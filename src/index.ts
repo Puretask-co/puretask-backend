@@ -9,6 +9,7 @@ import { logger } from "./lib/logger";
 import { authMiddlewareAttachUser } from "./lib/auth";
 import {
   generalRateLimiter,
+  endpointRateLimiter,
   additionalSecurityHeaders,
   sanitizeBody,
 } from "./lib/security";
@@ -21,6 +22,12 @@ import adminRouter from "./routes/admin";
 import stripeRouter from "./routes/stripe";
 import eventsRouter from "./routes/events";
 import paymentsRouter from "./routes/payments";
+import analyticsRouter from "./routes/analytics";
+import cleanerRouter from "./routes/cleaner";
+import trackingRouter from "./routes/tracking";
+import premiumRouter from "./routes/premium";
+import managerRouter from "./routes/manager";
+import v2Router from "./routes/v2";
 
 // Create Express app
 const app = express();
@@ -78,7 +85,8 @@ app.use(sanitizeBody);
 // ============================================
 // Rate Limiting
 // ============================================
-app.use(generalRateLimiter);
+// Use fine-grained endpoint rate limiter (falls back to general limiter)
+app.use(endpointRateLimiter());
 
 // ============================================
 // Authentication
@@ -116,6 +124,12 @@ app.use("/jobs", jobsRouter);
 app.use("/admin", adminRouter);
 app.use("/stripe", stripeRouter);
 app.use("/payments", paymentsRouter);
+app.use("/analytics", analyticsRouter);
+app.use("/cleaner", cleanerRouter);
+app.use("/tracking", trackingRouter);   // Job live tracking
+app.use("/premium", premiumRouter);     // Boosts, subscriptions, referrals
+app.use("/manager", managerRouter);     // Manager dashboard
+app.use("/v2", v2Router);               // V2 features: properties, teams, calendar, AI
 app.use(eventsRouter); // Mounts /events and /n8n/events
 
 // ============================================

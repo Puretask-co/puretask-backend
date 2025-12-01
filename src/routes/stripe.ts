@@ -6,6 +6,7 @@ import Stripe from "stripe";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import { createPaymentIntent, handleStripeEvent, getPaymentIntentByJobId } from "../services/paymentService";
+import { queueWebhookForRetry } from "../services/webhookRetryService";
 import { authMiddleware, AuthedRequest } from "../middleware/auth";
 import { validateBody } from "../lib/validation";
 import { z } from "zod";
@@ -108,8 +109,29 @@ stripeRouter.post("/webhook", async (req: Request, res: Response) => {
       eventId: event.id,
       eventType: event.type,
     });
-    // Still return 200 to Stripe to prevent retries
-    res.status(200).json({ received: true, error: (error as Error).message });
+
+    // Queue failed webhook for retry
+    try {
+      await queueWebhookForRetry({
+        source: "stripe",
+        eventId: event.id,
+        eventType: event.type,
+        payload: event,
+        errorMessage: (error as Error).message,
+      });
+      logger.info("stripe_webhook_queued_for_retry", {
+        eventId: event.id,
+        eventType: event.type,
+      });
+    } catch (queueError) {
+      logger.error("stripe_webhook_queue_failed", {
+        error: (queueError as Error).message,
+        eventId: event.id,
+      });
+    }
+
+    // Still return 200 to Stripe to prevent their retries (we handle our own)
+    res.status(200).json({ received: true, queued_for_retry: true });
   }
 });
 

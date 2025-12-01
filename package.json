@@ -24,6 +24,16 @@
     "worker:backup-daily": "ts-node src/workers/backupDaily.ts",
     "worker:retry-notifications": "ts-node src/workers/retryFailedNotifications.ts",
     "worker:reliability-recalc": "ts-node src/workers/reliabilityRecalc.ts",
+    "worker:webhook-retry": "ts-node src/workers/webhookRetry.ts",
+    "worker:credit-economy": "ts-node src/workers/creditEconomyMaintenance.ts",
+    "worker:stuck-detection": "ts-node src/workers/stuckJobDetection.ts",
+    "worker:weekly-summary": "ts-node src/workers/weeklySummary.ts",
+    "worker:payout-retry": "ts-node src/workers/payoutRetry.ts",
+    "worker:subscription-jobs": "ts-node src/workers/subscriptionJobs.ts",
+    "worker:expire-boosts": "ts-node src/workers/expireBoosts.ts",
+    "worker:queue-processor": "ts-node src/workers/queueProcessor.ts",
+    "worker:cleaning-scores": "ts-node src/workers/cleaningScores.ts",
+    "worker:goal-checker": "ts-node src/workers/goalChecker.ts",
 
     "migrate:run": "echo 'Run migrations against your Neon DB using psql or a migration tool'",
     "db:seed": "ts-node src/db/seed.ts"
