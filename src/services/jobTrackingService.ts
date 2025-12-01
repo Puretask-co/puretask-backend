@@ -1,0 +1,553 @@
+// src/services/jobTrackingService.ts
+// Complete job live tracking for clients and cleaners
+
+import { query } from "../db/client";
+import { logger } from "../lib/logger";
+import { publishEvent } from "../lib/events";
+import { updateCleanerReliability } from "./reliabilityService";
+
+// ============================================
+// Types
+// ============================================
+
+export interface JobTrackingState {
+  jobId: string;
+  status: string;
+  timeline: JobTimelineEvent[];
+  currentLocation: {
+    latitude: number;
+    longitude: number;
+    updatedAt: string;
+  } | null;
+  eta: {
+    minutes: number;
+    distance: string;
+  } | null;
+  photos: {
+    before: string[];
+    after: string[];
+  };
+  cleaner: {
+    id: string;
+    name: string;
+    tier: string;
+    rating: number;
+    photo: string | null;
+  } | null;
+  times: {
+    scheduled_start: string;
+    scheduled_end: string;
+    actual_start: string | null;
+    actual_end: string | null;
+    en_route_at: string | null;
+    arrived_at: string | null;
+  };
+}
+
+export interface JobTimelineEvent {
+  event_type: string;
+  timestamp: string;
+  payload: Record<string, unknown>;
+  actor_type: string;
+}
+
+export interface LocationUpdate {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  heading?: number;
+  speed?: number;
+}
+
+// ============================================
+// Timeline & Tracking
+// ============================================
+
+/**
+ * Get full job tracking state for client view
+ */
+export async function getJobTrackingState(jobId: string): Promise<JobTrackingState> {
+  // Get job details
+  const jobResult = await query<{
+    id: string;
+    status: string;
+    client_id: string;
+    cleaner_id: string | null;
+    scheduled_start_at: string;
+    scheduled_end_at: string;
+    actual_start_at: string | null;
+    actual_end_at: string | null;
+    address: string;
+    latitude: number;
+    longitude: number;
+  }>(
+    `SELECT * FROM jobs WHERE id = $1`,
+    [jobId]
+  );
+
+  if (jobResult.rows.length === 0) {
+    throw Object.assign(new Error("Job not found"), { statusCode: 404 });
+  }
+
+  const job = jobResult.rows[0];
+
+  // Get timeline events
+  const eventsResult = await query<JobTimelineEvent>(
+    `
+      SELECT event_type, created_at as timestamp, payload, actor_type
+      FROM job_events
+      WHERE job_id = $1
+      ORDER BY created_at ASC
+    `,
+    [jobId]
+  );
+
+  // Get photos
+  const photosResult = await query<{ type: string; url: string }>(
+    `SELECT type, url FROM job_photos WHERE job_id = $1`,
+    [jobId]
+  );
+
+  const photos = {
+    before: photosResult.rows.filter(p => p.type === "before").map(p => p.url),
+    after: photosResult.rows.filter(p => p.type === "after").map(p => p.url),
+  };
+
+  // Get cleaner info if assigned
+  let cleaner = null;
+  let currentLocation = null;
+  let eta = null;
+
+  if (job.cleaner_id) {
+    const cleanerResult = await query<{
+      id: string;
+      email: string;
+      tier: string;
+      reliability_score: number;
+    }>(
+      `
+        SELECT u.id, u.email, cp.tier, cp.reliability_score
+        FROM users u
+        JOIN cleaner_profiles cp ON cp.user_id = u.id
+        WHERE u.id = $1
+      `,
+      [job.cleaner_id]
+    );
+
+    if (cleanerResult.rows.length > 0) {
+      const c = cleanerResult.rows[0];
+      cleaner = {
+        id: c.id,
+        name: c.email.split("@")[0], // Placeholder - use real name field
+        tier: c.tier,
+        rating: c.reliability_score / 20, // Convert to 5-star scale
+        photo: null,
+      };
+    }
+
+    // Get last known location (from events)
+    const locationEvent = eventsResult.rows
+      .filter(e => e.event_type === "cleaner.location_updated")
+      .pop();
+
+    if (locationEvent?.payload) {
+      const loc = locationEvent.payload as { latitude: number; longitude: number };
+      currentLocation = {
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        updatedAt: locationEvent.timestamp,
+      };
+
+      // Calculate ETA (simplified)
+      if (job.status === "on_my_way" && job.latitude && job.longitude) {
+        const distance = calculateDistance(
+          loc.latitude,
+          loc.longitude,
+          job.latitude,
+          job.longitude
+        );
+        eta = {
+          minutes: Math.round(distance * 3), // Rough estimate: 3 min per mile
+          distance: `${distance.toFixed(1)} mi`,
+        };
+      }
+    }
+  }
+
+  // Extract key timestamps from events
+  const getEventTime = (type: string) => {
+    const event = eventsResult.rows.find(e => e.event_type === type);
+    return event?.timestamp ?? null;
+  };
+
+  return {
+    jobId: job.id,
+    status: job.status,
+    timeline: eventsResult.rows,
+    currentLocation,
+    eta,
+    photos,
+    cleaner,
+    times: {
+      scheduled_start: job.scheduled_start_at,
+      scheduled_end: job.scheduled_end_at,
+      actual_start: job.actual_start_at,
+      actual_end: job.actual_end_at,
+      en_route_at: getEventTime("job.cleaner_en_route"),
+      arrived_at: getEventTime("job.cleaner_arrived"),
+    },
+  };
+}
+
+// ============================================
+// Cleaner Actions
+// ============================================
+
+/**
+ * Cleaner starts heading to job
+ */
+export async function startEnRoute(
+  jobId: string,
+  cleanerId: string,
+  location: LocationUpdate
+): Promise<void> {
+  // Verify job belongs to cleaner
+  const job = await verifyCleanerJob(jobId, cleanerId);
+
+  if (job.status !== "accepted") {
+    throw Object.assign(new Error("Job must be in accepted status"), { statusCode: 400 });
+  }
+
+  await query(
+    `UPDATE jobs SET status = 'on_my_way', updated_at = NOW() WHERE id = $1`,
+    [jobId]
+  );
+
+  await publishEvent({
+    jobId,
+    actorType: "cleaner",
+    actorId: cleanerId,
+    eventName: "job.cleaner_en_route",
+    payload: { location },
+  });
+
+  logger.info("job_cleaner_en_route", { jobId, cleanerId });
+}
+
+/**
+ * Cleaner arrives at location
+ */
+export async function markArrived(
+  jobId: string,
+  cleanerId: string,
+  location: LocationUpdate
+): Promise<void> {
+  const job = await verifyCleanerJob(jobId, cleanerId);
+
+  if (job.status !== "on_my_way") {
+    throw Object.assign(new Error("Must be en route first"), { statusCode: 400 });
+  }
+
+  // Verify GPS proximity (within 0.5 miles)
+  if (job.latitude && job.longitude) {
+    const distance = calculateDistance(
+      location.latitude,
+      location.longitude,
+      job.latitude,
+      job.longitude
+    );
+    
+    if (distance > 0.5) {
+      logger.warn("job_arrival_distance_warning", { jobId, cleanerId, distance });
+      // Don't block, but log for reliability tracking
+    }
+  }
+
+  await publishEvent({
+    jobId,
+    actorType: "cleaner",
+    actorId: cleanerId,
+    eventName: "job.cleaner_arrived",
+    payload: { location },
+  });
+
+  logger.info("job_cleaner_arrived", { jobId, cleanerId });
+}
+
+/**
+ * Cleaner checks in and starts job
+ */
+export async function checkIn(
+  jobId: string,
+  cleanerId: string,
+  location: LocationUpdate,
+  beforePhotos: string[]
+): Promise<void> {
+  const job = await verifyCleanerJob(jobId, cleanerId);
+
+  if (!["on_my_way", "accepted"].includes(job.status)) {
+    throw Object.assign(new Error("Invalid status for check-in"), { statusCode: 400 });
+  }
+
+  // Require at least 1 before photo
+  if (beforePhotos.length === 0) {
+    throw Object.assign(new Error("At least one before photo required"), { statusCode: 400 });
+  }
+
+  // Save photos
+  for (const url of beforePhotos) {
+    await query(
+      `INSERT INTO job_photos (job_id, uploaded_by, type, url) VALUES ($1, $2, 'before', $3)`,
+      [jobId, cleanerId, url]
+    );
+  }
+
+  // Update job status
+  await query(
+    `UPDATE jobs SET status = 'in_progress', actual_start_at = NOW(), updated_at = NOW() WHERE id = $1`,
+    [jobId]
+  );
+
+  await publishEvent({
+    jobId,
+    actorType: "cleaner",
+    actorId: cleanerId,
+    eventName: "job.checked_in",
+    payload: { location, photoCount: beforePhotos.length },
+  });
+
+  logger.info("job_checked_in", { jobId, cleanerId, photoCount: beforePhotos.length });
+}
+
+/**
+ * Cleaner checks out and completes job
+ */
+export async function checkOut(
+  jobId: string,
+  cleanerId: string,
+  afterPhotos: string[],
+  notes?: string
+): Promise<void> {
+  const job = await verifyCleanerJob(jobId, cleanerId);
+
+  if (job.status !== "in_progress") {
+    throw Object.assign(new Error("Job must be in progress"), { statusCode: 400 });
+  }
+
+  // Require at least 1 after photo
+  if (afterPhotos.length === 0) {
+    throw Object.assign(new Error("At least one after photo required"), { statusCode: 400 });
+  }
+
+  // Save photos
+  for (const url of afterPhotos) {
+    await query(
+      `INSERT INTO job_photos (job_id, uploaded_by, type, url) VALUES ($1, $2, 'after', $3)`,
+      [jobId, cleanerId, url]
+    );
+  }
+
+  // Update job status
+  await query(
+    `
+      UPDATE jobs 
+      SET status = 'awaiting_approval', 
+          actual_end_at = NOW(), 
+          client_notes = COALESCE(client_notes, '') || $2,
+          updated_at = NOW() 
+      WHERE id = $1
+    `,
+    [jobId, notes ? `\n[Cleaner notes]: ${notes}` : ""]
+  );
+
+  await publishEvent({
+    jobId,
+    actorType: "cleaner",
+    actorId: cleanerId,
+    eventName: "job.checked_out",
+    payload: { photoCount: afterPhotos.length, notes },
+  });
+
+  logger.info("job_checked_out", { jobId, cleanerId, photoCount: afterPhotos.length });
+}
+
+/**
+ * Update cleaner location during job
+ */
+export async function updateCleanerLocation(
+  jobId: string,
+  cleanerId: string,
+  location: LocationUpdate
+): Promise<void> {
+  // Just verify and log - don't change job state
+  await verifyCleanerJob(jobId, cleanerId);
+
+  await publishEvent({
+    jobId,
+    actorType: "cleaner",
+    actorId: cleanerId,
+    eventName: "cleaner.location_updated",
+    payload: location,
+  });
+}
+
+// ============================================
+// Client Actions
+// ============================================
+
+/**
+ * Client approves completed job
+ */
+export async function approveJob(
+  jobId: string,
+  clientId: string,
+  rating: number,
+  tip?: number,
+  feedback?: string
+): Promise<void> {
+  const job = await verifyClientJob(jobId, clientId);
+
+  if (job.status !== "awaiting_approval") {
+    throw Object.assign(new Error("Job not awaiting approval"), { statusCode: 400 });
+  }
+
+  // Update job
+  await query(
+    `
+      UPDATE jobs 
+      SET status = 'completed', 
+          rating = $2,
+          updated_at = NOW() 
+      WHERE id = $1
+    `,
+    [jobId, rating]
+  );
+
+  // Handle tip if provided
+  if (tip && tip > 0 && job.cleaner_id) {
+    await query(
+      `INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason) VALUES ($1, $2, $3, 'adjustment')`,
+      [job.cleaner_id, jobId, tip]
+    );
+  }
+
+  await publishEvent({
+    jobId,
+    actorType: "client",
+    actorId: clientId,
+    eventName: "job.approved",
+    payload: { rating, tip, feedback },
+  });
+
+  // Update cleaner reliability
+  if (job.cleaner_id) {
+    await updateCleanerReliability(job.cleaner_id, "job_completed");
+  }
+
+  logger.info("job_approved", { jobId, clientId, rating, tip });
+}
+
+/**
+ * Client disputes completed job
+ */
+export async function disputeJob(
+  jobId: string,
+  clientId: string,
+  reason: string,
+  requestedRefund: "full" | "partial" | "none"
+): Promise<void> {
+  const job = await verifyClientJob(jobId, clientId);
+
+  if (!["awaiting_approval", "completed"].includes(job.status)) {
+    throw Object.assign(new Error("Cannot dispute job in current status"), { statusCode: 400 });
+  }
+
+  // Create dispute
+  await query(
+    `
+      INSERT INTO disputes (job_id, client_id, client_notes, status, metadata)
+      VALUES ($1, $2, $3, 'open', $4::jsonb)
+    `,
+    [jobId, clientId, reason, JSON.stringify({ requestedRefund })]
+  );
+
+  // Update job status
+  await query(
+    `UPDATE jobs SET status = 'disputed', updated_at = NOW() WHERE id = $1`,
+    [jobId]
+  );
+
+  await publishEvent({
+    jobId,
+    actorType: "client",
+    actorId: clientId,
+    eventName: "job.disputed",
+    payload: { reason, requestedRefund },
+  });
+
+  logger.info("job_disputed", { jobId, clientId, requestedRefund });
+}
+
+// ============================================
+// Helpers
+// ============================================
+
+async function verifyCleanerJob(jobId: string, cleanerId: string) {
+  const result = await query<{
+    id: string;
+    status: string;
+    cleaner_id: string;
+    latitude: number;
+    longitude: number;
+  }>(
+    `SELECT id, status, cleaner_id, latitude, longitude FROM jobs WHERE id = $1`,
+    [jobId]
+  );
+
+  const job = result.rows[0];
+  if (!job) {
+    throw Object.assign(new Error("Job not found"), { statusCode: 404 });
+  }
+  if (job.cleaner_id !== cleanerId) {
+    throw Object.assign(new Error("Not assigned to this job"), { statusCode: 403 });
+  }
+  return job;
+}
+
+async function verifyClientJob(jobId: string, clientId: string) {
+  const result = await query<{
+    id: string;
+    status: string;
+    client_id: string;
+    cleaner_id: string | null;
+    credit_amount: number;
+  }>(
+    `SELECT id, status, client_id, cleaner_id, credit_amount FROM jobs WHERE id = $1`,
+    [jobId]
+  );
+
+  const job = result.rows[0];
+  if (!job) {
+    throw Object.assign(new Error("Job not found"), { statusCode: 404 });
+  }
+  if (job.client_id !== clientId) {
+    throw Object.assign(new Error("Not your job"), { statusCode: 403 });
+  }
+  return job;
+}
+
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959; // Earth radius in miles
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function toRad(deg: number): number {
+  return deg * (Math.PI / 180);
+}
+

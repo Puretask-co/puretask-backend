@@ -16,6 +16,18 @@ import {
   getCleanerProfile,
 } from "../services/cleanerOnboardingService";
 import { getCleanerPayouts } from "../services/payoutsService";
+import {
+  getTimeOff,
+  addTimeOff,
+  deleteTimeOff,
+  getServiceAreas,
+  addServiceArea,
+  deleteServiceArea,
+  getPreferences,
+  setPreferences,
+  getCleanerSchedule,
+} from "../services/availabilityService";
+import { getCleanerReliabilityInfo } from "../services/reliabilityService";
 
 const cleanerRouter = Router();
 
@@ -244,6 +256,241 @@ cleanerRouter.get(
     }
   }
 );
+
+// ============================================
+// Time Off Management
+// ============================================
+
+/**
+ * GET /cleaner/time-off
+ * Get time off entries
+ */
+cleanerRouter.get("/time-off", async (req: JWTAuthedRequest, res: Response) => {
+  try {
+    const timeOff = await getTimeOff(req.user!.id, true);
+    res.json({ timeOff });
+  } catch (error) {
+    logger.error("get_time_off_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_TIME_OFF_FAILED", message: "Failed to get time off" },
+    });
+  }
+});
+
+/**
+ * POST /cleaner/time-off
+ * Add time off
+ */
+const addTimeOffSchema = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+  allDay: z.boolean().optional().default(true),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  reason: z.string().optional(),
+});
+
+cleanerRouter.post(
+  "/time-off",
+  validateBody(addTimeOffSchema),
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const timeOff = await addTimeOff({
+        cleanerId: req.user!.id,
+        ...req.body,
+      });
+      res.status(201).json({ timeOff });
+    } catch (error) {
+      logger.error("add_time_off_failed", { error: (error as Error).message });
+      res.status(400).json({
+        error: { code: "ADD_TIME_OFF_FAILED", message: (error as Error).message },
+      });
+    }
+  }
+);
+
+/**
+ * DELETE /cleaner/time-off/:id
+ * Delete time off entry
+ */
+cleanerRouter.delete("/time-off/:id", async (req: JWTAuthedRequest, res: Response) => {
+  try {
+    await deleteTimeOff(req.user!.id, req.params.id);
+    res.json({ deleted: true });
+  } catch (error) {
+    logger.error("delete_time_off_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "DELETE_TIME_OFF_FAILED", message: "Failed to delete" },
+    });
+  }
+});
+
+// ============================================
+// Service Areas
+// ============================================
+
+/**
+ * GET /cleaner/service-areas
+ * Get service areas
+ */
+cleanerRouter.get("/service-areas", async (req: JWTAuthedRequest, res: Response) => {
+  try {
+    const areas = await getServiceAreas(req.user!.id);
+    res.json({ serviceAreas: areas });
+  } catch (error) {
+    logger.error("get_service_areas_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_AREAS_FAILED", message: "Failed to get areas" },
+    });
+  }
+});
+
+/**
+ * POST /cleaner/service-areas
+ * Add service area
+ */
+const addServiceAreaSchema = z.object({
+  zipCode: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  radiusMiles: z.number().int().positive().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+});
+
+cleanerRouter.post(
+  "/service-areas",
+  validateBody(addServiceAreaSchema),
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const area = await addServiceArea({
+        cleanerId: req.user!.id,
+        ...req.body,
+      });
+      res.status(201).json({ serviceArea: area });
+    } catch (error) {
+      logger.error("add_service_area_failed", { error: (error as Error).message });
+      res.status(400).json({
+        error: { code: "ADD_AREA_FAILED", message: (error as Error).message },
+      });
+    }
+  }
+);
+
+/**
+ * DELETE /cleaner/service-areas/:id
+ * Delete service area
+ */
+cleanerRouter.delete("/service-areas/:id", async (req: JWTAuthedRequest, res: Response) => {
+  try {
+    await deleteServiceArea(req.user!.id, req.params.id);
+    res.json({ deleted: true });
+  } catch (error) {
+    logger.error("delete_service_area_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "DELETE_AREA_FAILED", message: "Failed to delete" },
+    });
+  }
+});
+
+// ============================================
+// Preferences
+// ============================================
+
+/**
+ * GET /cleaner/preferences
+ * Get cleaner preferences
+ */
+cleanerRouter.get("/preferences", async (req: JWTAuthedRequest, res: Response) => {
+  try {
+    const preferences = await getPreferences(req.user!.id);
+    res.json({ preferences });
+  } catch (error) {
+    logger.error("get_preferences_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_PREFS_FAILED", message: "Failed to get preferences" },
+    });
+  }
+});
+
+/**
+ * PUT /cleaner/preferences
+ * Update cleaner preferences
+ */
+const updatePreferencesSchema = z.object({
+  max_jobs_per_day: z.number().int().min(1).max(20).optional(),
+  min_job_duration_h: z.number().min(0.5).max(8).optional(),
+  max_job_duration_h: z.number().min(1).max(12).optional(),
+  accepts_pets: z.boolean().optional(),
+  accepts_deep_clean: z.boolean().optional(),
+  accepts_move_out: z.boolean().optional(),
+  has_own_supplies: z.boolean().optional(),
+  has_vehicle: z.boolean().optional(),
+  notes: z.string().max(500).optional(),
+});
+
+cleanerRouter.put(
+  "/preferences",
+  validateBody(updatePreferencesSchema),
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const preferences = await setPreferences(req.user!.id, req.body);
+      res.json({ preferences });
+    } catch (error) {
+      logger.error("update_preferences_failed", { error: (error as Error).message });
+      res.status(400).json({
+        error: { code: "UPDATE_PREFS_FAILED", message: (error as Error).message },
+      });
+    }
+  }
+);
+
+// ============================================
+// Schedule View
+// ============================================
+
+/**
+ * GET /cleaner/schedule/:date
+ * Get cleaner's schedule for a specific date
+ */
+cleanerRouter.get("/schedule/:date", async (req: JWTAuthedRequest, res: Response) => {
+  try {
+    const date = new Date(req.params.date);
+    if (isNaN(date.getTime())) {
+      return res.status(400).json({
+        error: { code: "INVALID_DATE", message: "Invalid date format" },
+      });
+    }
+
+    const schedule = await getCleanerSchedule(req.user!.id, date);
+    res.json({ date: req.params.date, schedule });
+  } catch (error) {
+    logger.error("get_schedule_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_SCHEDULE_FAILED", message: "Failed to get schedule" },
+    });
+  }
+});
+
+// ============================================
+// Reliability Score
+// ============================================
+
+/**
+ * GET /cleaner/reliability
+ * Get cleaner's reliability info
+ */
+cleanerRouter.get("/reliability", async (req: JWTAuthedRequest, res: Response) => {
+  try {
+    const reliability = await getCleanerReliabilityInfo(req.user!.id);
+    res.json({ reliability });
+  } catch (error) {
+    logger.error("get_reliability_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_RELIABILITY_FAILED", message: "Failed to get reliability" },
+    });
+  }
+});
 
 export default cleanerRouter;
 

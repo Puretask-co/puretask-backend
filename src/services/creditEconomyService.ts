@@ -1,0 +1,631 @@
+// src/services/creditEconomyService.ts
+// Credit economy controls: anti-fraud, bonus caps, decay logic
+
+import { query } from "../db/client";
+import { logger } from "../lib/logger";
+
+// ============================================
+// Configuration
+// ============================================
+
+export const CREDIT_ECONOMY_CONFIG = {
+  // Weekly bonus caps
+  WEEKLY_BONUS_CAP: 50,           // Max 50 bonus credits per week
+  WEEKLY_BONUS_WARNING: 40,       // Warn at 40 credits
+
+  // Reliability decay
+  DECAY_INACTIVE_WEEKS: 2,        // Start decay after 2 weeks inactive
+  DECAY_RATE_PER_WEEK: 2,         // -2 points per week inactive
+
+  // Tier lock duration (days)
+  TIER_LOCK_DAYS: 7,              // Can't lose tier for 7 days after promotion
+
+  // Cancellation grace period
+  MONTHLY_GRACE_CANCELLATIONS: 2, // First 2 cancellations = reduced penalty
+
+  // Anti-fraud thresholds
+  FRAUD_RAPID_BONUS_THRESHOLD: 5, // Alert if >5 bonuses in 1 hour
+  FRAUD_LARGE_ADJUSTMENT_THRESHOLD: 500, // Alert if single adjustment >500 credits
+
+  // Penalty rates (credits)
+  LATE_CANCEL_PENALTY_CLEANER: 10,    // Cleaner cancels <24h before
+  LATE_CANCEL_PENALTY_CLIENT: 5,       // Client cancels <24h before
+  NO_SHOW_PENALTY_CLEANER: 25,         // Cleaner no-show
+};
+
+// ============================================
+// Types
+// ============================================
+
+export interface FraudAlert {
+  id: string;
+  user_id: string | null;
+  alert_type: string;
+  severity: string;
+  description: string;
+  metadata: Record<string, unknown>;
+  status: string;
+  created_at: string;
+}
+
+export interface CreditBonus {
+  id: string;
+  user_id: string;
+  bonus_type: string;
+  amount: number;
+  week_of_year: number;
+  year: number;
+  source: string | null;
+  created_at: string;
+}
+
+// ============================================
+// Bonus Cap System
+// ============================================
+
+/**
+ * Get user's weekly bonus total
+ */
+export async function getUserWeeklyBonusTotal(userId: string): Promise<number> {
+  const now = new Date();
+  const year = now.getFullYear();
+  const week = getISOWeek(now);
+
+  const result = await query<{ total: string }>(
+    `SELECT get_user_weekly_bonus_total($1, $2, $3)::text as total`,
+    [userId, year, week]
+  );
+
+  return Number(result.rows[0]?.total || 0);
+}
+
+/**
+ * Check if user can receive bonus (under cap)
+ */
+export async function canReceiveBonus(userId: string, amount: number): Promise<{
+  allowed: boolean;
+  currentTotal: number;
+  cap: number;
+  remaining: number;
+}> {
+  const currentTotal = await getUserWeeklyBonusTotal(userId);
+  const remaining = Math.max(0, CREDIT_ECONOMY_CONFIG.WEEKLY_BONUS_CAP - currentTotal);
+
+  return {
+    allowed: currentTotal + amount <= CREDIT_ECONOMY_CONFIG.WEEKLY_BONUS_CAP,
+    currentTotal,
+    cap: CREDIT_ECONOMY_CONFIG.WEEKLY_BONUS_CAP,
+    remaining,
+  };
+}
+
+/**
+ * Award bonus credits (with cap enforcement)
+ */
+export async function awardBonusCredits(params: {
+  userId: string;
+  amount: number;
+  bonusType: string;
+  source?: string;
+  bypassCap?: boolean;
+}): Promise<{
+  awarded: number;
+  capped: boolean;
+  newTotal: number;
+}> {
+  const { userId, amount, bonusType, source, bypassCap = false } = params;
+
+  // Check cap
+  const { allowed, currentTotal, remaining } = await canReceiveBonus(userId, amount);
+
+  let awardedAmount = amount;
+  let capped = false;
+
+  if (!allowed && !bypassCap) {
+    awardedAmount = remaining;
+    capped = true;
+
+    if (awardedAmount <= 0) {
+      logger.warn("bonus_cap_reached", { userId, requestedAmount: amount, currentTotal });
+      return { awarded: 0, capped: true, newTotal: currentTotal };
+    }
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const week = getISOWeek(now);
+
+  // Record bonus
+  await query(
+    `
+      INSERT INTO credit_bonuses (user_id, bonus_type, amount, week_of_year, year, source)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `,
+    [userId, bonusType, awardedAmount, week, year, source ?? null]
+  );
+
+  // Add to credit ledger
+  await query(
+    `
+      INSERT INTO credit_ledger (user_id, delta_credits, reason)
+      VALUES ($1, $2, 'adjustment')
+    `,
+    [userId, awardedAmount]
+  );
+
+  const newTotal = currentTotal + awardedAmount;
+
+  logger.info("bonus_credits_awarded", {
+    userId,
+    bonusType,
+    requestedAmount: amount,
+    awardedAmount,
+    capped,
+    newWeeklyTotal: newTotal,
+  });
+
+  // Check for fraud (rapid bonuses)
+  await checkRapidBonusActivity(userId);
+
+  return { awarded: awardedAmount, capped, newTotal };
+}
+
+// ============================================
+// Reliability Decay System
+// ============================================
+
+/**
+ * Apply weekly reliability decay for inactive cleaners
+ */
+export async function applyReliabilityDecay(): Promise<{
+  processed: number;
+  decayed: number;
+}> {
+  const weeksInactive = CREDIT_ECONOMY_CONFIG.DECAY_INACTIVE_WEEKS;
+  const decayRate = CREDIT_ECONOMY_CONFIG.DECAY_RATE_PER_WEEK;
+
+  // Find cleaners who haven't completed a job in X weeks
+  const inactiveCleaners = await query<{
+    user_id: string;
+    reliability_score: number;
+    tier: string;
+    last_job_date: string | null;
+  }>(
+    `
+      SELECT 
+        cp.user_id,
+        cp.reliability_score,
+        cp.tier,
+        MAX(j.actual_end_at)::text as last_job_date
+      FROM cleaner_profiles cp
+      LEFT JOIN jobs j ON j.cleaner_id = cp.user_id AND j.status = 'completed'
+      GROUP BY cp.user_id, cp.reliability_score, cp.tier
+      HAVING MAX(j.actual_end_at) IS NULL 
+         OR MAX(j.actual_end_at) < NOW() - INTERVAL '1 week' * $1
+    `,
+    [weeksInactive]
+  );
+
+  let decayed = 0;
+
+  for (const cleaner of inactiveCleaners.rows) {
+    // Don't decay below 50
+    if (cleaner.reliability_score <= 50) continue;
+
+    // Check tier lock
+    const isLocked = await isTierLocked(cleaner.user_id);
+    if (isLocked) continue;
+
+    const newScore = Math.max(50, cleaner.reliability_score - decayRate);
+
+    // Apply decay
+    await query(
+      `UPDATE cleaner_profiles SET reliability_score = $2, updated_at = NOW() WHERE user_id = $1`,
+      [cleaner.user_id, newScore]
+    );
+
+    // Record history
+    await query(
+      `
+        INSERT INTO reliability_history (cleaner_id, old_score, new_score, old_tier, new_tier, reason, metadata)
+        VALUES ($1, $2, $3, $4, $4, 'decay', $5::jsonb)
+      `,
+      [
+        cleaner.user_id,
+        cleaner.reliability_score,
+        newScore,
+        cleaner.tier,
+        JSON.stringify({ weeks_inactive: weeksInactive, decay_rate: decayRate }),
+      ]
+    );
+
+    decayed++;
+
+    logger.info("reliability_decay_applied", {
+      cleanerId: cleaner.user_id,
+      oldScore: cleaner.reliability_score,
+      newScore,
+      tier: cleaner.tier,
+    });
+  }
+
+  logger.info("reliability_decay_completed", {
+    processed: inactiveCleaners.rows.length,
+    decayed,
+  });
+
+  return { processed: inactiveCleaners.rows.length, decayed };
+}
+
+// ============================================
+// Tier Lock System
+// ============================================
+
+/**
+ * Check if cleaner's tier is locked
+ */
+export async function isTierLocked(cleanerId: string): Promise<boolean> {
+  const result = await query<{ locked: boolean }>(
+    `SELECT is_tier_locked($1) as locked`,
+    [cleanerId]
+  );
+  return result.rows[0]?.locked ?? false;
+}
+
+/**
+ * Create tier lock after promotion
+ */
+export async function createTierLock(
+  cleanerId: string,
+  tier: string,
+  reason: string = "promotion"
+): Promise<void> {
+  const lockDays = CREDIT_ECONOMY_CONFIG.TIER_LOCK_DAYS;
+  const lockedUntil = new Date(Date.now() + lockDays * 24 * 60 * 60 * 1000);
+
+  await query(
+    `
+      INSERT INTO tier_locks (cleaner_id, tier, locked_until, reason)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (cleaner_id) DO UPDATE
+      SET tier = EXCLUDED.tier,
+          locked_until = EXCLUDED.locked_until,
+          reason = EXCLUDED.reason
+    `,
+    [cleanerId, tier, lockedUntil.toISOString(), reason]
+  );
+
+  logger.info("tier_lock_created", { cleanerId, tier, lockedUntil, reason });
+}
+
+/**
+ * Remove expired tier locks
+ */
+export async function cleanupExpiredTierLocks(): Promise<number> {
+  const result = await query<{ count: string }>(
+    `
+      WITH deleted AS (
+        DELETE FROM tier_locks WHERE locked_until < NOW() RETURNING id
+      )
+      SELECT COUNT(*)::text as count FROM deleted
+    `
+  );
+
+  return Number(result.rows[0]?.count || 0);
+}
+
+// ============================================
+// Anti-Fraud Detection
+// ============================================
+
+/**
+ * Check for rapid bonus activity (potential abuse)
+ */
+async function checkRapidBonusActivity(userId: string): Promise<void> {
+  const threshold = CREDIT_ECONOMY_CONFIG.FRAUD_RAPID_BONUS_THRESHOLD;
+
+  const result = await query<{ count: string }>(
+    `
+      SELECT COUNT(*)::text as count
+      FROM credit_bonuses
+      WHERE user_id = $1
+        AND created_at > NOW() - INTERVAL '1 hour'
+    `,
+    [userId]
+  );
+
+  const count = Number(result.rows[0]?.count || 0);
+
+  if (count >= threshold) {
+    await createFraudAlert({
+      userId,
+      alertType: "rapid_bonus",
+      severity: "high",
+      description: `User received ${count} bonuses in the last hour (threshold: ${threshold})`,
+      metadata: { bonusCount: count, threshold, timeWindow: "1 hour" },
+    });
+  }
+}
+
+/**
+ * Check for large credit adjustments
+ */
+export async function checkLargeAdjustment(
+  userId: string,
+  amount: number,
+  adjustedBy?: string
+): Promise<void> {
+  const threshold = CREDIT_ECONOMY_CONFIG.FRAUD_LARGE_ADJUSTMENT_THRESHOLD;
+
+  if (Math.abs(amount) >= threshold) {
+    await createFraudAlert({
+      userId,
+      alertType: "large_adjustment",
+      severity: amount >= threshold * 2 ? "critical" : "medium",
+      description: `Large credit adjustment of ${amount} credits`,
+      metadata: { amount, threshold, adjustedBy },
+    });
+  }
+}
+
+/**
+ * Create a fraud alert
+ */
+export async function createFraudAlert(params: {
+  userId?: string;
+  alertType: string;
+  severity: string;
+  description: string;
+  metadata?: Record<string, unknown>;
+}): Promise<FraudAlert> {
+  const { userId, alertType, severity, description, metadata = {} } = params;
+
+  const result = await query<FraudAlert>(
+    `
+      INSERT INTO fraud_alerts (user_id, alert_type, severity, description, metadata)
+      VALUES ($1, $2, $3, $4, $5::jsonb)
+      RETURNING *
+    `,
+    [userId ?? null, alertType, severity, description, JSON.stringify(metadata)]
+  );
+
+  const alert = result.rows[0];
+
+  logger.warn("fraud_alert_created", {
+    alertId: alert.id,
+    userId,
+    alertType,
+    severity,
+    description,
+  });
+
+  return alert;
+}
+
+/**
+ * Get open fraud alerts
+ */
+export async function getOpenFraudAlerts(): Promise<FraudAlert[]> {
+  const result = await query<FraudAlert>(
+    `SELECT * FROM fraud_alerts WHERE status = 'open' ORDER BY severity DESC, created_at DESC`
+  );
+  return result.rows;
+}
+
+/**
+ * Resolve a fraud alert
+ */
+export async function resolveFraudAlert(
+  alertId: string,
+  resolvedBy: string,
+  resolution: "resolved" | "false_positive",
+  notes?: string
+): Promise<void> {
+  await query(
+    `
+      UPDATE fraud_alerts
+      SET status = $2,
+          resolved_by = $3,
+          resolved_at = NOW(),
+          resolution_notes = $4
+      WHERE id = $1
+    `,
+    [alertId, resolution, resolvedBy, notes ?? null]
+  );
+
+  logger.info("fraud_alert_resolved", { alertId, resolvedBy, resolution });
+}
+
+// ============================================
+// Cancellation Tracking
+// ============================================
+
+/**
+ * Record a job cancellation
+ */
+export async function recordCancellation(params: {
+  jobId: string;
+  cancelledBy: string;
+  cancelledByRole: "client" | "cleaner";
+  scheduledStart: Date;
+}): Promise<{
+  isGracePeriod: boolean;
+  penaltyCredits: number;
+  monthlyCount: number;
+}> {
+  const { jobId, cancelledBy, cancelledByRole, scheduledStart } = params;
+
+  const now = new Date();
+  const hoursBefore = (scheduledStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  // Get monthly cancellation count
+  const monthlyCount = await getMonthilyCancellationCount(cancelledBy);
+  const isGracePeriod = monthlyCount < CREDIT_ECONOMY_CONFIG.MONTHLY_GRACE_CANCELLATIONS;
+
+  // Calculate penalty
+  let penaltyCredits = 0;
+  if (hoursBefore < 24 && !isGracePeriod) {
+    penaltyCredits = cancelledByRole === "cleaner"
+      ? CREDIT_ECONOMY_CONFIG.LATE_CANCEL_PENALTY_CLEANER
+      : CREDIT_ECONOMY_CONFIG.LATE_CANCEL_PENALTY_CLIENT;
+  }
+
+  // Record cancellation
+  await query(
+    `
+      INSERT INTO cancellation_records (
+        job_id, cancelled_by, cancelled_by_role, scheduled_start,
+        hours_before, penalty_applied, penalty_credits, is_grace_period
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `,
+    [
+      jobId,
+      cancelledBy,
+      cancelledByRole,
+      scheduledStart.toISOString(),
+      hoursBefore,
+      penaltyCredits > 0,
+      penaltyCredits,
+      isGracePeriod,
+    ]
+  );
+
+  // Apply penalty if applicable
+  if (penaltyCredits > 0) {
+    await query(
+      `INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason) VALUES ($1, $2, $3, 'adjustment')`,
+      [cancelledBy, jobId, -penaltyCredits]
+    );
+
+    logger.info("cancellation_penalty_applied", {
+      jobId,
+      cancelledBy,
+      penaltyCredits,
+      hoursBefore,
+    });
+  }
+
+  return {
+    isGracePeriod,
+    penaltyCredits,
+    monthlyCount: monthlyCount + 1,
+  };
+}
+
+async function getMonthilyCancellationCount(userId: string): Promise<number> {
+  const now = new Date();
+  const result = await query<{ count: string }>(
+    `SELECT get_monthly_cancellation_count($1, $2, $3)::text as count`,
+    [userId, now.getFullYear(), now.getMonth() + 1]
+  );
+  return Number(result.rows[0]?.count || 0);
+}
+
+// ============================================
+// Audit Logging
+// ============================================
+
+/**
+ * Create an audit log entry
+ */
+export async function createAuditLog(params: {
+  actorId?: string;
+  actorType: "admin" | "system" | "user";
+  action: string;
+  resourceType: string;
+  resourceId?: string;
+  oldValue?: unknown;
+  newValue?: unknown;
+  metadata?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+}): Promise<void> {
+  await query(
+    `
+      INSERT INTO audit_logs (
+        actor_id, actor_type, action, resource_type, resource_id,
+        old_value, new_value, metadata, ip_address, user_agent
+      )
+      VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb, $9, $10)
+    `,
+    [
+      params.actorId ?? null,
+      params.actorType,
+      params.action,
+      params.resourceType,
+      params.resourceId ?? null,
+      params.oldValue ? JSON.stringify(params.oldValue) : null,
+      params.newValue ? JSON.stringify(params.newValue) : null,
+      JSON.stringify(params.metadata ?? {}),
+      params.ipAddress ?? null,
+      params.userAgent ?? null,
+    ]
+  );
+}
+
+/**
+ * Get audit logs for a resource
+ */
+export async function getAuditLogs(params: {
+  resourceType?: string;
+  resourceId?: string;
+  actorId?: string;
+  action?: string;
+  limit?: number;
+}): Promise<Array<{
+  id: string;
+  actor_id: string | null;
+  actor_type: string;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  old_value: unknown;
+  new_value: unknown;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}>> {
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  if (params.resourceType) {
+    conditions.push(`resource_type = $${paramIndex++}`);
+    values.push(params.resourceType);
+  }
+  if (params.resourceId) {
+    conditions.push(`resource_id = $${paramIndex++}`);
+    values.push(params.resourceId);
+  }
+  if (params.actorId) {
+    conditions.push(`actor_id = $${paramIndex++}`);
+    values.push(params.actorId);
+  }
+  if (params.action) {
+    conditions.push(`action = $${paramIndex++}`);
+    values.push(params.action);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const limit = params.limit ?? 100;
+
+  const result = await query(
+    `SELECT * FROM audit_logs ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex}`,
+    [...values, limit]
+  );
+
+  return result.rows as any;
+}
+
+// ============================================
+// Helpers
+// ============================================
+
+function getISOWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+

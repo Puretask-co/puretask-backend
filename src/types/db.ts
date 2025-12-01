@@ -238,6 +238,50 @@ export interface BackupSnapshot {
   data: Record<string, unknown>;
 }
 
+/**
+ * Webhook failures table for retry queue
+ */
+export interface WebhookFailure {
+  id: string;
+  source: string;
+  event_id: string | null;
+  event_type: string;
+  payload: Record<string, unknown>;
+  error_message: string | null;
+  retry_count: number;
+  max_retries: number;
+  next_retry_at: string | null;
+  status: "pending" | "processing" | "succeeded" | "failed" | "dead";
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Cleaner availability table
+ */
+export interface CleanerAvailability {
+  id: string;
+  cleaner_id: string;
+  day_of_week: number; // 0=Sunday, 1=Monday, etc.
+  start_time: string;  // HH:MM format
+  end_time: string;    // HH:MM format
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Cleaner time off / blocked dates
+ */
+export interface CleanerTimeOff {
+  id: string;
+  cleaner_id: string;
+  start_date: string;
+  end_date: string;
+  reason: string | null;
+  created_at: string;
+}
+
 // -------------------------
 // UTILITY TYPES
 // -------------------------

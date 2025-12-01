@@ -3,6 +3,7 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
+import { isTierLocked, createTierLock, createAuditLog } from "./creditEconomyService";
 
 // ============================================
 // Types
@@ -124,20 +125,50 @@ export function getTierFromScore(score: number): string {
 
 /**
  * Update a single cleaner's reliability score
+ * 
+ * Features:
+ * - Tier lock protection: can't demote tier within 7 days of promotion
+ * - Records history for audit trail
+ * - Creates tier lock on promotion
  */
-export async function updateCleanerReliability(cleanerId: string): Promise<ReliabilityUpdate> {
-  // Get current score
-  const currentResult = await query<{ reliability_score: number }>(
-    `SELECT reliability_score FROM cleaner_profiles WHERE user_id = $1`,
+export async function updateCleanerReliability(
+  cleanerId: string,
+  reason: string = "job_completed"
+): Promise<ReliabilityUpdate> {
+  // Get current score and tier
+  const currentResult = await query<{ reliability_score: number; tier: string }>(
+    `SELECT reliability_score, tier FROM cleaner_profiles WHERE user_id = $1`,
     [cleanerId]
   );
 
   const previousScore = currentResult.rows[0]?.reliability_score ?? 100;
+  const previousTier = currentResult.rows[0]?.tier ?? "bronze";
 
   // Compute new stats and score
   const stats = await computeCleanerStats(cleanerId);
-  const newScore = computeReliabilityScoreFromStats(stats);
-  const newTier = getTierFromScore(newScore);
+  let newScore = computeReliabilityScoreFromStats(stats);
+  let newTier = getTierFromScore(newScore);
+
+  // Check tier lock - prevent demotion during lock period
+  const tierLocked = await isTierLocked(cleanerId);
+  const tierOrder = ["bronze", "silver", "gold", "platinum"];
+  const previousTierIndex = tierOrder.indexOf(previousTier);
+  const newTierIndex = tierOrder.indexOf(newTier);
+
+  if (tierLocked && newTierIndex < previousTierIndex) {
+    // Keep the locked tier, but update score
+    newTier = previousTier;
+    logger.info("tier_demotion_blocked_by_lock", {
+      cleanerId,
+      attemptedTier: getTierFromScore(newScore),
+      lockedTier: previousTier,
+    });
+  }
+
+  // Check for promotion - create tier lock
+  if (newTierIndex > previousTierIndex) {
+    await createTierLock(cleanerId, newTier, "promotion");
+  }
 
   // Update profile
   await query(
@@ -151,11 +182,30 @@ export async function updateCleanerReliability(cleanerId: string): Promise<Relia
     [cleanerId, newScore, newTier]
   );
 
+  // Record history
+  await query(
+    `
+      INSERT INTO reliability_history (cleaner_id, old_score, new_score, old_tier, new_tier, reason, metadata)
+      VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+    `,
+    [
+      cleanerId,
+      previousScore,
+      newScore,
+      previousTier,
+      newTier,
+      reason,
+      JSON.stringify({ stats, tierLocked }),
+    ]
+  );
+
   logger.info("reliability_updated", {
     cleanerId,
     previousScore,
     newScore,
-    tier: newTier,
+    previousTier,
+    newTier,
+    tierLocked,
     stats,
   });
 

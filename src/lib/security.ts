@@ -174,6 +174,218 @@ export const passwordResetRateLimiter = createRateLimiter({
 });
 
 // ============================================
+// Fine-Grained Endpoint Rate Limiters
+// ============================================
+
+/**
+ * Rate limit configuration per endpoint pattern
+ */
+export interface EndpointRateLimitConfig {
+  pattern: RegExp | string;
+  method?: string | string[];
+  windowMs: number;
+  max: number;
+  message?: string;
+}
+
+/**
+ * Default endpoint-specific rate limits
+ */
+export const endpointRateLimits: EndpointRateLimitConfig[] = [
+  // Auth endpoints - strict
+  { pattern: /^\/auth\/login$/, method: "POST", windowMs: 15 * 60 * 1000, max: 10, message: "Too many login attempts" },
+  { pattern: /^\/auth\/register$/, method: "POST", windowMs: 60 * 60 * 1000, max: 5, message: "Too many registration attempts" },
+  
+  // Payment endpoints - moderate
+  { pattern: /^\/payments\/credits$/, method: "POST", windowMs: 60 * 1000, max: 10, message: "Too many payment requests" },
+  { pattern: /^\/payments\/job\//, method: "POST", windowMs: 60 * 1000, max: 10, message: "Too many payment requests" },
+  { pattern: /^\/jobs\/.*\/pay$/, method: "POST", windowMs: 60 * 1000, max: 10, message: "Too many payment requests" },
+  
+  // Job creation - moderate
+  { pattern: /^\/jobs$/, method: "POST", windowMs: 60 * 1000, max: 20, message: "Too many job creation requests" },
+  
+  // Job transitions - moderate
+  { pattern: /^\/jobs\/.*\/transition$/, method: "POST", windowMs: 60 * 1000, max: 30, message: "Too many transition requests" },
+  
+  // Admin endpoints - relaxed (trusted users)
+  { pattern: /^\/admin\//, windowMs: 60 * 1000, max: 100, message: "Admin rate limit exceeded" },
+  
+  // Stripe webhooks - high throughput
+  { pattern: /^\/stripe\/webhook$/, method: "POST", windowMs: 60 * 1000, max: 200, message: "Webhook rate limit exceeded" },
+  
+  // n8n webhooks - moderate
+  { pattern: /^\/n8n\/events$/, method: "POST", windowMs: 60 * 1000, max: 50, message: "n8n webhook rate limit exceeded" },
+  
+  // Read endpoints - relaxed
+  { pattern: /^\/jobs$/, method: "GET", windowMs: 60 * 1000, max: 60, message: "Too many list requests" },
+  { pattern: /^\/payments\/balance$/, method: "GET", windowMs: 60 * 1000, max: 60, message: "Too many balance requests" },
+  { pattern: /^\/payments\/history$/, method: "GET", windowMs: 60 * 1000, max: 30, message: "Too many history requests" },
+];
+
+/**
+ * Endpoint-specific rate limiter middleware
+ * Applies different limits based on the endpoint pattern
+ */
+export function endpointRateLimiter(
+  customLimits?: EndpointRateLimitConfig[]
+) {
+  const limits = customLimits || endpointRateLimits;
+  
+  // Create a bucket for each pattern
+  const patternBuckets = new Map<string, Map<string, RateLimitBucket>>();
+  
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const path = req.path;
+    const method = req.method;
+    
+    // Find matching limit config
+    const config = limits.find((limit) => {
+      const patternMatch = typeof limit.pattern === "string"
+        ? path === limit.pattern
+        : limit.pattern.test(path);
+      
+      if (!patternMatch) return false;
+      
+      if (limit.method) {
+        const methods = Array.isArray(limit.method) ? limit.method : [limit.method];
+        return methods.includes(method);
+      }
+      
+      return true;
+    });
+    
+    // If no specific config, use general limiter
+    if (!config) {
+      return generalRateLimiter(req, res, next);
+    }
+    
+    // Create bucket key
+    const patternKey = config.pattern.toString();
+    const clientKey = getClientIp(req);
+    const bucketKey = `${patternKey}:${clientKey}`;
+    
+    // Get or create pattern bucket map
+    if (!patternBuckets.has(patternKey)) {
+      patternBuckets.set(patternKey, new Map());
+    }
+    const bucketMap = patternBuckets.get(patternKey)!;
+    
+    const now = Date.now();
+    let bucket = bucketMap.get(clientKey);
+    
+    if (!bucket) {
+      bucket = { count: 1, firstRequestAt: now };
+      bucketMap.set(clientKey, bucket);
+      
+      res.setHeader("X-RateLimit-Limit", config.max);
+      res.setHeader("X-RateLimit-Remaining", config.max - 1);
+      res.setHeader("X-RateLimit-Reset", Math.ceil((now + config.windowMs) / 1000));
+      
+      next();
+      return;
+    }
+    
+    const elapsed = now - bucket.firstRequestAt;
+    
+    if (elapsed > config.windowMs) {
+      bucket.count = 1;
+      bucket.firstRequestAt = now;
+      
+      res.setHeader("X-RateLimit-Limit", config.max);
+      res.setHeader("X-RateLimit-Remaining", config.max - 1);
+      res.setHeader("X-RateLimit-Reset", Math.ceil((now + config.windowMs) / 1000));
+      
+      next();
+      return;
+    }
+    
+    bucket.count += 1;
+    const remaining = Math.max(0, config.max - bucket.count);
+    const resetTime = Math.ceil((bucket.firstRequestAt + config.windowMs) / 1000);
+    
+    res.setHeader("X-RateLimit-Limit", config.max);
+    res.setHeader("X-RateLimit-Remaining", remaining);
+    res.setHeader("X-RateLimit-Reset", resetTime);
+    
+    if (bucket.count > config.max) {
+      logger.warn("endpoint_rate_limited", {
+        ip: clientKey,
+        path,
+        method,
+        pattern: patternKey,
+        count: bucket.count,
+        max: config.max,
+      });
+      
+      res.setHeader("Retry-After", Math.ceil((bucket.firstRequestAt + config.windowMs - now) / 1000));
+      res.status(429).json({
+        error: {
+          code: "RATE_LIMITED",
+          message: config.message || "Too many requests",
+          retryAfter: Math.ceil((bucket.firstRequestAt + config.windowMs - now) / 1000),
+        },
+      });
+      return;
+    }
+    
+    next();
+  };
+}
+
+/**
+ * User-based rate limiter (uses user ID instead of IP)
+ * Better for authenticated endpoints
+ */
+export function userRateLimiter(options: {
+  windowMs: number;
+  max: number;
+  message?: string;
+}) {
+  return createRateLimiter({
+    ...options,
+    keyGenerator: (req) => {
+      // Use user ID if available, fall back to IP
+      const userId = (req as any).user?.id;
+      if (userId) return `user:${userId}`;
+      return `ip:${getClientIp(req)}`;
+    },
+  });
+}
+
+/**
+ * Combined IP + User rate limiter
+ * Limits both per-IP and per-user
+ */
+export function combinedRateLimiter(options: {
+  ipWindowMs: number;
+  ipMax: number;
+  userWindowMs: number;
+  userMax: number;
+  message?: string;
+}) {
+  const ipLimiter = createRateLimiter({
+    windowMs: options.ipWindowMs,
+    max: options.ipMax,
+    message: options.message,
+  });
+  
+  const userLimiter = userRateLimiter({
+    windowMs: options.userWindowMs,
+    max: options.userMax,
+    message: options.message,
+  });
+  
+  return (req: Request, res: Response, next: NextFunction): void => {
+    // First check IP limit
+    ipLimiter(req, res, (err) => {
+      if (err || res.headersSent) return;
+      // Then check user limit
+      userLimiter(req, res, next);
+    });
+  };
+}
+
+// ============================================
 // Request Validation
 // ============================================
 
