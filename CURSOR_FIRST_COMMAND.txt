@@ -1,0 +1,18 @@
+Analyze the entire puretask-backend folder. Read DB/migrations/001_core_schema.sql first to understand the exact Neon schema.
+
+Then:
+1. List all files that exist
+2. Identify all schema mismatches (wrong column names, wrong table names, wrong status values)
+3. List all missing files from the spec
+4. List all incomplete implementations (TODOs, stubs, placeholders)
+5. Create a prioritized action plan to fix everything
+
+Output format:
+- File-by-file status
+- Schema mismatches found
+- Missing files needed
+- Incomplete code sections
+- Recommended fix order
+
+Be specific about what needs to change in each file.
+

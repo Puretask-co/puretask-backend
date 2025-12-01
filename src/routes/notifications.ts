@@ -1,0 +1,218 @@
+// src/routes/notifications.ts
+// Notification preferences API routes
+
+import { Router, Response } from "express";
+import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { validateBody } from "../lib/validation";
+import { z } from "zod";
+import { logger } from "../lib/logger";
+import {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+} from "../services/notifications";
+import { query } from "../db/client";
+
+const notificationsRouter = Router();
+
+// All routes require authentication
+notificationsRouter.use(authMiddleware);
+
+/**
+ * GET /notifications/preferences
+ * Get current user's notification preferences
+ */
+notificationsRouter.get(
+  "/preferences",
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const preferences = await getNotificationPreferences(userId);
+      res.json({ preferences });
+    } catch (error) {
+      logger.error("get_notification_preferences_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "GET_PREFERENCES_FAILED",
+          message: (error as Error).message,
+        },
+      });
+    }
+  }
+);
+
+/**
+ * PUT /notifications/preferences
+ * Update notification preferences
+ */
+const updatePreferencesSchema = z.object({
+  email: z.boolean().optional(),
+  sms: z.boolean().optional(),
+  push: z.boolean().optional(),
+  jobUpdates: z.boolean().optional(),
+  marketing: z.boolean().optional(),
+  payoutAlerts: z.boolean().optional(),
+});
+
+notificationsRouter.put(
+  "/preferences",
+  validateBody(updatePreferencesSchema),
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const preferences = await updateNotificationPreferences(userId, req.body);
+
+      logger.info("notification_preferences_updated", {
+        userId,
+        preferences: req.body,
+      });
+
+      res.json({ preferences });
+    } catch (error) {
+      logger.error("update_notification_preferences_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "UPDATE_PREFERENCES_FAILED",
+          message: (error as Error).message,
+        },
+      });
+    }
+  }
+);
+
+/**
+ * POST /notifications/push-token
+ * Register a push notification token
+ */
+const registerPushTokenSchema = z.object({
+  token: z.string().min(1),
+  platform: z.enum(["ios", "android", "web"]).optional(),
+});
+
+notificationsRouter.post(
+  "/push-token",
+  validateBody(registerPushTokenSchema),
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const { token, platform } = req.body;
+
+      // Update user's push token
+      await query(
+        `
+          UPDATE users
+          SET push_token = $1,
+              updated_at = NOW()
+          WHERE id = $2
+        `,
+        [token, userId]
+      );
+
+      logger.info("push_token_registered", {
+        userId,
+        platform,
+        tokenPrefix: token.substring(0, 10) + "...",
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("register_push_token_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "REGISTER_PUSH_TOKEN_FAILED",
+          message: (error as Error).message,
+        },
+      });
+    }
+  }
+);
+
+/**
+ * DELETE /notifications/push-token
+ * Remove push notification token (logout)
+ */
+notificationsRouter.delete(
+  "/push-token",
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const userId = req.user!.id;
+
+      await query(
+        `
+          UPDATE users
+          SET push_token = NULL,
+              updated_at = NOW()
+          WHERE id = $1
+        `,
+        [userId]
+      );
+
+      logger.info("push_token_removed", { userId });
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("remove_push_token_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "REMOVE_PUSH_TOKEN_FAILED",
+          message: (error as Error).message,
+        },
+      });
+    }
+  }
+);
+
+/**
+ * GET /notifications/history
+ * Get notification history for current user
+ */
+notificationsRouter.get(
+  "/history",
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const { limit = "50", offset = "0" } = req.query;
+
+      const result = await query(
+        `
+          SELECT id, type, channel, success, created_at
+          FROM notification_log
+          WHERE user_id = $1
+          ORDER BY created_at DESC
+          LIMIT $2 OFFSET $3
+        `,
+        [userId, parseInt(limit as string, 10), parseInt(offset as string, 10)]
+      );
+
+      res.json({
+        notifications: result.rows,
+        count: result.rows.length,
+      });
+    } catch (error) {
+      logger.error("get_notification_history_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "GET_HISTORY_FAILED",
+          message: (error as Error).message,
+        },
+      });
+    }
+  }
+);
+
+export default notificationsRouter;
+
