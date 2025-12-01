@@ -1,0 +1,202 @@
+﻿// src/index.ts
+// Main application entry point
+
+import express from "express";
+import helmet from "helmet";
+import cors from "cors";
+import { env } from "./config/env";
+import { logger } from "./lib/logger";
+import { authMiddlewareAttachUser } from "./lib/auth";
+import {
+  generalRateLimiter,
+  additionalSecurityHeaders,
+  sanitizeBody,
+} from "./lib/security";
+
+// Import routes
+import healthRouter from "./routes/health";
+import authRouter from "./routes/auth";
+import jobsRouter from "./routes/jobs";
+import adminRouter from "./routes/admin";
+import stripeRouter from "./routes/stripe";
+import eventsRouter from "./routes/events";
+import paymentsRouter from "./routes/payments";
+
+// Create Express app
+const app = express();
+
+// ============================================
+// Trust Proxy (for rate limiting behind LB)
+// ============================================
+app.set("trust proxy", 1);
+
+// ============================================
+// Security Middleware
+// ============================================
+
+// Helmet for secure headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for API
+  crossOriginEmbedderPolicy: false,
+}));
+
+// Additional security headers
+app.use(additionalSecurityHeaders);
+
+// CORS configuration
+app.use(
+  cors({
+    origin: [
+      "https://app.puretask.com",
+      "https://admin.puretask.com",
+      "http://localhost:3000",
+      "http://localhost:3001",
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-n8n-signature"],
+    credentials: true,
+    maxAge: 86400, // 24 hours
+  })
+);
+
+// ============================================
+// Body Parsing (with special handling for Stripe)
+// ============================================
+app.use((req, res, next) => {
+  if (req.path === "/stripe/webhook") {
+    // Stripe needs raw body for signature verification
+    express.raw({ type: "application/json", limit: "500kb" })(req, res, next);
+  } else {
+    // Standard JSON parsing with size limit
+    express.json({ limit: "1mb" })(req, res, next);
+  }
+});
+
+// Sanitize request body
+app.use(sanitizeBody);
+
+// ============================================
+// Rate Limiting
+// ============================================
+app.use(generalRateLimiter);
+
+// ============================================
+// Authentication
+// ============================================
+// Attach user to request if valid JWT present (doesn't enforce auth)
+app.use(authMiddlewareAttachUser);
+
+// ============================================
+// Request Logging
+// ============================================
+app.use((req, res, next) => {
+  const start = Date.now();
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    logger.info("request", {
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      duration,
+      userId: req.user?.id ?? null,
+      ip: req.ip,
+    });
+  });
+
+  next();
+});
+
+// ============================================
+// Routes
+// ============================================
+app.use("/health", healthRouter);
+app.use("/auth", authRouter);
+app.use("/jobs", jobsRouter);
+app.use("/admin", adminRouter);
+app.use("/stripe", stripeRouter);
+app.use("/payments", paymentsRouter);
+app.use(eventsRouter); // Mounts /events and /n8n/events
+
+// ============================================
+// 404 Handler
+// ============================================
+app.use((req, res) => {
+  res.status(404).json({
+    error: {
+      code: "NOT_FOUND",
+      message: `Route ${req.method} ${req.path} not found`,
+    },
+  });
+});
+
+// ============================================
+// Global Error Handler
+// ============================================
+app.use(
+  (
+    err: Error & { statusCode?: number; code?: string },
+    req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    const statusCode = err.statusCode || 500;
+    const code = err.code || "INTERNAL_ERROR";
+
+    logger.error("unhandled_error", {
+      message: err.message,
+      stack: err.stack,
+      path: req.path,
+      method: req.method,
+      userId: req.user?.id,
+    });
+
+    // Don't leak error details in production
+    const message =
+      env.NODE_ENV === "production" && statusCode === 500
+        ? "Internal server error"
+        : err.message;
+
+    res.status(statusCode).json({
+      error: { code, message },
+    });
+  }
+);
+
+// ============================================
+// Server Startup
+// ============================================
+const PORT = env.PORT;
+
+const server = app.listen(PORT, () => {
+  logger.info("server_started", {
+    port: PORT,
+    env: env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+  });
+  console.log(`🚀 PureTask Backend running on port ${PORT}`);
+});
+
+// ============================================
+// Graceful Shutdown
+// ============================================
+async function gracefulShutdown(signal: string) {
+  logger.info("shutdown_initiated", { signal });
+
+  server.close(() => {
+    logger.info("server_closed");
+    process.exit(0);
+  });
+
+  // Force close after 30 seconds
+  setTimeout(() => {
+    logger.error("forced_shutdown", { reason: "timeout" });
+    process.exit(1);
+  }, 30000);
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+// Export for testing
+export default app;
