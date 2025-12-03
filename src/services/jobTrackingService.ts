@@ -5,6 +5,7 @@ import { query } from "../db/client";
 import { logger } from "../lib/logger";
 import { publishEvent } from "../lib/events";
 import { updateCleanerReliability } from "./reliabilityService";
+import { env } from "../config/env";
 
 // ============================================
 // Types
@@ -236,6 +237,7 @@ export async function startEnRoute(
 
 /**
  * Cleaner arrives at location
+ * Per policy: GPS check-in/out within 250 meters of job location
  */
 export async function markArrived(
   jobId: string,
@@ -248,18 +250,28 @@ export async function markArrived(
     throw Object.assign(new Error("Must be en route first"), { statusCode: 400 });
   }
 
-  // Verify GPS proximity (within 0.5 miles)
+  // Verify GPS proximity (per policy: within 250 meters)
   if (job.latitude && job.longitude) {
-    const distance = calculateDistance(
+    const distanceMeters = calculateDistanceMeters(
       location.latitude,
       location.longitude,
       job.latitude,
       job.longitude
     );
     
-    if (distance > 0.5) {
-      logger.warn("job_arrival_distance_warning", { jobId, cleanerId, distance });
-      // Don't block, but log for reliability tracking
+    const maxRadius = env.GPS_CHECKIN_RADIUS_METERS;
+    if (distanceMeters > maxRadius) {
+      logger.warn("job_arrival_distance_warning", { 
+        jobId, 
+        cleanerId, 
+        distanceMeters,
+        maxRadius,
+        exceeded: true,
+      });
+      throw Object.assign(
+        new Error(`GPS check-in failed: You must be within ${maxRadius} meters of the job location. Current distance: ${Math.round(distanceMeters)} meters`),
+        { statusCode: 400, code: "GPS_TOO_FAR" }
+      );
     }
   }
 
@@ -268,7 +280,7 @@ export async function markArrived(
     actorType: "cleaner",
     actorId: cleanerId,
     eventName: "job.cleaner_arrived",
-    payload: { location },
+    payload: { location, distanceMeters: job.latitude && job.longitude ? calculateDistanceMeters(location.latitude, location.longitude, job.latitude, job.longitude) : null },
   });
 
   logger.info("job_cleaner_arrived", { jobId, cleanerId });
@@ -276,6 +288,7 @@ export async function markArrived(
 
 /**
  * Cleaner checks in and starts job
+ * Per policy: GPS check-in within 250 meters of job location
  */
 export async function checkIn(
   jobId: string,
@@ -287,6 +300,30 @@ export async function checkIn(
 
   if (!["on_my_way", "accepted"].includes(job.status)) {
     throw Object.assign(new Error("Invalid status for check-in"), { statusCode: 400 });
+  }
+
+  // Verify GPS proximity (per policy: within 250 meters)
+  if (job.latitude && job.longitude) {
+    const distanceMeters = calculateDistanceMeters(
+      location.latitude,
+      location.longitude,
+      job.latitude,
+      job.longitude
+    );
+    
+    const maxRadius = env.GPS_CHECKIN_RADIUS_METERS;
+    if (distanceMeters > maxRadius) {
+      logger.warn("job_checkin_distance_warning", { 
+        jobId, 
+        cleanerId, 
+        distanceMeters,
+        maxRadius,
+      });
+      throw Object.assign(
+        new Error(`GPS check-in failed: You must be within ${maxRadius} meters of the job location. Current distance: ${Math.round(distanceMeters)} meters`),
+        { statusCode: 400, code: "GPS_TOO_FAR" }
+      );
+    }
   }
 
   // Require at least 1 before photo
@@ -321,6 +358,7 @@ export async function checkIn(
 
 /**
  * Cleaner checks out and completes job
+ * Per Photo Proof policy: Minimum 3 photos total (before + after combined)
  */
 export async function checkOut(
   jobId: string,
@@ -339,6 +377,23 @@ export async function checkOut(
     throw Object.assign(new Error("At least one after photo required"), { statusCode: 400 });
   }
 
+  // Get count of existing before photos
+  const beforeResult = await query<{ count: string }>(
+    `SELECT COUNT(*)::text as count FROM job_photos WHERE job_id = $1 AND type = 'before'`,
+    [jobId]
+  );
+  const beforeCount = Number(beforeResult.rows[0]?.count || 0);
+  const totalPhotos = beforeCount + afterPhotos.length;
+
+  // Per Photo Proof policy: Minimum 3 photos total
+  const minPhotos = env.MIN_PHOTOS_TOTAL;
+  if (totalPhotos < minPhotos) {
+    throw Object.assign(
+      new Error(`Minimum ${minPhotos} photos required (before + after combined). You have ${beforeCount} before photos and ${afterPhotos.length} after photos. Please add ${minPhotos - totalPhotos} more.`),
+      { statusCode: 400, code: "INSUFFICIENT_PHOTOS" }
+    );
+  }
+
   // Save photos
   for (const url of afterPhotos) {
     await query(
@@ -346,6 +401,17 @@ export async function checkOut(
       [jobId, cleanerId, url]
     );
   }
+
+  // Track photo compliance for reliability bonus
+  await query(
+    `
+      INSERT INTO photo_compliance (job_id, cleaner_id, total_photos, before_photos, after_photos, meets_minimum)
+      VALUES ($1, $2, $3, $4, $5, true)
+      ON CONFLICT (job_id) DO UPDATE
+      SET total_photos = $3, before_photos = $4, after_photos = $5, meets_minimum = true
+    `,
+    [jobId, cleanerId, totalPhotos, beforeCount, afterPhotos.length]
+  );
 
   // Update job status
   await query(
@@ -365,10 +431,16 @@ export async function checkOut(
     actorType: "cleaner",
     actorId: cleanerId,
     eventName: "job.checked_out",
-    payload: { photoCount: afterPhotos.length, notes },
+    payload: { totalPhotos, beforePhotos: beforeCount, afterPhotos: afterPhotos.length, notes },
   });
 
-  logger.info("job_checked_out", { jobId, cleanerId, photoCount: afterPhotos.length });
+  logger.info("job_checked_out", { 
+    jobId, 
+    cleanerId, 
+    totalPhotos,
+    beforePhotos: beforeCount,
+    afterPhotos: afterPhotos.length,
+  });
 }
 
 /**
@@ -536,8 +608,25 @@ async function verifyClientJob(jobId: string, clientId: string) {
   return job;
 }
 
+/**
+ * Calculate distance in miles (for backwards compatibility)
+ */
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 3959; // Earth radius in miles
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+/**
+ * Calculate distance in meters (for GPS check-in per policy: 250m radius)
+ */
+function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000; // Earth radius in meters
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +

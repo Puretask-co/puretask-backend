@@ -1,13 +1,16 @@
 // src/services/disputesService.ts
 // Disputes service matching 001_init.sql schema
+// Per Damage & Claims Policy: Disputes must be filed within 48 hours
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
 import { publishEvent } from "../lib/events";
+import { env } from "../config/env";
 import { Dispute, DisputeStatus, Job } from "../types/db";
 
 /**
  * Create a dispute for a job
+ * Per Damage & Claims Policy: Disputes must be filed within 48 hours of job completion
  */
 export async function createDispute(options: {
   jobId: string;
@@ -36,19 +39,39 @@ export async function createDispute(options: {
     throw new Error("Job is not in a state that can be disputed");
   }
 
-  // Create dispute
+  // Per policy: Check 48-hour dispute window
+  const disputeWindowHours = env.DISPUTE_WINDOW_HOURS;
+  let withinWindow = true;
+  
+  if (job.actual_end_at) {
+    const completedAt = new Date(job.actual_end_at);
+    const now = new Date();
+    const hoursSinceCompletion = (now.getTime() - completedAt.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursSinceCompletion > disputeWindowHours) {
+      withinWindow = false;
+      throw Object.assign(
+        new Error(`Dispute window has expired. Disputes must be filed within ${disputeWindowHours} hours of job completion. This job was completed ${Math.round(hoursSinceCompletion)} hours ago.`),
+        { statusCode: 400, code: "DISPUTE_WINDOW_EXPIRED" }
+      );
+    }
+  }
+
+  // Create dispute with window tracking
   const result = await query<Dispute>(
     `
       INSERT INTO disputes (
         job_id,
         client_id,
         client_notes,
-        status
+        status,
+        job_completed_at,
+        within_window
       )
-      VALUES ($1, $2, $3, 'open')
+      VALUES ($1, $2, $3, 'open', $4, $5)
       RETURNING *
     `,
-    [jobId, clientId, clientNotes]
+    [jobId, clientId, clientNotes, job.actual_end_at, withinWindow]
   );
 
   const dispute = result.rows[0];
@@ -68,6 +91,7 @@ export async function createDispute(options: {
     payload: {
       disputeId: dispute.id,
       clientNotes,
+      withinWindow,
     },
   });
 
@@ -75,6 +99,7 @@ export async function createDispute(options: {
     disputeId: dispute.id,
     jobId,
     clientId,
+    withinWindow,
   });
 
   return dispute;

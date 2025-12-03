@@ -5,15 +5,19 @@ import { runAutoCancelWorker } from "./autoCancelJobs";
 import { runPayoutsWorker } from "./processPayouts";
 import { runKPISnapshotWorker } from "./kpiSnapshot";
 import { runRetryFailedEventsWorker } from "./retryFailedEvents";
+import { runPhotoRetentionCleanup } from "./photoRetentionCleanup";
+import { runNightlyScoreRecompute } from "./nightlyScoreRecompute";
 import { logger } from "../lib/logger";
 
-type WorkerName = "auto-cancel" | "payouts" | "kpi-snapshot" | "retry-events" | "all";
+type WorkerName = "auto-cancel" | "payouts" | "kpi-snapshot" | "retry-events" | "photo-cleanup" | "nightly-scores" | "all";
 
 const workers: Record<string, () => Promise<any>> = {
   "auto-cancel": runAutoCancelWorker,
   "payouts": runPayoutsWorker,
   "kpi-snapshot": runKPISnapshotWorker,
   "retry-events": runRetryFailedEventsWorker,
+  "photo-cleanup": runPhotoRetentionCleanup, // Per Photo Proof policy: 90-day retention
+  "nightly-scores": runNightlyScoreRecompute, // Client risk + Cleaner reliability + Flexibility scores
 };
 
 /**

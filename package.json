@@ -10,13 +10,11 @@
     "start": "node dist/index.js",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit",
-
     "test": "vitest run",
     "test:watch": "vitest",
     "test:smoke": "vitest run src/tests/smoke",
     "test:integration": "vitest run src/tests/integration",
     "test:coverage": "vitest run --coverage",
-
     "worker:auto-cancel": "ts-node src/workers/autoCancelJobs.ts",
     "worker:auto-expire": "ts-node src/workers/autoExpireAwaitingApproval.ts",
     "worker:payout-weekly": "ts-node src/workers/payoutWeekly.ts",
@@ -34,18 +32,18 @@
     "worker:queue-processor": "ts-node src/workers/queueProcessor.ts",
     "worker:cleaning-scores": "ts-node src/workers/cleaningScores.ts",
     "worker:goal-checker": "ts-node src/workers/goalChecker.ts",
-
     "migrate:run": "echo 'Run migrations against your Neon DB using psql or a migration tool'",
     "db:seed": "ts-node src/db/seed.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.0",
     "@sendgrid/mail": "^8.1.0",
+    "@types/helmet": "^0.0.48",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
     "express": "^4.19.0",
-    "helmet": "^7.1.0",
+    "helmet": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.0",
     "stripe": "^16.0.0",

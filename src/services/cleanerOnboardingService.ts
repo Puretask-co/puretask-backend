@@ -9,6 +9,19 @@ import type { User } from "../types/db";
 
 const APP_URL = env.APP_URL;
 
+// Extended type for cleaner users joined with cleaner_profiles
+interface CleanerUserRow extends User {
+  stripe_connect_id: string | null;
+  tier: string | null;
+  base_rate_cph: number | null;
+  deep_addon_cph: number | null;
+  moveout_addon_cph: number | null;
+  reliability_score: number | null;
+  payout_percentage: number | null;
+  avg_rating: number | null;
+  jobs_completed: number;
+}
+
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20",
 });
@@ -37,9 +50,14 @@ export interface CleanerProfile {
 export async function createStripeConnectAccount(
   cleanerId: string
 ): Promise<{ accountId: string; onboardingUrl: string }> {
-  // Get cleaner info
-  const userResult = await query<User>(
-    `SELECT * FROM users WHERE id = $1 AND role = 'cleaner'`,
+  // Get cleaner info with profile
+  const userResult = await query<CleanerUserRow>(
+    `SELECT u.*, cp.stripe_connect_id, cp.tier, cp.base_rate_cph, 
+            cp.deep_addon_cph, cp.moveout_addon_cph, cp.reliability_score,
+            cp.payout_percentage, cp.avg_rating, cp.jobs_completed
+     FROM users u
+     LEFT JOIN cleaner_profiles cp ON cp.user_id = u.id
+     WHERE u.id = $1 AND u.role = 'cleaner'`,
     [cleanerId]
   );
 
@@ -120,8 +138,8 @@ export async function getStripeConnectStatus(cleanerId: string): Promise<{
   detailsSubmitted: boolean;
   onboardingComplete: boolean;
 }> {
-  const userResult = await query<User>(
-    `SELECT stripe_connect_id FROM users WHERE id = $1`,
+  const userResult = await query<{ stripe_connect_id: string | null }>(
+    `SELECT stripe_connect_id FROM cleaner_profiles WHERE user_id = $1`,
     [cleanerId]
   );
 
@@ -176,8 +194,8 @@ export async function getStripeConnectStatus(cleanerId: string): Promise<{
 export async function getStripeDashboardLink(
   cleanerId: string
 ): Promise<string> {
-  const userResult = await query<User>(
-    `SELECT stripe_connect_id FROM users WHERE id = $1`,
+  const userResult = await query<{ stripe_connect_id: string | null }>(
+    `SELECT stripe_connect_id FROM cleaner_profiles WHERE user_id = $1`,
     [cleanerId]
   );
 
@@ -204,7 +222,7 @@ export async function updateCleanerProfile(
     bio?: string;
     serviceAreas?: string[];
   }
-): Promise<User> {
+): Promise<CleanerUserRow> {
   const fields: string[] = ["updated_at = NOW()"];
   const values: any[] = [cleanerId];
   let paramIndex = 2;
@@ -224,12 +242,12 @@ export async function updateCleanerProfile(
     values.push(updates.moveoutAddonCph);
   }
 
-  const result = await query<User>(
+  const result = await query<CleanerUserRow>(
     `
-      UPDATE users
+      UPDATE cleaner_profiles
       SET ${fields.join(", ")}
-      WHERE id = $1 AND role = 'cleaner'
-      RETURNING *
+      WHERE user_id = $1
+      RETURNING *, user_id as id
     `,
     values
   );
@@ -288,8 +306,13 @@ export async function getCleanerAvailability(cleanerId: string): Promise<any> {
 export async function getCleanerProfile(
   cleanerId: string
 ): Promise<CleanerProfile | null> {
-  const result = await query<User>(
-    `SELECT * FROM users WHERE id = $1 AND role = 'cleaner'`,
+  const result = await query<CleanerUserRow>(
+    `SELECT u.*, cp.tier, cp.base_rate_cph, cp.deep_addon_cph, cp.moveout_addon_cph,
+            cp.reliability_score, cp.payout_percentage, cp.stripe_connect_id,
+            cp.avg_rating, COALESCE(cp.jobs_completed, 0) as jobs_completed
+     FROM users u
+     LEFT JOIN cleaner_profiles cp ON cp.user_id = u.id
+     WHERE u.id = $1 AND u.role = 'cleaner'`,
     [cleanerId]
   );
 
@@ -313,7 +336,7 @@ export async function getCleanerProfile(
     stripeConnectId: user.stripe_connect_id,
     stripeOnboardingComplete: stripeStatus.onboardingComplete,
     avgRating: user.avg_rating,
-    jobsCompleted: user.jobs_completed,
+    jobsCompleted: user.jobs_completed ?? 0,
     availabilityJson: availability,
     bio: null, // Add to schema if needed
     serviceAreas: [], // Add to schema if needed

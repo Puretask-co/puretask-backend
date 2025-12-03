@@ -3,7 +3,7 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import { isTierLocked, createTierLock, createAuditLog } from "./creditEconomyService";
+import { isTierLocked, createTierLock, createAuditLog, CREDIT_ECONOMY_CONFIG } from "./creditEconomyService";
 
 // ============================================
 // Types
@@ -69,6 +69,46 @@ export async function computeCleanerStats(cleanerId: string): Promise<CleanerSta
 }
 
 /**
+ * Get photo compliance stats for a cleaner
+ * Per Photo Proof policy: Photo compliance boosts reliability by +10 points
+ */
+export async function getPhotoComplianceStats(cleanerId: string): Promise<{
+  totalJobs: number;
+  compliantJobs: number;
+  complianceRate: number;
+  bonusEligible: boolean;
+}> {
+  const result = await query<{
+    total: string;
+    compliant: string;
+  }>(
+    `
+      SELECT 
+        COUNT(DISTINCT j.id)::text as total,
+        COUNT(DISTINCT pc.job_id)::text as compliant
+      FROM jobs j
+      LEFT JOIN photo_compliance pc ON pc.job_id = j.id AND pc.meets_minimum = true
+      WHERE j.cleaner_id = $1
+        AND j.status = 'completed'
+        AND j.created_at >= NOW() - INTERVAL '90 days'
+    `,
+    [cleanerId]
+  );
+
+  const total = Number(result.rows[0]?.total || 0);
+  const compliant = Number(result.rows[0]?.compliant || 0);
+  const complianceRate = total > 0 ? compliant / total : 0;
+  
+  // Eligible for bonus if compliance rate >= 90%
+  return {
+    totalJobs: total,
+    compliantJobs: compliant,
+    complianceRate,
+    bonusEligible: complianceRate >= 0.9,
+  };
+}
+
+/**
  * Compute reliability score from stats
  * 
  * Algorithm:
@@ -76,9 +116,14 @@ export async function computeCleanerStats(cleanerId: string): Promise<CleanerSta
  * - Penalize cancellations: up to -40 points
  * - Penalize disputes: up to -30 points
  * - Adjust for rating: -10 to +10 points based on average rating
+ * - Completion rate bonus: up to +10 points
+ * - Photo compliance bonus: +10 points (per Photo Proof policy)
  * - Clamp final score between 0 and 100
  */
-export function computeReliabilityScoreFromStats(stats: CleanerStats): number {
+export function computeReliabilityScoreFromStats(
+  stats: CleanerStats, 
+  photoComplianceBonus: boolean = false
+): number {
   const totalJobs = stats.completed_jobs + stats.cancelled_jobs + stats.disputed_jobs;
 
   // New cleaners start at 100
@@ -105,6 +150,11 @@ export function computeReliabilityScoreFromStats(stats: CleanerStats): number {
   const completionRate = stats.completed_jobs / Math.max(1, totalJobs);
   score += Math.round(completionRate * 10);
 
+  // Photo compliance bonus (per Photo Proof policy: +10 points)
+  if (photoComplianceBonus) {
+    score += CREDIT_ECONOMY_CONFIG.PHOTO_COMPLIANCE_BONUS;
+  }
+
   // Clamp between 0 and 100
   return Math.max(0, Math.min(100, score));
 }
@@ -130,6 +180,7 @@ export function getTierFromScore(score: number): string {
  * - Tier lock protection: can't demote tier within 7 days of promotion
  * - Records history for audit trail
  * - Creates tier lock on promotion
+ * - Photo compliance bonus (+10 points per Photo Proof policy)
  */
 export async function updateCleanerReliability(
   cleanerId: string,
@@ -146,7 +197,12 @@ export async function updateCleanerReliability(
 
   // Compute new stats and score
   const stats = await computeCleanerStats(cleanerId);
-  let newScore = computeReliabilityScoreFromStats(stats);
+  
+  // Check photo compliance for bonus (per Photo Proof policy: +10 points)
+  const photoStats = await getPhotoComplianceStats(cleanerId);
+  const photoBonus = photoStats.bonusEligible;
+  
+  let newScore = computeReliabilityScoreFromStats(stats, photoBonus);
   let newTier = getTierFromScore(newScore);
 
   // Check tier lock - prevent demotion during lock period
@@ -207,6 +263,8 @@ export async function updateCleanerReliability(
     newTier,
     tierLocked,
     stats,
+    photoComplianceBonus: photoBonus,
+    photoComplianceRate: photoStats.complianceRate,
   });
 
   return {
