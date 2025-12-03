@@ -3,6 +3,7 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
+import { env } from "../config/env";
 
 // ============================================
 // Configuration
@@ -20,17 +21,29 @@ export const CREDIT_ECONOMY_CONFIG = {
   // Tier lock duration (days)
   TIER_LOCK_DAYS: 7,              // Can't lose tier for 7 days after promotion
 
-  // Cancellation grace period
-  MONTHLY_GRACE_CANCELLATIONS: 2, // First 2 cancellations = reduced penalty
+  // Cancellation policy (per Terms of Service)
+  // Grace cancellations: 2 free cancellations per client (LIFETIME, not monthly)
+  LIFETIME_GRACE_CANCELLATIONS: 2,
+  
+  // Cancellation fee percentages based on notice given:
+  // - >48 hours: 0% fee (free cancellation)
+  // - 24-48 hours: 50% fee
+  // - <24 hours: 100% fee
+  CANCEL_FREE_HOURS: 48,          // Free cancellation if >48h before
+  CANCEL_PARTIAL_HOURS: 24,       // 50% fee if 24-48h before
+  CANCEL_FEE_PARTIAL_PERCENT: 50, // 50% fee for 24-48h notice
+  CANCEL_FEE_LATE_PERCENT: 100,   // 100% fee for <24h notice
 
   // Anti-fraud thresholds
   FRAUD_RAPID_BONUS_THRESHOLD: 5, // Alert if >5 bonuses in 1 hour
   FRAUD_LARGE_ADJUSTMENT_THRESHOLD: 500, // Alert if single adjustment >500 credits
 
-  // Penalty rates (credits)
-  LATE_CANCEL_PENALTY_CLEANER: 10,    // Cleaner cancels <24h before
-  LATE_CANCEL_PENALTY_CLIENT: 5,       // Client cancels <24h before
-  NO_SHOW_PENALTY_CLEANER: 25,         // Cleaner no-show
+  // Cleaner penalties (reliability score impact)
+  NO_SHOW_PENALTY_CLEANER: 25,    // Cleaner no-show reliability penalty
+  LATE_CANCEL_PENALTY_CLEANER: 10,// Cleaner late cancellation reliability penalty
+
+  // Photo compliance bonus (per Photo Proof policy)
+  PHOTO_COMPLIANCE_BONUS: 10,     // +10 reliability points for photo compliance
 };
 
 // ============================================
@@ -441,7 +454,194 @@ export async function resolveFraudAlert(
 // ============================================
 
 /**
- * Record a job cancellation
+ * Calculate cancellation fee based on notice given (per Cancellation Policy)
+ * - >48 hours: 0% fee (free cancellation)
+ * - 24-48 hours: 50% fee
+ * - <24 hours: 100% fee
+ */
+export function calculateCancellationFeePercent(hoursBefore: number): number {
+  if (hoursBefore > CREDIT_ECONOMY_CONFIG.CANCEL_FREE_HOURS) {
+    return 0; // Free cancellation
+  }
+  if (hoursBefore > CREDIT_ECONOMY_CONFIG.CANCEL_PARTIAL_HOURS) {
+    return CREDIT_ECONOMY_CONFIG.CANCEL_FEE_PARTIAL_PERCENT; // 50% fee
+  }
+  return CREDIT_ECONOMY_CONFIG.CANCEL_FEE_LATE_PERCENT; // 100% fee
+}
+
+/**
+ * Record a client job cancellation (per Cancellation Policy)
+ * 
+ * Fee structure:
+ * - >48h before: 0% fee (free cancellation)
+ * - 24-48h before: 50% fee
+ * - <24h before: 100% fee
+ * 
+ * Grace cancellations:
+ * - Each client gets 2 FREE grace cancellations (LIFETIME, not monthly)
+ * - Grace cancellations waive the 50% or 100% fee
+ * - Not applicable to no-shows
+ */
+export async function recordClientCancellation(params: {
+  jobId: string;
+  clientId: string;
+  scheduledStart: Date;
+  jobCreditAmount: number;
+  useGraceCancellation?: boolean;
+}): Promise<{
+  feePercent: number;
+  feeCredits: number;
+  refundCredits: number;
+  usedGraceCancellation: boolean;
+  graceCancellationsRemaining: number;
+}> {
+  const { jobId, clientId, scheduledStart, jobCreditAmount, useGraceCancellation = false } = params;
+
+  const now = new Date();
+  const hoursBefore = (scheduledStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+  
+  // Calculate base fee percentage
+  const baseFeePercent = calculateCancellationFeePercent(hoursBefore);
+  
+  // Check grace cancellations remaining (LIFETIME total)
+  const graceRemaining = await getGraceCancellationsRemaining(clientId);
+  
+  // Determine if grace cancellation can/should be used
+  let usedGrace = false;
+  let feePercent = baseFeePercent;
+  
+  if (baseFeePercent > 0 && useGraceCancellation && graceRemaining > 0) {
+    // Use grace cancellation to waive fee
+    usedGrace = true;
+    feePercent = 0;
+  }
+  
+  // Calculate actual credits
+  const feeCredits = Math.round(jobCreditAmount * (feePercent / 100));
+  const refundCredits = jobCreditAmount - feeCredits;
+
+  // Record cancellation
+  await query(
+    `
+      INSERT INTO cancellation_records (
+        job_id, cancelled_by, cancelled_by_role, scheduled_start,
+        hours_before, penalty_applied, penalty_credits, is_grace_period,
+        fee_percent, refund_credits
+      )
+      VALUES ($1, $2, 'client', $3, $4, $5, $6, $7, $8, $9)
+    `,
+    [
+      jobId,
+      clientId,
+      scheduledStart.toISOString(),
+      hoursBefore,
+      feeCredits > 0,
+      feeCredits,
+      usedGrace,
+      feePercent,
+      refundCredits,
+    ]
+  );
+
+  // If grace cancellation was used, record it
+  if (usedGrace) {
+    await recordGraceCancellationUsed(clientId, jobId);
+  }
+
+  logger.info("client_cancellation_recorded", {
+    jobId,
+    clientId,
+    hoursBefore,
+    baseFeePercent,
+    feePercent,
+    feeCredits,
+    refundCredits,
+    usedGraceCancellation: usedGrace,
+  });
+
+  return {
+    feePercent,
+    feeCredits,
+    refundCredits,
+    usedGraceCancellation: usedGrace,
+    graceCancellationsRemaining: usedGrace ? graceRemaining - 1 : graceRemaining,
+  };
+}
+
+/**
+ * Record a cleaner job cancellation
+ * - No charge to client (full refund)
+ * - Affects cleaner's reliability score
+ */
+export async function recordCleanerCancellation(params: {
+  jobId: string;
+  cleanerId: string;
+  scheduledStart: Date;
+}): Promise<{
+  reliabilityPenalty: number;
+}> {
+  const { jobId, cleanerId, scheduledStart } = params;
+
+  const now = new Date();
+  const hoursBefore = (scheduledStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+  
+  // Late cancellations affect reliability more
+  const reliabilityPenalty = hoursBefore < 24 
+    ? CREDIT_ECONOMY_CONFIG.LATE_CANCEL_PENALTY_CLEANER 
+    : 5;
+
+  // Record cancellation
+  await query(
+    `
+      INSERT INTO cancellation_records (
+        job_id, cancelled_by, cancelled_by_role, scheduled_start,
+        hours_before, penalty_applied, penalty_credits, is_grace_period
+      )
+      VALUES ($1, $2, 'cleaner', $3, $4, false, 0, false)
+    `,
+    [jobId, cleanerId, scheduledStart.toISOString(), hoursBefore]
+  );
+
+  logger.info("cleaner_cancellation_recorded", {
+    jobId,
+    cleanerId,
+    hoursBefore,
+    reliabilityPenalty,
+  });
+
+  return { reliabilityPenalty };
+}
+
+/**
+ * Get client's remaining grace cancellations (LIFETIME total of 2)
+ */
+export async function getGraceCancellationsRemaining(clientId: string): Promise<number> {
+  const result = await query<{ used: string }>(
+    `
+      SELECT COUNT(*)::text as used
+      FROM grace_cancellations
+      WHERE client_id = $1
+    `,
+    [clientId]
+  );
+  const used = Number(result.rows[0]?.used || 0);
+  return Math.max(0, CREDIT_ECONOMY_CONFIG.LIFETIME_GRACE_CANCELLATIONS - used);
+}
+
+/**
+ * Record a grace cancellation used
+ */
+async function recordGraceCancellationUsed(clientId: string, jobId: string): Promise<void> {
+  await query(
+    `INSERT INTO grace_cancellations (client_id, job_id) VALUES ($1, $2)`,
+    [clientId, jobId]
+  );
+  logger.info("grace_cancellation_used", { clientId, jobId });
+}
+
+/**
+ * Legacy function for backwards compatibility
+ * @deprecated Use recordClientCancellation or recordCleanerCancellation instead
  */
 export async function recordCancellation(params: {
   jobId: string;
@@ -458,68 +658,149 @@ export async function recordCancellation(params: {
   const now = new Date();
   const hoursBefore = (scheduledStart.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-  // Get monthly cancellation count
-  const monthlyCount = await getMonthilyCancellationCount(cancelledBy);
-  const isGracePeriod = monthlyCount < CREDIT_ECONOMY_CONFIG.MONTHLY_GRACE_CANCELLATIONS;
-
-  // Calculate penalty
-  let penaltyCredits = 0;
-  if (hoursBefore < 24 && !isGracePeriod) {
-    penaltyCredits = cancelledByRole === "cleaner"
-      ? CREDIT_ECONOMY_CONFIG.LATE_CANCEL_PENALTY_CLEANER
-      : CREDIT_ECONOMY_CONFIG.LATE_CANCEL_PENALTY_CLIENT;
+  if (cancelledByRole === "client") {
+    // Use new cancellation logic
+    const result = await recordClientCancellation({
+      jobId,
+      clientId: cancelledBy,
+      scheduledStart,
+      jobCreditAmount: 0, // Legacy - no amount tracking
+      useGraceCancellation: false,
+    });
+    
+    return {
+      isGracePeriod: false,
+      penaltyCredits: result.feeCredits,
+      monthlyCount: CREDIT_ECONOMY_CONFIG.LIFETIME_GRACE_CANCELLATIONS - result.graceCancellationsRemaining,
+    };
+  } else {
+    await recordCleanerCancellation({ jobId, cleanerId: cancelledBy, scheduledStart });
+    return { isGracePeriod: false, penaltyCredits: 0, monthlyCount: 0 };
   }
+}
 
-  // Record cancellation
+// ============================================
+// Cleaner No-Show Handling (per Cancellation Policy)
+// "If a cleaner doesn't arrive within 30 minutes of scheduled time:
+//  - Client receives full refund + 50 bonus credits"
+// ============================================
+
+/**
+ * Process a cleaner no-show
+ * Per Cancellation Policy: Client gets full refund + 50 bonus credits
+ */
+export async function processCleanerNoShow(params: {
+  jobId: string;
+  cleanerId: string;
+  clientId: string;
+  jobCreditAmount: number;
+}): Promise<{
+  refundCredits: number;
+  bonusCredits: number;
+  totalCreditsToClient: number;
+}> {
+  const { jobId, cleanerId, clientId, jobCreditAmount } = params;
+  
+  const bonusCredits = env.CLEANER_NOSHOW_BONUS_CREDITS;
+  const totalCreditsToClient = jobCreditAmount + bonusCredits;
+
+  // Record the no-show
   await query(
     `
-      INSERT INTO cancellation_records (
-        job_id, cancelled_by, cancelled_by_role, scheduled_start,
-        hours_before, penalty_applied, penalty_credits, is_grace_period
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO cleaner_no_shows (job_id, cleaner_id, client_id, bonus_credits, processed)
+      VALUES ($1, $2, $3, $4, true)
     `,
-    [
-      jobId,
-      cancelledBy,
-      cancelledByRole,
-      scheduledStart.toISOString(),
-      hoursBefore,
-      penaltyCredits > 0,
-      penaltyCredits,
-      isGracePeriod,
-    ]
+    [jobId, cleanerId, clientId, bonusCredits]
   );
 
-  // Apply penalty if applicable
-  if (penaltyCredits > 0) {
-    await query(
-      `INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason) VALUES ($1, $2, $3, 'adjustment')`,
-      [cancelledBy, jobId, -penaltyCredits]
-    );
+  // Full refund to client (credits back from escrow)
+  await query(
+    `INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason) VALUES ($1, $2, $3, 'refund')`,
+    [clientId, jobId, jobCreditAmount]
+  );
 
-    logger.info("cancellation_penalty_applied", {
-      jobId,
-      cancelledBy,
-      penaltyCredits,
-      hoursBefore,
-    });
-  }
+  // Bonus credits to client (as compensation)
+  await query(
+    `INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason) VALUES ($1, $2, $3, 'adjustment')`,
+    [clientId, jobId, bonusCredits]
+  );
+
+  // Apply reliability penalty to cleaner
+  const penaltyPoints = CREDIT_ECONOMY_CONFIG.NO_SHOW_PENALTY_CLEANER;
+  await query(
+    `
+      UPDATE cleaner_profiles 
+      SET reliability_score = GREATEST(0, reliability_score - $2),
+          updated_at = NOW()
+      WHERE user_id = $1
+    `,
+    [cleanerId, penaltyPoints]
+  );
+
+  // Record reliability history
+  await query(
+    `
+      INSERT INTO reliability_history (cleaner_id, old_score, new_score, old_tier, new_tier, reason, metadata)
+      SELECT 
+        user_id,
+        reliability_score + $2,
+        reliability_score,
+        tier,
+        tier,
+        'no_show',
+        $3::jsonb
+      FROM cleaner_profiles
+      WHERE user_id = $1
+    `,
+    [cleanerId, penaltyPoints, JSON.stringify({ jobId, penaltyPoints })]
+  );
+
+  logger.info("cleaner_no_show_processed", {
+    jobId,
+    cleanerId,
+    clientId,
+    refundCredits: jobCreditAmount,
+    bonusCredits,
+    reliabilityPenalty: penaltyPoints,
+  });
 
   return {
-    isGracePeriod,
-    penaltyCredits,
-    monthlyCount: monthlyCount + 1,
+    refundCredits: jobCreditAmount,
+    bonusCredits,
+    totalCreditsToClient,
   };
 }
 
-async function getMonthilyCancellationCount(userId: string): Promise<number> {
-  const now = new Date();
-  const result = await query<{ count: string }>(
-    `SELECT get_monthly_cancellation_count($1, $2, $3)::text as count`,
-    [userId, now.getFullYear(), now.getMonth() + 1]
+/**
+ * Get no-show statistics for a cleaner
+ */
+export async function getCleanerNoShowStats(cleanerId: string): Promise<{
+  totalNoShows: number;
+  last30Days: number;
+  last90Days: number;
+}> {
+  const result = await query<{
+    total: string;
+    last_30: string;
+    last_90: string;
+  }>(
+    `
+      SELECT
+        COUNT(*)::text as total,
+        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days')::text as last_30,
+        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '90 days')::text as last_90
+      FROM cleaner_no_shows
+      WHERE cleaner_id = $1
+    `,
+    [cleanerId]
   );
-  return Number(result.rows[0]?.count || 0);
+
+  const row = result.rows[0];
+  return {
+    totalNoShows: Number(row?.total || 0),
+    last30Days: Number(row?.last_30 || 0),
+    last90Days: Number(row?.last_90 || 0),
+  };
 }
 
 // ============================================

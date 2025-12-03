@@ -31,7 +31,31 @@ export const env = {
   // Payouts
   PAYOUTS_ENABLED: process.env.PAYOUTS_ENABLED === "true",
   PAYOUT_CURRENCY: process.env.PAYOUT_CURRENCY || "usd",
-  CENTS_PER_CREDIT: process.env.CENTS_PER_CREDIT ? Number(process.env.CENTS_PER_CREDIT) : 100,
+  // Credit system: 10 credits = $1 USD (per policy)
+  CENTS_PER_CREDIT: process.env.CENTS_PER_CREDIT ? Number(process.env.CENTS_PER_CREDIT) : 10,
+
+  // Platform fee and cleaner payout configuration (per Terms of Service)
+  PLATFORM_FEE_PERCENT: process.env.PLATFORM_FEE_PERCENT ? Number(process.env.PLATFORM_FEE_PERCENT) : 15,
+  // Cleaner payout percentages by tier (cleaners receive 80-85% of booking amount)
+  CLEANER_PAYOUT_PERCENT_BRONZE: process.env.CLEANER_PAYOUT_PERCENT_BRONZE ? Number(process.env.CLEANER_PAYOUT_PERCENT_BRONZE) : 80,
+  CLEANER_PAYOUT_PERCENT_SILVER: process.env.CLEANER_PAYOUT_PERCENT_SILVER ? Number(process.env.CLEANER_PAYOUT_PERCENT_SILVER) : 82,
+  CLEANER_PAYOUT_PERCENT_GOLD: process.env.CLEANER_PAYOUT_PERCENT_GOLD ? Number(process.env.CLEANER_PAYOUT_PERCENT_GOLD) : 84,
+  CLEANER_PAYOUT_PERCENT_PLATINUM: process.env.CLEANER_PAYOUT_PERCENT_PLATINUM ? Number(process.env.CLEANER_PAYOUT_PERCENT_PLATINUM) : 85,
+
+  // GPS check-in radius (per policy: 250 meters)
+  GPS_CHECKIN_RADIUS_METERS: process.env.GPS_CHECKIN_RADIUS_METERS ? Number(process.env.GPS_CHECKIN_RADIUS_METERS) : 250,
+
+  // Photo requirements (per policy: minimum 3 total)
+  MIN_PHOTOS_TOTAL: process.env.MIN_PHOTOS_TOTAL ? Number(process.env.MIN_PHOTOS_TOTAL) : 3,
+
+  // Photo retention (per policy: 90 days)
+  PHOTO_RETENTION_DAYS: process.env.PHOTO_RETENTION_DAYS ? Number(process.env.PHOTO_RETENTION_DAYS) : 90,
+
+  // Dispute window (per policy: 48 hours)
+  DISPUTE_WINDOW_HOURS: process.env.DISPUTE_WINDOW_HOURS ? Number(process.env.DISPUTE_WINDOW_HOURS) : 48,
+
+  // No-show compensation for clients (per policy)
+  CLEANER_NOSHOW_BONUS_CREDITS: process.env.CLEANER_NOSHOW_BONUS_CREDITS ? Number(process.env.CLEANER_NOSHOW_BONUS_CREDITS) : 50,
 
   // Surcharge for non-credit (direct card) payments
   // e.g. 5 = 5%, 10 = 10% - applied on top of base price for job_charge payments

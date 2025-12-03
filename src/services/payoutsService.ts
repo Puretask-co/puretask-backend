@@ -16,18 +16,63 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
 // Payout configuration
 const PAYOUTS_ENABLED = env.PAYOUTS_ENABLED ?? false;
 const PAYOUT_CURRENCY = env.PAYOUT_CURRENCY ?? "usd";
-const CENTS_PER_CREDIT = env.CENTS_PER_CREDIT ?? 100; // 1 credit = $1.00 by default
+const CENTS_PER_CREDIT = env.CENTS_PER_CREDIT ?? 10; // 10 credits = $1.00 (per policy)
+
+/**
+ * Get cleaner's payout percentage based on tier
+ * Per Terms of Service: Cleaners receive 80-85% of booking amount depending on tier
+ * - Bronze: 80%
+ * - Silver: 82%
+ * - Gold: 84%
+ * - Platinum: 85%
+ * Platform fee: 15%
+ */
+export async function getCleanerPayoutPercent(cleanerId: string): Promise<number> {
+  const result = await query<{ tier: string; payout_percent: number }>(
+    `SELECT tier, COALESCE(payout_percent, 80) as payout_percent FROM cleaner_profiles WHERE user_id = $1`,
+    [cleanerId]
+  );
+  
+  if (result.rows.length === 0) {
+    return env.CLEANER_PAYOUT_PERCENT_BRONZE; // Default to bronze
+  }
+  
+  const { tier, payout_percent } = result.rows[0];
+  
+  // Use stored payout_percent if available, otherwise calculate from tier
+  if (payout_percent) {
+    return payout_percent;
+  }
+  
+  switch (tier) {
+    case "platinum": return env.CLEANER_PAYOUT_PERCENT_PLATINUM;
+    case "gold": return env.CLEANER_PAYOUT_PERCENT_GOLD;
+    case "silver": return env.CLEANER_PAYOUT_PERCENT_SILVER;
+    default: return env.CLEANER_PAYOUT_PERCENT_BRONZE;
+  }
+}
 
 /**
  * Called when a job is approved & completed.
  * Creates a pending payout row for that job/cleaner.
+ * 
+ * Per Terms of Service:
+ * - Platform fee: 15% of transaction value
+ * - Cleaners receive 80-85% of booking amount depending on tier
  */
 export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
   if (!job.cleaner_id) {
     throw Object.assign(new Error("Job has no cleaner assigned"), { statusCode: 500 });
   }
 
-  const amountCents = job.credit_amount * CENTS_PER_CREDIT;
+  // Get cleaner's payout percentage based on tier
+  const payoutPercent = await getCleanerPayoutPercent(job.cleaner_id);
+  
+  // Calculate payout amounts (applying tier-based percentage)
+  const grossCents = job.credit_amount * CENTS_PER_CREDIT;
+  const payoutCents = Math.round(grossCents * (payoutPercent / 100));
+  const platformFeeCents = grossCents - payoutCents;
+  const payoutCredits = Math.round(job.credit_amount * (payoutPercent / 100));
 
   const result = await query<Payout>(
     `
@@ -42,7 +87,7 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
       VALUES ($1, $2, null, $3, $4, 'pending')
       RETURNING *
     `,
-    [job.cleaner_id, job.id, job.credit_amount, amountCents]
+    [job.cleaner_id, job.id, payoutCredits, payoutCents]
   );
 
   const payout = result.rows[0];
@@ -55,8 +100,12 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
     payoutId: payout.id,
     cleanerId: job.cleaner_id,
     jobId: job.id,
-    creditAmount: job.credit_amount,
-    amountCents,
+    grossCredits: job.credit_amount,
+    grossCents,
+    payoutPercent,
+    payoutCredits,
+    payoutCents,
+    platformFeeCents,
   });
 
   await publishEvent({
@@ -66,8 +115,11 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
     payload: {
       payoutId: payout.id,
       cleanerId: job.cleaner_id,
-      creditAmount: job.credit_amount,
-      amountCents,
+      grossCredits: job.credit_amount,
+      payoutCredits,
+      payoutCents,
+      payoutPercent,
+      platformFeeCents,
     },
   });
 

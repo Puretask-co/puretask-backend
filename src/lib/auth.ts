@@ -13,6 +13,7 @@ export type UserRole = "client" | "cleaner" | "admin";
 export interface AuthUser {
   id: string;
   role: UserRole;
+  email?: string | null;
 }
 
 // Extend Express Request to include user
@@ -53,7 +54,7 @@ export function signAuthToken(user: AuthUser): string {
   return jwt.sign(
     { id: user.id, role: user.role },
     env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRES_IN }
+    { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
   );
 }
 

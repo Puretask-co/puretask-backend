@@ -30,6 +30,10 @@ export type CreditReason =
 
 export type ActorType = "client" | "cleaner" | "system" | "admin";
 
+export type PhotoType = "before" | "after";
+
+export type CleaningType = "basic" | "deep" | "move_out" | "recurring";
+
 // -------------------------
 // TABLE TYPES
 // -------------------------
@@ -43,6 +47,8 @@ export interface User {
   password_hash: string;
   role: UserRole;
   phone: string | null;
+  first_name: string | null;
+  last_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -53,9 +59,13 @@ export interface User {
 export interface ClientProfile {
   id: string;
   user_id: string;
+  first_name: string | null;
+  last_name: string | null;
   default_address: string | null;
   stripe_customer_id: string | null;
   push_token: string | null;
+  grace_cancellations_total: number;
+  grace_cancellations_used: number;
   created_at: string;
   updated_at: string;
 }
@@ -66,12 +76,28 @@ export interface ClientProfile {
 export interface CleanerProfile {
   id: string;
   user_id: string;
-  tier: string; // bronze/silver/gold/platinum
+  first_name: string | null;
+  last_name: string | null;
+  bio: string | null;
+  tier: string; // bronze/silver/gold/platinum OR Developing/Semi Pro/Pro/Elite
   reliability_score: number; // 0-100
   hourly_rate_credits: number;
+  base_rate_cph: number | null;
+  deep_addon_cph: number | null;
+  moveout_addon_cph: number | null;
+  avg_rating: number | null;
+  jobs_completed: number;
+  low_flexibility_badge: boolean;
+  payout_percent: number;
   stripe_connect_id: string | null;
   stripe_account_id: string | null; // Alias for stripe_connect_id
   push_token: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  is_available: boolean;
+  travel_radius_km: number | null;
+  max_jobs_per_day: number | null;
+  accepts_high_risk: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -83,6 +109,7 @@ export interface Job {
   id: string;
   client_id: string;
   cleaner_id: string | null;
+  address_id: string | null;
   status: JobStatus;
   scheduled_start_at: string;
   scheduled_end_at: string;
@@ -92,8 +119,14 @@ export interface Job {
   latitude: number | null;
   longitude: number | null;
   credit_amount: number;
+  cleaning_type: CleaningType | null;
+  duration_hours: number | null;
+  price_credits: number | null;
+  held_credits: number;
+  cleaner_payout_amount_cents: number | null;
   rating: number | null; // 1-5
   client_notes: string | null;
+  notes_cleaner: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -164,6 +197,7 @@ export interface Payout {
   stripe_transfer_id: string | null;
   amount_credits: number;
   amount_cents: number;
+  total_usd: number;
   status: PayoutStatus;
   created_at: string;
   updated_at: string;
@@ -239,6 +273,32 @@ export interface BackupSnapshot {
 }
 
 /**
+ * Messages table
+ */
+export interface Message {
+  id: string;
+  job_id: string;
+  sender_type: ActorType;
+  sender_id: string;
+  content: string;
+  read: boolean;
+  created_at: string;
+}
+
+/**
+ * Cleaner earnings table
+ */
+export interface CleanerEarning {
+  id: string;
+  cleaner_id: string;
+  job_id: string;
+  amount_credits: number;
+  amount_cents: number;
+  status: PayoutStatus;
+  created_at: string;
+}
+
+/**
  * Webhook failures table for retry queue
  */
 export interface WebhookFailure {
@@ -280,6 +340,368 @@ export interface CleanerTimeOff {
   end_date: string;
   reason: string | null;
   created_at: string;
+}
+
+/**
+ * Addresses table
+ */
+export interface Address {
+  id: string;
+  user_id: string;
+  label: string | null;
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string | null;
+  postal_code: string | null;
+  country: string;
+  lat: number | null;
+  lng: number | null;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Stripe customers table
+ */
+export interface StripeCustomer {
+  id: string;
+  user_id: string;
+  stripe_customer_id: string;
+  default_payment_method_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Stripe Connect accounts table
+ */
+export interface StripeConnectAccount {
+  id: string;
+  cleaner_id: string;
+  stripe_account_id: string;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  details_submitted: boolean;
+  onboarding_complete: boolean;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Job status history table
+ */
+export interface JobStatusHistory {
+  id: string;
+  job_id: string;
+  from_status: string | null;
+  to_status: string;
+  changed_by_user_id: string | null;
+  changed_by_type: ActorType | null;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+/**
+ * Job checkins table
+ */
+export interface JobCheckin {
+  id: string;
+  job_id: string;
+  cleaner_id: string;
+  type: "check_in" | "check_out";
+  lat: number | null;
+  lng: number | null;
+  distance_from_job_meters: number | null;
+  is_within_radius: boolean | null;
+  device_info: Record<string, unknown> | null;
+  created_at: string;
+}
+
+/**
+ * Dispute actions table
+ */
+export interface DisputeAction {
+  id: string;
+  dispute_id: string;
+  actor_user_id: string | null;
+  actor_type: ActorType;
+  action: string;
+  details: Record<string, unknown>;
+  attachments: unknown[];
+  created_at: string;
+}
+
+/**
+ * Payout requests table
+ */
+export interface PayoutRequest {
+  id: string;
+  cleaner_id: string;
+  amount_credits: number;
+  amount_cents: number;
+  status: "pending" | "approved" | "rejected" | "processing" | "completed" | "failed";
+  requested_at: string;
+  decided_at: string | null;
+  decided_by: string | null;
+  rejection_reason: string | null;
+  payout_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Reliability snapshots table
+ */
+export interface ReliabilitySnapshot {
+  id: string;
+  cleaner_id: string;
+  score: number;
+  tier: string | null;
+  inputs: Record<string, unknown>;
+  breakdown: Record<string, unknown> | null;
+  computed_at: string;
+  created_at: string;
+}
+
+/**
+ * Cleaner tier history table
+ */
+export interface CleanerTierHistory {
+  id: string;
+  cleaner_id: string;
+  from_tier: string | null;
+  to_tier: string;
+  reason: string | null;
+  triggered_by: "system" | "admin" | null;
+  triggered_by_user_id: string | null;
+  effective_from: string;
+  effective_to: string | null;
+  created_at: string;
+}
+
+/**
+ * Notification templates table
+ */
+export interface NotificationTemplate {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  channel: "email" | "sms" | "push" | "in_app";
+  subject: string | null;
+  title: string | null;
+  body: string;
+  variables: unknown[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Admin audit log table
+ */
+export interface AdminAuditLog {
+  id: string;
+  admin_user_id: string;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  reason: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+/**
+ * Credit accounts table
+ */
+export interface CreditAccount {
+  id: string;
+  user_id: string;
+  current_balance: number;
+  held_balance: number;
+  lifetime_purchased: number;
+  lifetime_spent: number;
+  lifetime_refunded: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Credit transactions table
+ */
+export interface CreditTransaction {
+  id: string;
+  account_id: string;
+  amount: number;
+  balance_after: number;
+  type: "purchase" | "hold" | "release" | "refund" | "adjustment" | "payout" | "bonus" | "expiry";
+  reference_type: string | null;
+  reference_id: string | null;
+  description: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+/**
+ * User preferences table
+ */
+export interface UserPreferences {
+  id: string;
+  user_id: string;
+  email_notifications: boolean;
+  sms_notifications: boolean;
+  push_notifications: boolean;
+  marketing_emails: boolean;
+  language: string;
+  timezone: string;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Reviews table
+ */
+export interface Review {
+  id: string;
+  job_id: string;
+  reviewer_id: string;
+  reviewee_id: string;
+  reviewer_type: "client" | "cleaner";
+  rating: number;
+  comment: string | null;
+  is_public: boolean;
+  response: string | null;
+  response_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Risk bands for clients
+ */
+export type ClientRiskBand = "normal" | "mild" | "elevated" | "high" | "critical";
+
+/**
+ * Client risk score table
+ */
+export interface ClientRiskScore {
+  client_id: string;
+  risk_score: number;
+  risk_band: ClientRiskBand;
+  last_recomputed_at: string;
+}
+
+/**
+ * Reschedule status
+ */
+export type RescheduleStatus = "pending" | "accepted" | "declined" | "expired";
+
+/**
+ * Reschedule bucket
+ */
+export type RescheduleBucket = "lt24" | "24_48" | "gt48";
+
+/**
+ * Reschedule events table
+ */
+export interface RescheduleEvent {
+  id: string;
+  job_id: string;
+  client_id: string;
+  cleaner_id: string;
+  requested_by: "client" | "cleaner";
+  requested_to: "client" | "cleaner";
+  t_request: string;
+  t_start_original: string;
+  t_start_new: string;
+  hours_before_original: number;
+  bucket: RescheduleBucket;
+  reason_code: string | null;
+  status: RescheduleStatus;
+  declined_by: "client" | "cleaner" | null;
+  decline_reason_code: string | null;
+  is_reasonable: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Cancellation events table
+ */
+export interface CancellationEvent {
+  id: string;
+  job_id: string;
+  client_id: string | null;
+  cleaner_id: string | null;
+  cancelled_by: "client" | "cleaner" | "system" | "admin";
+  type: string | null;
+  t_cancel: string;
+  hours_before_start: number | null;
+  bucket: string | null;
+  reason_code: string | null;
+  after_reschedule_declined: boolean;
+  fee_pct: number;
+  fee_credits: number;
+  refund_credits: number;
+  cleaner_comp_credits: number;
+  platform_comp_credits: number;
+  grace_used: boolean;
+  bonus_credits_to_client: number;
+  is_emergency: boolean;
+  job_status_at_cancellation: string | null;
+  created_at: string;
+}
+
+/**
+ * Inconvenience logs table
+ */
+export interface InconvenienceLog {
+  id: string;
+  job_id: string;
+  client_id: string;
+  cleaner_id: string;
+  caused_by: "client" | "cleaner";
+  score: number; // 1-4
+  reason_link: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+/**
+ * Cleaner flexibility profile table
+ */
+export interface CleanerFlexProfile {
+  cleaner_id: string;
+  reasonable_declines_14d: number;
+  reasonable_declines_30d: number;
+  low_flexibility_active: boolean;
+  badge_assigned_at: string | null;
+  badge_removed_at: string | null;
+  last_evaluated_at: string;
+}
+
+/**
+ * Client flexibility profile table
+ */
+export interface ClientFlexProfile {
+  client_id: string;
+  flex_score: number;
+  reschedules_30d: number;
+  late_reschedules_30d: number;
+  cancellations_30d: number;
+  last_computed_at: string;
+  metadata: Record<string, unknown> | null;
 }
 
 // -------------------------

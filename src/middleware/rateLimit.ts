@@ -111,12 +111,19 @@ export function rateLimit(options: RateLimitOptions) {
 
     // If skipSuccessfulRequests, decrement on successful response
     if (skipSuccessfulRequests) {
-      const originalEnd = res.end;
-      res.end = function (...args: any[]) {
+      const originalEnd = res.end.bind(res);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (res as any).end = function (chunk?: any, encoding?: BufferEncoding | (() => void), callback?: () => void) {
         if (res.statusCode < 400) {
           store[key].count--;
         }
-        return originalEnd.apply(this, args);
+        if (typeof encoding === 'function') {
+          return originalEnd(chunk, encoding);
+        }
+        if (encoding) {
+          return originalEnd(chunk, encoding, callback);
+        }
+        return originalEnd(chunk, callback);
       };
     }
 

@@ -2,7 +2,8 @@
 // Analytics API routes - Revenue reports, trends, and business metrics
 
 import { Router, Response } from "express";
-import { authMiddleware, AuthedRequest, requireRole } from "../middleware/auth";
+import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireRole } from "../middleware/jwtAuth";
 import { logger } from "../lib/logger";
 import {
   getDashboardMetrics,

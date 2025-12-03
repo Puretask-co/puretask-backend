@@ -2,15 +2,22 @@
 // JWT authentication middleware
 
 import { Request, Response, NextFunction } from "express";
-import { verifyToken, TokenPayload } from "../services/authService";
+import { verifyAuthToken, AuthUser } from "../lib/auth";
 import { logger } from "../lib/logger";
 import type { UserRole } from "../types/db";
+
+// For backwards compatibility
+export type TokenPayload = AuthUser & { email?: string | null };
+export const verifyToken = (token: string): TokenPayload => {
+  const decoded = verifyAuthToken(token);
+  return { ...decoded, email: null };
+};
 
 export interface JWTAuthedRequest extends Request {
   user?: {
     id: string;
     role: UserRole;
-    email: string | null;
+    email?: string | null;
   };
 }
 
@@ -54,9 +61,9 @@ export function jwtAuthMiddleware(
   try {
     const payload = verifyToken(token);
     req.user = {
-      id: payload.userId,
+      id: payload.id,
       role: payload.role,
-      email: payload.email,
+      email: payload.email ?? null,
     };
     next();
   } catch (error) {
@@ -93,9 +100,9 @@ export function optionalJwtAuth(
   try {
     const payload = verifyToken(token);
     req.user = {
-      id: payload.userId,
+      id: payload.id,
       role: payload.role,
-      email: payload.email,
+      email: payload.email ?? null,
     };
   } catch {
     // Ignore invalid tokens for optional auth

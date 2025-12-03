@@ -37,6 +37,23 @@ export interface NotificationResult {
   success: boolean;
   messageId?: string;
   error?: string;
+  channel?: NotificationChannel;
+}
+
+// Provider-specific payload types
+export interface PushPayload extends NotificationPayload {
+  channel: "push";
+  pushToken: string;
+}
+
+export interface EmailPayload extends NotificationPayload {
+  channel: "email";
+  email: string;
+}
+
+export interface SMSPayload extends NotificationPayload {
+  channel: "sms";
+  phone: string;
 }
 
 export interface NotificationProvider {
