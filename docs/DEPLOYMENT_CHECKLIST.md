@@ -62,13 +62,24 @@ openssl rand -hex 32
 
 ### Step 1: Run Migrations
 
+**Recommended (fresh database):**
 ```bash
-# Connect to Neon using psql or their SQL Editor
-# Run migrations in order:
-psql $DATABASE_URL -f DB/migrations/001_init.sql
-psql $DATABASE_URL -f DB/migrations/002_supplementary.sql
-# ... continue through all migrations ...
-psql $DATABASE_URL -f DB/migrations/019_comprehensive_schema_additions.sql
+# Complete schema (tables, views, functions)
+psql $DATABASE_URL -f DB/migrations/000_CONSOLIDATED_SCHEMA.sql
+
+# Optional: seed test data (dev/staging only)
+psql $DATABASE_URL -f DB/migrations/000_SEED_TEST_DATA.sql
+```
+
+**Existing databases already on 001-019:** continue with the numbered migrations as before; do **not** apply the consolidated file on top.
+
+**Staging verification:**
+```bash
+# Verify schema shape
+psql "$DATABASE_URL" -f scripts/verifySchema.sql
+
+# Optional integrity checks (fill placeholders)
+psql "$DATABASE_URL" -f scripts/verify_integrity.sql
 ```
 
 ### Step 2: Verify Schema
@@ -77,11 +88,10 @@ psql $DATABASE_URL -f DB/migrations/019_comprehensive_schema_additions.sql
 2. Paste contents of `scripts/verifySchema.sql`
 3. Run and verify all tables exist
 
-### Migration Order
+### Migration Order (legacy incremental path)
 
 ```
 001_init.sql
-002_seed_test_data.sql (optional - dev only)
 002_supplementary.sql
 003_credit_views.sql
 004_connect_payouts.sql

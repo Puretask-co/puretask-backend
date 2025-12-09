@@ -136,9 +136,11 @@ export async function getDisputes(
   const statusFilter = status ? "WHERE d.status = $1" : "";
   const params = status ? [status, limit] : [limit];
 
-  const result = await query<Dispute>(
+  const result = await query<Dispute & { routed_to: string | null; route_note: string | null }>(
     `
-      SELECT d.*, j.credit_amount, j.address
+      SELECT d.*, j.credit_amount, j.address,
+             (d.metadata ->> 'routed_to') as routed_to,
+             (d.metadata ->> 'route_note') as route_note
       FROM disputes d
       JOIN jobs j ON d.job_id = j.id
       ${statusFilter}

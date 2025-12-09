@@ -47,6 +47,8 @@ export const env = {
 
   // Photo requirements (per policy: minimum 3 total)
   MIN_PHOTOS_TOTAL: process.env.MIN_PHOTOS_TOTAL ? Number(process.env.MIN_PHOTOS_TOTAL) : 3,
+  MIN_BEFORE_PHOTOS: process.env.MIN_BEFORE_PHOTOS ? Number(process.env.MIN_BEFORE_PHOTOS) : 2,
+  MIN_AFTER_PHOTOS: process.env.MIN_AFTER_PHOTOS ? Number(process.env.MIN_AFTER_PHOTOS) : 2,
 
   // Photo retention (per policy: 90 days)
   PHOTO_RETENTION_DAYS: process.env.PHOTO_RETENTION_DAYS ? Number(process.env.PHOTO_RETENTION_DAYS) : 90,
@@ -62,6 +64,19 @@ export const env = {
   NON_CREDIT_SURCHARGE_PERCENT: process.env.NON_CREDIT_SURCHARGE_PERCENT 
     ? Number(process.env.NON_CREDIT_SURCHARGE_PERCENT) 
     : 10,
+
+  // Lead time before start (hours)
+  MIN_LEAD_TIME_HOURS: process.env.MIN_LEAD_TIME_HOURS ? Number(process.env.MIN_LEAD_TIME_HOURS) : 2,
+
+  // Subscription credits fallback (if invoice metadata missing)
+  SUBSCRIPTION_DEFAULT_CREDITS: process.env.SUBSCRIPTION_DEFAULT_CREDITS
+    ? Number(process.env.SUBSCRIPTION_DEFAULT_CREDITS)
+    : 100,
+
+  // Cancellation lock window (hours before start where cancellation is disallowed unless emergency)
+  CANCELLATION_LOCK_HOURS: process.env.CANCELLATION_LOCK_HOURS
+    ? Number(process.env.CANCELLATION_LOCK_HOURS)
+    : 1,
 
   // n8n Integration
   N8N_WEBHOOK_SECRET: requireEnv("N8N_WEBHOOK_SECRET"),
@@ -83,6 +98,11 @@ export const env = {
   // Notifications - OneSignal (Push)
   ONESIGNAL_APP_ID: process.env.ONESIGNAL_APP_ID || "",
   ONESIGNAL_API_KEY: process.env.ONESIGNAL_API_KEY || "",
+
+  // Alerting
+  ALERT_SLACK_WEBHOOK_URL: process.env.ALERT_SLACK_WEBHOOK_URL || "",
+  ALERT_EMAIL_TO: process.env.ALERT_EMAIL_TO || "",
+  ALERT_EMAIL_FROM: process.env.ALERT_EMAIL_FROM || "alerts@puretask.com",
 };
 
 // Alias for backwards compatibility

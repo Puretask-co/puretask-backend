@@ -38,8 +38,35 @@ import {
   forceProcessPayout,
   runSystemHealthCheck,
 } from "../services/adminRepairService";
+import {
+  reversePayout,
+  holdPayoutForDispute,
+  releaseDisputeHold,
+} from "../services/payoutImprovementsService";
+import {
+  getPayoutReconciliationFlags,
+  resolvePayoutReconciliationFlag,
+} from "../services/reconciliationService";
+import { sendAlert, alertTemplates } from "../lib/alerting";
 import { getOpenFraudAlerts, resolveFraudAlert } from "../services/creditEconomyService";
+import { processStripeRefund } from "../services/refundProcessor";
+import { processChargeDispute } from "../services/chargebackProcessor";
+import { env } from "../config/env";
+import { updatePayoutPause } from "../services/payoutsService";
+import { markObjectProcessed } from "../services/paymentService";
 import { logger } from "../lib/logger";
+import {
+  getAdminInvoices,
+  getInvoiceWithLineItems,
+  adminApproveInvoice,
+  adminDenyInvoice,
+  InvoiceStatus,
+} from "../services/invoiceService";
+import {
+  getOperationalMetrics,
+  getMetricTrends,
+  getSystemHealthSnapshot,
+} from "../services/operationalMetricsService";
 
 export const adminRouter = Router();
 
@@ -101,6 +128,60 @@ adminRouter.get("/kpis/history", requireAdmin, async (req: AuthedRequest, res: R
         code: "GET_KPI_HISTORY_FAILED",
         message: (error as Error).message,
       },
+    });
+  }
+});
+
+// ============================================
+// Operational Metrics
+// ============================================
+
+/**
+ * GET /admin/metrics/operational
+ * Get comprehensive operational metrics
+ */
+adminRouter.get("/metrics/operational", requireAdmin, async (req: AuthedRequest, res: Response) => {
+  try {
+    const { days = "30" } = req.query;
+    const metrics = await getOperationalMetrics(parseInt(days as string, 10));
+    res.json({ metrics });
+  } catch (error) {
+    logger.error("get_operational_metrics_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_OPERATIONAL_METRICS_FAILED", message: (error as Error).message },
+    });
+  }
+});
+
+/**
+ * GET /admin/metrics/trends
+ * Get metric trends over time
+ */
+adminRouter.get("/metrics/trends", requireAdmin, async (req: AuthedRequest, res: Response) => {
+  try {
+    const { days = "30" } = req.query;
+    const trends = await getMetricTrends(parseInt(days as string, 10));
+    res.json({ trends });
+  } catch (error) {
+    logger.error("get_metric_trends_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_METRIC_TRENDS_FAILED", message: (error as Error).message },
+    });
+  }
+});
+
+/**
+ * GET /admin/metrics/health
+ * Get real-time system health snapshot
+ */
+adminRouter.get("/metrics/health", requireAdmin, async (_req: AuthedRequest, res: Response) => {
+  try {
+    const health = await getSystemHealthSnapshot();
+    res.json(health);
+  } catch (error) {
+    logger.error("get_system_health_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_SYSTEM_HEALTH_FAILED", message: (error as Error).message },
     });
   }
 });
@@ -308,16 +389,54 @@ adminRouter.post(
       const { disputeId } = req.params;
       const { resolution, admin_notes } = req.body;
 
-      // Import from disputesService for direct resolution
-      const { resolveDispute: resolveDisputeService } = await import("../services/disputesService");
-      
-      const dispute = await resolveDisputeService(
-        disputeId,
-        resolution,
-        admin_notes || ""
+      // Load dispute & job context
+      const disputeResult = await query<{ id: string; job_id: string; client_id: string; status: string; amount_cents?: number | null }>(
+        `SELECT id, job_id, client_id, status, amount_cents FROM disputes WHERE id = $1`,
+        [disputeId]
       );
+      const dispute = disputeResult.rows[0];
+      if (!dispute) {
+        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Dispute not found" } });
+      }
 
-      res.json({ dispute });
+      if (resolution === "resolved_refund") {
+        const jobResult = await query<{ id: string; credit_amount: number }>(
+          `SELECT id, credit_amount FROM jobs WHERE id = $1`,
+          [dispute.job_id]
+        );
+        const job = jobResult.rows[0];
+        if (!job) {
+          return res.status(404).json({ error: { code: "JOB_NOT_FOUND", message: "Job not found" } });
+        }
+
+        await processChargeDispute({
+          disputeId,
+          chargeId: null,
+          paymentIntentId: null,
+          jobId: job.id,
+          clientId: dispute.client_id,
+          amount: (dispute.amount_cents ?? job.credit_amount * env.CENTS_PER_CREDIT),
+          currency: env.PAYOUT_CURRENCY,
+          status: "lost",
+          eventType: "charge.dispute.closed",
+          reason: admin_notes || null,
+        });
+      } else {
+        // resolved_no_refund -> just mark dispute closed
+        await query(
+          `UPDATE disputes SET status = 'resolved_no_refund', admin_notes = $2, updated_at = NOW() WHERE id = $1`,
+          [disputeId, admin_notes || null]
+        );
+      }
+
+      await sendAlert({
+        level: "info",
+        title: "Dispute resolved",
+        message: `Dispute ${disputeId} resolved: ${resolution}`,
+        details: { disputeId, resolution },
+      });
+
+      res.json({ success: true });
     } catch (error) {
       const err = error as Error & { statusCode?: number };
       logger.error("resolve_dispute_failed", {
@@ -671,6 +790,306 @@ adminRouter.get("/system/health", requireAdmin, async (_req: AuthedRequest, res:
 });
 
 /**
+ * GET /admin/fraud/alerts
+ */
+adminRouter.get("/fraud/alerts", requireAdmin, async (_req: AuthedRequest, res: Response) => {
+  try {
+    const alerts = await getOpenFraudAlerts();
+    res.json({ alerts, count: alerts.length });
+  } catch (error) {
+    res.status(500).json({ error: { code: "FRAUD_ALERTS_FAILED", message: (error as Error).message } });
+  }
+});
+
+/**
+ * POST /admin/fraud/alerts/:alertId/resolve
+ */
+adminRouter.post("/fraud/alerts/:alertId/resolve", requireAdmin, async (req: AuthedRequest, res: Response) => {
+  try {
+    const { alertId } = req.params;
+    const { resolution, notes } = req.body as { resolution?: "resolved" | "false_positive"; notes?: string };
+    if (!resolution) {
+      return res.status(400).json({ error: { code: "MISSING_RESOLUTION", message: "resolution required" } });
+    }
+    await resolveFraudAlert(alertId, req.user!.id, resolution, notes);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: { code: "FRAUD_RESOLVE_FAILED", message: (error as Error).message } });
+  }
+});
+
+/**
+ * POST /admin/payouts/:payoutId/reverse
+ */
+adminRouter.post(
+  "/payouts/:payoutId/reverse",
+  requireAdmin,
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const { payoutId } = req.params;
+      const { reason } = req.body as { reason?: string };
+      if (!reason) {
+        return res
+          .status(400)
+          .json({ error: { code: "MISSING_REASON", message: "Reason is required" } });
+      }
+      const adjustment = await reversePayout({
+        payoutId,
+        reason,
+        initiatedBy: req.user!.id,
+      });
+      await sendAlert(alertTemplates.payoutReversed(payoutId, reason, req.user!.id));
+      res.json({ success: true, adjustment });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      res
+        .status(err.statusCode || 500)
+        .json({ error: { code: "PAYOUT_REVERSE_FAILED", message: err.message } });
+    }
+  }
+);
+
+/**
+ * POST /admin/payouts/:payoutId/hold
+ */
+adminRouter.post(
+  "/payouts/:payoutId/hold",
+  requireAdmin,
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const { payoutId } = req.params;
+      const { reason } = req.body as { reason?: string };
+      const payout = await query<{
+        cleaner_id: string;
+        job_id: string | null;
+        amount_cents: number;
+      }>(`SELECT cleaner_id, job_id, amount_cents FROM payouts WHERE id = $1`, [payoutId]);
+      const row = payout.rows[0];
+      if (!row) {
+        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Payout not found" } });
+      }
+      const adjustment = await holdPayoutForDispute({
+        cleanerId: row.cleaner_id,
+        jobId: row.job_id || "",
+        amountCents: row.amount_cents,
+        reason: reason || "Admin hold",
+      });
+      await sendAlert(alertTemplates.payoutHold(payoutId, row.cleaner_id, row.job_id, row.amount_cents));
+      res.json({ success: true, adjustment });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      res
+        .status(err.statusCode || 500)
+        .json({ error: { code: "PAYOUT_HOLD_FAILED", message: err.message } });
+    }
+  }
+);
+
+/**
+ * POST /admin/payouts/hold/:adjustmentId/release
+ */
+adminRouter.post(
+  "/payouts/hold/:adjustmentId/release",
+  requireAdmin,
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const { adjustmentId } = req.params;
+      const { resolution } = req.body as { resolution?: "refund" | "release" };
+      if (!resolution) {
+        return res
+          .status(400)
+          .json({ error: { code: "MISSING_RESOLUTION", message: "resolution required" } });
+      }
+      await releaseDisputeHold(adjustmentId, resolution);
+      await sendAlert({
+        level: "info",
+        title: "Payout hold resolved",
+        message: `Hold ${adjustmentId} resolved as ${resolution}`,
+        details: { adjustmentId, resolution },
+      });
+      res.json({ success: true });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      res
+        .status(err.statusCode || 500)
+        .json({ error: { code: "PAYOUT_HOLD_RELEASE_FAILED", message: err.message } });
+    }
+  }
+);
+
+/**
+ * GET /admin/payouts/reconciliation/flags
+ */
+adminRouter.get(
+  "/payouts/reconciliation/flags",
+  requireAdmin,
+  async (_req: AuthedRequest, res: Response) => {
+    try {
+      const flags = await getPayoutReconciliationFlags();
+      res.json({ flags });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({ error: { code: "RECON_FLAGS_FAILED", message: err.message } });
+    }
+  }
+);
+
+/**
+ * POST /admin/payouts/reconciliation/:payoutId/resolve
+ */
+adminRouter.post(
+  "/payouts/reconciliation/:payoutId/resolve",
+  requireAdmin,
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const { payoutId } = req.params;
+      const { status, note } = req.body as { status?: "resolved" | "ignored"; note?: string };
+      if (!status) {
+        return res
+          .status(400)
+          .json({ error: { code: "MISSING_STATUS", message: "status required" } });
+      }
+      await resolvePayoutReconciliationFlag({ payoutId, status, note, resolvedBy: req.user!.id });
+      await sendAlert(alertTemplates.reconFlagResolved(payoutId, status, note));
+      res.json({ success: true });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({ error: { code: "RECON_RESOLVE_FAILED", message: err.message } });
+    }
+  }
+);
+
+/**
+ * POST /admin/payouts/:cleanerId/pause
+ * Toggle payout pause for a cleaner
+ */
+adminRouter.post("/payouts/:cleanerId/pause", requireAdmin, async (req: AuthedRequest, res: Response) => {
+  try {
+    const { cleanerId } = req.params;
+    const { paused } = req.body as { paused?: boolean };
+    if (paused === undefined) {
+      return res.status(400).json({ error: { code: "MISSING_PARAM", message: "paused required" } });
+    }
+    await updatePayoutPause(cleanerId, !!paused);
+    await query(
+      `
+        UPDATE cleaner_profiles
+        SET payout_paused_at = CASE WHEN $2 THEN NOW() ELSE payout_paused_at END,
+            payout_paused_by = CASE WHEN $2 THEN $3 ELSE payout_paused_by END
+        WHERE user_id = $1
+      `,
+      [cleanerId, !!paused, req.user!.id]
+    );
+    await sendAlert({
+      level: "info",
+      title: "Payout pause toggled",
+      message: `Cleaner ${cleanerId} payout pause set to ${!!paused}`,
+      details: { cleanerId, paused: !!paused },
+    });
+    res.json({ success: true, paused: !!paused });
+  } catch (error) {
+    const err = error as Error;
+    res.status(500).json({ error: { code: "PAYOUT_PAUSE_FAILED", message: err.message } });
+  }
+});
+
+/**
+ * POST /admin/refunds/:jobId/approve
+ * Approve and execute a refund to client (credit refund)
+ */
+const approveRefundSchema = z.object({
+  reason: z.string().min(3),
+});
+
+adminRouter.post(
+  "/refunds/:jobId/approve",
+  requireAdmin,
+  validateBody(approveRefundSchema),
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const { jobId } = req.params;
+      const { reason } = req.body;
+
+      const jobResult = await query<{ id: string; client_id: string; credit_amount: number }>(
+        `SELECT id, client_id, credit_amount FROM jobs WHERE id = $1`,
+        [jobId]
+      );
+      const job = jobResult.rows[0];
+      if (!job) {
+        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Job not found" } });
+      }
+
+      // Drive through refundProcessor to keep ledger/payout consistency
+      await processStripeRefund({
+        chargeId: "admin_manual_refund",
+        paymentIntentId: "admin_manual_refund",
+        jobId: job.id,
+        clientId: job.client_id,
+        purpose: "job_charge",
+        amount: job.credit_amount * env.CENTS_PER_CREDIT,
+        currency: env.PAYOUT_CURRENCY,
+      });
+
+      // Mark job cancelled for clarity
+      await query(`UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [job.id]);
+
+      await sendAlert({
+        level: "warning",
+        title: "Refund approved",
+        message: `Refund approved for job ${jobId}`,
+        details: { jobId, adminId: req.user!.id, reason },
+      });
+
+      res.json({ success: true, result });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      res
+        .status(err.statusCode || 500)
+        .json({ error: { code: "REFUND_APPROVAL_FAILED", message: err.message } });
+    }
+  }
+);
+
+/**
+ * POST /admin/disputes/:disputeId/route
+ * Route a dispute to a queue or admin by updating metadata
+ */
+const DISPUTE_ROUTE_QUEUES = ["ops", "finance", "trust_safety", "support"] as const;
+const routeDisputeSchema = z.object({
+  routeTo: z.enum(DISPUTE_ROUTE_QUEUES),
+  note: z.string().optional(),
+});
+
+adminRouter.post(
+  "/disputes/:disputeId/route",
+  requireAdmin,
+  validateBody(routeDisputeSchema),
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const { disputeId } = req.params;
+      const { routeTo, note } = req.body;
+
+      await query(
+        `
+          UPDATE disputes
+          SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('routed_to', $2, 'route_note', $3),
+              updated_at = NOW()
+          WHERE id = $1
+        `,
+        [disputeId, routeTo, note || null]
+      );
+
+      await sendAlert(alertTemplates.disputeRouted(disputeId, routeTo, note, DISPUTE_ROUTE_QUEUES));
+
+      res.json({ success: true });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({ error: { code: "DISPUTE_ROUTE_FAILED", message: err.message } });
+    }
+  }
+);
+
+/**
  * GET /admin/system/stuck-jobs
  * Find stuck jobs
  */
@@ -907,6 +1326,183 @@ adminRouter.post(
       logger.error("resolve_fraud_alert_failed", { error: (error as Error).message });
       res.status(500).json({
         error: { code: "RESOLVE_FRAUD_ALERT_FAILED", message: (error as Error).message },
+      });
+    }
+  }
+);
+
+// ============================================
+// Invoice Management
+// ============================================
+
+/**
+ * GET /admin/invoices
+ * List all invoices (admin view)
+ */
+adminRouter.get("/invoices", requireAdmin, async (req: AuthedRequest, res: Response) => {
+  try {
+    const { status, requiresApproval, limit = "50", offset = "0" } = req.query;
+
+    const result = await getAdminInvoices({
+      status: status as InvoiceStatus | undefined,
+      requiresApproval: requiresApproval === "true" ? true : requiresApproval === "false" ? false : undefined,
+      limit: parseInt(limit as string, 10),
+      offset: parseInt(offset as string, 10),
+    });
+
+    res.json({
+      invoices: result.invoices,
+      pagination: {
+        total: result.total,
+        limit: parseInt(limit as string, 10),
+        offset: parseInt(offset as string, 10),
+      },
+    });
+  } catch (error) {
+    logger.error("get_admin_invoices_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_INVOICES_FAILED", message: (error as Error).message },
+    });
+  }
+});
+
+/**
+ * GET /admin/invoices/pending-approval
+ * Get invoices requiring admin approval
+ */
+adminRouter.get("/invoices/pending-approval", requireAdmin, async (req: AuthedRequest, res: Response) => {
+  try {
+    const { limit = "50", offset = "0" } = req.query;
+
+    const result = await getAdminInvoices({
+      status: "pending_approval" as InvoiceStatus,
+      limit: parseInt(limit as string, 10),
+      offset: parseInt(offset as string, 10),
+    });
+
+    res.json({
+      invoices: result.invoices,
+      pagination: {
+        total: result.total,
+        limit: parseInt(limit as string, 10),
+        offset: parseInt(offset as string, 10),
+      },
+    });
+  } catch (error) {
+    logger.error("get_pending_invoices_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_PENDING_INVOICES_FAILED", message: (error as Error).message },
+    });
+  }
+});
+
+/**
+ * GET /admin/invoices/:invoiceId
+ * Get single invoice with full details
+ */
+adminRouter.get("/invoices/:invoiceId", requireAdmin, async (req: AuthedRequest, res: Response) => {
+  try {
+    const { invoiceId } = req.params;
+    const invoice = await getInvoiceWithLineItems(invoiceId);
+
+    if (!invoice) {
+      return res.status(404).json({
+        error: { code: "NOT_FOUND", message: "Invoice not found" },
+      });
+    }
+
+    res.json({ invoice });
+  } catch (error) {
+    logger.error("get_admin_invoice_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_INVOICE_FAILED", message: (error as Error).message },
+    });
+  }
+});
+
+/**
+ * PATCH /admin/invoices/:invoiceId/approve
+ * Approve an invoice pending approval
+ */
+const approveInvoiceSchema = z.object({
+  autoSend: z.boolean().optional().default(true),
+});
+
+adminRouter.patch(
+  "/invoices/:invoiceId/approve",
+  requireAdmin,
+  validateBody(approveInvoiceSchema),
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const { invoiceId } = req.params;
+      const { autoSend } = req.body;
+      const adminId = req.user!.id;
+
+      const invoice = await adminApproveInvoice(invoiceId, adminId, autoSend);
+
+      await sendAlert({
+        level: "info",
+        title: "Invoice approved",
+        message: `Invoice ${invoice.invoice_number} approved by admin`,
+        details: {
+          invoiceId,
+          invoiceNumber: invoice.invoice_number,
+          cleanerId: invoice.cleaner_id,
+          clientId: invoice.client_id,
+          totalCents: invoice.total_cents,
+          autoSend,
+        },
+      });
+
+      res.json({ invoice });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      logger.error("approve_invoice_failed", { error: err.message, invoiceId: req.params.invoiceId });
+      res.status(err.statusCode || 500).json({
+        error: { code: "APPROVE_INVOICE_FAILED", message: err.message },
+      });
+    }
+  }
+);
+
+/**
+ * PATCH /admin/invoices/:invoiceId/deny
+ * Deny an invoice pending approval
+ */
+const denyInvoiceSchema = z.object({
+  reason: z.string().min(3),
+});
+
+adminRouter.patch(
+  "/invoices/:invoiceId/deny",
+  requireAdmin,
+  validateBody(denyInvoiceSchema),
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const { invoiceId } = req.params;
+      const { reason } = req.body;
+      const adminId = req.user!.id;
+
+      const invoice = await adminDenyInvoice(invoiceId, adminId, reason);
+
+      await sendAlert({
+        level: "warning",
+        title: "Invoice denied",
+        message: `Invoice ${invoice.invoice_number} denied: ${reason}`,
+        details: {
+          invoiceId,
+          invoiceNumber: invoice.invoice_number,
+          cleanerId: invoice.cleaner_id,
+          reason,
+        },
+      });
+
+      res.json({ invoice });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      logger.error("deny_invoice_failed", { error: err.message, invoiceId: req.params.invoiceId });
+      res.status(err.statusCode || 500).json({
+        error: { code: "DENY_INVOICE_FAILED", message: err.message },
       });
     }
   }

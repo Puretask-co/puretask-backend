@@ -43,6 +43,7 @@ export const allowedTransitions: Record<
   // Cleaner has accepted the job
   accepted: {
     cleaner_on_my_way: "on_my_way",
+    job_started: "in_progress", // allow direct start if no on_my_way step
     job_cancelled: "cancelled",
   },
   // Cleaner is en route to the job location

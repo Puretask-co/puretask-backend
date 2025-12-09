@@ -3,15 +3,19 @@
 //
 // Run every 15 minutes: node dist/workers/stuckJobDetection.js
 
-import { pool } from "../db/client";
+import { pool, query } from "../db/client";
 import { logger } from "../lib/logger";
 import {
   findStuckJobs,
   findStuckPayouts,
   findLedgerInconsistencies,
+  findPayoutEarningMismatches,
   runSystemHealthCheck,
 } from "../services/adminRepairService";
+import { upsertReconciliationFlag } from "../services/reconciliationService";
 import { getOpenFraudAlerts } from "../services/creditEconomyService";
+import { publishEvent } from "../lib/events";
+import { sendAlert as sendAlertLib } from "../lib/alerting";
 
 // Thresholds for alerting
 const ALERT_THRESHOLDS = {
@@ -22,39 +26,10 @@ const ALERT_THRESHOLDS = {
   WEBHOOK_FAILURES: 20, // Alert if > 20 pending webhooks
 };
 
-/**
- * Send alert notification (placeholder - integrate with your alerting system)
- */
-async function sendAlert(params: {
-  level: "warning" | "error" | "critical";
-  title: string;
-  message: string;
-  details: Record<string, unknown>;
-}): Promise<void> {
-  const { level, title, message, details } = params;
+// No-show grace period (minutes) after scheduled_start_at with no check-in
+const NO_SHOW_GRACE_MINUTES = 60;
 
-  // Log the alert
-  logger.warn("system_alert", { level, title, message, details });
-
-  // TODO: Integrate with your alerting system:
-  // - Slack webhook
-  // - Email to admin
-  // - PagerDuty
-  // - SMS via Twilio
-
-  // Example Slack webhook:
-  // await fetch(process.env.SLACK_WEBHOOK_URL, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({
-  //     text: `🚨 [${level.toUpperCase()}] ${title}`,
-  //     blocks: [
-  //       { type: 'section', text: { type: 'mrkdwn', text: message } },
-  //       { type: 'section', text: { type: 'mrkdwn', text: '```' + JSON.stringify(details, null, 2) + '```' } }
-  //     ]
-  //   })
-  // });
-}
+const sendAlert = sendAlertLib;
 
 /**
  * Main worker function
@@ -63,6 +38,9 @@ async function main(): Promise<void> {
   logger.info("stuck_job_detection_started");
 
   try {
+    // No-show detection for jobs with no check-in past grace
+    await detectNoShowJobs();
+
     // Run health check
     const health = await runSystemHealthCheck();
 
@@ -152,6 +130,24 @@ async function main(): Promise<void> {
       });
     }
 
+    // Payout vs earnings reconciliation
+    const mismatches = await findPayoutEarningMismatches();
+    if (mismatches.length > 0) {
+      for (const m of mismatches) {
+        await upsertReconciliationFlag({
+          payoutId: m.payout_id,
+          cleanerId: m.cleaner_id,
+          deltaCents: m.delta_cents,
+        });
+      }
+      await sendAlert({
+        level: "warning",
+        title: "Payout/earnings reconciliation mismatches",
+        message: `${mismatches.length} payouts differ from summed earnings.`,
+        details: { mismatches: mismatches.slice(0, 10) },
+      });
+    }
+
     // Auto-handle some issues if configured
     await autoHandleStuckJobs(health.details.stuckJobs);
 
@@ -196,6 +192,41 @@ async function autoHandleStuckJobs(stuckJobs: Array<{ id: string; reason: string
         logger.error("auto_approve_failed", { jobId: job.id, error: (err as Error).message });
       }
     }
+  }
+}
+
+/**
+ * Detect and mark no-shows: jobs in accepted/on_my_way with no check-in past grace
+ */
+async function detectNoShowJobs(): Promise<void> {
+  const result = await query<{ job_id: string; status: string; scheduled_start_at: string }>(
+    `
+      SELECT j.id AS job_id, j.status, j.scheduled_start_at
+      FROM jobs j
+      WHERE j.status IN ('accepted', 'on_my_way')
+        AND j.scheduled_start_at + INTERVAL '${NO_SHOW_GRACE_MINUTES} minutes' < NOW()
+        AND NOT EXISTS (
+          SELECT 1 FROM job_checkins c WHERE c.job_id = j.id
+        )
+    `
+  );
+
+  for (const row of result.rows) {
+    logger.warn("marking_no_show_due_to_no_checkin", {
+      jobId: row.job_id,
+      status: row.status,
+      scheduled_start_at: row.scheduled_start_at,
+      graceMinutes: NO_SHOW_GRACE_MINUTES,
+    });
+
+    // Publish a cancellation/no-show event; downstream logic should refund per policy
+    await publishEvent({
+      jobId: row.job_id,
+      actorType: "system",
+      actorId: null,
+      eventName: "job_cancelled",
+      payload: { reason: "no_show", auto: true },
+    });
   }
 }
 

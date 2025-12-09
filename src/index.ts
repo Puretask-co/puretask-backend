@@ -13,6 +13,7 @@ import {
   additionalSecurityHeaders,
   sanitizeBody,
 } from "./lib/security";
+import { requestContextMiddleware, enrichRequestContext } from "./middleware/requestContext";
 
 // Import routes
 import healthRouter from "./routes/health";
@@ -28,6 +29,11 @@ import trackingRouter from "./routes/tracking";
 import premiumRouter from "./routes/premium";
 import managerRouter from "./routes/manager";
 import v2Router from "./routes/v2";
+import assignmentRouter from "./routes/assignment";
+import alertsRouter from "./routes/alerts";
+import cleanerPortalRouter from "./routes/cleanerPortal";
+import clientInvoicesRouter from "./routes/clientInvoices";
+import statusRouter from "./routes/status";
 
 // Create Express app
 const app = express();
@@ -49,6 +55,9 @@ app.use(helmet({
 
 // Additional security headers
 app.use(additionalSecurityHeaders);
+
+// Request context for tracing (generates request ID)
+app.use(requestContextMiddleware);
 
 // CORS configuration
 app.use(
@@ -100,15 +109,23 @@ app.use(authMiddlewareAttachUser);
 app.use((req, res, next) => {
   const start = Date.now();
 
+  // Enrich context with user info if available
+  if (req.user) {
+    enrichRequestContext(req);
+  }
+
   res.on("finish", () => {
     const duration = Date.now() - start;
-    logger.info("request", {
+    logger.info("http_request", {
       method: req.method,
       path: req.path,
       status: res.statusCode,
-      duration,
+      durationMs: duration,
       userId: req.user?.id ?? null,
       ip: req.ip,
+      userAgent: req.headers["user-agent"],
+      requestId: req.requestId,
+      correlationId: req.correlationId,
     });
   });
 
@@ -119,17 +136,22 @@ app.use((req, res, next) => {
 // Routes
 // ============================================
 app.use("/health", healthRouter);
+app.use("/status", statusRouter);  // Operational status dashboard
 app.use("/auth", authRouter);
 app.use("/jobs", jobsRouter);
+app.use("/assignment", assignmentRouter);
 app.use("/admin", adminRouter);
 app.use("/stripe", stripeRouter);
 app.use("/payments", paymentsRouter);
 app.use("/analytics", analyticsRouter);
 app.use("/cleaner", cleanerRouter);
+app.use("/cleaner", cleanerPortalRouter); // Cleaner portal: my clients + invoicing
+app.use("/client", clientInvoicesRouter); // Client invoice management
 app.use("/tracking", trackingRouter);   // Job live tracking
 app.use("/premium", premiumRouter);     // Boosts, subscriptions, referrals
 app.use("/manager", managerRouter);     // Manager dashboard
 app.use("/v2", v2Router);               // V2 features: properties, teams, calendar, AI
+app.use("/alerts", alertsRouter);
 app.use(eventsRouter); // Mounts /events and /n8n/events
 
 // ============================================

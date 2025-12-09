@@ -39,6 +39,14 @@ export interface LedgerInconsistency {
   discrepancy: number;
 }
 
+export interface PayoutEarningMismatch {
+  payout_id: string;
+  cleaner_id: string | null;
+  amount_cents: number;
+  earnings_cents: number;
+  delta_cents: number;
+}
+
 export interface RepairResult {
   success: boolean;
   action: string;
@@ -121,6 +129,28 @@ export async function findStuckPayouts(): Promise<StuckPayout[]> {
       WHERE p.status = 'pending'
         AND p.created_at < NOW() - INTERVAL '7 days'
       ORDER BY p.created_at ASC
+    `
+  );
+
+  return result.rows;
+}
+
+/**
+ * Find mismatches between payouts and linked earnings
+ */
+export async function findPayoutEarningMismatches(): Promise<PayoutEarningMismatch[]> {
+  const result = await query<PayoutEarningMismatch>(
+    `
+      SELECT 
+        p.id as payout_id,
+        p.cleaner_id,
+        COALESCE(p.amount_cents, 0) as amount_cents,
+        COALESCE(SUM(e.amount_cents), 0) as earnings_cents,
+        COALESCE(SUM(e.amount_cents), 0) - COALESCE(p.amount_cents, 0) as delta_cents
+      FROM payouts p
+      LEFT JOIN cleaner_earnings e ON e.payout_id = p.id
+      GROUP BY p.id, p.cleaner_id, p.amount_cents
+      HAVING COALESCE(SUM(e.amount_cents), 0) <> COALESCE(p.amount_cents, 0)
     `
   );
 

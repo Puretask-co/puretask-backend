@@ -23,10 +23,12 @@ export type DisputeStatus = "open" | "resolved_refund" | "resolved_no_refund";
 
 export type CreditReason =
   | "purchase"
+  | "subscription_credit"
   | "job_escrow"
   | "job_release"
   | "refund"
-  | "adjustment";
+  | "adjustment"
+  | "invoice_payment";
 
 export type ActorType = "client" | "cleaner" | "system" | "admin";
 
