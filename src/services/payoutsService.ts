@@ -18,6 +18,13 @@ const PAYOUTS_ENABLED = env.PAYOUTS_ENABLED ?? false;
 const PAYOUT_CURRENCY = env.PAYOUT_CURRENCY ?? "usd";
 const CENTS_PER_CREDIT = env.CENTS_PER_CREDIT ?? 10; // 10 credits = $1.00 (per policy)
 
+export async function updatePayoutPause(cleanerId: string, paused: boolean): Promise<void> {
+  await query(
+    `UPDATE cleaner_profiles SET payout_paused = $2, updated_at = NOW() WHERE user_id = $1`,
+    [cleanerId, paused]
+  );
+}
+
 /**
  * Get cleaner's payout percentage based on tier
  * Per Terms of Service: Cleaners receive 80-85% of booking amount depending on tier
@@ -153,6 +160,7 @@ export async function processPendingPayouts(): Promise<{
       FROM payouts p
       LEFT JOIN cleaner_profiles cp ON cp.user_id = p.cleaner_id
       WHERE p.status = 'pending'
+        AND COALESCE(cp.payout_paused, false) = false
       ORDER BY p.created_at ASC
     `
   );

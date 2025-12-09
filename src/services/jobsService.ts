@@ -15,6 +15,7 @@ import { recordEarningsForCompletedJob } from "./payoutsService";
 import { logger } from "../lib/logger";
 import { Job, JobStatus, ActorType } from "../types/db";
 import { AuthUser } from "../lib/auth";
+import { env } from "../config/env";
 
 export type { Job, JobStatus };
 
@@ -126,6 +127,21 @@ export async function createJob(options: {
 
   if (creditAmount <= 0) {
     throw new Error("Credit amount must be positive");
+  }
+
+  // Lead time validation
+  const start = new Date(scheduledStartAt);
+  const end = new Date(scheduledEndAt);
+  const now = new Date();
+  const leadHours = (start.getTime() - now.getTime()) / (1000 * 60 * 60);
+  if (leadHours < env.MIN_LEAD_TIME_HOURS) {
+    throw Object.assign(
+      new Error(`Start time must be at least ${env.MIN_LEAD_TIME_HOURS} hours from now`),
+      { statusCode: 400 }
+    );
+  }
+  if (end <= start) {
+    throw Object.assign(new Error("End time must be after start time"), { statusCode: 400 });
   }
 
   // Insert job with 'requested' status
@@ -334,7 +350,7 @@ export async function applyStatusTransition(options: {
 }): Promise<Job> {
   const { jobId, eventType, payload = {}, requesterId, role } = options;
 
-  // Load current job
+  // Load current job with photos/check-in info if needed later
   const job = await getJob(jobId);
   if (!job) {
     throw new Error("Job not found");
@@ -364,6 +380,53 @@ export async function applyStatusTransition(options: {
 
   const nextStatus = validation.nextStatus;
 
+  // Enforce preconditions for certain transitions
+  if (eventType === "job_started") {
+    // Require check-in payload coordinates if desired; here we only enforce role/state via state machine.
+  }
+
+  if (eventType === "job_completed") {
+    // Ensure job has a check-in before completion
+    const checkInResult = await query<{ exists: boolean }>(
+      `
+        SELECT EXISTS (
+          SELECT 1
+          FROM job_checkins
+          WHERE job_id = $1
+        ) AS exists
+      `,
+      [jobId]
+    );
+    if (!checkInResult.rows[0]?.exists) {
+      throw new Error("Cannot complete job without check-in");
+    }
+
+    // Ensure required photos are present (before and after)
+    const photoResult = await query<{ before_count: number; after_count: number }>(
+      `
+        SELECT
+          COALESCE(SUM(CASE WHEN type = 'before' THEN 1 ELSE 0 END), 0) AS before_count,
+          COALESCE(SUM(CASE WHEN type = 'after' THEN 1 ELSE 0 END), 0) AS after_count
+        FROM job_photos
+        WHERE job_id = $1
+      `,
+      [jobId]
+    );
+    const beforeCount = Number(photoResult.rows[0]?.before_count ?? 0);
+    const afterCount = Number(photoResult.rows[0]?.after_count ?? 0);
+
+    const { env } = await import("../config/env");
+    const MIN_BEFORE = env.MIN_BEFORE_PHOTOS;
+    const MIN_AFTER = env.MIN_AFTER_PHOTOS;
+
+    if (beforeCount < MIN_BEFORE) {
+      throw new Error(`Cannot complete job: requires at least ${MIN_BEFORE} before photos`);
+    }
+    if (afterCount < MIN_AFTER) {
+      throw new Error(`Cannot complete job: requires at least ${MIN_AFTER} after photos`);
+    }
+  }
+
   // Build dynamic UPDATE query based on event type
   const updateFields: string[] = ["status = $2", "updated_at = NOW()"];
   const updateParams: unknown[] = [jobId, nextStatus];
@@ -374,6 +437,9 @@ export async function applyStatusTransition(options: {
     updateFields.push(`cleaner_id = $${paramIndex}`);
     updateParams.push(requesterId);
     paramIndex++;
+
+    // Apply penalty if reassignment late (if cleaner already assigned and being replaced)
+    // Note: This assumes callers manage the reassignment. Here we just ensure any previous assignment is overwritten.
   }
 
   // Handle job started - set actual_start_at

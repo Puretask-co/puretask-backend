@@ -4,7 +4,7 @@
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
 import { isCleanerAvailableForSlot, getPreferences } from "./availabilityService";
-import { Job, CleanerProfile } from "../types/db";
+import { Job } from "../types/db";
 
 // ============================================
 // Types
@@ -54,6 +54,14 @@ const TIER_SCORES: Record<string, number> = {
   gold: 80,
   silver: 60,
   bronze: 40,
+};
+
+const WAVE_CONFIG = {
+  baseRadiusMiles: Number(process.env.MATCHING_BASE_RADIUS_MILES || 15),
+  expandPerWaveMiles: Number(process.env.MATCHING_EXPAND_PER_WAVE_MILES || 10),
+  waveDurationHours: Number(process.env.MATCHING_WAVE_DURATION_HOURS || 24),
+  minTierWave1: ["platinum", "gold"], // top tiers first
+  minTierWave2: ["platinum", "gold", "silver"],
 };
 
 // ============================================
@@ -215,11 +223,11 @@ export async function findMatchingCleaners(
     candidates: topCandidates,
     bestMatch,
     autoAssigned,
-    reason: autoAssigned
-      ? `Auto-assigned to ${bestMatch!.email} with score ${bestMatch!.score}`
-      : candidates.length === 0
-      ? "No available cleaners found"
-      : `Found ${candidates.length} candidates, best score: ${bestMatch?.score || 0}`,
+    reason: autoAssign
+      ? bestMatch
+        ? `Auto-assigned to ${bestMatch.email} with score ${bestMatch.score}`
+        : "No available cleaners found"
+      : "Matched candidates for review",
   };
 
   logger.info("job_matching_completed", {
@@ -339,6 +347,100 @@ export async function assignCleanerToJob(jobId: string, cleanerId: string): Prom
   );
 }
 
+/**
+ * Reassign a job to a different cleaner and apply late reassignment penalty to the previous cleaner.
+ * - Resets job_offers for the job.
+ * - Applies a small reliability decrement to the previous cleaner if within the late window.
+ */
+export async function reassignCleanerWithPenalty(options: {
+  jobId: string;
+  newCleanerId: string;
+  actorId: string;
+}): Promise<void> {
+  const { jobId, newCleanerId, actorId } = options;
+
+  // Fetch current assignment and start time
+  const jobResult = await query<{
+    cleaner_id: string | null;
+    scheduled_start_at: string | null;
+  }>(
+    `SELECT cleaner_id, scheduled_start_at FROM jobs WHERE id = $1`,
+    [jobId]
+  );
+
+  const current = jobResult.rows[0];
+  if (!current) {
+    throw new Error("Job not found");
+  }
+
+  const previousCleanerId = current.cleaner_id;
+  if (previousCleanerId === newCleanerId) {
+    return;
+  }
+
+  // Apply late reassignment penalty if within 24h of start
+  const now = new Date();
+  const startAt = current.scheduled_start_at ? new Date(current.scheduled_start_at) : null;
+  if (previousCleanerId && startAt) {
+    const hoursBefore = (startAt.getTime() - now.getTime()) / (1000 * 60 * 60);
+    if (hoursBefore >= 0 && hoursBefore < 24) {
+      const penaltyPoints = 5;
+      await query(
+        `
+          UPDATE cleaner_profiles
+          SET reliability_score = GREATEST(0, reliability_score - $2),
+              updated_at = NOW()
+          WHERE user_id = $1
+        `,
+        [previousCleanerId, penaltyPoints]
+      );
+
+      await query(
+        `
+          INSERT INTO reliability_history (cleaner_id, old_score, new_score, old_tier, new_tier, reason, metadata)
+          SELECT
+            cp.user_id,
+            cp.reliability_score + $2, -- old_score before decrement
+            cp.reliability_score,       -- new_score after decrement
+            cp.tier,
+            cp.tier,
+            'reassignment_penalty',
+            jsonb_build_object('hours_before', $3, 'job_id', $4, 'actor', $5)
+          FROM cleaner_profiles cp
+          WHERE cp.user_id = $1
+        `,
+        [previousCleanerId, penaltyPoints, hoursBefore, jobId, actorId]
+      );
+    }
+  }
+
+  // Reset offers for this job (prevent stale accepts)
+  await query(`UPDATE job_offers SET status = 'expired' WHERE job_id = $1 AND status = 'pending'`, [
+    jobId,
+  ]);
+
+  // Assign new cleaner
+  await query(
+    `UPDATE jobs SET cleaner_id = $2, status = 'accepted', updated_at = NOW() WHERE id = $1`,
+    [jobId, newCleanerId]
+  );
+
+  await query(
+    `
+      INSERT INTO job_events (job_id, actor_type, actor_id, event_type, payload)
+      VALUES ($1, 'system', $2, 'job.reassigned', $3::jsonb)
+    `,
+    [
+      jobId,
+      actorId,
+      JSON.stringify({
+        previousCleanerId,
+        newCleanerId,
+      }),
+    ]
+  );
+}
+
 // ============================================
 // Broadcast & Offer System
 // ============================================
@@ -435,6 +537,31 @@ export async function acceptJobOffer(
   logger.info("job_offer_accepted", { jobId, cleanerId });
 
   return { success: true, reason: "Job assigned successfully" };
+}
+
+/**
+ * Wave-based eligibility: long-wave, score/tier-first, voluntary accept
+ */
+export async function getWaveEligibleCleaners(
+  job: Job,
+  options: { wave?: number; limit?: number; minReliability?: number } = {}
+): Promise<CleanerCandidate[]> {
+  const wave = options.wave ?? 1;
+  const limit = options.limit ?? 20;
+  const minReliability = options.minReliability ?? 50;
+
+  const radius =
+    WAVE_CONFIG.baseRadiusMiles + WAVE_CONFIG.expandPerWaveMiles * Math.max(0, wave - 1);
+  const allowedTiers = wave === 1 ? WAVE_CONFIG.minTierWave1 : WAVE_CONFIG.minTierWave2;
+
+  const match = await findMatchingCleaners(job, { limit: 200, minReliability });
+  const filtered = match.candidates.filter((c) => {
+    const tierOk = allowedTiers.includes(c.tier.toLowerCase());
+    const radiusOk = c.distanceMiles === null || c.distanceMiles <= radius;
+    return tierOk && radiusOk;
+  });
+
+  return filtered.slice(0, limit);
 }
 
 /**

@@ -10,6 +10,7 @@ import { coreDb } from "../core/db";
 import { computeHoursBeforeStart, computeWindow, getTimeBucket } from "../core/timeBuckets";
 import { CancellationType } from "../core/types";
 import { query } from "../db/client";
+import { env } from "../config/env";
 
 const cancellationRouter = Router();
 
@@ -57,6 +58,13 @@ cancellationRouter.post("/jobs/:jobId", async (req: AuthedRequest, res) => {
 
     const now = new Date();
     const hoursBefore = computeHoursBeforeStart(job.startTime, now);
+
+    // Enforce lock window unless marked emergency
+    if (!body.isEmergency && hoursBefore < env.CANCELLATION_LOCK_HOURS) {
+      return res.status(400).json({
+        error: `Cancellation locked within ${env.CANCELLATION_LOCK_HOURS}h of start; contact support or mark emergency.`,
+      });
+    }
 
     // Check if this is a no-show situation (at/after start time)
     if (hoursBefore <= 0) {
@@ -155,6 +163,13 @@ cancellationRouter.post("/jobs/:jobId/cleaner", async (req: AuthedRequest, res) 
     }
 
     const now = new Date();
+    const hoursBefore = computeHoursBeforeStart(job.startTime, now);
+
+    if (!body.isEmergency && hoursBefore < env.CANCELLATION_LOCK_HOURS) {
+      return res.status(400).json({
+        error: `Cancellation locked within ${env.CANCELLATION_LOCK_HOURS}h of start; contact support or mark emergency.`,
+      });
+    }
 
     // Determine cancellation type
     const type: CancellationType = body.isEmergency 

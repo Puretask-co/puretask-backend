@@ -1,0 +1,338 @@
+"use strict";
+// src/services/backgroundCheckService.ts
+// Background check integration with Checkr (or other providers)
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.initiateBackgroundCheck = initiateBackgroundCheck;
+exports.getBackgroundCheckStatus = getBackgroundCheckStatus;
+exports.handleCheckrWebhook = handleCheckrWebhook;
+exports.adminUpdateCheckStatus = adminUpdateCheckStatus;
+exports.getCleanersNeedingChecks = getCleanersNeedingChecks;
+exports.getBackgroundCheckStats = getBackgroundCheckStats;
+const client_1 = require("../db/client");
+const logger_1 = require("../lib/logger");
+const creditEconomyService_1 = require("./creditEconomyService");
+// ============================================
+// Configuration
+// ============================================
+// Checkr API configuration (placeholder - replace with actual API)
+const CHECKR_CONFIG = {
+    API_KEY: process.env.CHECKR_API_KEY || "",
+    API_URL: process.env.CHECKR_API_URL || "https://api.checkr.com/v1",
+    WEBHOOK_SECRET: process.env.CHECKR_WEBHOOK_SECRET || "",
+};
+// ============================================
+// Background Check Initiation
+// ============================================
+/**
+ * Initiate a background check for a cleaner
+ */
+async function initiateBackgroundCheck(cleanerId, candidateInfo) {
+    // Check if cleaner already has a pending or valid check
+    const existingResult = await (0, client_1.query)(`
+      SELECT * FROM background_checks 
+      WHERE cleaner_id = $1 
+        AND (status IN ('pending', 'processing') OR (status = 'clear' AND expires_at > NOW()))
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [cleanerId]);
+    if (existingResult.rows.length > 0) {
+        throw Object.assign(new Error("Background check already in progress or valid"), { statusCode: 400 });
+    }
+    // Create Checkr candidate and report (placeholder - implement actual API call)
+    let providerId = null;
+    if (CHECKR_CONFIG.API_KEY) {
+        try {
+            // Example Checkr API call (you'd use their actual SDK or API)
+            // const response = await fetch(`${CHECKR_CONFIG.API_URL}/candidates`, {
+            //   method: 'POST',
+            //   headers: {
+            //     'Authorization': `Bearer ${CHECKR_CONFIG.API_KEY}`,
+            //     'Content-Type': 'application/json',
+            //   },
+            //   body: JSON.stringify({
+            //     first_name: candidateInfo.firstName,
+            //     last_name: candidateInfo.lastName,
+            //     email: candidateInfo.email,
+            //     dob: candidateInfo.dateOfBirth,
+            //     ssn: candidateInfo.ssn,
+            //     driver_license_number: candidateInfo.driverLicenseNumber,
+            //     driver_license_state: candidateInfo.driverLicenseState,
+            //   }),
+            // });
+            // const candidate = await response.json();
+            // providerId = candidate.id;
+            // Then create a report/invitation
+            // const reportResponse = await fetch(`${CHECKR_CONFIG.API_URL}/invitations`, {
+            //   method: 'POST',
+            //   headers: { ... },
+            //   body: JSON.stringify({
+            //     candidate_id: candidate.id,
+            //     package: 'tasker_standard', // Your configured package
+            //   }),
+            // });
+            providerId = `checkr_${Date.now()}`; // Placeholder
+        }
+        catch (err) {
+            logger_1.logger.error("checkr_api_failed", { error: err.message });
+            throw Object.assign(new Error("Failed to initiate background check with provider"), { statusCode: 500 });
+        }
+    }
+    else {
+        // Mock mode for development
+        providerId = `mock_${Date.now()}`;
+        logger_1.logger.warn("background_check_mock_mode", { cleanerId });
+    }
+    // Calculate expiry (typically 1-2 years)
+    const expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    // Create database record
+    const result = await (0, client_1.query)(`
+      INSERT INTO background_checks (cleaner_id, provider, provider_id, status, expires_at, metadata)
+      VALUES ($1, 'checkr', $2, 'pending', $3, $4::jsonb)
+      RETURNING *
+    `, [
+        cleanerId,
+        providerId,
+        expiresAt.toISOString(),
+        JSON.stringify({
+            firstName: candidateInfo.firstName,
+            lastName: candidateInfo.lastName,
+            email: candidateInfo.email,
+            initiatedAt: new Date().toISOString(),
+        }),
+    ]);
+    // Update cleaner profile status
+    await (0, client_1.query)(`UPDATE cleaner_profiles SET background_check_status = 'pending', updated_at = NOW() WHERE user_id = $1`, [cleanerId]);
+    logger_1.logger.info("background_check_initiated", {
+        cleanerId,
+        checkId: result.rows[0].id,
+        providerId,
+    });
+    return result.rows[0];
+}
+/**
+ * Get background check status for a cleaner
+ */
+async function getBackgroundCheckStatus(cleanerId) {
+    const result = await (0, client_1.query)(`
+      SELECT * FROM background_checks 
+      WHERE cleaner_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `, [cleanerId]);
+    if (result.rows.length === 0) {
+        return {
+            hasCheck: false,
+            status: "not_started",
+            check: null,
+            isValid: false,
+        };
+    }
+    const check = result.rows[0];
+    const isValid = check.status === "clear" &&
+        check.expires_at !== null &&
+        new Date(check.expires_at) > new Date();
+    return {
+        hasCheck: true,
+        status: check.status,
+        check,
+        isValid,
+    };
+}
+// ============================================
+// Webhook Handling
+// ============================================
+/**
+ * Handle Checkr webhook events
+ */
+async function handleCheckrWebhook(eventType, data) {
+    logger_1.logger.info("checkr_webhook_received", { eventType, data });
+    switch (eventType) {
+        case "report.completed":
+            await handleReportCompleted(data);
+            break;
+        case "report.upgraded":
+            await handleReportUpgraded(data);
+            break;
+        case "candidate.adverse_action":
+            await handleAdverseAction(data);
+            break;
+        default:
+            logger_1.logger.debug("checkr_webhook_unhandled", { eventType });
+    }
+}
+/**
+ * Handle report completed event
+ */
+async function handleReportCompleted(data) {
+    const reportId = data.id;
+    const status = data.status;
+    const result = data.result;
+    // Find the check by provider_id
+    const checkResult = await (0, client_1.query)(`SELECT * FROM background_checks WHERE provider_id = $1`, [reportId]);
+    if (checkResult.rows.length === 0) {
+        logger_1.logger.warn("checkr_report_not_found", { reportId });
+        return;
+    }
+    const check = checkResult.rows[0];
+    // Map Checkr status to our status
+    let newStatus = "processing";
+    if (status === "complete") {
+        newStatus = result === "clear" ? "clear" : "consider";
+    }
+    // Update check
+    await (0, client_1.query)(`
+      UPDATE background_checks 
+      SET status = $2, 
+          completed_at = NOW(),
+          report_url = $3,
+          metadata = metadata || $4::jsonb,
+          updated_at = NOW()
+      WHERE id = $1
+    `, [
+        check.id,
+        newStatus,
+        data.report_url || null,
+        JSON.stringify({ checkrResult: result, checkrStatus: status }),
+    ]);
+    // Update cleaner profile
+    await (0, client_1.query)(`UPDATE cleaner_profiles SET background_check_status = $2, updated_at = NOW() WHERE user_id = $1`, [check.cleaner_id, newStatus]);
+    await (0, creditEconomyService_1.createAuditLog)({
+        actorType: "system",
+        action: "background_check_completed",
+        resourceType: "background_check",
+        resourceId: check.id,
+        newValue: { status: newStatus, result },
+    });
+    logger_1.logger.info("background_check_completed", {
+        checkId: check.id,
+        cleanerId: check.cleaner_id,
+        status: newStatus,
+        result,
+    });
+    // TODO: Send notification to cleaner about result
+}
+/**
+ * Handle report upgraded (re-run) event
+ */
+async function handleReportUpgraded(data) {
+    const reportId = data.id;
+    await (0, client_1.query)(`UPDATE background_checks SET status = 'processing', updated_at = NOW() WHERE provider_id = $1`, [reportId]);
+    logger_1.logger.info("background_check_upgraded", { reportId });
+}
+/**
+ * Handle adverse action (pre-adverse or adverse action taken)
+ */
+async function handleAdverseAction(data) {
+    const reportId = data.id;
+    // Find the check
+    const checkResult = await (0, client_1.query)(`SELECT * FROM background_checks WHERE provider_id = $1`, [reportId]);
+    if (checkResult.rows.length === 0)
+        return;
+    const check = checkResult.rows[0];
+    // Update status to suspended
+    await (0, client_1.query)(`
+      UPDATE background_checks 
+      SET status = 'suspended', 
+          metadata = metadata || $2::jsonb,
+          updated_at = NOW()
+      WHERE id = $1
+    `, [check.id, JSON.stringify({ adverseAction: data })]);
+    await (0, client_1.query)(`UPDATE cleaner_profiles SET background_check_status = 'suspended', updated_at = NOW() WHERE user_id = $1`, [check.cleaner_id]);
+    logger_1.logger.warn("background_check_adverse_action", {
+        checkId: check.id,
+        cleanerId: check.cleaner_id,
+    });
+    // TODO: Notify admin, disable cleaner account if needed
+}
+// ============================================
+// Admin Functions
+// ============================================
+/**
+ * Manually update background check status (admin override)
+ */
+async function adminUpdateCheckStatus(checkId, newStatus, adminId, notes) {
+    const result = await (0, client_1.query)(`
+      UPDATE background_checks 
+      SET status = $2, 
+          metadata = metadata || $3::jsonb,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `, [checkId, newStatus, JSON.stringify({ adminOverride: true, notes, adminId })]);
+    if (result.rows.length === 0) {
+        throw Object.assign(new Error("Background check not found"), { statusCode: 404 });
+    }
+    const check = result.rows[0];
+    // Update cleaner profile
+    await (0, client_1.query)(`UPDATE cleaner_profiles SET background_check_status = $2, updated_at = NOW() WHERE user_id = $1`, [check.cleaner_id, newStatus]);
+    await (0, creditEconomyService_1.createAuditLog)({
+        actorId: adminId,
+        actorType: "admin",
+        action: "background_check_override",
+        resourceType: "background_check",
+        resourceId: checkId,
+        newValue: { status: newStatus, notes },
+    });
+    logger_1.logger.info("background_check_admin_override", {
+        checkId,
+        newStatus,
+        adminId,
+        notes,
+    });
+    return check;
+}
+/**
+ * Get cleaners needing background checks
+ */
+async function getCleanersNeedingChecks() {
+    const result = await (0, client_1.query)(`
+      SELECT 
+        cp.user_id as cleaner_id,
+        u.email,
+        cp.background_check_status as status,
+        bc.created_at::text as last_check_date
+      FROM cleaner_profiles cp
+      JOIN users u ON u.id = cp.user_id
+      LEFT JOIN (
+        SELECT DISTINCT ON (cleaner_id) * 
+        FROM background_checks 
+        ORDER BY cleaner_id, created_at DESC
+      ) bc ON bc.cleaner_id = cp.user_id
+      WHERE cp.background_check_required = true
+        AND (
+          cp.background_check_status = 'not_started'
+          OR (cp.background_check_status = 'clear' AND bc.expires_at < NOW() + INTERVAL '30 days')
+        )
+      ORDER BY bc.expires_at ASC NULLS FIRST
+    `);
+    return result.rows;
+}
+/**
+ * Get background check stats
+ */
+async function getBackgroundCheckStats() {
+    const result = await (0, client_1.query)(`
+      SELECT
+        COUNT(DISTINCT cleaner_id)::text as total,
+        COUNT(*) FILTER (WHERE status = 'pending')::text as pending,
+        COUNT(*) FILTER (WHERE status = 'clear' AND expires_at > NOW())::text as clear,
+        COUNT(*) FILTER (WHERE status = 'consider')::text as consider,
+        COUNT(*) FILTER (WHERE status = 'suspended')::text as suspended,
+        COUNT(*) FILTER (WHERE status = 'clear' AND expires_at BETWEEN NOW() AND NOW() + INTERVAL '30 days')::text as expiring_soon
+      FROM (
+        SELECT DISTINCT ON (cleaner_id) * 
+        FROM background_checks 
+        ORDER BY cleaner_id, created_at DESC
+      ) latest_checks
+    `);
+    const row = result.rows[0];
+    return {
+        total: Number(row?.total || 0),
+        pending: Number(row?.pending || 0),
+        clear: Number(row?.clear || 0),
+        consider: Number(row?.consider || 0),
+        suspended: Number(row?.suspended || 0),
+        expiringSoon: Number(row?.expiring_soon || 0),
+    };
+}

@@ -16,6 +16,9 @@
 | [Deployment Checklist](./DEPLOYMENT_CHECKLIST.md) | Step-by-step deployment guide |
 | [API Reference](./API_REFERENCE.md) | Complete API documentation |
 | [Environment Variables](./ENV_TEMPLATE.md) | All configuration options |
+| [Stripe Testing Cheat Sheet](./STRIPE_TESTING.md) | How to test payments, refunds, disputes, payouts |
+| [Testing Data Setup](./TESTING_DATA_SETUP.md) | How to load schema/seed, wire Stripe, and validate data |
+| [Stripe Testing Cheat Sheet](./STRIPE_TESTING.md) | How to test payments, refunds, disputes, payouts |
 
 ---
 
