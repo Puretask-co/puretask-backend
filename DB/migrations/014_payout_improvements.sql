@@ -1,5 +1,6 @@
 -- 014_payout_improvements.sql
 -- Payout improvements: reversals, minimum thresholds, retry logic
+-- NOTE: Uses TEXT for user references to match existing users.id column type
 
 -- ============================================
 -- PAYOUT SETTINGS (Platform-wide + per-cleaner)
@@ -18,12 +19,12 @@ ALTER TABLE cleaner_profiles
 CREATE TABLE IF NOT EXISTS payout_adjustments (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   payout_id       UUID REFERENCES payouts (id) ON DELETE SET NULL,
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
   adjustment_type TEXT NOT NULL,  -- reversal, correction, dispute_hold, dispute_release
   amount_cents    INTEGER NOT NULL,  -- positive = add to cleaner, negative = deduct
   reason          TEXT NOT NULL,
   stripe_reversal_id TEXT,  -- If we reversed a Stripe transfer
-  initiated_by    UUID REFERENCES users (id) ON DELETE SET NULL,  -- admin who initiated
+  initiated_by    TEXT REFERENCES users (id) ON DELETE SET NULL,  -- admin who initiated
   status          TEXT NOT NULL DEFAULT 'pending',  -- pending, completed, failed
   metadata        JSONB DEFAULT '{}'::jsonb,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -41,7 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_payout_adjustments_status ON payout_adjustments (
 CREATE TABLE IF NOT EXISTS payout_retry_queue (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   payout_id       UUID NOT NULL REFERENCES payouts (id) ON DELETE CASCADE,
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   amount_cents    INTEGER NOT NULL,
   stripe_account_id TEXT,
   error_message   TEXT,
@@ -62,14 +63,14 @@ CREATE INDEX IF NOT EXISTS idx_payout_retry_next ON payout_retry_queue (next_ret
 
 CREATE TABLE IF NOT EXISTS support_tickets (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   job_id          UUID REFERENCES jobs (id) ON DELETE SET NULL,
   category        TEXT NOT NULL,  -- billing, job_issue, account, payout, dispute, other
   subject         TEXT NOT NULL,
   description     TEXT NOT NULL,
   priority        TEXT NOT NULL DEFAULT 'normal',  -- low, normal, high, urgent
   status          TEXT NOT NULL DEFAULT 'open',  -- open, in_progress, waiting_user, resolved, closed
-  assigned_to     UUID REFERENCES users (id) ON DELETE SET NULL,
+  assigned_to     TEXT REFERENCES users (id) ON DELETE SET NULL,
   resolution      TEXT,
   metadata        JSONB DEFAULT '{}'::jsonb,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -87,7 +88,7 @@ CREATE INDEX IF NOT EXISTS idx_support_tickets_assigned ON support_tickets (assi
 CREATE TABLE IF NOT EXISTS support_messages (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_id       UUID NOT NULL REFERENCES support_tickets (id) ON DELETE CASCADE,
-  sender_id       UUID REFERENCES users (id) ON DELETE SET NULL,
+  sender_id       TEXT REFERENCES users (id) ON DELETE SET NULL,
   sender_type     TEXT NOT NULL,  -- user, admin, system
   message         TEXT NOT NULL,
   attachments     JSONB DEFAULT '[]'::jsonb,  -- array of URLs
@@ -111,7 +112,7 @@ FOR EACH ROW EXECUTE PROCEDURE set_updated_at_timestamp();
 
 CREATE TABLE IF NOT EXISTS background_checks (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   provider        TEXT NOT NULL DEFAULT 'checkr',  -- checkr, sterling, etc.
   provider_id     TEXT,  -- External ID from provider
   status          TEXT NOT NULL DEFAULT 'pending',  -- pending, processing, clear, consider, suspended
@@ -142,7 +143,7 @@ FOR EACH ROW EXECUTE PROCEDURE set_updated_at_timestamp();
 
 CREATE TABLE IF NOT EXISTS notification_logs (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID REFERENCES users (id) ON DELETE SET NULL,
+  user_id         TEXT REFERENCES users (id) ON DELETE SET NULL,
   channel         TEXT NOT NULL,  -- email, sms, push
   type            TEXT NOT NULL,  -- template type
   recipient       TEXT NOT NULL,  -- email address, phone, device token
@@ -183,4 +184,3 @@ COMMENT ON TABLE payout_retry_queue IS 'Queue for retrying failed payout transfe
 COMMENT ON TABLE support_tickets IS 'Customer support ticket system';
 COMMENT ON TABLE background_checks IS 'Track background check status for cleaners';
 COMMENT ON TABLE notification_logs IS 'Log all sent notifications for tracking and debugging';
-

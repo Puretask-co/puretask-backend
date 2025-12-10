@@ -1,10 +1,11 @@
 -- 012_job_offers.sql
 -- Job offers for broadcast matching system
+-- NOTE: Uses TEXT for cleaner_id to match existing users.id column type
 
 CREATE TABLE IF NOT EXISTS job_offers (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id          UUID NOT NULL REFERENCES jobs (id) ON DELETE CASCADE,
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   status          TEXT NOT NULL DEFAULT 'pending',  -- pending, accepted, declined, declined_by_system, expired
   expires_at      TIMESTAMPTZ NOT NULL,
   decline_reason  TEXT,
@@ -41,4 +42,3 @@ $$ LANGUAGE plpgsql;
 
 COMMENT ON TABLE job_offers IS 'Tracks job offers sent to cleaners for broadcast matching';
 COMMENT ON FUNCTION expire_old_job_offers IS 'Mark expired offers - call periodically';
-

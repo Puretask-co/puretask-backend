@@ -1,10 +1,11 @@
 -- 002_supplementary.sql
 -- Additional tables for features not in the core 001_init.sql
+-- NOTE: Uses TEXT for user references to match existing users.id column type
 
 -- Credit purchases tracking (for Stripe checkout history)
 CREATE TABLE IF NOT EXISTS credit_purchases (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   package_id      TEXT NOT NULL,
   credits_amount  INTEGER NOT NULL,
   price_usd       NUMERIC(10,2) NOT NULL,
@@ -21,7 +22,7 @@ CREATE INDEX idx_credit_purchases_status ON credit_purchases (status);
 -- Notification preferences per user
 CREATE TABLE IF NOT EXISTS notification_preferences (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
   email_enabled   BOOLEAN NOT NULL DEFAULT true,
   sms_enabled     BOOLEAN NOT NULL DEFAULT false,
   push_enabled    BOOLEAN NOT NULL DEFAULT true,
@@ -32,7 +33,7 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 -- Notification log for history/debugging
 CREATE TABLE IF NOT EXISTS notification_log (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID REFERENCES users (id) ON DELETE SET NULL,
+  user_id         TEXT REFERENCES users (id) ON DELETE SET NULL,
   channel         TEXT NOT NULL, -- email/sms/push
   type            TEXT NOT NULL, -- job_created, job_completed, etc.
   payload         JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -50,4 +51,3 @@ CREATE TRIGGER trg_notification_preferences_set_updated_at
 BEFORE UPDATE ON notification_preferences
 FOR EACH ROW
 EXECUTE PROCEDURE set_updated_at_timestamp();
-

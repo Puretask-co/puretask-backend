@@ -8,6 +8,7 @@
 -- - Inconvenience Score System (logs)
 -- - Flexibility System (cleaner/client profiles)
 -- - Availability System (blocks, blackouts)
+-- NOTE: Uses TEXT for user references to match existing users.id column type
 
 -- ============================================
 -- CLEANER RELIABILITY SYSTEM
@@ -15,7 +16,7 @@
 
 -- Pre-aggregated cleaner metrics (rolling window)
 CREATE TABLE IF NOT EXISTS cleaner_metrics (
-    cleaner_id UUID PRIMARY KEY REFERENCES users(id),
+    cleaner_id TEXT PRIMARY KEY REFERENCES users(id),
     total_jobs_window INTEGER NOT NULL DEFAULT 0,
     attended_jobs INTEGER NOT NULL DEFAULT 0,
     no_show_jobs INTEGER NOT NULL DEFAULT 0,
@@ -47,7 +48,7 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS cleaner_events (
     id BIGSERIAL PRIMARY KEY,
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     job_id UUID REFERENCES jobs(id),
     event_type cleaner_event_type NOT NULL,
     weight INTEGER NOT NULL,
@@ -62,7 +63,7 @@ CREATE INDEX IF NOT EXISTS idx_cleaner_events_type ON cleaner_events(event_type)
 -- Weekly streak tracking
 CREATE TABLE IF NOT EXISTS cleaner_weekly_streaks (
     id BIGSERIAL PRIMARY KEY,
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     week_start DATE NOT NULL,
     is_streak BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -89,7 +90,7 @@ END $$;
 
 -- Client risk scores
 CREATE TABLE IF NOT EXISTS client_risk_scores (
-    client_id UUID PRIMARY KEY REFERENCES users(id),
+    client_id TEXT PRIMARY KEY REFERENCES users(id),
     risk_score NUMERIC(5,2) NOT NULL DEFAULT 0,
     risk_band client_risk_band NOT NULL DEFAULT 'normal',
     last_recomputed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -119,7 +120,7 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS client_risk_events (
     id BIGSERIAL PRIMARY KEY,
-    client_id UUID NOT NULL REFERENCES users(id),
+    client_id TEXT NOT NULL REFERENCES users(id),
     job_id UUID REFERENCES jobs(id),
     event_type client_risk_event_type NOT NULL,
     weight INTEGER NOT NULL,
@@ -174,8 +175,8 @@ END $$;
 CREATE TABLE IF NOT EXISTS reschedule_events (
     id BIGSERIAL PRIMARY KEY,
     job_id UUID NOT NULL REFERENCES jobs(id),
-    client_id UUID NOT NULL REFERENCES users(id),
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    client_id TEXT NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     requested_by VARCHAR(10) NOT NULL CHECK (requested_by IN ('client', 'cleaner')),
     requested_to VARCHAR(10) NOT NULL CHECK (requested_to IN ('client', 'cleaner')),
     t_request TIMESTAMPTZ NOT NULL,
@@ -204,8 +205,8 @@ CREATE INDEX IF NOT EXISTS idx_reschedule_events_status ON reschedule_events(sta
 CREATE TABLE IF NOT EXISTS cancellation_events (
     id BIGSERIAL PRIMARY KEY,
     job_id UUID NOT NULL REFERENCES jobs(id),
-    client_id UUID REFERENCES users(id),
-    cleaner_id UUID REFERENCES users(id),
+    client_id TEXT REFERENCES users(id),
+    cleaner_id TEXT REFERENCES users(id),
     cancelled_by VARCHAR(10) NOT NULL CHECK (cancelled_by IN ('client', 'cleaner', 'system', 'admin')),
     type VARCHAR(50),
     t_cancel TIMESTAMPTZ NOT NULL,
@@ -230,11 +231,11 @@ CREATE INDEX IF NOT EXISTS idx_cancellation_events_client_id ON cancellation_eve
 CREATE INDEX IF NOT EXISTS idx_cancellation_events_cleaner_id ON cancellation_events(cleaner_id);
 
 -- Grace cancellations tracking
--- Note: This table is also defined in 017_policy_compliance.sql with UUID types
+-- Note: This table is also defined in 017_policy_compliance.sql with TEXT types
 -- Using IF NOT EXISTS to avoid conflict
 CREATE TABLE IF NOT EXISTS grace_cancellations (
     id BIGSERIAL PRIMARY KEY,
-    client_id UUID NOT NULL REFERENCES users(id),
+    client_id TEXT NOT NULL REFERENCES users(id),
     job_id UUID REFERENCES jobs(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -257,8 +258,8 @@ END $$;
 CREATE TABLE IF NOT EXISTS match_recommendations (
     id BIGSERIAL PRIMARY KEY,
     job_id UUID NOT NULL REFERENCES jobs(id),
-    client_id UUID NOT NULL REFERENCES users(id),
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    client_id TEXT NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     match_score NUMERIC(6,4) NOT NULL,
     rank INTEGER NOT NULL,
     breakdown JSONB,
@@ -276,8 +277,8 @@ CREATE INDEX IF NOT EXISTS idx_match_recommendations_cleaner_id ON match_recomme
 CREATE TABLE IF NOT EXISTS inconvenience_logs (
     id BIGSERIAL PRIMARY KEY,
     job_id UUID NOT NULL REFERENCES jobs(id),
-    client_id UUID NOT NULL REFERENCES users(id),
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    client_id TEXT NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     caused_by VARCHAR(10) NOT NULL CHECK (caused_by IN ('client', 'cleaner')),
     score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 4),
     reason_link VARCHAR(50),
@@ -295,7 +296,7 @@ CREATE INDEX IF NOT EXISTS idx_inconvenience_logs_caused_by ON inconvenience_log
 
 -- Cleaner flexibility profiles
 CREATE TABLE IF NOT EXISTS cleaner_flex_profiles (
-    cleaner_id UUID PRIMARY KEY REFERENCES users(id),
+    cleaner_id TEXT PRIMARY KEY REFERENCES users(id),
     reasonable_declines_14d INTEGER NOT NULL DEFAULT 0,
     reasonable_declines_30d INTEGER NOT NULL DEFAULT 0,
     low_flexibility_active BOOLEAN NOT NULL DEFAULT false,
@@ -307,7 +308,7 @@ CREATE TABLE IF NOT EXISTS cleaner_flex_profiles (
 -- Flexibility decline events (for low flex badge calculation)
 CREATE TABLE IF NOT EXISTS flexibility_decline_events (
     id BIGSERIAL PRIMARY KEY,
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     reschedule_event_id BIGINT REFERENCES reschedule_events(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -316,7 +317,7 @@ CREATE INDEX IF NOT EXISTS idx_flexibility_decline_cleaner_id ON flexibility_dec
 
 -- Client flexibility profiles
 CREATE TABLE IF NOT EXISTS client_flex_profiles (
-    client_id UUID PRIMARY KEY REFERENCES users(id),
+    client_id TEXT PRIMARY KEY REFERENCES users(id),
     flex_score NUMERIC(3,2) NOT NULL DEFAULT 0.5, -- 0.0 to 1.0
     reschedules_30d INTEGER NOT NULL DEFAULT 0,
     late_reschedules_30d INTEGER NOT NULL DEFAULT 0,
@@ -332,7 +333,7 @@ CREATE TABLE IF NOT EXISTS client_flex_profiles (
 -- Weekly availability blocks
 CREATE TABLE IF NOT EXISTS availability_blocks (
     id BIGSERIAL PRIMARY KEY,
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
@@ -348,7 +349,7 @@ CREATE INDEX IF NOT EXISTS idx_availability_blocks_day ON availability_blocks(da
 -- Blackout periods (time off, etc.)
 CREATE TABLE IF NOT EXISTS blackout_periods (
     id BIGSERIAL PRIMARY KEY,
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     start_ts TIMESTAMPTZ NOT NULL,
     end_ts TIMESTAMPTZ NOT NULL,
     reason VARCHAR(100),

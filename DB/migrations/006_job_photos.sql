@@ -1,11 +1,12 @@
 -- 006_job_photos.sql
 -- Job photos table for before/after images
+-- NOTE: Uses TEXT for user references to match existing users.id column type
 
 -- Job photos table
 CREATE TABLE IF NOT EXISTS job_photos (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id       UUID NOT NULL REFERENCES jobs (id) ON DELETE CASCADE,
-  uploaded_by  UUID NOT NULL REFERENCES users (id) ON DELETE SET NULL,
+  uploaded_by  TEXT NOT NULL REFERENCES users (id) ON DELETE SET NULL,
   type         TEXT NOT NULL CHECK (type IN ('before', 'after')),
   url          TEXT NOT NULL,
   thumbnail_url TEXT,
@@ -27,4 +28,3 @@ COMMENT ON COLUMN job_photos.type IS 'Photo type: before (pre-cleaning) or after
 COMMENT ON COLUMN job_photos.url IS 'Full URL to the photo in cloud storage (S3/R2/etc)';
 COMMENT ON COLUMN job_photos.thumbnail_url IS 'Optional thumbnail URL for faster loading';
 COMMENT ON COLUMN job_photos.metadata IS 'Additional metadata: dimensions, exif, etc';
-

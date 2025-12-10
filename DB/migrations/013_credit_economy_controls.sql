@@ -1,5 +1,6 @@
 -- 013_credit_economy_controls.sql
 -- Credit economy controls: anti-fraud, bonus caps, audit logs, device tokens
+-- NOTE: Uses TEXT for user references to match existing users.id column type
 
 -- ============================================
 -- AUDIT LOGS (Admin & System Actions)
@@ -7,7 +8,7 @@
 
 CREATE TABLE IF NOT EXISTS audit_logs (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  actor_id        UUID REFERENCES users (id) ON DELETE SET NULL,
+  actor_id        TEXT REFERENCES users (id) ON DELETE SET NULL,
   actor_type      TEXT NOT NULL,  -- admin, system, user
   action          TEXT NOT NULL,  -- e.g., credit_adjustment, user_update, dispute_resolved
   resource_type   TEXT NOT NULL,  -- user, job, credit_ledger, etc.
@@ -31,7 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs (created_at DESC
 
 CREATE TABLE IF NOT EXISTS device_tokens (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   token           TEXT NOT NULL,
   platform        TEXT NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
   device_name     TEXT,
@@ -57,7 +58,7 @@ FOR EACH ROW EXECUTE PROCEDURE set_updated_at_timestamp();
 
 CREATE TABLE IF NOT EXISTS credit_bonuses (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   bonus_type      TEXT NOT NULL,  -- signup, referral, promo, weekly_reward, tier_bonus
   amount          INTEGER NOT NULL,
   week_of_year    INTEGER NOT NULL,  -- ISO week number for weekly caps
@@ -87,13 +88,13 @@ GROUP BY user_id, year, week_of_year;
 
 CREATE TABLE IF NOT EXISTS fraud_alerts (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID REFERENCES users (id) ON DELETE SET NULL,
+  user_id         TEXT REFERENCES users (id) ON DELETE SET NULL,
   alert_type      TEXT NOT NULL,  -- rapid_bonus, large_adjustment, suspicious_pattern
   severity        TEXT NOT NULL DEFAULT 'medium',  -- low, medium, high, critical
   description     TEXT NOT NULL,
   metadata        JSONB DEFAULT '{}'::jsonb,
   status          TEXT NOT NULL DEFAULT 'open',  -- open, investigating, resolved, false_positive
-  resolved_by     UUID REFERENCES users (id) ON DELETE SET NULL,
+  resolved_by     TEXT REFERENCES users (id) ON DELETE SET NULL,
   resolved_at     TIMESTAMPTZ,
   resolution_notes TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -110,7 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_fraud_alerts_created ON fraud_alerts (created_at 
 
 CREATE TABLE IF NOT EXISTS reliability_history (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   old_score       NUMERIC(5,2) NOT NULL,
   new_score       NUMERIC(5,2) NOT NULL,
   old_tier        TEXT NOT NULL,
@@ -129,7 +130,7 @@ CREATE INDEX IF NOT EXISTS idx_reliability_history_created ON reliability_histor
 
 CREATE TABLE IF NOT EXISTS tier_locks (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   tier            TEXT NOT NULL,
   locked_until    TIMESTAMPTZ NOT NULL,
   reason          TEXT NOT NULL,  -- promotion, grace_period
@@ -149,7 +150,7 @@ CREATE INDEX IF NOT EXISTS idx_tier_locks_until ON tier_locks (locked_until);
 CREATE TABLE IF NOT EXISTS cancellation_records (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id          UUID NOT NULL REFERENCES jobs (id) ON DELETE CASCADE,
-  cancelled_by    UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cancelled_by    TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   cancelled_by_role TEXT NOT NULL,  -- client, cleaner
   cancellation_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   scheduled_start   TIMESTAMPTZ NOT NULL,
@@ -170,7 +171,7 @@ CREATE INDEX IF NOT EXISTS idx_cancellation_records_created ON cancellation_reco
 
 -- Get user's weekly bonus total
 CREATE OR REPLACE FUNCTION get_user_weekly_bonus_total(
-  p_user_id UUID,
+  p_user_id TEXT,
   p_year INTEGER DEFAULT EXTRACT(YEAR FROM NOW())::INTEGER,
   p_week INTEGER DEFAULT EXTRACT(WEEK FROM NOW())::INTEGER
 ) RETURNS INTEGER AS $$
@@ -189,7 +190,7 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 -- Check if cleaner has tier lock active
-CREATE OR REPLACE FUNCTION is_tier_locked(p_cleaner_id UUID) RETURNS BOOLEAN AS $$
+CREATE OR REPLACE FUNCTION is_tier_locked(p_cleaner_id TEXT) RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 FROM tier_locks
@@ -201,7 +202,7 @@ $$ LANGUAGE plpgsql STABLE;
 
 -- Get user's monthly cancellation count
 CREATE OR REPLACE FUNCTION get_monthly_cancellation_count(
-  p_user_id UUID,
+  p_user_id TEXT,
   p_year INTEGER DEFAULT EXTRACT(YEAR FROM NOW())::INTEGER,
   p_month INTEGER DEFAULT EXTRACT(MONTH FROM NOW())::INTEGER
 ) RETURNS INTEGER AS $$
@@ -227,4 +228,3 @@ COMMENT ON TABLE fraud_alerts IS 'Suspicious activity alerts for admin review';
 COMMENT ON TABLE reliability_history IS 'Historical record of reliability score changes';
 COMMENT ON TABLE tier_locks IS 'Prevent rapid tier demotions after promotions';
 COMMENT ON TABLE cancellation_records IS 'Track cancellations for penalty and grace period logic';
-

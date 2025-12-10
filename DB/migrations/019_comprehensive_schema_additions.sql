@@ -1,6 +1,7 @@
 -- 019_comprehensive_schema_additions.sql
 -- Comprehensive schema additions based on full audit
 -- Adds missing tables, columns, and indexes for complete PureTask platform
+-- NOTE: Uses TEXT for user references to match existing users.id column type
 
 -- ============================================
 -- 1. USER NAME COLUMNS
@@ -53,7 +54,7 @@ COMMENT ON COLUMN cleaner_profiles.moveout_addon_cph IS 'Additional rate for mov
 
 CREATE TABLE IF NOT EXISTS addresses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     label TEXT,                          -- "Home", "Work", "Rental #1"
     line1 TEXT NOT NULL,
     line2 TEXT,
@@ -79,7 +80,7 @@ COMMENT ON TABLE addresses IS 'User addresses for job locations';
 
 CREATE TABLE IF NOT EXISTS stripe_customers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     stripe_customer_id TEXT NOT NULL UNIQUE,
     default_payment_method_id TEXT,
     metadata JSONB DEFAULT '{}'::jsonb,
@@ -97,7 +98,7 @@ COMMENT ON TABLE stripe_customers IS 'Stripe customer records for payment proces
 
 CREATE TABLE IF NOT EXISTS stripe_connect_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cleaner_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     stripe_account_id TEXT NOT NULL UNIQUE,
     charges_enabled BOOLEAN NOT NULL DEFAULT false,
     payouts_enabled BOOLEAN NOT NULL DEFAULT false,
@@ -121,7 +122,7 @@ CREATE TABLE IF NOT EXISTS job_status_history (
     job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
     from_status TEXT,
     to_status TEXT NOT NULL,
-    changed_by_user_id UUID REFERENCES users(id),
+    changed_by_user_id TEXT REFERENCES users(id),
     changed_by_type TEXT CHECK (changed_by_type IN ('client', 'cleaner', 'admin', 'system')),
     reason TEXT,
     metadata JSONB DEFAULT '{}'::jsonb,
@@ -140,7 +141,7 @@ COMMENT ON TABLE job_status_history IS 'Complete history of job status transitio
 CREATE TABLE IF NOT EXISTS job_checkins (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
-    cleaner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type TEXT NOT NULL CHECK (type IN ('check_in', 'check_out')),
     lat NUMERIC(9,6),
     lng NUMERIC(9,6),
@@ -163,7 +164,7 @@ COMMENT ON TABLE job_checkins IS 'GPS check-in/check-out records for jobs';
 CREATE TABLE IF NOT EXISTS dispute_actions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     dispute_id UUID NOT NULL REFERENCES disputes(id) ON DELETE CASCADE,
-    actor_user_id UUID REFERENCES users(id),
+    actor_user_id TEXT REFERENCES users(id),
     actor_type TEXT NOT NULL CHECK (actor_type IN ('client', 'cleaner', 'admin', 'system')),
     action TEXT NOT NULL,                -- 'opened', 'responded', 'evidence_added', 'resolved', 'escalated'
     details JSONB DEFAULT '{}'::jsonb,
@@ -182,13 +183,13 @@ COMMENT ON TABLE dispute_actions IS 'Actions taken during dispute resolution';
 
 CREATE TABLE IF NOT EXISTS payout_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cleaner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     amount_credits INTEGER NOT NULL,
     amount_cents INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'processing', 'completed', 'failed')),
     requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     decided_at TIMESTAMPTZ,
-    decided_by UUID REFERENCES users(id),
+    decided_by TEXT REFERENCES users(id),
     rejection_reason TEXT,
     payout_id UUID REFERENCES payouts(id),
     metadata JSONB DEFAULT '{}'::jsonb,
@@ -207,7 +208,7 @@ COMMENT ON TABLE payout_requests IS 'Cleaner requests for payouts (instant/manua
 
 CREATE TABLE IF NOT EXISTS reliability_snapshots (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cleaner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     score INTEGER NOT NULL,
     tier TEXT,
     inputs JSONB NOT NULL,               -- All inputs used in calculation
@@ -227,12 +228,12 @@ COMMENT ON TABLE reliability_snapshots IS 'Historical reliability score snapshot
 
 CREATE TABLE IF NOT EXISTS cleaner_tier_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cleaner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     from_tier TEXT,
     to_tier TEXT NOT NULL,
     reason TEXT,                         -- 'score_increase', 'score_decrease', 'manual_adjustment', 'new_cleaner'
     triggered_by TEXT CHECK (triggered_by IN ('system', 'admin')),
-    triggered_by_user_id UUID REFERENCES users(id),
+    triggered_by_user_id TEXT REFERENCES users(id),
     effective_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     effective_to TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -286,7 +287,7 @@ ON CONFLICT (key) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS admin_audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_user_id UUID NOT NULL REFERENCES users(id),
+    admin_user_id TEXT NOT NULL REFERENCES users(id),
     action TEXT NOT NULL,                -- 'user.suspended', 'dispute.resolved', 'payout.approved'
     entity_type TEXT,                    -- 'user', 'job', 'dispute', 'payout', 'cleaner'
     entity_id UUID,
@@ -312,7 +313,7 @@ COMMENT ON TABLE admin_audit_log IS 'Audit trail for all admin actions';
 
 CREATE TABLE IF NOT EXISTS credit_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     current_balance INTEGER NOT NULL DEFAULT 0,
     held_balance INTEGER NOT NULL DEFAULT 0,     -- Credits in escrow
     lifetime_purchased INTEGER NOT NULL DEFAULT 0,
@@ -387,13 +388,13 @@ COMMENT ON COLUMN jobs.cleaner_payout_amount_cents IS 'Amount to pay cleaner in 
 -- 18. DISPUTES TABLE ENHANCEMENTS
 -- ============================================
 
-ALTER TABLE disputes ADD COLUMN IF NOT EXISTS opened_by_user_id UUID REFERENCES users(id);
+ALTER TABLE disputes ADD COLUMN IF NOT EXISTS opened_by_user_id TEXT REFERENCES users(id);
 ALTER TABLE disputes ADD COLUMN IF NOT EXISTS reason_code TEXT;
 ALTER TABLE disputes ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE disputes ADD COLUMN IF NOT EXISTS resolution_type TEXT;
 ALTER TABLE disputes ADD COLUMN IF NOT EXISTS resolution_notes TEXT;
 ALTER TABLE disputes ADD COLUMN IF NOT EXISTS refund_amount_credits INTEGER;
-ALTER TABLE disputes ADD COLUMN IF NOT EXISTS resolved_by_user_id UUID REFERENCES users(id);
+ALTER TABLE disputes ADD COLUMN IF NOT EXISTS resolved_by_user_id TEXT REFERENCES users(id);
 ALTER TABLE disputes ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
 
 COMMENT ON COLUMN disputes.opened_by_user_id IS 'User who opened the dispute';
@@ -421,7 +422,7 @@ COMMENT ON COLUMN payouts.processed_at IS 'When payout was processed';
 
 CREATE TABLE IF NOT EXISTS user_preferences (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     email_notifications BOOLEAN NOT NULL DEFAULT true,
     sms_notifications BOOLEAN NOT NULL DEFAULT true,
     push_notifications BOOLEAN NOT NULL DEFAULT true,
@@ -444,7 +445,7 @@ COMMENT ON TABLE user_preferences IS 'User notification and display preferences'
 CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
-    sender_id UUID NOT NULL REFERENCES users(id),
+    sender_id TEXT NOT NULL REFERENCES users(id),
     sender_type TEXT NOT NULL CHECK (sender_type IN ('client', 'cleaner', 'admin', 'system')),
     content TEXT NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT false,
@@ -465,7 +466,7 @@ COMMENT ON TABLE messages IS 'In-app messages between clients and cleaners';
 
 CREATE TABLE IF NOT EXISTS cleaner_earnings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cleaner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
     amount_credits INTEGER NOT NULL,
     amount_cents INTEGER NOT NULL,
@@ -491,8 +492,8 @@ COMMENT ON TABLE cleaner_earnings IS 'Individual earnings records for cleaners';
 CREATE TABLE IF NOT EXISTS reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID NOT NULL UNIQUE REFERENCES jobs(id) ON DELETE CASCADE,
-    reviewer_id UUID NOT NULL REFERENCES users(id),
-    reviewee_id UUID NOT NULL REFERENCES users(id),
+    reviewer_id TEXT NOT NULL REFERENCES users(id),
+    reviewee_id TEXT NOT NULL REFERENCES users(id),
     reviewer_type TEXT NOT NULL CHECK (reviewer_type IN ('client', 'cleaner')),
     rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
     comment TEXT,
@@ -613,4 +614,3 @@ COMMENT ON TABLE user_preferences IS 'User notification and display preferences'
 COMMENT ON TABLE messages IS 'In-app messaging between users';
 COMMENT ON TABLE cleaner_earnings IS 'Individual job earnings for cleaners';
 COMMENT ON TABLE reviews IS 'Job reviews and ratings from clients and cleaners';
-

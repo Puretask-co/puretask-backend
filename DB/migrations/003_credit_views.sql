@@ -1,5 +1,7 @@
 -- 003_credit_views.sql
 -- SQL helpers for credit balance calculations
+-- NOTE: Uses TEXT for user_id parameters to match users.id column type
+-- NOTE: This migration requires 001_init.sql to be run first (creates credit_ledger, jobs, payouts tables)
 
 -- Total credit balance per user (all time)
 -- Balance = SUM(delta_credits) from credit_ledger
@@ -11,7 +13,7 @@ FROM credit_ledger
 GROUP BY user_id;
 
 -- Helper function: get a user's current balance
-CREATE OR REPLACE FUNCTION get_user_credit_balance(p_user_id UUID)
+CREATE OR REPLACE FUNCTION get_user_credit_balance(p_user_id TEXT)
 RETURNS INTEGER AS $$
 DECLARE
   v_balance INTEGER;
@@ -26,7 +28,7 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 -- Helper function: check if user has enough credits
-CREATE OR REPLACE FUNCTION user_has_credits(p_user_id UUID, p_required INTEGER)
+CREATE OR REPLACE FUNCTION user_has_credits(p_user_id TEXT, p_required INTEGER)
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN get_user_credit_balance(p_user_id) >= p_required;
@@ -87,4 +89,3 @@ GROUP BY j.cleaner_id;
 -- Index to optimize credit balance lookups
 CREATE INDEX IF NOT EXISTS idx_credit_ledger_user_balance
   ON credit_ledger (user_id, created_at);
-

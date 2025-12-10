@@ -1,5 +1,6 @@
 -- 023_cleaner_portal_invoicing.sql
 -- Cleaner Portal: Previous Clients + Invoicing Module
+-- NOTE: Uses TEXT for user references to match existing users.id column type
 
 -- ============================================
 -- CLEANER CLIENT NOTES
@@ -8,8 +9,8 @@
 
 CREATE TABLE IF NOT EXISTS cleaner_client_notes (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  client_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  client_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   notes           TEXT,
   preferences     TEXT,  -- Pet info, parking, entry instructions
   is_favorite     BOOLEAN DEFAULT false,
@@ -39,8 +40,8 @@ CREATE TYPE invoice_status AS ENUM (
 CREATE TABLE IF NOT EXISTS invoices (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   invoice_number      TEXT NOT NULL UNIQUE,
-  cleaner_id          UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  client_id           UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  cleaner_id          TEXT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  client_id           TEXT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   job_id              UUID REFERENCES jobs(id) ON DELETE SET NULL,  -- Optional: link to specific job
   
   -- Amounts
@@ -59,7 +60,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   
   -- Admin approval (if required)
   requires_approval   BOOLEAN DEFAULT false,
-  approved_by         UUID REFERENCES users(id) ON DELETE SET NULL,
+  approved_by         TEXT REFERENCES users(id) ON DELETE SET NULL,
   approved_at         TIMESTAMPTZ,
   denial_reason       TEXT,
   
@@ -112,7 +113,7 @@ CREATE TABLE IF NOT EXISTS invoice_status_history (
   invoice_id      UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
   old_status      invoice_status,
   new_status      invoice_status NOT NULL,
-  changed_by      UUID REFERENCES users(id) ON DELETE SET NULL,
+  changed_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
   actor_type      TEXT NOT NULL,  -- 'cleaner', 'client', 'admin', 'system'
   reason          TEXT,
   metadata        JSONB DEFAULT '{}'::jsonb,
@@ -232,4 +233,3 @@ COMMENT ON TABLE invoices IS 'Cleaner-initiated invoices to clients';
 COMMENT ON TABLE invoice_line_items IS 'Individual line items on an invoice';
 COMMENT ON TABLE invoice_status_history IS 'Audit trail for invoice status changes';
 COMMENT ON VIEW cleaner_client_summary IS 'Aggregated view of cleaner-client relationships for the cleaner portal';
-

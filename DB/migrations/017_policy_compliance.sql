@@ -1,5 +1,6 @@
 -- 017_policy_compliance.sql
 -- Updates to align with Privacy Policy, Terms of Service, and Cancellation Policy documents
+-- NOTE: Uses TEXT for user references to match existing users.id column type
 
 -- ============================================
 -- GRACE CANCELLATIONS (per Cancellation Policy)
@@ -8,7 +9,7 @@
 
 CREATE TABLE IF NOT EXISTS grace_cancellations (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id   UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  client_id   TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   job_id      UUID REFERENCES jobs (id) ON DELETE SET NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -45,8 +46,8 @@ COMMENT ON COLUMN cancellation_records.refund_credits IS 'Credits refunded to cl
 CREATE TABLE IF NOT EXISTS cleaner_no_shows (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id           UUID NOT NULL REFERENCES jobs (id) ON DELETE CASCADE,
-  cleaner_id       UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-  client_id        UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id       TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  client_id        TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   bonus_credits    INTEGER NOT NULL DEFAULT 50, -- Policy: 50 bonus credits to client
   processed        BOOLEAN NOT NULL DEFAULT false,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -66,7 +67,7 @@ COMMENT ON TABLE cleaner_no_shows IS 'Tracks cleaner no-shows for compensation p
 CREATE TABLE IF NOT EXISTS photo_compliance (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id           UUID NOT NULL UNIQUE REFERENCES jobs (id) ON DELETE CASCADE,
-  cleaner_id       UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id       TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   total_photos     INTEGER NOT NULL DEFAULT 0,
   before_photos    INTEGER NOT NULL DEFAULT 0,
   after_photos     INTEGER NOT NULL DEFAULT 0,
@@ -118,7 +119,7 @@ COMMENT ON COLUMN client_profiles.grace_cancellations_used IS 'Number of lifetim
 -- ============================================
 
 -- Get client's remaining grace cancellations
-CREATE OR REPLACE FUNCTION get_client_grace_cancellations_remaining(p_client_id UUID)
+CREATE OR REPLACE FUNCTION get_client_grace_cancellations_remaining(p_client_id TEXT)
 RETURNS INTEGER AS $$
 DECLARE
   used_count INTEGER;
@@ -208,7 +209,3 @@ CREATE TRIGGER trg_update_payout_percent
 BEFORE UPDATE ON cleaner_profiles
 FOR EACH ROW
 EXECUTE FUNCTION update_payout_percent_on_tier_change();
-
-
-
-
