@@ -60,7 +60,7 @@ router.get("/summary", async (_req: Request, res: Response) => {
     if (failedWebhooks24h > 5) {
       alerts.push(`${failedWebhooks24h} failed webhooks in last 24h`);
       if (failedWebhooks24h > 20) status = "critical";
-      else if (status !== "critical") status = "warning";
+      else if (status === "ok") status = "warning";
     }
 
     // 3. Stuck jobs (in active state for > 4 hours without update)

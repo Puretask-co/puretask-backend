@@ -5,7 +5,7 @@ export const pool = new Pool({
   connectionString: env.DATABASE_URL
 });
 
-export async function query<T extends Record<string, any> = any>(text: string, params?: any[]): Promise<{ rows: T[] }> {
+export async function query<T extends Record<string, any> = any>(text: string, params?: any[]): Promise<{ rows: T[]; rowCount: number | null }> {
   const res = await pool.query<T>(text, params);
   return res;
 }

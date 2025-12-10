@@ -244,7 +244,7 @@ cleanerRouter.get(
         req.user!.id,
         parseInt(limit as string, 10)
       );
-      res.json({ payouts: payouts.rows });
+      res.json({ payouts });
     } catch (error) {
       logger.error("get_payouts_failed", {
         error: (error as Error).message,

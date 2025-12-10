@@ -244,8 +244,9 @@ export async function createPaymentIntent(options: {
   amountCents: number;
   currency?: string;
   customerId?: string;
+  clientId?: string;
 }): Promise<Stripe.PaymentIntent> {
-  const { jobId, amountCents, currency = "usd", customerId } = options;
+  const { jobId, amountCents, currency = "usd", customerId, clientId } = options;
 
   try {
     const paymentIntent = await stripe.paymentIntents.create({
@@ -254,6 +255,7 @@ export async function createPaymentIntent(options: {
       customer: customerId,
       metadata: {
         job_id: jobId,
+        client_id: clientId || "",
         purpose: "job_charge",
       },
       automatic_payment_methods: {
@@ -265,22 +267,24 @@ export async function createPaymentIntent(options: {
       `
         INSERT INTO payment_intents (
           job_id,
+          client_id,
           stripe_payment_intent_id,
           status,
           amount_cents,
           currency,
           purpose
         )
-        VALUES ($1, $2, $3, $4, $5, 'job_charge')
+        VALUES ($1, $2, $3, $4, $5, $6, 'job_charge')
         ON CONFLICT (stripe_payment_intent_id) DO UPDATE
         SET status = EXCLUDED.status,
             updated_at = NOW()
       `,
-      [jobId, paymentIntent.id, paymentIntent.status, amountCents, currency]
+      [jobId, clientId, paymentIntent.id, paymentIntent.status, amountCents, currency]
     );
 
     logger.info("payment_intent_created", {
       jobId,
+      clientId,
       paymentIntentId: paymentIntent.id,
       amountCents,
     });
@@ -290,6 +294,72 @@ export async function createPaymentIntent(options: {
     logger.error("payment_intent_creation_failed", {
       error: (error as Error).message,
       jobId,
+      amountCents,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Create a PaymentIntent for invoice payment
+ */
+export async function createInvoicePaymentIntent(options: {
+  invoiceId: string;
+  amountCents: number;
+  currency?: string;
+  clientId: string;
+  cleanerId: string;
+  customerId?: string;
+}): Promise<Stripe.PaymentIntent> {
+  const { invoiceId, amountCents, currency = "usd", clientId, cleanerId, customerId } = options;
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountCents,
+      currency,
+      customer: customerId,
+      metadata: {
+        invoice_id: invoiceId,
+        client_id: clientId,
+        cleaner_id: cleanerId,
+        purpose: "invoice_payment",
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    await query(
+      `
+        INSERT INTO payment_intents (
+          client_id,
+          stripe_payment_intent_id,
+          status,
+          amount_cents,
+          currency,
+          purpose
+        )
+        VALUES ($1, $2, $3, $4, $5, 'invoice_payment')
+        ON CONFLICT (stripe_payment_intent_id) DO UPDATE
+        SET status = EXCLUDED.status,
+            updated_at = NOW()
+      `,
+      [clientId, paymentIntent.id, paymentIntent.status, amountCents, currency]
+    );
+
+    logger.info("invoice_payment_intent_created", {
+      invoiceId,
+      paymentIntentId: paymentIntent.id,
+      amountCents,
+      clientId,
+      cleanerId,
+    });
+
+    return paymentIntent;
+  } catch (error) {
+    logger.error("invoice_payment_intent_creation_failed", {
+      error: (error as Error).message,
+      invoiceId,
       amountCents,
     });
     throw error;
@@ -442,8 +512,8 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       }
 
       case "transfer.created":
-      case "transfer.paid":
-      case "transfer.failed": {
+      case "transfer.updated":
+      case "transfer.reversed": {
         const transfer = (event as Stripe.Event).data.object as { id: string };
         if (await isObjectAlreadyProcessed(transfer.id, "transfer")) {
           logger.info("stripe_object_already_processed", { objectId: transfer.id, type: "transfer" });
@@ -920,12 +990,17 @@ async function resolveUserIdByStripeCustomer(stripeCustomerId: string): Promise<
  */
 async function handleTransferEvent(event: Stripe.Event): Promise<void> {
   const transfer = event.data.object as Stripe.Transfer;
-  const newStatus =
-    event.type === "transfer.paid"
-      ? "paid"
-      : event.type === "transfer.failed"
-      ? "failed"
-      : "pending";
+  // Map transfer status to our payout status
+  // Stripe transfer statuses: pending, paid, failed, reversed, canceled
+  let newStatus: string;
+  if (transfer.reversed) {
+    newStatus = "reversed";
+  } else if (event.type === "transfer.reversed") {
+    newStatus = "reversed";
+  } else {
+    // For transfer.created and transfer.updated, use the transfer's status
+    newStatus = transfer.reversed ? "reversed" : "pending";
+  }
 
   await query(
     `
