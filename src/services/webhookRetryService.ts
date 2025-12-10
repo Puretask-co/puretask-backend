@@ -374,7 +374,14 @@ export async function getWebhookStats(): Promise<{
   };
 
   for (const row of statusResult.rows) {
-    stats[row.status as keyof typeof stats] = Number(row.count);
+    const count = Number(row.count);
+    switch (row.status) {
+      case "pending": stats.pending = count; break;
+      case "processing": stats.processing = count; break;
+      case "succeeded": stats.succeeded = count; break;
+      case "failed": stats.failed = count; break;
+      case "dead": stats.dead = count; break;
+    }
   }
 
   for (const row of sourceResult.rows) {

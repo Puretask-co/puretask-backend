@@ -6,7 +6,7 @@ import { logger } from "../lib/logger";
 import { sendAlert } from "../lib/alerting";
 import { validateCleanerClientRelationship } from "./cleanerClientsService";
 import { addLedgerEntry, getUserCreditBalance } from "./creditsService";
-import { createPaymentIntent } from "./paymentService";
+import { createInvoicePaymentIntent } from "./paymentService";
 
 // ============================================
 // Types
@@ -255,11 +255,16 @@ export async function createInvoice(
   });
 
   if (requiresApproval) {
-    await sendAlert("warning", "Invoice Requires Approval", `Invoice ${invoiceNumber} for $${(totalCents / 100).toFixed(2)} requires admin approval`, {
-      invoiceId: invoice.id,
-      cleanerId,
-      clientId: input.client_id,
-      amount: totalCents,
+    await sendAlert({
+      level: "warning",
+      title: "Invoice Requires Approval",
+      message: `Invoice ${invoiceNumber} for $${(totalCents / 100).toFixed(2)} requires admin approval`,
+      details: {
+        invoiceId: invoice.id,
+        cleanerId,
+        clientId: input.client_id,
+        amount: totalCents,
+      },
     });
   }
 
@@ -354,7 +359,12 @@ export async function payInvoiceWithCredits(
   }
 
   // Deduct credits from client
-  await addLedgerEntry(clientId, -invoice.total_credits, "invoice_payment", invoice.id);
+  await addLedgerEntry({
+    userId: clientId,
+    deltaCredits: -invoice.total_credits,
+    reason: "invoice_payment",
+    jobId: invoice.id,
+  });
 
   // Credit cleaner earnings (via ledger for cleaner-visible balance, and earnings table)
   await creditCleanerFromInvoice(invoice.cleaner_id, invoice.total_cents, invoice.id);
@@ -406,9 +416,10 @@ export async function payInvoiceWithCard(
   }
 
   // Create payment intent
-  const paymentIntent = await createPaymentIntent(invoice.total_cents, "usd", {
-    purpose: "invoice_payment",
+  const paymentIntent = await createInvoicePaymentIntent({
     invoiceId: invoice.id,
+    amountCents: invoice.total_cents,
+    currency: "usd",
     clientId,
     cleanerId: invoice.cleaner_id,
   });

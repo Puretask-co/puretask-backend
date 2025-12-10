@@ -137,6 +137,7 @@ export async function getTicketById(ticketId: string): Promise<TicketWithMessage
 
   return {
     ...ticket,
+    assigned_to_email: ticket.assigned_to_email ?? undefined,
     messages: messagesResult.rows,
   };
 }

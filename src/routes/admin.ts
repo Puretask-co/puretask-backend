@@ -1040,7 +1040,7 @@ adminRouter.post(
         details: { jobId, adminId: req.user!.id, reason },
       });
 
-      res.json({ success: true, result });
+      res.json({ success: true, jobId, message: "Refund processed successfully" });
     } catch (error) {
       const err = error as Error & { statusCode?: number };
       res

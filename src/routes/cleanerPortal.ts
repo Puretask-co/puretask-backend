@@ -3,7 +3,7 @@
 
 import { Router, Response } from "express";
 import { z } from "zod";
-import { jwtAuth, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { jwtAuthMiddleware as jwtAuth, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
 import {
   getCleanerClients,
   getCleanerClientProfile,
