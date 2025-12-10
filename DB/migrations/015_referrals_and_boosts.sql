@@ -1,5 +1,6 @@
 -- 015_referrals_and_boosts.sql
 -- Referral system and premium features (boosts, rush jobs)
+-- NOTE: Uses TEXT for user references to match existing users.id column type
 
 -- ============================================
 -- REFERRALS
@@ -7,7 +8,7 @@
 
 CREATE TABLE IF NOT EXISTS referral_codes (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   code            TEXT NOT NULL UNIQUE,
   type            TEXT NOT NULL DEFAULT 'standard',  -- standard, promo, influencer
   reward_credits  INTEGER NOT NULL DEFAULT 20,
@@ -25,8 +26,8 @@ CREATE INDEX IF NOT EXISTS idx_referral_codes_active ON referral_codes (is_activ
 
 CREATE TABLE IF NOT EXISTS referrals (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  referrer_id     UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
-  referee_id      UUID NOT NULL UNIQUE REFERENCES users (id) ON DELETE RESTRICT,
+  referrer_id     TEXT NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  referee_id      TEXT NOT NULL UNIQUE REFERENCES users (id) ON DELETE RESTRICT,
   referral_code   TEXT NOT NULL,
   status          TEXT NOT NULL DEFAULT 'pending',  -- pending, qualified, rewarded, expired
   referee_role    TEXT NOT NULL,  -- client, cleaner
@@ -50,7 +51,7 @@ CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals (status);
 
 CREATE TABLE IF NOT EXISTS cleaner_boosts (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   boost_type      TEXT NOT NULL DEFAULT 'standard',  -- standard, premium, mega
   credits_spent   INTEGER NOT NULL,
   multiplier      NUMERIC(3,2) NOT NULL DEFAULT 1.5,  -- Ranking multiplier
@@ -94,8 +95,8 @@ ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS cleaning_subscriptions (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id       UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-  cleaner_id      UUID REFERENCES users (id) ON DELETE SET NULL,  -- Preferred cleaner
+  client_id       TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT REFERENCES users (id) ON DELETE SET NULL,  -- Preferred cleaner
   frequency       TEXT NOT NULL,  -- weekly, biweekly, monthly
   day_of_week     SMALLINT,  -- 0-6 (Sunday-Saturday)
   preferred_time  TIME,
@@ -153,4 +154,3 @@ COMMENT ON TABLE referral_codes IS 'Unique referral codes per user';
 COMMENT ON TABLE referrals IS 'Track referral relationships and rewards';
 COMMENT ON TABLE cleaner_boosts IS 'Paid ranking boosts for cleaners';
 COMMENT ON TABLE cleaning_subscriptions IS 'Recurring cleaning subscriptions';
-

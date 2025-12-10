@@ -1,5 +1,6 @@
 -- 007_payment_purposes.sql
 -- Add purpose and credits_amount to payment_intents for dual payment flows
+-- NOTE: Uses TEXT for user references to match existing users.id column type
 
 -- Add purpose column to distinguish between:
 -- 'wallet_topup' - buying credits into wallet
@@ -13,7 +14,7 @@ ADD COLUMN IF NOT EXISTS credits_amount INTEGER;
 
 -- Add client_id for easier lookups
 ALTER TABLE payment_intents
-ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ADD COLUMN IF NOT EXISTS client_id TEXT REFERENCES users(id) ON DELETE SET NULL;
 
 -- Add check constraint for valid purposes
 ALTER TABLE payment_intents
@@ -30,4 +31,3 @@ CREATE INDEX IF NOT EXISTS idx_payment_intents_client_id ON payment_intents (cli
 COMMENT ON COLUMN payment_intents.purpose IS 'Payment purpose: wallet_topup (buy credits) or job_charge (pay for specific job)';
 COMMENT ON COLUMN payment_intents.credits_amount IS 'Number of credits this payment represents';
 COMMENT ON COLUMN payment_intents.client_id IS 'Client who initiated this payment';
-

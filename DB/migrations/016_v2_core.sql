@@ -1,5 +1,6 @@
 -- 016_v2_core.sql
 -- PureTask V2 Core Data Model Changes
+-- NOTE: Uses TEXT for user references to match existing users.id column type
 
 -- ============================================
 -- 1.1 CITIES & SERVICE AREAS
@@ -38,7 +39,7 @@ CREATE INDEX IF NOT EXISTS idx_service_areas_active ON platform_service_areas (i
 
 CREATE TABLE IF NOT EXISTS properties (
   id              SERIAL PRIMARY KEY,
-  client_id       UUID NOT NULL REFERENCES users(id),
+  client_id       TEXT NOT NULL REFERENCES users(id),
   service_area_id INT REFERENCES platform_service_areas(id),
   label           TEXT NOT NULL,        -- "Home", "Rental 1", "Airbnb #3"
   address_line1   TEXT NOT NULL,
@@ -93,8 +94,8 @@ ALTER TABLE cleaning_subscriptions
 
 CREATE TABLE IF NOT EXISTS favorite_cleaners (
   id          SERIAL PRIMARY KEY,
-  client_id   UUID NOT NULL REFERENCES users(id),
-  cleaner_id  UUID NOT NULL REFERENCES users(id),
+  client_id   TEXT NOT NULL REFERENCES users(id),
+  cleaner_id  TEXT NOT NULL REFERENCES users(id),
   notes       TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (client_id, cleaner_id)
@@ -108,7 +109,7 @@ CREATE INDEX IF NOT EXISTS idx_favorites_client ON favorite_cleaners (client_id)
 
 CREATE TABLE IF NOT EXISTS cleaner_teams (
   id              SERIAL PRIMARY KEY,
-  owner_cleaner_id UUID NOT NULL REFERENCES users(id),
+  owner_cleaner_id TEXT NOT NULL REFERENCES users(id),
   name            TEXT NOT NULL,
   description     TEXT,
   max_members     INT NOT NULL DEFAULT 5,
@@ -122,7 +123,7 @@ CREATE INDEX IF NOT EXISTS idx_teams_owner ON cleaner_teams (owner_cleaner_id);
 CREATE TABLE IF NOT EXISTS team_members (
   id          SERIAL PRIMARY KEY,
   team_id     INT NOT NULL REFERENCES cleaner_teams(id) ON DELETE CASCADE,
-  cleaner_id  UUID NOT NULL REFERENCES users(id),
+  cleaner_id  TEXT NOT NULL REFERENCES users(id),
   role        TEXT NOT NULL DEFAULT 'member', -- 'owner', 'lead', 'member'
   invited_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   accepted_at TIMESTAMPTZ,
@@ -143,7 +144,7 @@ ALTER TABLE jobs ADD COLUMN IF NOT EXISTS team_id INT REFERENCES cleaner_teams(i
 
 CREATE TABLE IF NOT EXISTS cleaner_goals (
   id           SERIAL PRIMARY KEY,
-  cleaner_id   UUID NOT NULL REFERENCES users(id),
+  cleaner_id   TEXT NOT NULL REFERENCES users(id),
   goal_type    TEXT NOT NULL DEFAULT 'jobs', -- jobs, earnings, rating
   month        DATE NOT NULL,
   target_value INT NOT NULL,
@@ -164,7 +165,7 @@ CREATE INDEX IF NOT EXISTS idx_goals_month ON cleaner_goals (month);
 
 CREATE TABLE IF NOT EXISTS calendar_connections (
   id            SERIAL PRIMARY KEY,
-  user_id       UUID NOT NULL REFERENCES users(id),
+  user_id       TEXT NOT NULL REFERENCES users(id),
   provider      TEXT NOT NULL,       -- 'google', 'apple', 'outlook'
   external_id   TEXT NOT NULL,       -- Google calendar id
   email         TEXT,                -- Connected account email
@@ -287,4 +288,3 @@ COMMENT ON TABLE cleaner_goals IS 'Monthly goals for cleaners with credit reward
 COMMENT ON TABLE calendar_connections IS 'OAuth connections to external calendars';
 COMMENT ON TABLE feature_flags IS 'Feature flag system for gradual rollouts';
 COMMENT ON TABLE job_queue IS 'Simple database-backed job queue';
-

@@ -1,10 +1,11 @@
 -- 011_cleaner_availability.sql
 -- Cleaner availability and schedule management
+-- NOTE: Uses TEXT for cleaner_id to match existing users.id column type
 
 -- Weekly availability (recurring schedule)
 CREATE TABLE IF NOT EXISTS cleaner_availability (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   day_of_week     SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6), -- 0=Sunday, 6=Saturday
   start_time      TIME NOT NULL,
   end_time        TIME NOT NULL,
@@ -24,7 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_cleaner_availability_day ON cleaner_availability 
 -- Time off / blocked dates (one-time overrides)
 CREATE TABLE IF NOT EXISTS cleaner_time_off (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   start_date      DATE NOT NULL,
   end_date        DATE NOT NULL,
   all_day         BOOLEAN NOT NULL DEFAULT true,
@@ -43,7 +44,7 @@ CREATE INDEX IF NOT EXISTS idx_cleaner_time_off_dates ON cleaner_time_off (start
 -- Service areas / coverage zones
 CREATE TABLE IF NOT EXISTS cleaner_service_areas (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   zip_code        TEXT,
   city            TEXT,
   state           TEXT,
@@ -59,7 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_cleaner_service_areas_zip ON cleaner_service_area
 -- Cleaner preferences (job types, special skills)
 CREATE TABLE IF NOT EXISTS cleaner_preferences (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id          UUID NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id          TEXT NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
   max_jobs_per_day    INTEGER NOT NULL DEFAULT 5,
   min_job_duration_h  NUMERIC(3,1) NOT NULL DEFAULT 1.0,  -- Minimum job length in hours
   max_job_duration_h  NUMERIC(3,1) NOT NULL DEFAULT 8.0,  -- Maximum job length in hours
@@ -86,7 +87,7 @@ FOR EACH ROW EXECUTE PROCEDURE set_updated_at_timestamp();
 
 -- Helper function: Check if cleaner is available at a specific datetime
 CREATE OR REPLACE FUNCTION is_cleaner_available(
-  p_cleaner_id UUID,
+  p_cleaner_id TEXT,
   p_datetime TIMESTAMPTZ
 ) RETURNS BOOLEAN AS $$
 DECLARE
@@ -132,4 +133,3 @@ COMMENT ON TABLE cleaner_time_off IS 'One-time time off / blocked dates for clea
 COMMENT ON TABLE cleaner_service_areas IS 'Geographic areas a cleaner is willing to work in';
 COMMENT ON TABLE cleaner_preferences IS 'Job preferences and capabilities for cleaners';
 COMMENT ON FUNCTION is_cleaner_available IS 'Check if a cleaner is available at a specific datetime';
-

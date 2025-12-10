@@ -34,10 +34,11 @@ CREATE TYPE credit_reason AS ENUM (
 
 -------------------------
 -- USERS & PROFILES
+-- NOTE: Uses TEXT for users.id to allow flexible ID formats
 -------------------------
 
 CREATE TABLE users (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
   email           CITEXT NOT NULL UNIQUE,
   password_hash   TEXT NOT NULL,
   role            user_role NOT NULL DEFAULT 'client',
@@ -49,7 +50,7 @@ CREATE INDEX idx_users_role ON users (role);
 
 CREATE TABLE client_profiles (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
   default_address TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -57,7 +58,7 @@ CREATE TABLE client_profiles (
 
 CREATE TABLE cleaner_profiles (
   id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id                 UUID NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
+  user_id                 TEXT NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
   tier                    TEXT NOT NULL DEFAULT 'bronze', -- bronze/silver/gold/platinum
   reliability_score       NUMERIC(5,2) NOT NULL DEFAULT 100.0, -- 0–100
   hourly_rate_credits     INTEGER NOT NULL DEFAULT 0,
@@ -75,8 +76,8 @@ CREATE INDEX idx_cleaner_profiles_tier ON cleaner_profiles (tier);
 
 CREATE TABLE jobs (
   id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id               UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
-  cleaner_id              UUID REFERENCES users (id) ON DELETE SET NULL,
+  client_id               TEXT NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  cleaner_id              TEXT REFERENCES users (id) ON DELETE SET NULL,
   status                  job_status NOT NULL DEFAULT 'requested',
 
   scheduled_start_at      TIMESTAMPTZ NOT NULL,
@@ -110,7 +111,7 @@ CREATE TABLE job_events (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id          UUID NOT NULL REFERENCES jobs (id) ON DELETE CASCADE,
   actor_type      TEXT NOT NULL, -- client/cleaner/admin/system
-  actor_id        UUID,          -- nullable for 'system'
+  actor_id        TEXT,          -- nullable for 'system'
   event_type      TEXT NOT NULL, -- e.g. job.created, job.accepted, job.approved, ...
   payload         JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -129,7 +130,7 @@ CREATE INDEX idx_job_events_created_at ON job_events (created_at);
 
 CREATE TABLE credit_ledger (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   job_id          UUID REFERENCES jobs (id) ON DELETE SET NULL,
   delta_credits   INTEGER NOT NULL, -- + added, - deducted
   reason          credit_reason NOT NULL,
@@ -179,7 +180,7 @@ CREATE INDEX idx_stripe_events_processed ON stripe_events (processed);
 
 CREATE TABLE payouts (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id          UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  cleaner_id          TEXT NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
   job_id              UUID NOT NULL REFERENCES jobs (id) ON DELETE CASCADE,
 
   stripe_transfer_id  TEXT UNIQUE,
@@ -202,7 +203,7 @@ CREATE INDEX idx_payouts_status ON payouts (status);
 CREATE TABLE disputes (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id          UUID NOT NULL UNIQUE REFERENCES jobs (id) ON DELETE CASCADE,
-  client_id       UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  client_id       TEXT NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
 
   status          dispute_status NOT NULL DEFAULT 'open',
   client_notes    TEXT NOT NULL,
@@ -238,7 +239,7 @@ CREATE TABLE kpi_snapshots (
 
 CREATE TABLE notification_failures (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID REFERENCES users (id) ON DELETE SET NULL,
+  user_id         TEXT REFERENCES users (id) ON DELETE SET NULL,
   channel         TEXT NOT NULL, -- sms/email/push
   type            TEXT NOT NULL, -- e.g. job.reminder, job.assigned
   payload         JSONB NOT NULL,
@@ -293,4 +294,3 @@ CREATE TRIGGER trg_cleaner_profiles_set_updated_at
 BEFORE UPDATE ON cleaner_profiles
 FOR EACH ROW
 EXECUTE PROCEDURE set_updated_at_timestamp();
-
