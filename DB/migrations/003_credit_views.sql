@@ -2,13 +2,14 @@
 -- SQL helpers for credit balance calculations
 -- NOTE: Uses TEXT for user_id parameters to match users.id column type
 -- NOTE: This migration requires 001_init.sql to be run first (creates credit_ledger, jobs, payouts tables)
+-- NOTE: Adapted for actual schema: credit_ledger uses 'amount' and 'direction' columns
 
 -- Total credit balance per user (all time)
--- Balance = SUM(delta_credits) from credit_ledger
+-- Balance = SUM(amount) where direction='credit' minus SUM(amount) where direction='debit'
 CREATE OR REPLACE VIEW user_credit_balances AS
 SELECT
   user_id,
-  COALESCE(SUM(delta_credits), 0)::INTEGER AS balance_credits
+  COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0)::INTEGER AS balance_credits
 FROM credit_ledger
 GROUP BY user_id;
 
@@ -18,7 +19,7 @@ RETURNS INTEGER AS $$
 DECLARE
   v_balance INTEGER;
 BEGIN
-  SELECT COALESCE(SUM(delta_credits), 0)
+  SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0)
   INTO v_balance
   FROM credit_ledger
   WHERE user_id = p_user_id;
@@ -39,7 +40,7 @@ $$ LANGUAGE plpgsql STABLE;
 CREATE OR REPLACE VIEW credit_ledger_with_balance AS
 SELECT
   cl.*,
-  SUM(cl.delta_credits) OVER (
+  SUM(CASE WHEN cl.direction = 'credit' THEN cl.amount ELSE -cl.amount END) OVER (
     PARTITION BY cl.user_id
     ORDER BY cl.created_at
     ROWS UNBOUNDED PRECEDING
@@ -51,9 +52,9 @@ CREATE OR REPLACE VIEW credit_summary_by_reason AS
 SELECT
   reason,
   COUNT(*) as transaction_count,
-  SUM(CASE WHEN delta_credits > 0 THEN delta_credits ELSE 0 END)::INTEGER as total_added,
-  SUM(CASE WHEN delta_credits < 0 THEN ABS(delta_credits) ELSE 0 END)::INTEGER as total_removed,
-  SUM(delta_credits)::INTEGER as net_change
+  SUM(CASE WHEN direction = 'credit' THEN amount ELSE 0 END)::INTEGER as total_added,
+  SUM(CASE WHEN direction != 'credit' THEN amount ELSE 0 END)::INTEGER as total_removed,
+  SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END)::INTEGER as net_change
 FROM credit_ledger
 GROUP BY reason;
 
