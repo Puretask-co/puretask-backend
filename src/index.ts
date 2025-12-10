@@ -202,37 +202,51 @@ app.use(
 // ============================================
 // Server Startup
 // ============================================
-const PORT = env.PORT;
+// Only start server if not in test mode
+// Tests import the app but don't need the server running
+const isTestMode = process.env.NODE_ENV === 'test' || 
+                   process.env.VITEST === 'true' ||
+                   typeof process.env.VITEST !== 'undefined';
 
-const server = app.listen(PORT, () => {
-  logger.info("server_started", {
-    port: PORT,
-    env: env.NODE_ENV,
-    timestamp: new Date().toISOString(),
-  });
-  console.log(`🚀 PureTask Backend running on port ${PORT}`);
-});
+let server: ReturnType<typeof app.listen> | null = null;
 
-// ============================================
-// Graceful Shutdown
-// ============================================
-async function gracefulShutdown(signal: string) {
-  logger.info("shutdown_initiated", { signal });
-
-  server.close(() => {
-    logger.info("server_closed");
-    process.exit(0);
+if (!isTestMode) {
+  const PORT = env.PORT;
+  
+  server = app.listen(PORT, () => {
+    logger.info("server_started", {
+      port: PORT,
+      env: env.NODE_ENV,
+      timestamp: new Date().toISOString(),
+    });
+    console.log(`🚀 PureTask Backend running on port ${PORT}`);
   });
 
-  // Force close after 30 seconds
-  setTimeout(() => {
-    logger.error("forced_shutdown", { reason: "timeout" });
-    process.exit(1);
-  }, 30000);
+  // ============================================
+  // Graceful Shutdown
+  // ============================================
+  async function gracefulShutdown(signal: string) {
+    logger.info("shutdown_initiated", { signal });
+
+    if (server) {
+      server.close(() => {
+        logger.info("server_closed");
+        process.exit(0);
+      });
+
+      // Force close after 30 seconds
+      setTimeout(() => {
+        logger.error("forced_shutdown", { reason: "timeout" });
+        process.exit(1);
+      }, 30000);
+    } else {
+      process.exit(0);
+    }
+  }
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 }
-
-process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 // Export for testing
 export default app;
