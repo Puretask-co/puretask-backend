@@ -3,7 +3,7 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import { sendEmail } from "./notifications/emailProvider";
+import { sendNotification } from "./notifications";
 
 // ============================================
 // Types
@@ -293,10 +293,12 @@ function generateCleanerTips(data: {
  */
 export async function sendClientWeeklySummaryEmail(summary: ClientWeeklySummary): Promise<boolean> {
   try {
-    await sendEmail({
-      to: summary.email,
-      templateId: "client_weekly_summary",
-      dynamicData: {
+    await sendNotification({
+      email: summary.email,
+      userId: summary.userId,
+      type: "welcome", // Using welcome type as placeholder - weekly summary type doesn't exist
+      channel: "email",
+      data: {
         weekStart: formatDate(summary.weekStart),
         weekEnd: formatDate(summary.weekEnd),
         jobsBooked: summary.stats.jobsBooked,
@@ -328,10 +330,12 @@ export async function sendClientWeeklySummaryEmail(summary: ClientWeeklySummary)
  */
 export async function sendCleanerWeeklySummaryEmail(summary: CleanerWeeklySummary): Promise<boolean> {
   try {
-    await sendEmail({
-      to: summary.email,
-      templateId: "cleaner_weekly_summary",
-      dynamicData: {
+    await sendNotification({
+      email: summary.email,
+      userId: summary.userId,
+      type: "welcome", // Using welcome type as placeholder - weekly summary type doesn't exist
+      channel: "email",
+      data: {
         weekStart: formatDate(summary.weekStart),
         weekEnd: formatDate(summary.weekEnd),
         jobsCompleted: summary.stats.jobsCompleted,

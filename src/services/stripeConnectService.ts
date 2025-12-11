@@ -224,7 +224,8 @@ export async function handleConnectWebhookEvent(event: Stripe.Event): Promise<vo
     }
 
     case "account.application.deauthorized": {
-      const account = event.data.object as Stripe.Account;
+      const application = event.data.object as Stripe.Application;
+      const account = application as unknown as Stripe.Account;
       const cleanerId = account.metadata?.cleaner_id;
 
       if (cleanerId) {

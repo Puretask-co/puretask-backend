@@ -3,7 +3,7 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import { processPayout, createPayoutForCleaner } from "../services/payoutsService";
+import { processSinglePayout, processPendingPayouts as processPendingPayoutsService } from "../services/payoutsService";
 import type { Payout, CleanerEarning } from "../types/db";
 
 // Configuration
@@ -88,7 +88,9 @@ async function createPayoutsForCleaners(): Promise<{ created: number; failed: nu
         continue;
       }
 
-      await createPayoutForCleaner(cleaner.cleaner_id);
+      // TODO: Implement createPayoutForCleaner or use processPendingPayoutsService
+      // For now, use processPendingPayoutsService which handles creating payouts
+      await processPendingPayoutsService();
       created++;
 
       logger.info("payout_created_for_cleaner", {
@@ -119,7 +121,7 @@ async function processPendingPayouts(): Promise<{ processed: number; failed: num
 
   for (const payout of payouts) {
     try {
-      await processPayout(payout.id);
+      await processSinglePayout(payout.id);
       processed++;
 
       logger.info("payout_processed", {

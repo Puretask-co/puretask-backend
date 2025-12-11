@@ -36,9 +36,9 @@ export class TwilioProvider implements NotificationProvider {
       const url = `${TWILIO_API_URL}/Accounts/${accountSid}/Messages.json`;
 
       const params = new URLSearchParams({
-        To: payload.to,
+        To: payload.to || payload.phone || "",
         From: fromNumber,
-        Body: payload.body,
+        Body: payload.body || "",
       });
 
       const response = await fetch(url, {
