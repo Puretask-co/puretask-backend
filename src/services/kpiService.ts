@@ -161,10 +161,10 @@ export async function getExtendedDailyMetrics(date?: string): Promise<ExtendedKp
       ),
       credit_metrics AS (
         SELECT
-          COALESCE(SUM(delta_credits) FILTER (WHERE reason = 'purchase'), 0) AS credits_purchased,
-          COALESCE(ABS(SUM(delta_credits) FILTER (WHERE reason = 'job_escrow')), 0) AS credits_escrowed,
-          COALESCE(SUM(delta_credits) FILTER (WHERE reason = 'job_release'), 0) AS credits_released,
-          COALESCE(SUM(delta_credits) FILTER (WHERE reason = 'refund'), 0) AS credits_refunded
+          COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END) FILTER (WHERE reason = 'purchase'), 0) AS credits_purchased,
+          COALESCE(ABS(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END) FILTER (WHERE reason = 'job_escrow')), 0) AS credits_escrowed,
+          COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END) FILTER (WHERE reason = 'job_release'), 0) AS credits_released,
+          COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END) FILTER (WHERE reason = 'refund'), 0) AS credits_refunded
         FROM credit_ledger
         WHERE created_at::date = $1::date
       ),

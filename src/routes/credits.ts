@@ -19,17 +19,17 @@ import {
 
 const creditsRouter = Router();
 
-// All routes require authentication
-creditsRouter.use(jwtAuthMiddleware);
-
 /**
  * GET /credits/packages
- * Get available credit packages
+ * Get available credit packages (public, no auth required)
  */
 creditsRouter.get("/packages", (req, res: Response) => {
   const packages = getCreditPackages();
   res.json({ packages });
 });
+
+// All other routes require authentication
+creditsRouter.use(jwtAuthMiddleware);
 
 /**
  * GET /credits/balance

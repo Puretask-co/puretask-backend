@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from "vitest";
 import request from "supertest";
-import { app } from "../../index";
+import app from "../../index";
 import { env } from "../../config/env";
 
 describe("Events API - Smoke Tests", () => {

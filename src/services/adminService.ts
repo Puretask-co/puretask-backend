@@ -70,8 +70,9 @@ export async function getAdminKPIs(dateFrom?: string, dateTo?: string): Promise<
   const cancelledJobs = parseInt(cancelledJobsResult.rows[0]?.count || "0", 10);
 
   // Total credits escrowed (from credit_ledger - job_escrow entries)
+  // Uses amount and direction columns instead of delta_credits
   const creditsResult = await query<{ total: string }>(
-    `SELECT COALESCE(SUM(ABS(delta_credits)), 0) as total FROM credit_ledger WHERE reason = 'job_escrow' ${dateFilter}`,
+    `SELECT COALESCE(SUM(ABS(CASE WHEN direction = 'credit' THEN amount ELSE -amount END)), 0) as total FROM credit_ledger WHERE reason = 'job_escrow' ${dateFilter}`,
     params
   );
   const totalCreditsEscrowed = parseFloat(creditsResult.rows[0]?.total || "0");

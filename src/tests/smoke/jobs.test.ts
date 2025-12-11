@@ -3,7 +3,7 @@
 
 import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
-import { app } from "../../index";
+import app from "../../index";
 
 // Test user headers
 const clientHeaders = {

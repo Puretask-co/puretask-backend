@@ -10,6 +10,10 @@ export default defineConfig({
     exclude: ["node_modules", "dist"],
     testTimeout: 30000, // 30 seconds for integration tests
     hookTimeout: 30000,
+    env: {
+      // Set flag so server doesn't start during tests
+      RUNNING_TESTS: "true",
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
