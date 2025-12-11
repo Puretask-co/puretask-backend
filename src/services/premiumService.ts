@@ -403,7 +403,7 @@ function calculateNextJobDate(
   preferredDayOfWeek?: number
 ): Date {
   const now = new Date();
-  let next = new Date(now);
+  const next = new Date(now);
 
   // Set to next occurrence of preferred day if specified
   if (preferredDayOfWeek !== undefined) {

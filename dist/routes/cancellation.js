@@ -11,6 +11,7 @@ const cancellationService_1 = require("../core/cancellationService");
 const db_1 = require("../core/db");
 const timeBuckets_1 = require("../core/timeBuckets");
 const client_1 = require("../db/client");
+const env_1 = require("../config/env");
 const cancellationRouter = (0, express_1.Router)();
 exports.cancellationRouter = cancellationRouter;
 // All routes require auth
@@ -48,6 +49,12 @@ cancellationRouter.post("/jobs/:jobId", async (req, res) => {
         }
         const now = new Date();
         const hoursBefore = (0, timeBuckets_1.computeHoursBeforeStart)(job.startTime, now);
+        // Enforce lock window unless marked emergency
+        if (!body.isEmergency && hoursBefore < env_1.env.CANCELLATION_LOCK_HOURS) {
+            return res.status(400).json({
+                error: `Cancellation locked within ${env_1.env.CANCELLATION_LOCK_HOURS}h of start; contact support or mark emergency.`,
+            });
+        }
         // Check if this is a no-show situation (at/after start time)
         if (hoursBefore <= 0) {
             return res.status(400).json({
@@ -132,6 +139,12 @@ cancellationRouter.post("/jobs/:jobId/cleaner", async (req, res) => {
             return res.status(400).json({ error: `Cannot cancel job with status: ${job.status}` });
         }
         const now = new Date();
+        const hoursBefore = (0, timeBuckets_1.computeHoursBeforeStart)(job.startTime, now);
+        if (!body.isEmergency && hoursBefore < env_1.env.CANCELLATION_LOCK_HOURS) {
+            return res.status(400).json({
+                error: `Cancellation locked within ${env_1.env.CANCELLATION_LOCK_HOURS}h of start; contact support or mark emergency.`,
+            });
+        }
         // Determine cancellation type
         const type = body.isEmergency
             ? 'cleaner_cancel_emergency'

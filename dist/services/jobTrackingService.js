@@ -271,7 +271,7 @@ async function updateCleanerLocation(jobId, cleanerId, location) {
         actorType: "cleaner",
         actorId: cleanerId,
         eventName: "cleaner.location_updated",
-        payload: location,
+        payload: { ...location },
     });
 }
 // ============================================

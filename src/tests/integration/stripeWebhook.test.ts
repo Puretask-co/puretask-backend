@@ -28,9 +28,10 @@ describe("Stripe Webhook Integration", () => {
           scheduled_start_at,
           scheduled_end_at,
           address,
-          credit_amount
+          credit_amount,
+          estimated_hours
         )
-        VALUES ($1, 'requested', NOW(), NOW() + INTERVAL '2 hours', 'Test Address', 100)
+        VALUES ($1, 'requested', NOW() + INTERVAL '3 hours', NOW() + INTERVAL '5 hours', 'Test Address', 100, 2)
         RETURNING id
       `,
       [client.id]

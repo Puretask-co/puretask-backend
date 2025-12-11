@@ -58,8 +58,20 @@ export async function createTestClient(): Promise<TestUser> {
     throw new Error(`Failed to create test client: ${res.status} ${JSON.stringify(res.body)}`);
   }
 
+  const userId = res.body.user.id;
+  
+  // Verify user was actually created in database (test isolation)
+  const userCheck = await query<{ id: string }>(
+    `SELECT id FROM users WHERE id = $1`,
+    [userId]
+  );
+  
+  if (userCheck.rows.length === 0) {
+    throw new Error(`User ${userId} was not found in database after registration - transaction issue`);
+  }
+
   return {
-    id: res.body.user.id,
+    id: userId,
     email: res.body.user.email,
     role: res.body.user.role,
     token: res.body.token,
@@ -85,8 +97,31 @@ export async function createTestCleaner(): Promise<TestUser> {
     throw new Error(`Failed to create test cleaner: ${res.status} ${JSON.stringify(res.body)}`);
   }
 
+  const userId = res.body.user.id;
+  
+  // Verify user was actually created in database (test isolation)
+  const userCheck = await query<{ id: string }>(
+    `SELECT id FROM users WHERE id = $1`,
+    [userId]
+  );
+  
+  if (userCheck.rows.length === 0) {
+    throw new Error(`User ${userId} was not found in database after registration - transaction issue`);
+  }
+  
+  // Verify cleaner_profile was created
+  const profileCheck = await query<{ user_id: string }>(
+    `SELECT user_id FROM cleaner_profiles WHERE user_id = $1`,
+    [userId]
+  );
+  
+  if (profileCheck.rows.length === 0) {
+    // This is a warning, not an error - profile might be created lazily
+    console.warn(`Cleaner profile not found for user ${userId} - may be created later`);
+  }
+
   return {
-    id: res.body.user.id,
+    id: userId,
     email: res.body.user.email,
     role: res.body.user.role,
     token: res.body.token,
@@ -179,8 +214,19 @@ export async function createTestJob(
 /**
  * Add credits to a user's account (directly in DB)
  * Note: credit_ledger uses 'amount' and 'direction' columns, not 'delta_credits'
+ * Ensures user exists before adding credits to prevent FK violations
  */
 export async function addCreditsToUser(userId: string, amount: number): Promise<void> {
+  // First verify user exists
+  const userCheck = await query<{ id: string }>(
+    `SELECT id FROM users WHERE id = $1`,
+    [userId]
+  );
+  
+  if (userCheck.rows.length === 0) {
+    throw new Error(`Cannot add credits: user ${userId} does not exist in users table`);
+  }
+  
   await query(
     `
       INSERT INTO credit_ledger (user_id, amount, direction, reason)
@@ -192,10 +238,11 @@ export async function addCreditsToUser(userId: string, amount: number): Promise<
 
 /**
  * Get user's credit balance
+ * Note: credit_ledger uses 'amount' and 'direction' columns, not 'delta_credits'
  */
 export async function getUserBalance(userId: string): Promise<number> {
   const result = await query<{ balance: string }>(
-    `SELECT COALESCE(SUM(delta_credits), 0) as balance FROM credit_ledger WHERE user_id = $1`,
+    `SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0) as balance FROM credit_ledger WHERE user_id = $1`,
     [userId]
   );
   return Number(result.rows[0]?.balance || 0);
@@ -255,6 +302,11 @@ export async function cleanupTestData(): Promise<void> {
       // Ignore errors about missing tables or columns (schema might not be fully migrated)
       if (error?.code === '42P01' || error?.code === '42703') {
         // Table or column doesn't exist - skip this cleanup step
+        continue;
+      }
+      // Ignore connection errors during cleanup (non-critical)
+      if (error?.code === 'ECONNRESET' || error?.code === 'ECONNREFUSED' || error?.message?.includes('socket')) {
+        console.warn(`Cleanup query failed due to connection issue (non-critical): ${error.message}`);
         continue;
       }
       // Re-throw other errors

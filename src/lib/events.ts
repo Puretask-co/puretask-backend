@@ -35,6 +35,7 @@ export interface PublishEventInput {
 /**
  * Publish an application event to job_events table
  * Matches 001_init.sql schema: (id, job_id, actor_type, actor_id, event_type, payload, created_at)
+ * Note: job_id is NOT NULL in the schema, so events without a jobId are logged but not stored in DB
  */
 export async function publishEvent(input: PublishEventInput): Promise<void> {
   const {
@@ -47,19 +48,33 @@ export async function publishEvent(input: PublishEventInput): Promise<void> {
 
   const payloadJson = JSON.stringify(payload);
 
-  await query(
-    `
-      INSERT INTO job_events (
-        job_id,
-        actor_type,
-        actor_id,
-        event_type,
-        payload
-      )
-      VALUES ($1, $2, $3, $4, $5::jsonb)
-    `,
-    [jobId, actorType, actorId, eventName, payloadJson]
-  );
+  // Only insert into job_events if jobId is provided (schema requires NOT NULL)
+  // For system events without a job, we still log and forward to n8n, but don't store in DB
+  if (jobId) {
+    try {
+      await query(
+        `
+          INSERT INTO job_events (
+            job_id,
+            actor_type,
+            actor_id,
+            event_type,
+            payload
+          )
+          VALUES ($1, $2, $3, $4, $5::jsonb)
+        `,
+        [jobId, actorType, actorId, eventName, payloadJson]
+      );
+    } catch (error: any) {
+      // If insert fails (e.g., foreign key constraint), log but don't throw
+      // This allows events to still be forwarded to n8n even if DB insert fails
+      logger.error("job_event_insert_failed", {
+        jobId,
+        eventName,
+        error: (error as Error).message,
+      });
+    }
+  }
 
   logger.info("job_event_published", {
     jobId,
@@ -68,11 +83,23 @@ export async function publishEvent(input: PublishEventInput): Promise<void> {
     actorId,
   });
 
-  // Send notifications for key events
-  await maybeSendNotifications(jobId, eventName, payload);
+  // Send notifications for key events (non-blocking, errors are logged but don't fail the request)
+  maybeSendNotifications(jobId, eventName, payload).catch((err) => {
+    logger.error("event_notification_failed_non_blocking", {
+      jobId,
+      eventName,
+      error: (err as Error).message,
+    });
+  });
 
-  // Forward to n8n webhook if configured
-  await maybeForwardToN8n(jobId, actorType, actorId, eventName, payload);
+  // Forward to n8n webhook if configured (non-blocking, errors are logged but don't fail the request)
+  maybeForwardToN8n(jobId, actorType, actorId, eventName, payload).catch((err) => {
+    logger.error("n8n_forward_failed_non_blocking", {
+      error: (err as Error).message,
+      jobId,
+      eventName,
+    });
+  });
 }
 
 /**

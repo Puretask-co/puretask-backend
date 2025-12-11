@@ -7,7 +7,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const supertest_1 = __importDefault(require("supertest"));
-const index_1 = require("../../index");
+const index_1 = __importDefault(require("../../index"));
 const client_1 = require("../../db/client");
 const TEST_EMAIL = `test-${Date.now()}@puretask.test`;
 const TEST_PASSWORD = "TestPassword123!";
@@ -22,7 +22,7 @@ let userId;
     });
     (0, vitest_1.describe)("POST /auth/register", () => {
         (0, vitest_1.it)("should register a new user", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .post("/auth/register")
                 .send({
                 email: TEST_EMAIL,
@@ -39,7 +39,7 @@ let userId;
             authToken = res.body.accessToken;
         });
         (0, vitest_1.it)("should reject duplicate email", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .post("/auth/register")
                 .send({
                 email: TEST_EMAIL,
@@ -51,7 +51,7 @@ let userId;
             (0, vitest_1.expect)(res.body.error.code).toBe("EMAIL_EXISTS");
         });
         (0, vitest_1.it)("should reject invalid email", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .post("/auth/register")
                 .send({
                 email: "not-an-email",
@@ -62,7 +62,7 @@ let userId;
             (0, vitest_1.expect)(res.status).toBe(400);
         });
         (0, vitest_1.it)("should reject short password", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .post("/auth/register")
                 .send({
                 email: "another@test.com",
@@ -75,7 +75,7 @@ let userId;
     });
     (0, vitest_1.describe)("POST /auth/login", () => {
         (0, vitest_1.it)("should login with valid credentials", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .post("/auth/login")
                 .send({
                 email: TEST_EMAIL,
@@ -87,7 +87,7 @@ let userId;
             authToken = res.body.accessToken;
         });
         (0, vitest_1.it)("should reject invalid password", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .post("/auth/login")
                 .send({
                 email: TEST_EMAIL,
@@ -97,7 +97,7 @@ let userId;
             (0, vitest_1.expect)(res.body.error.code).toBe("LOGIN_FAILED");
         });
         (0, vitest_1.it)("should reject unknown email", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .post("/auth/login")
                 .send({
                 email: "unknown@test.com",
@@ -108,7 +108,7 @@ let userId;
     });
     (0, vitest_1.describe)("GET /auth/me", () => {
         (0, vitest_1.it)("should return current user with valid token", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .get("/auth/me")
                 .set("Authorization", `Bearer ${authToken}`);
             (0, vitest_1.expect)(res.status).toBe(200);
@@ -116,11 +116,11 @@ let userId;
             (0, vitest_1.expect)(res.body.user.email).toBe(TEST_EMAIL.toLowerCase());
         });
         (0, vitest_1.it)("should reject without token", async () => {
-            const res = await (0, supertest_1.default)(index_1.app).get("/auth/me");
+            const res = await (0, supertest_1.default)(index_1.default).get("/auth/me");
             (0, vitest_1.expect)(res.status).toBe(401);
         });
         (0, vitest_1.it)("should reject invalid token", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .get("/auth/me")
                 .set("Authorization", "Bearer invalid-token");
             (0, vitest_1.expect)(res.status).toBe(401);
@@ -128,7 +128,7 @@ let userId;
     });
     (0, vitest_1.describe)("PATCH /auth/me", () => {
         (0, vitest_1.it)("should update user profile", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .patch("/auth/me")
                 .set("Authorization", `Bearer ${authToken}`)
                 .send({
@@ -141,7 +141,7 @@ let userId;
     (0, vitest_1.describe)("POST /auth/change-password", () => {
         const NEW_PASSWORD = "NewPassword456!";
         (0, vitest_1.it)("should change password with correct current password", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .post("/auth/change-password")
                 .set("Authorization", `Bearer ${authToken}`)
                 .send({
@@ -152,7 +152,7 @@ let userId;
             (0, vitest_1.expect)(res.body.success).toBe(true);
         });
         (0, vitest_1.it)("should login with new password", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .post("/auth/login")
                 .send({
                 email: TEST_EMAIL,
@@ -161,7 +161,7 @@ let userId;
             (0, vitest_1.expect)(res.status).toBe(200);
         });
         (0, vitest_1.it)("should reject incorrect current password", async () => {
-            const res = await (0, supertest_1.default)(index_1.app)
+            const res = await (0, supertest_1.default)(index_1.default)
                 .post("/auth/change-password")
                 .set("Authorization", `Bearer ${authToken}`)
                 .send({

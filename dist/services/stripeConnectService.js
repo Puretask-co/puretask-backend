@@ -174,7 +174,8 @@ async function handleConnectWebhookEvent(event) {
             break;
         }
         case "account.application.deauthorized": {
-            const account = event.data.object;
+            const application = event.data.object;
+            const account = application;
             const cleanerId = account.metadata?.cleaner_id;
             if (cleanerId) {
                 // Clear the stripe_account_id when deauthorized

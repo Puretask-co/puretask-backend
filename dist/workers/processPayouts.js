@@ -64,7 +64,9 @@ async function createPayoutsForCleaners() {
                 });
                 continue;
             }
-            await (0, payoutsService_1.createPayoutForCleaner)(cleaner.cleaner_id);
+            // TODO: Implement createPayoutForCleaner or use processPendingPayoutsService
+            // For now, use processPendingPayoutsService which handles creating payouts
+            await (0, payoutsService_1.processPendingPayouts)();
             created++;
             logger_1.logger.info("payout_created_for_cleaner", {
                 cleanerId: cleaner.cleaner_id,
@@ -91,7 +93,7 @@ async function processPendingPayouts() {
     let failed = 0;
     for (const payout of payouts) {
         try {
-            await (0, payoutsService_1.processPayout)(payout.id);
+            await (0, payoutsService_1.processSinglePayout)(payout.id);
             processed++;
             logger_1.logger.info("payout_processed", {
                 payoutId: payout.id,

@@ -38,23 +38,46 @@ async function registerUser(input) {
     }
     // Hash password
     const passwordHash = await (0, auth_1.hashPassword)(password);
-    // Create user
-    const userResult = await (0, client_1.query)(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
-      RETURNING *
-    `, [email, passwordHash, role]);
-    const user = userResult.rows[0];
-    if (!user) {
-        throw Object.assign(new Error("Failed to create user"), { statusCode: 500 });
-    }
-    // Create corresponding profile
-    if (role === "client") {
-        await (0, client_1.query)(`INSERT INTO client_profiles (user_id) VALUES ($1)`, [user.id]);
-    }
-    else if (role === "cleaner") {
-        await (0, client_1.query)(`INSERT INTO cleaner_profiles (user_id) VALUES ($1)`, [user.id]);
-    }
+    // Create user and profile in a transaction to ensure foreign key constraints work
+    const user = await (0, client_1.withTransaction)(async (client) => {
+        // Create user
+        const userResult = await client.query(`
+        INSERT INTO users (email, password_hash, role)
+        VALUES ($1, $2, $3)
+        RETURNING *
+      `, [email, passwordHash, role]);
+        const newUser = userResult.rows[0];
+        if (!newUser) {
+            throw Object.assign(new Error("Failed to create user"), { statusCode: 500 });
+        }
+        // Create corresponding profile in the same transaction
+        if (role === "client") {
+            await client.query(`INSERT INTO client_profiles (user_id) VALUES ($1)`, [newUser.id]);
+        }
+        else if (role === "cleaner") {
+            // Try to insert with all columns first (if they exist)
+            // If columns don't exist, fall back to just user_id
+            // Use a savepoint so we can rollback the failed INSERT and try again
+            await client.query("SAVEPOINT cleaner_profile_insert");
+            try {
+                await client.query(`INSERT INTO cleaner_profiles (user_id, tier, reliability_score, hourly_rate_credits) VALUES ($1, 'bronze', 100.0, 0)`, [newUser.id]);
+                // Success - release the savepoint
+                await client.query("RELEASE SAVEPOINT cleaner_profile_insert");
+            }
+            catch (error) {
+                // If columns don't exist (error code 42703 = undefined column), rollback to savepoint and try with just user_id
+                if (error?.code === '42703') {
+                    await client.query("ROLLBACK TO SAVEPOINT cleaner_profile_insert");
+                    await client.query(`INSERT INTO cleaner_profiles (user_id) VALUES ($1)`, [newUser.id]);
+                }
+                else {
+                    // Re-throw other errors
+                    throw error;
+                }
+            }
+        }
+        return newUser;
+    });
     logger_1.logger.info("user_registered", {
         userId: user.id,
         email: user.email,

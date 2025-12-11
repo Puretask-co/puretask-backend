@@ -4,7 +4,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");
-const auth_1 = require("../middleware/auth");
+const jwtAuth_1 = require("../middleware/jwtAuth");
 const jobsService_1 = require("../services/jobsService");
 const paymentService_1 = require("../services/paymentService");
 const creditsService_1 = require("../services/creditsService");
@@ -13,7 +13,7 @@ const logger_1 = require("../lib/logger");
 const env_1 = require("../config/env");
 const jobsRouter = (0, express_1.Router)();
 // All routes require auth
-jobsRouter.use(auth_1.authMiddleware);
+jobsRouter.use(jwtAuth_1.jwtAuthMiddleware);
 // Helpers
 function getRole(req) {
     return (req.user?.role ?? "client");

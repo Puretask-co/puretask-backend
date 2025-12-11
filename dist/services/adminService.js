@@ -39,7 +39,8 @@ async function getAdminKPIs(dateFrom, dateTo) {
     const cancelledJobsResult = await (0, client_1.query)(`SELECT COUNT(*) as count FROM jobs WHERE status = 'cancelled' ${dateFilter}`, params);
     const cancelledJobs = parseInt(cancelledJobsResult.rows[0]?.count || "0", 10);
     // Total credits escrowed (from credit_ledger - job_escrow entries)
-    const creditsResult = await (0, client_1.query)(`SELECT COALESCE(SUM(ABS(delta_credits)), 0) as total FROM credit_ledger WHERE reason = 'job_escrow' ${dateFilter}`, params);
+    // Uses amount and direction columns instead of delta_credits
+    const creditsResult = await (0, client_1.query)(`SELECT COALESCE(SUM(ABS(CASE WHEN direction = 'credit' THEN amount ELSE -amount END)), 0) as total FROM credit_ledger WHERE reason = 'job_escrow' ${dateFilter}`, params);
     const totalCreditsEscrowed = parseFloat(creditsResult.rows[0]?.total || "0");
     // Total payouts
     const payoutsResult = await (0, client_1.query)(`SELECT COALESCE(SUM(amount_cents), 0) as total FROM payouts WHERE status = 'paid' ${dateFilter}`, params);
@@ -77,7 +78,9 @@ async function getDisputes(status, limit = 50) {
     const statusFilter = status ? "WHERE d.status = $1" : "";
     const params = status ? [status, limit] : [limit];
     const result = await (0, client_1.query)(`
-      SELECT d.*, j.credit_amount, j.address
+      SELECT d.*, j.credit_amount, j.address,
+             (d.metadata ->> 'routed_to') as routed_to,
+             (d.metadata ->> 'route_note') as route_note
       FROM disputes d
       JOIN jobs j ON d.job_id = j.id
       ${statusFilter}

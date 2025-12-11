@@ -7,7 +7,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const supertest_1 = __importDefault(require("supertest"));
-const index_1 = require("../../index");
+const index_1 = __importDefault(require("../../index"));
 const client_1 = require("../../db/client");
 // Test user IDs (should exist in test database)
 const TEST_CLIENT_ID = "11111111-1111-1111-1111-111111111111";
@@ -51,7 +51,7 @@ const adminHeaders = {
         (0, vitest_1.it)("1. Client creates a job", async () => {
             const scheduledStart = new Date();
             scheduledStart.setHours(scheduledStart.getHours() + 24);
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .post("/jobs")
                 .set(clientHeaders)
                 .send({
@@ -69,7 +69,7 @@ const adminHeaders = {
             testJobId = response.body.job.id;
         });
         (0, vitest_1.it)("2. Client requests the job (submits for matching)", async () => {
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${testJobId}/transition`)
                 .set(clientHeaders)
                 .send({
@@ -80,7 +80,7 @@ const adminHeaders = {
             (0, vitest_1.expect)(response.body.job).toHaveProperty("status", "request");
         });
         (0, vitest_1.it)("3. Cleaner accepts the job", async () => {
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${testJobId}/transition`)
                 .set(cleanerHeaders)
                 .send({
@@ -95,7 +95,7 @@ const adminHeaders = {
             (0, vitest_1.expect)(response.body.job).toHaveProperty("cleaner_id", TEST_CLEANER_ID);
         });
         (0, vitest_1.it)("4. Cleaner goes en route", async () => {
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${testJobId}/transition`)
                 .set(cleanerHeaders)
                 .send({
@@ -106,7 +106,7 @@ const adminHeaders = {
             (0, vitest_1.expect)(response.body.job).toHaveProperty("status", "en_route");
         });
         (0, vitest_1.it)("5. Cleaner starts the job (check-in)", async () => {
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${testJobId}/transition`)
                 .set(cleanerHeaders)
                 .send({
@@ -122,7 +122,7 @@ const adminHeaders = {
             (0, vitest_1.expect)(response.body.job).toHaveProperty("check_in_at");
         });
         (0, vitest_1.it)("6. Cleaner completes the job (check-out)", async () => {
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${testJobId}/transition`)
                 .set(cleanerHeaders)
                 .send({
@@ -139,7 +139,7 @@ const adminHeaders = {
             (0, vitest_1.expect)(response.body.job).toHaveProperty("check_out_at");
         });
         (0, vitest_1.it)("7. Client approves the job", async () => {
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${testJobId}/transition`)
                 .set(clientHeaders)
                 .send({
@@ -155,7 +155,7 @@ const adminHeaders = {
             (0, vitest_1.expect)(response.body.job).toHaveProperty("client_review_stars", 5);
         });
         (0, vitest_1.it)("8. Job events are recorded", async () => {
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .get(`/admin/jobs/${testJobId}/events`)
                 .set(adminHeaders);
             (0, vitest_1.expect)(response.status).toBe(200);
@@ -169,7 +169,7 @@ const adminHeaders = {
         (0, vitest_1.it)("1. Client creates a job", async () => {
             const scheduledStart = new Date();
             scheduledStart.setHours(scheduledStart.getHours() + 48);
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .post("/jobs")
                 .set(clientHeaders)
                 .send({
@@ -184,7 +184,7 @@ const adminHeaders = {
             cancelJobId = response.body.job.id;
         });
         (0, vitest_1.it)("2. Client cancels the job", async () => {
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${cancelJobId}/transition`)
                 .set(clientHeaders)
                 .send({
@@ -210,7 +210,7 @@ const adminHeaders = {
             const scheduledStart = new Date();
             scheduledStart.setHours(scheduledStart.getHours() + 24);
             // Create job
-            const createRes = await (0, supertest_1.default)(index_1.app)
+            const createRes = await (0, supertest_1.default)(index_1.default)
                 .post("/jobs")
                 .set(clientHeaders)
                 .send({
@@ -222,29 +222,29 @@ const adminHeaders = {
             });
             disputeJobId = createRes.body.job.id;
             // Progress through states
-            await (0, supertest_1.default)(index_1.app)
+            await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${disputeJobId}/transition`)
                 .set(clientHeaders)
                 .send({ event_type: "job_requested" });
-            await (0, supertest_1.default)(index_1.app)
+            await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${disputeJobId}/transition`)
                 .set(cleanerHeaders)
                 .send({ event_type: "job_accepted", payload: { cleaner_id: TEST_CLEANER_ID } });
-            await (0, supertest_1.default)(index_1.app)
+            await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${disputeJobId}/transition`)
                 .set(cleanerHeaders)
                 .send({ event_type: "cleaner_en_route" });
-            await (0, supertest_1.default)(index_1.app)
+            await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${disputeJobId}/transition`)
                 .set(cleanerHeaders)
                 .send({ event_type: "job_started" });
-            await (0, supertest_1.default)(index_1.app)
+            await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${disputeJobId}/transition`)
                 .set(cleanerHeaders)
                 .send({ event_type: "job_completed", payload: { actual_hours: 2 } });
         });
         (0, vitest_1.it)("1. Client disputes the job", async () => {
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .post(`/jobs/${disputeJobId}/transition`)
                 .set(clientHeaders)
                 .send({
@@ -260,7 +260,7 @@ const adminHeaders = {
             (0, vitest_1.expect)(response.body.job).toHaveProperty("dispute_status", "open");
         });
         (0, vitest_1.it)("2. Admin resolves the dispute", async () => {
-            const response = await (0, supertest_1.default)(index_1.app)
+            const response = await (0, supertest_1.default)(index_1.default)
                 .post(`/admin/disputes/${disputeJobId}/resolve`)
                 .set(adminHeaders)
                 .send({

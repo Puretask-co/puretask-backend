@@ -69,6 +69,7 @@ async function getTicketById(ticketId) {
     const messagesResult = await (0, client_1.query)(`SELECT * FROM support_messages WHERE ticket_id = $1 ORDER BY created_at ASC`, [ticketId]);
     return {
         ...ticket,
+        assigned_to_email: ticket.assigned_to_email ?? undefined,
         messages: messagesResult.rows,
     };
 }

@@ -12,7 +12,10 @@ const healthRouter = (0, express_1.Router)();
  */
 healthRouter.get("/", (_req, res) => {
     res.json({
+        ok: true,
         status: "ok",
+        service: "puretask-backend",
+        time: new Date().toISOString(),
         timestamp: new Date().toISOString(),
         env: env_1.env.NODE_ENV,
     });

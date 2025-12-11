@@ -71,6 +71,9 @@ export async function computeCleanerStats(cleanerId: string): Promise<CleanerSta
 /**
  * Get photo compliance stats for a cleaner
  * Per Photo Proof policy: Photo compliance boosts reliability by +10 points
+ * 
+ * Note: Calculates compliance from job_photos table directly
+ * (photo_compliance table/view may not exist in all environments)
  */
 export async function getPhotoComplianceStats(cleanerId: string): Promise<{
   totalJobs: number;
@@ -78,34 +81,78 @@ export async function getPhotoComplianceStats(cleanerId: string): Promise<{
   complianceRate: number;
   bonusEligible: boolean;
 }> {
-  const result = await query<{
-    total: string;
-    compliant: string;
-  }>(
-    `
-      SELECT 
-        COUNT(DISTINCT j.id)::text as total,
-        COUNT(DISTINCT pc.job_id)::text as compliant
-      FROM jobs j
-      LEFT JOIN photo_compliance pc ON pc.job_id = j.id AND pc.meets_minimum = true
-      WHERE j.cleaner_id = $1
-        AND j.status = 'completed'
-        AND j.created_at >= NOW() - INTERVAL '90 days'
-    `,
-    [cleanerId]
-  );
+  try {
+    // Try to use photo_compliance table/view if it exists
+    const result = await query<{
+      total: string;
+      compliant: string;
+    }>(
+      `
+        SELECT 
+          COUNT(DISTINCT j.id)::text as total,
+          COUNT(DISTINCT pc.job_id)::text as compliant
+        FROM jobs j
+        LEFT JOIN photo_compliance pc ON pc.job_id = j.id AND pc.meets_minimum = true
+        WHERE j.cleaner_id = $1
+          AND j.status = 'completed'
+          AND j.created_at >= NOW() - INTERVAL '90 days'
+      `,
+      [cleanerId]
+    );
 
-  const total = Number(result.rows[0]?.total || 0);
-  const compliant = Number(result.rows[0]?.compliant || 0);
-  const complianceRate = total > 0 ? compliant / total : 0;
-  
-  // Eligible for bonus if compliance rate >= 90%
-  return {
-    totalJobs: total,
-    compliantJobs: compliant,
-    complianceRate,
-    bonusEligible: complianceRate >= 0.9,
-  };
+    const total = Number(result.rows[0]?.total || 0);
+    const compliant = Number(result.rows[0]?.compliant || 0);
+    const complianceRate = total > 0 ? compliant / total : 0;
+    
+    // Eligible for bonus if compliance rate >= 90%
+    return {
+      totalJobs: total,
+      compliantJobs: compliant,
+      complianceRate,
+      bonusEligible: complianceRate >= 0.9,
+    };
+  } catch (error: any) {
+    // If photo_compliance table doesn't exist, calculate from job_photos directly
+    if (error?.code === '42P01' || error?.message?.includes('photo_compliance')) {
+      logger.warn("photo_compliance_table_missing", {
+        cleanerId,
+        message: "photo_compliance table not found, calculating from job_photos",
+      });
+      
+      // Fallback: calculate compliance from job_photos table
+      // A job is compliant if it has at least one 'after' photo
+      const fallbackResult = await query<{
+        total: string;
+        compliant: string;
+      }>(
+        `
+          SELECT 
+            COUNT(DISTINCT j.id)::text as total,
+            COUNT(DISTINCT CASE WHEN jp.id IS NOT NULL THEN j.id END)::text as compliant
+          FROM jobs j
+          LEFT JOIN job_photos jp ON jp.job_id = j.id AND jp.type = 'after'
+          WHERE j.cleaner_id = $1
+            AND j.status = 'completed'
+            AND j.created_at >= NOW() - INTERVAL '90 days'
+        `,
+        [cleanerId]
+      );
+
+      const total = Number(fallbackResult.rows[0]?.total || 0);
+      const compliant = Number(fallbackResult.rows[0]?.compliant || 0);
+      const complianceRate = total > 0 ? compliant / total : 0;
+      
+      return {
+        totalJobs: total,
+        compliantJobs: compliant,
+        complianceRate,
+        bonusEligible: complianceRate >= 0.9,
+      };
+    }
+    
+    // Re-throw other errors
+    throw error;
+  }
 }
 
 /**
@@ -187,13 +234,34 @@ export async function updateCleanerReliability(
   reason: string = "job_completed"
 ): Promise<ReliabilityUpdate> {
   // Get current score and tier
-  const currentResult = await query<{ reliability_score: number; tier: string }>(
-    `SELECT reliability_score, tier FROM cleaner_profiles WHERE user_id = $1`,
-    [cleanerId]
-  );
-
-  const previousScore = currentResult.rows[0]?.reliability_score ?? 100;
-  const previousTier = currentResult.rows[0]?.tier ?? "bronze";
+  // Handle case where reliability_score column might not exist
+  let previousScore = 100;
+  let previousTier = "bronze";
+  
+  try {
+    const currentResult = await query<{ reliability_score: number; tier: string }>(
+      `SELECT reliability_score, tier FROM cleaner_profiles WHERE user_id = $1`,
+      [cleanerId]
+    );
+    previousScore = currentResult.rows[0]?.reliability_score ?? 100;
+    previousTier = currentResult.rows[0]?.tier ?? "bronze";
+  } catch (error: any) {
+    // If column doesn't exist, use defaults
+    if (error?.code === '42703' && error?.message?.includes('reliability_score')) {
+      logger.warn("reliability_score_column_missing_on_read", {
+        cleanerId,
+        message: "reliability_score column not found, using defaults",
+      });
+      const currentResult = await query<{ tier: string }>(
+        `SELECT tier FROM cleaner_profiles WHERE user_id = $1`,
+        [cleanerId]
+      );
+      previousTier = currentResult.rows[0]?.tier ?? "bronze";
+    } else {
+      // Re-throw other errors
+      throw error;
+    }
+  }
 
   // Compute new stats and score
   const stats = await computeCleanerStats(cleanerId);
@@ -202,7 +270,7 @@ export async function updateCleanerReliability(
   const photoStats = await getPhotoComplianceStats(cleanerId);
   const photoBonus = photoStats.bonusEligible;
   
-  let newScore = computeReliabilityScoreFromStats(stats, photoBonus);
+  const newScore = computeReliabilityScoreFromStats(stats, photoBonus);
   let newTier = getTierFromScore(newScore);
 
   // Check tier lock - prevent demotion during lock period
@@ -227,16 +295,40 @@ export async function updateCleanerReliability(
   }
 
   // Update profile
-  await query(
-    `
-      UPDATE cleaner_profiles
-      SET reliability_score = $2,
-          tier = $3,
-          updated_at = NOW()
-      WHERE user_id = $1
-    `,
-    [cleanerId, newScore, newTier]
-  );
+  // Handle case where reliability_score column might not exist (schema migration issue)
+  try {
+    await query(
+      `
+        UPDATE cleaner_profiles
+        SET reliability_score = $2,
+            tier = $3,
+            updated_at = NOW()
+        WHERE user_id = $1
+      `,
+      [cleanerId, newScore, newTier]
+    );
+  } catch (error: any) {
+    // If column doesn't exist (error code 42703 = undefined column), try without reliability_score
+    if (error?.code === '42703' && error?.message?.includes('reliability_score')) {
+      logger.warn("reliability_score_column_missing", {
+        cleanerId,
+        message: "reliability_score column not found, updating tier only",
+      });
+      // Fallback: update tier only
+      await query(
+        `
+          UPDATE cleaner_profiles
+          SET tier = $2,
+              updated_at = NOW()
+          WHERE user_id = $1
+        `,
+        [cleanerId, newTier]
+      );
+    } else {
+      // Re-throw other errors
+      throw error;
+    }
+  }
 
   // Record history
   await query(

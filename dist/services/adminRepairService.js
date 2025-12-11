@@ -37,6 +37,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.findStuckJobs = findStuckJobs;
 exports.findStuckPayouts = findStuckPayouts;
+exports.findPayoutEarningMismatches = findPayoutEarningMismatches;
 exports.findLedgerInconsistencies = findLedgerInconsistencies;
 exports.forceCompleteJob = forceCompleteJob;
 exports.forceCancelJob = forceCancelJob;
@@ -117,6 +118,24 @@ async function findStuckPayouts() {
       WHERE p.status = 'pending'
         AND p.created_at < NOW() - INTERVAL '7 days'
       ORDER BY p.created_at ASC
+    `);
+    return result.rows;
+}
+/**
+ * Find mismatches between payouts and linked earnings
+ */
+async function findPayoutEarningMismatches() {
+    const result = await (0, client_1.query)(`
+      SELECT 
+        p.id as payout_id,
+        p.cleaner_id,
+        COALESCE(p.amount_cents, 0) as amount_cents,
+        COALESCE(SUM(e.amount_cents), 0) as earnings_cents,
+        COALESCE(SUM(e.amount_cents), 0) - COALESCE(p.amount_cents, 0) as delta_cents
+      FROM payouts p
+      LEFT JOIN cleaner_earnings e ON e.payout_id = p.id
+      GROUP BY p.id, p.cleaner_id, p.amount_cents
+      HAVING COALESCE(SUM(e.amount_cents), 0) <> COALESCE(p.amount_cents, 0)
     `);
     return result.rows;
 }

@@ -41,7 +41,10 @@ exports.runStuckJobDetection = main;
 const client_1 = require("../db/client");
 const logger_1 = require("../lib/logger");
 const adminRepairService_1 = require("../services/adminRepairService");
+const reconciliationService_1 = require("../services/reconciliationService");
 const creditEconomyService_1 = require("../services/creditEconomyService");
+const events_1 = require("../lib/events");
+const alerting_1 = require("../lib/alerting");
 // Thresholds for alerting
 const ALERT_THRESHOLDS = {
     STUCK_JOBS: 5, // Alert if > 5 stuck jobs
@@ -50,37 +53,17 @@ const ALERT_THRESHOLDS = {
     FRAUD_ALERTS: 1, // Alert on any fraud alerts
     WEBHOOK_FAILURES: 20, // Alert if > 20 pending webhooks
 };
-/**
- * Send alert notification (placeholder - integrate with your alerting system)
- */
-async function sendAlert(params) {
-    const { level, title, message, details } = params;
-    // Log the alert
-    logger_1.logger.warn("system_alert", { level, title, message, details });
-    // TODO: Integrate with your alerting system:
-    // - Slack webhook
-    // - Email to admin
-    // - PagerDuty
-    // - SMS via Twilio
-    // Example Slack webhook:
-    // await fetch(process.env.SLACK_WEBHOOK_URL, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     text: `🚨 [${level.toUpperCase()}] ${title}`,
-    //     blocks: [
-    //       { type: 'section', text: { type: 'mrkdwn', text: message } },
-    //       { type: 'section', text: { type: 'mrkdwn', text: '```' + JSON.stringify(details, null, 2) + '```' } }
-    //     ]
-    //   })
-    // });
-}
+// No-show grace period (minutes) after scheduled_start_at with no check-in
+const NO_SHOW_GRACE_MINUTES = 60;
+const sendAlert = alerting_1.sendAlert;
 /**
  * Main worker function
  */
 async function main() {
     logger_1.logger.info("stuck_job_detection_started");
     try {
+        // No-show detection for jobs with no check-in past grace
+        await detectNoShowJobs();
         // Run health check
         const health = await (0, adminRepairService_1.runSystemHealthCheck)();
         logger_1.logger.info("system_health_snapshot", {
@@ -163,6 +146,23 @@ async function main() {
                 details: { count: health.pendingWebhooks },
             });
         }
+        // Payout vs earnings reconciliation
+        const mismatches = await (0, adminRepairService_1.findPayoutEarningMismatches)();
+        if (mismatches.length > 0) {
+            for (const m of mismatches) {
+                await (0, reconciliationService_1.upsertReconciliationFlag)({
+                    payoutId: m.payout_id,
+                    cleanerId: m.cleaner_id,
+                    deltaCents: m.delta_cents,
+                });
+            }
+            await sendAlert({
+                level: "warning",
+                title: "Payout/earnings reconciliation mismatches",
+                message: `${mismatches.length} payouts differ from summed earnings.`,
+                details: { mismatches: mismatches.slice(0, 10) },
+            });
+        }
         // Auto-handle some issues if configured
         await autoHandleStuckJobs(health.details.stuckJobs);
         logger_1.logger.info("stuck_job_detection_completed", {
@@ -204,6 +204,36 @@ async function autoHandleStuckJobs(stuckJobs) {
                 logger_1.logger.error("auto_approve_failed", { jobId: job.id, error: err.message });
             }
         }
+    }
+}
+/**
+ * Detect and mark no-shows: jobs in accepted/on_my_way with no check-in past grace
+ */
+async function detectNoShowJobs() {
+    const result = await (0, client_1.query)(`
+      SELECT j.id AS job_id, j.status, j.scheduled_start_at
+      FROM jobs j
+      WHERE j.status IN ('accepted', 'on_my_way')
+        AND j.scheduled_start_at + INTERVAL '${NO_SHOW_GRACE_MINUTES} minutes' < NOW()
+        AND NOT EXISTS (
+          SELECT 1 FROM job_checkins c WHERE c.job_id = j.id
+        )
+    `);
+    for (const row of result.rows) {
+        logger_1.logger.warn("marking_no_show_due_to_no_checkin", {
+            jobId: row.job_id,
+            status: row.status,
+            scheduled_start_at: row.scheduled_start_at,
+            graceMinutes: NO_SHOW_GRACE_MINUTES,
+        });
+        // Publish a cancellation/no-show event; downstream logic should refund per policy
+        await (0, events_1.publishEvent)({
+            jobId: row.job_id,
+            actorType: "system",
+            actorId: null,
+            eventName: "job_cancelled",
+            payload: { reason: "no_show", auto: true },
+        });
     }
 }
 /**

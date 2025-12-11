@@ -54,9 +54,9 @@ describe("Credit System Integration", () => {
         paymentIntentId: `pi_test_${Date.now()}`,
       });
 
-      const entries = await query<{ delta_credits: number; reason: string }>(
+      const entries = await query<{ amount: number; direction: string; reason: string }>(
         `
-          SELECT delta_credits, reason
+          SELECT amount, direction, reason
           FROM credit_ledger
           WHERE user_id = $1 AND reason = 'purchase'
           ORDER BY created_at DESC
@@ -66,7 +66,8 @@ describe("Credit System Integration", () => {
       );
 
       expect(entries.rows.length).toBeGreaterThan(0);
-      expect(entries.rows[0].delta_credits).toBe(100);
+      expect(entries.rows[0].amount).toBe(100);
+      expect(entries.rows[0].direction).toBe('credit');
     });
   });
 
@@ -81,10 +82,11 @@ describe("Credit System Integration", () => {
         .post("/jobs")
         .set("Authorization", `Bearer ${client.token}`)
         .send({
-          scheduled_start_at: new Date().toISOString(),
-          scheduled_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          scheduled_start_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+          scheduled_end_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
           address: "Credit Test St",
           credit_amount: 150,
+          estimated_hours: 2,
         });
 
       expect(res.status).toBe(201);
@@ -94,12 +96,13 @@ describe("Credit System Integration", () => {
 
       // Verify escrow entry
       const jobId = res.body.job.id;
-      const entries = await query<{ delta_credits: number; reason: string }>(
-        `SELECT delta_credits, reason FROM credit_ledger WHERE job_id = $1 AND reason = 'job_escrow'`,
+      const entries = await query<{ amount: number; direction: string; reason: string }>(
+        `SELECT amount, direction, reason FROM credit_ledger WHERE job_id = $1 AND reason = 'job_escrow'`,
         [jobId]
       );
       expect(entries.rows.length).toBe(1);
-      expect(entries.rows[0].delta_credits).toBe(-150);
+      expect(entries.rows[0].amount).toBe(150);
+      expect(entries.rows[0].direction).toBe('debit');
     });
 
     it("prevents job creation with insufficient credits", async () => {
@@ -110,10 +113,11 @@ describe("Credit System Integration", () => {
         .post("/jobs")
         .set("Authorization", `Bearer ${client.token}`)
         .send({
-          scheduled_start_at: new Date().toISOString(),
-          scheduled_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          scheduled_start_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+          scheduled_end_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
           address: "No Money St",
           credit_amount: balance + 10000, // More than available
+          estimated_hours: 2,
         });
 
       expect(res.status).toBe(400);
@@ -131,10 +135,11 @@ describe("Credit System Integration", () => {
         .post("/jobs")
         .set("Authorization", `Bearer ${client.token}`)
         .send({
-          scheduled_start_at: new Date().toISOString(),
-          scheduled_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          scheduled_start_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+          scheduled_end_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
           address: "Release Test St",
           credit_amount: 100,
+          estimated_hours: 2,
         });
 
       const jobId = jobRes.body.job.id;
@@ -154,12 +159,13 @@ describe("Credit System Integration", () => {
       expect(cleanerBalanceAfter).toBe(cleanerBalanceBefore + 100);
 
       // Verify release entry
-      const entries = await query<{ delta_credits: number }>(
-        `SELECT delta_credits FROM credit_ledger WHERE user_id = $1 AND job_id = $2 AND reason = 'job_release'`,
+      const entries = await query<{ amount: number; direction: string }>(
+        `SELECT amount, direction FROM credit_ledger WHERE user_id = $1 AND job_id = $2 AND reason = 'job_release'`,
         [cleaner.id, jobId]
       );
       expect(entries.rows.length).toBe(1);
-      expect(entries.rows[0].delta_credits).toBe(100);
+      expect(entries.rows[0].amount).toBe(100);
+      expect(entries.rows[0].direction).toBe('credit');
     });
   });
 
@@ -173,10 +179,11 @@ describe("Credit System Integration", () => {
         .post("/jobs")
         .set("Authorization", `Bearer ${client.token}`)
         .send({
-          scheduled_start_at: new Date().toISOString(),
-          scheduled_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          scheduled_start_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+          scheduled_end_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
           address: "Cancel Refund St",
           credit_amount: 80,
+          estimated_hours: 2,
         });
 
       const jobId = jobRes.body.job.id;
@@ -195,12 +202,13 @@ describe("Credit System Integration", () => {
       expect(balanceAfterCancel).toBe(balanceBefore); // Full refund
 
       // Verify refund entry
-      const entries = await query<{ delta_credits: number }>(
-        `SELECT delta_credits FROM credit_ledger WHERE user_id = $1 AND job_id = $2 AND reason = 'refund'`,
+      const entries = await query<{ amount: number; direction: string }>(
+        `SELECT amount, direction FROM credit_ledger WHERE user_id = $1 AND job_id = $2 AND reason = 'refund'`,
         [client.id, jobId]
       );
       expect(entries.rows.length).toBe(1);
-      expect(entries.rows[0].delta_credits).toBe(80);
+      expect(entries.rows[0].amount).toBe(80);
+      expect(entries.rows[0].direction).toBe('credit');
     });
   });
 

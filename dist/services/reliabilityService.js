@@ -134,9 +134,29 @@ function getTierFromScore(score) {
  */
 async function updateCleanerReliability(cleanerId, reason = "job_completed") {
     // Get current score and tier
-    const currentResult = await (0, client_1.query)(`SELECT reliability_score, tier FROM cleaner_profiles WHERE user_id = $1`, [cleanerId]);
-    const previousScore = currentResult.rows[0]?.reliability_score ?? 100;
-    const previousTier = currentResult.rows[0]?.tier ?? "bronze";
+    // Handle case where reliability_score column might not exist
+    let previousScore = 100;
+    let previousTier = "bronze";
+    try {
+        const currentResult = await (0, client_1.query)(`SELECT reliability_score, tier FROM cleaner_profiles WHERE user_id = $1`, [cleanerId]);
+        previousScore = currentResult.rows[0]?.reliability_score ?? 100;
+        previousTier = currentResult.rows[0]?.tier ?? "bronze";
+    }
+    catch (error) {
+        // If column doesn't exist, use defaults
+        if (error?.code === '42703' && error?.message?.includes('reliability_score')) {
+            logger_1.logger.warn("reliability_score_column_missing_on_read", {
+                cleanerId,
+                message: "reliability_score column not found, using defaults",
+            });
+            const currentResult = await (0, client_1.query)(`SELECT tier FROM cleaner_profiles WHERE user_id = $1`, [cleanerId]);
+            previousTier = currentResult.rows[0]?.tier ?? "bronze";
+        }
+        else {
+            // Re-throw other errors
+            throw error;
+        }
+    }
     // Compute new stats and score
     const stats = await computeCleanerStats(cleanerId);
     // Check photo compliance for bonus (per Photo Proof policy: +10 points)
@@ -163,13 +183,36 @@ async function updateCleanerReliability(cleanerId, reason = "job_completed") {
         await (0, creditEconomyService_1.createTierLock)(cleanerId, newTier, "promotion");
     }
     // Update profile
-    await (0, client_1.query)(`
-      UPDATE cleaner_profiles
-      SET reliability_score = $2,
-          tier = $3,
-          updated_at = NOW()
-      WHERE user_id = $1
-    `, [cleanerId, newScore, newTier]);
+    // Handle case where reliability_score column might not exist (schema migration issue)
+    try {
+        await (0, client_1.query)(`
+        UPDATE cleaner_profiles
+        SET reliability_score = $2,
+            tier = $3,
+            updated_at = NOW()
+        WHERE user_id = $1
+      `, [cleanerId, newScore, newTier]);
+    }
+    catch (error) {
+        // If column doesn't exist (error code 42703 = undefined column), try without reliability_score
+        if (error?.code === '42703' && error?.message?.includes('reliability_score')) {
+            logger_1.logger.warn("reliability_score_column_missing", {
+                cleanerId,
+                message: "reliability_score column not found, updating tier only",
+            });
+            // Fallback: update tier only
+            await (0, client_1.query)(`
+          UPDATE cleaner_profiles
+          SET tier = $2,
+              updated_at = NOW()
+          WHERE user_id = $1
+        `, [cleanerId, newTier]);
+        }
+        else {
+            // Re-throw other errors
+            throw error;
+        }
+    }
     // Record history
     await (0, client_1.query)(`
       INSERT INTO reliability_history (cleaner_id, old_score, new_score, old_tier, new_tier, reason, metadata)

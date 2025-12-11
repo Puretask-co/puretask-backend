@@ -4,62 +4,80 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import app from "../../index";
-import { env } from "../../config/env";
+import { computeN8nSignature } from "../../lib/auth";
 
 describe("Events API - Smoke Tests", () => {
   describe("POST /events", () => {
     it("should reject invalid webhook secret", async () => {
+      const body = { event_type: "test_event" };
+      const invalidSignature = "invalid_signature";
+      
       const response = await request(app)
         .post("/events")
-        .send({
-          event_type: "test_event",
-          webhook_secret: "invalid_secret",
-        });
+        .set("x-n8n-signature", invalidSignature)
+        .send(body);
 
       expect(response.status).toBe(401);
       expect(response.body).toHaveProperty("error");
-      expect(response.body.error).toHaveProperty("code", "UNAUTHORIZED");
+      expect(response.body.error).toHaveProperty("code", "INVALID_SIGNATURE");
     });
 
-    it("should accept valid event with correct webhook secret", async () => {
+    it("should reject request without signature header", async () => {
+      const body = { event_type: "test_event" };
+      
       const response = await request(app)
         .post("/events")
-        .send({
-          event_type: "test_event",
-          webhook_secret: env.N8N_WEBHOOK_SECRET,
-          payload: { test: true },
-        });
+        .send(body);
 
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("success", true);
-      expect(response.body).toHaveProperty("eventType", "test_event");
+      expect(response.status).toBe(401);
+      expect(response.body).toHaveProperty("error");
+      expect(response.body.error).toHaveProperty("code", "MISSING_SIGNATURE");
+    });
+
+    it("should accept valid event with correct signature", async () => {
+      const body = {
+        eventType: "test_event", // Route expects camelCase 'eventType', not snake_case 'event_type'
+        payload: { test: true },
+      };
+      const signature = computeN8nSignature(body);
+      
+      const response = await request(app)
+        .post("/events")
+        .set("x-n8n-signature", signature)
+        .send(body);
+
+      expect(response.status).toBe(204); // API returns 204 No Content
     });
 
     it("should require event_type", async () => {
+      const body = {}; // Missing event_type
+      const signature = computeN8nSignature(body);
+      
       const response = await request(app)
         .post("/events")
-        .send({
-          webhook_secret: env.N8N_WEBHOOK_SECRET,
-        });
+        .set("x-n8n-signature", signature)
+        .send(body);
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("error");
+      expect(response.body.error).toHaveProperty("code", "VALIDATION_ERROR");
     });
 
     it("should accept event with job_id", async () => {
+      const body = {
+        jobId: "12345678-1234-1234-1234-123456789012",
+        eventType: "custom_event",
+        actorType: "system" as const,
+        payload: { action: "test" },
+      };
+      const signature = computeN8nSignature(body);
+      
       const response = await request(app)
         .post("/events")
-        .send({
-          job_id: "12345678-1234-1234-1234-123456789012",
-          event_type: "custom_event",
-          webhook_secret: env.N8N_WEBHOOK_SECRET,
-          actor_type: "system",
-          payload: { action: "test" },
-        });
+        .set("x-n8n-signature", signature)
+        .send(body);
 
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("success", true);
-      expect(response.body).toHaveProperty("jobId", "12345678-1234-1234-1234-123456789012");
+      expect(response.status).toBe(204); // API returns 204 No Content
     });
   });
 });
