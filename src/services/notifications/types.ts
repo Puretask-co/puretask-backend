@@ -44,16 +44,28 @@ export interface NotificationResult {
 export interface PushPayload extends NotificationPayload {
   channel: "push";
   pushToken: string;
+  tokens?: string[]; // For OneSignal provider compatibility
+  title?: string; // For OneSignal provider compatibility
+  body?: string; // For OneSignal provider compatibility
+  badge?: number; // For OneSignal provider compatibility
 }
 
 export interface EmailPayload extends NotificationPayload {
   channel: "email";
   email: string;
+  to?: string; // For SendGrid provider compatibility
+  from?: string; // For SendGrid provider compatibility
+  replyTo?: string; // For SendGrid provider compatibility
+  subject?: string; // For SendGrid provider compatibility
+  html?: string; // For SendGrid provider compatibility
+  text?: string; // For SendGrid provider compatibility
 }
 
 export interface SMSPayload extends NotificationPayload {
   channel: "sms";
   phone: string;
+  to?: string; // For Twilio provider compatibility
+  body?: string; // For Twilio provider compatibility
 }
 
 export interface NotificationProvider {
