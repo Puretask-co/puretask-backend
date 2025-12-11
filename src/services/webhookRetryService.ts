@@ -211,13 +211,14 @@ async function processWebhookRetry(failure: WebhookFailure): Promise<boolean> {
     await markAsProcessing(failure.id);
 
     switch (failure.source) {
-      case "stripe":
+      case "stripe": {
         // Reconstruct Stripe event and process
         const stripeEvent = failure.payload as unknown as Stripe.Event;
         await handleStripeEvent(stripeEvent);
         break;
+      }
 
-      case "n8n":
+      case "n8n": {
         // n8n events - try to import and process
         const { publishEvent } = await import("../lib/events");
         const n8nPayload = failure.payload as {
@@ -235,6 +236,7 @@ async function processWebhookRetry(failure: WebhookFailure): Promise<boolean> {
           payload: n8nPayload.payload,
         });
         break;
+      }
 
       default:
         throw new Error(`Unknown webhook source: ${failure.source}`);

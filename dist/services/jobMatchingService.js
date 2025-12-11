@@ -4,8 +4,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.findMatchingCleaners = findMatchingCleaners;
 exports.assignCleanerToJob = assignCleanerToJob;
+exports.reassignCleanerWithPenalty = reassignCleanerWithPenalty;
 exports.broadcastJobToCleaners = broadcastJobToCleaners;
 exports.acceptJobOffer = acceptJobOffer;
+exports.getWaveEligibleCleaners = getWaveEligibleCleaners;
 exports.declineJobOffer = declineJobOffer;
 exports.processUnassignedJobs = processUnassignedJobs;
 const client_1 = require("../db/client");
@@ -26,6 +28,13 @@ const TIER_SCORES = {
     gold: 80,
     silver: 60,
     bronze: 40,
+};
+const WAVE_CONFIG = {
+    baseRadiusMiles: Number(process.env.MATCHING_BASE_RADIUS_MILES || 15),
+    expandPerWaveMiles: Number(process.env.MATCHING_EXPAND_PER_WAVE_MILES || 10),
+    waveDurationHours: Number(process.env.MATCHING_WAVE_DURATION_HOURS || 24),
+    minTierWave1: ["platinum", "gold"], // top tiers first
+    minTierWave2: ["platinum", "gold", "silver"],
 };
 // ============================================
 // Core Matching Algorithm
@@ -136,11 +145,11 @@ async function findMatchingCleaners(job, options = {}) {
         candidates: topCandidates,
         bestMatch,
         autoAssigned,
-        reason: autoAssigned
-            ? `Auto-assigned to ${bestMatch.email} with score ${bestMatch.score}`
-            : candidates.length === 0
-                ? "No available cleaners found"
-                : `Found ${candidates.length} candidates, best score: ${bestMatch?.score || 0}`,
+        reason: autoAssign
+            ? bestMatch
+                ? `Auto-assigned to ${bestMatch.email} with score ${bestMatch.score}`
+                : "No available cleaners found"
+            : "Matched candidates for review",
     };
     logger_1.logger.info("job_matching_completed", {
         jobId: job.id,
@@ -221,6 +230,69 @@ async function assignCleanerToJob(jobId, cleanerId) {
       VALUES ($1, 'system', NULL, 'job.auto_assigned', $2::jsonb)
     `, [jobId, JSON.stringify({ cleanerId, assignedBy: "matching_algorithm" })]);
 }
+/**
+ * Reassign a job to a different cleaner and apply late reassignment penalty to the previous cleaner.
+ * - Resets job_offers for the job.
+ * - Applies a small reliability decrement to the previous cleaner if within the late window.
+ */
+async function reassignCleanerWithPenalty(options) {
+    const { jobId, newCleanerId, actorId } = options;
+    // Fetch current assignment and start time
+    const jobResult = await (0, client_1.query)(`SELECT cleaner_id, scheduled_start_at FROM jobs WHERE id = $1`, [jobId]);
+    const current = jobResult.rows[0];
+    if (!current) {
+        throw new Error("Job not found");
+    }
+    const previousCleanerId = current.cleaner_id;
+    if (previousCleanerId === newCleanerId) {
+        return;
+    }
+    // Apply late reassignment penalty if within 24h of start
+    const now = new Date();
+    const startAt = current.scheduled_start_at ? new Date(current.scheduled_start_at) : null;
+    if (previousCleanerId && startAt) {
+        const hoursBefore = (startAt.getTime() - now.getTime()) / (1000 * 60 * 60);
+        if (hoursBefore >= 0 && hoursBefore < 24) {
+            const penaltyPoints = 5;
+            await (0, client_1.query)(`
+          UPDATE cleaner_profiles
+          SET reliability_score = GREATEST(0, reliability_score - $2),
+              updated_at = NOW()
+          WHERE user_id = $1
+        `, [previousCleanerId, penaltyPoints]);
+            await (0, client_1.query)(`
+          INSERT INTO reliability_history (cleaner_id, old_score, new_score, old_tier, new_tier, reason, metadata)
+          SELECT
+            cp.user_id,
+            cp.reliability_score + $2, -- old_score before decrement
+            cp.reliability_score,       -- new_score after decrement
+            cp.tier,
+            cp.tier,
+            'reassignment_penalty',
+            jsonb_build_object('hours_before', $3, 'job_id', $4, 'actor', $5)
+          FROM cleaner_profiles cp
+          WHERE cp.user_id = $1
+        `, [previousCleanerId, penaltyPoints, hoursBefore, jobId, actorId]);
+        }
+    }
+    // Reset offers for this job (prevent stale accepts)
+    await (0, client_1.query)(`UPDATE job_offers SET status = 'expired' WHERE job_id = $1 AND status = 'pending'`, [
+        jobId,
+    ]);
+    // Assign new cleaner
+    await (0, client_1.query)(`UPDATE jobs SET cleaner_id = $2, status = 'accepted', updated_at = NOW() WHERE id = $1`, [jobId, newCleanerId]);
+    await (0, client_1.query)(`
+      INSERT INTO job_events (job_id, actor_type, actor_id, event_type, payload)
+      VALUES ($1, 'system', $2, 'job.reassigned', $3::jsonb)
+    `, [
+        jobId,
+        actorId,
+        JSON.stringify({
+            previousCleanerId,
+            newCleanerId,
+        }),
+    ]);
+}
 // ============================================
 // Broadcast & Offer System
 // ============================================
@@ -279,6 +351,23 @@ async function acceptJobOffer(jobId, cleanerId) {
     await (0, client_1.query)(`UPDATE job_offers SET status = 'declined_by_system' WHERE job_id = $1 AND cleaner_id != $2 AND status = 'pending'`, [jobId, cleanerId]);
     logger_1.logger.info("job_offer_accepted", { jobId, cleanerId });
     return { success: true, reason: "Job assigned successfully" };
+}
+/**
+ * Wave-based eligibility: long-wave, score/tier-first, voluntary accept
+ */
+async function getWaveEligibleCleaners(job, options = {}) {
+    const wave = options.wave ?? 1;
+    const limit = options.limit ?? 20;
+    const minReliability = options.minReliability ?? 50;
+    const radius = WAVE_CONFIG.baseRadiusMiles + WAVE_CONFIG.expandPerWaveMiles * Math.max(0, wave - 1);
+    const allowedTiers = wave === 1 ? WAVE_CONFIG.minTierWave1 : WAVE_CONFIG.minTierWave2;
+    const match = await findMatchingCleaners(job, { limit: 200, minReliability });
+    const filtered = match.candidates.filter((c) => {
+        const tierOk = allowedTiers.includes(c.tier.toLowerCase());
+        const radiusOk = c.distanceMiles === null || c.distanceMiles <= radius;
+        return tierOk && radiusOk;
+    });
+    return filtered.slice(0, limit);
 }
 /**
  * Cleaner declines a job offer

@@ -189,7 +189,7 @@ cleanerRouter.get("/payouts", async (req, res) => {
     try {
         const { limit = "50" } = req.query;
         const payouts = await (0, payoutsService_1.getCleanerPayouts)(req.user.id, parseInt(limit, 10));
-        res.json({ payouts: payouts.rows });
+        res.json({ payouts });
     }
     catch (error) {
         logger_1.logger.error("get_payouts_failed", {

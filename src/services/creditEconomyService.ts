@@ -276,13 +276,39 @@ export async function applyReliabilityDecay(): Promise<{
 
 /**
  * Check if cleaner's tier is locked
+ * Handles missing database function gracefully
  */
 export async function isTierLocked(cleanerId: string): Promise<boolean> {
-  const result = await query<{ locked: boolean }>(
-    `SELECT is_tier_locked($1) as locked`,
-    [cleanerId]
-  );
-  return result.rows[0]?.locked ?? false;
+  try {
+    const result = await query<{ locked: boolean }>(
+      `SELECT is_tier_locked($1) as locked`,
+      [cleanerId]
+    );
+    return result.rows[0]?.locked ?? false;
+  } catch (error: any) {
+    // If function doesn't exist, check tier_locks table directly
+    if (error?.code === '42883' || error?.message?.includes('does not exist')) {
+      logger.warn("is_tier_locked_function_missing", {
+        cleanerId,
+        message: "is_tier_locked function not found, checking tier_locks table directly",
+      });
+      
+      // Fallback: check tier_locks table directly
+      const lockResult = await query<{ id: string }>(
+        `
+          SELECT id FROM tier_locks 
+          WHERE cleaner_id = $1 
+            AND locked_until > NOW()
+        `,
+        [cleanerId]
+      );
+      
+      return lockResult.rows.length > 0;
+    }
+    
+    // Re-throw other errors
+    throw error;
+  }
 }
 
 /**

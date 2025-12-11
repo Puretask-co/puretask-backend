@@ -17,16 +17,64 @@ describe("Job Lifecycle Smoke Test", () => {
   let cleaner: TestUser;
 
   beforeAll(async () => {
-    // Create test users
-    client = await createTestClient();
-    cleaner = await createTestCleaner();
+    // Wait a bit for database connection to be ready (setup.ts may still be retrying)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Create test users with retry logic for database connection issues
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      try {
+        client = await createTestClient();
+        cleaner = await createTestCleaner();
+        return; // Success, exit retry loop
+      } catch (error: any) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          throw new Error(`Failed to create test users after ${maxAttempts} attempts: ${error.message}`);
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 2000 * Math.pow(2, attempts - 1)));
+      }
+    }
+  }, 120000); // 120 second timeout for user creation with retries (increased from 90s)
 
-    // Add credits to client for job creation
-    await addCreditsToUser(client.id, 500);
+  beforeEach(async () => {
+    // Verify users still exist, recreate if needed (test isolation)
+    const { query } = await import("../../db/client");
+    const clientCheck = await query(`SELECT id FROM users WHERE id = $1`, [client.id]);
+    const cleanerCheck = await query(`SELECT id FROM users WHERE id = $1`, [cleaner.id]);
+    
+    // Recreate users if they were deleted (test isolation issue)
+    if (clientCheck.rows.length === 0) {
+      console.warn(`Test client user ${client.id} was deleted, recreating...`);
+      client = await createTestClient();
+    }
+    if (cleanerCheck.rows.length === 0) {
+      console.warn(`Test cleaner user ${cleaner.id} was deleted, recreating...`);
+      cleaner = await createTestCleaner();
+    }
+    
+    // Add credits to client for each test to ensure test isolation
+    // Credits are consumed during job creation, so we need fresh credits for each test
+    // Use the current client.id (which may have been updated if user was recreated)
+    try {
+      await addCreditsToUser(client.id, 500);
+    } catch (error: any) {
+      // If adding credits fails, log and rethrow with context
+      console.error(`Failed to add credits to user ${client.id}:`, error.message);
+      throw new Error(`Cannot add credits to test client: ${error.message}`);
+    }
   });
 
   afterAll(async () => {
-    await cleanupTestData();
+    try {
+      await cleanupTestData();
+    } catch (error) {
+      // Log but don't fail test - cleanup errors shouldn't break test suite
+      console.warn("Cleanup failed (non-critical):", error);
+    }
   });
 
   it("runs through the happy path: requested → accepted → on_my_way → in_progress → awaiting_approval → completed", async () => {

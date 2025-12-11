@@ -28,8 +28,8 @@ const testUtils_1 = require("../helpers/testUtils");
             .post("/jobs")
             .set("Authorization", `Bearer ${client.token}`)
             .send({
-            scheduled_start_at: new Date().toISOString(),
-            scheduled_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+            scheduled_start_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(), // 3 hours from now (must be at least 2 hours)
+            scheduled_end_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(), // 5 hours from now
             address: "123 Happy Path St",
             credit_amount: 100,
         });
@@ -90,8 +90,8 @@ const testUtils_1 = require("../helpers/testUtils");
             .post("/jobs")
             .set("Authorization", `Bearer ${client.token}`)
             .send({
-            scheduled_start_at: new Date().toISOString(),
-            scheduled_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+            scheduled_start_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(), // 3 hours from now (must be at least 2 hours)
+            scheduled_end_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(), // 5 hours from now
             address: "456 Cancel St",
             credit_amount: 50,
         });
@@ -111,8 +111,8 @@ const testUtils_1 = require("../helpers/testUtils");
             .post("/jobs")
             .set("Authorization", `Bearer ${client.token}`)
             .send({
-            scheduled_start_at: new Date().toISOString(),
-            scheduled_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+            scheduled_start_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(), // 3 hours from now (must be at least 2 hours)
+            scheduled_end_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(), // 5 hours from now
             address: "789 Invalid St",
             credit_amount: 50,
         });

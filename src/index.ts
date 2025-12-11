@@ -230,7 +230,7 @@ if (!isTestMode) {
   // ============================================
   // Graceful Shutdown
   // ============================================
-  async function gracefulShutdown(signal: string) {
+  const gracefulShutdown = async (signal: string) => {
     logger.info("shutdown_initiated", { signal });
 
     if (server) {
@@ -247,7 +247,7 @@ if (!isTestMode) {
     } else {
       process.exit(0);
     }
-  }
+  };
 
   process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
   process.on("SIGINT", () => gracefulShutdown("SIGINT"));

@@ -27,10 +27,10 @@ const client_1 = require("../db/client");
 const logger_1 = require("../lib/logger");
 /**
  * Get user's current credit balance
- * Balance = SUM(delta_credits) from credit_ledger
+ * Balance = SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END) from credit_ledger
  */
 async function getUserBalance(userId) {
-    const result = await (0, client_1.query)(`SELECT COALESCE(SUM(delta_credits), 0) AS balance FROM credit_ledger WHERE user_id = $1`, [userId]);
+    const result = await (0, client_1.query)(`SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0) AS balance FROM credit_ledger WHERE user_id = $1`, [userId]);
     return Number(result.rows[0]?.balance ?? 0);
 }
 /**
@@ -39,20 +39,25 @@ async function getUserBalance(userId) {
 exports.getUserCreditBalance = getUserBalance;
 /**
  * Record a ledger entry
- * Positive delta_credits = add credits
- * Negative delta_credits = remove credits
+ * Positive deltaCredits = add credits (direction = 'credit')
+ * Negative deltaCredits = remove credits (direction = 'debit')
  */
 async function addLedgerEntry(input) {
     const { userId, jobId = null, deltaCredits, reason } = input;
+    // Convert deltaCredits to amount and direction
+    const amount = Math.abs(deltaCredits);
+    const direction = deltaCredits >= 0 ? 'credit' : 'debit';
     const result = await (0, client_1.query)(`
-      INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO credit_ledger (user_id, job_id, amount, direction, reason)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
-    `, [userId, jobId, deltaCredits, reason]);
+    `, [userId, jobId, amount, direction, reason]);
     logger_1.logger.info("credit_ledger_entry", {
         userId,
         jobId,
         deltaCredits,
+        amount,
+        direction,
         reason,
     });
     return result.rows[0];
@@ -187,12 +192,12 @@ async function getJobCreditEntries(jobId) {
 async function getBalanceWithSummary(userId) {
     const result = await (0, client_1.query)(`
       SELECT 
-        COALESCE(SUM(delta_credits), 0) as balance,
-        COALESCE(SUM(CASE WHEN reason = 'purchase' THEN delta_credits ELSE 0 END), 0) as total_purchased,
-        COALESCE(SUM(CASE WHEN reason = 'job_escrow' THEN ABS(delta_credits) ELSE 0 END), 0) as total_escrowed,
-        COALESCE(SUM(CASE WHEN reason = 'job_release' THEN delta_credits ELSE 0 END), 0) as total_released,
-        COALESCE(SUM(CASE WHEN reason = 'refund' THEN delta_credits ELSE 0 END), 0) as total_refunded,
-        COALESCE(SUM(CASE WHEN reason = 'adjustment' THEN delta_credits ELSE 0 END), 0) as total_adjusted
+        COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0) as balance,
+        COALESCE(SUM(CASE WHEN reason = 'purchase' AND direction = 'credit' THEN amount ELSE 0 END), 0) as total_purchased,
+        COALESCE(SUM(CASE WHEN reason = 'job_escrow' AND direction = 'debit' THEN amount ELSE 0 END), 0) as total_escrowed,
+        COALESCE(SUM(CASE WHEN reason = 'job_release' AND direction = 'credit' THEN amount ELSE 0 END), 0) as total_released,
+        COALESCE(SUM(CASE WHEN reason = 'refund' AND direction = 'credit' THEN amount ELSE 0 END), 0) as total_refunded,
+        COALESCE(SUM(CASE WHEN reason = 'adjustment' THEN CASE WHEN direction = 'credit' THEN amount ELSE -amount END ELSE 0 END), 0) as total_adjusted
       FROM credit_ledger
       WHERE user_id = $1
     `, [userId]);
@@ -216,23 +221,25 @@ async function escrowCreditsWithTransaction(options) {
         throw new Error("Credit amount must be positive");
     }
     return (0, client_1.withTransaction)(async (client) => {
-        // Check balance with row lock
+        // Lock rows first, then calculate balance
+        // We can't use FOR UPDATE with aggregate functions, so we lock rows in a CTE
         const balanceResult = await client.query(`
-        SELECT COALESCE(SUM(delta_credits), 0) AS balance
-        FROM credit_ledger
-        WHERE user_id = $1
-        FOR UPDATE
+        WITH locked_rows AS (
+          SELECT * FROM credit_ledger WHERE user_id = $1 FOR UPDATE
+        )
+        SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0) AS balance
+        FROM locked_rows
       `, [clientId]);
         const balance = Number(balanceResult.rows[0]?.balance ?? 0);
         if (balance < creditAmount) {
             throw Object.assign(new Error(`Insufficient credits. Required: ${creditAmount}, Available: ${balance}`), { statusCode: 400, code: "INSUFFICIENT_CREDITS" });
         }
-        // Insert escrow entry
+        // Insert escrow entry (debit = remove credits)
         const result = await client.query(`
-        INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason)
-        VALUES ($1, $2, $3, 'job_escrow')
+        INSERT INTO credit_ledger (user_id, job_id, amount, direction, reason)
+        VALUES ($1, $2, $3, 'debit', 'job_escrow')
         RETURNING *
-      `, [clientId, jobId, -creditAmount]);
+      `, [clientId, jobId, creditAmount]);
         logger_1.logger.info("credits_escrowed", {
             clientId,
             jobId,

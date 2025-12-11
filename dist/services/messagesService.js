@@ -42,18 +42,19 @@ async function sendMessage(input) {
         }
     }
     // Insert message
+    // Note: messages table uses sender_type (not sender_role), content (not body), created_at (not sent_at)
+    // No receiver_id column - receiver is determined by job context
     const result = await (0, client_1.query)(`
       INSERT INTO messages (
         job_id,
-        sender_role,
         sender_id,
-        receiver_id,
-        body,
-        sent_at
+        sender_type,
+        content,
+        created_at
       )
-      VALUES ($1, $2, $3, $4, $5, NOW())
+      VALUES ($1, $2, $3, $4, NOW())
       RETURNING *
-    `, [jobId, senderRole, senderId, actualReceiverId, body]);
+    `, [jobId, senderId, senderRole, body]);
     logger_1.logger.info("message_sent", {
         jobId,
         senderId,
@@ -84,10 +85,10 @@ async function getJobMessages(jobId, userId, limit = 100, before) {
     const params = [jobId];
     let paramIndex = 2;
     if (before) {
-        queryText += ` AND sent_at < $${paramIndex++}`;
+        queryText += ` AND created_at < $${paramIndex++}`;
         params.push(before);
     }
-    queryText += ` ORDER BY sent_at DESC LIMIT $${paramIndex}`;
+    queryText += ` ORDER BY created_at DESC LIMIT $${paramIndex}`;
     params.push(limit);
     const result = await (0, client_1.query)(queryText, params);
     // Return in chronological order
@@ -99,10 +100,10 @@ async function getJobMessages(jobId, userId, limit = 100, before) {
 async function markMessagesAsRead(jobId, userId) {
     const result = await (0, client_1.query)(`
       UPDATE messages
-      SET read_at = NOW()
+      SET is_read = true, read_at = NOW()
       WHERE job_id = $1
-        AND receiver_id = $2
-        AND read_at IS NULL
+        AND sender_id != $2
+        AND is_read = false
       RETURNING id
     `, [jobId, userId]);
     logger_1.logger.info("messages_marked_read", {
@@ -114,13 +115,19 @@ async function markMessagesAsRead(jobId, userId) {
 }
 /**
  * Get unread message count for user
+ * Note: Messages table doesn't have receiver_id, so we determine unread by:
+ * - Messages in jobs where user is participant
+ * - Messages not sent by the user
+ * - Messages that are unread (is_read = false)
  */
 async function getUnreadCount(userId) {
     const result = await (0, client_1.query)(`
       SELECT COUNT(*) as count
-      FROM messages
-      WHERE receiver_id = $1
-        AND read_at IS NULL
+      FROM messages m
+      INNER JOIN jobs j ON m.job_id = j.id
+      WHERE (j.client_id = $1 OR j.cleaner_id = $1)
+        AND m.sender_id != $1
+        AND m.is_read = false
     `, [userId]);
     return parseInt(result.rows[0]?.count || "0", 10);
 }
@@ -129,11 +136,13 @@ async function getUnreadCount(userId) {
  */
 async function getUnreadCountByJob(userId) {
     const result = await (0, client_1.query)(`
-      SELECT job_id, COUNT(*) as count
-      FROM messages
-      WHERE receiver_id = $1
-        AND read_at IS NULL
-      GROUP BY job_id
+      SELECT m.job_id, COUNT(*) as count
+      FROM messages m
+      INNER JOIN jobs j ON m.job_id = j.id
+      WHERE (j.client_id = $1 OR j.cleaner_id = $1)
+        AND m.sender_id != $1
+        AND m.is_read = false
+      GROUP BY m.job_id
     `, [userId]);
     return result.rows.map((row) => ({
         jobId: row.job_id,
@@ -160,18 +169,18 @@ async function getRecentConversations(userId, limit = 20) {
         SELECT *
         FROM messages
         WHERE job_id = $1
-        ORDER BY sent_at DESC
+        ORDER BY created_at DESC
         LIMIT 1
       `, [job.id]);
         if (lastMsgResult.rows.length === 0)
             continue;
-        // Get unread count
+        // Get unread count (messages not sent by user that are unread)
         const unreadResult = await (0, client_1.query)(`
         SELECT COUNT(*) as count
         FROM messages
         WHERE job_id = $1
-          AND receiver_id = $2
-          AND read_at IS NULL
+          AND sender_id != $2
+          AND is_read = false
       `, [job.id, userId]);
         // Get other user
         const otherUserId = job.client_id === userId ? job.cleaner_id : job.client_id;

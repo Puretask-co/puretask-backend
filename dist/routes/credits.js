@@ -11,16 +11,16 @@ const jwtAuth_1 = require("../middleware/jwtAuth");
 const creditsPurchaseService_1 = require("../services/creditsPurchaseService");
 const creditsService_1 = require("../services/creditsService");
 const creditsRouter = (0, express_1.Router)();
-// All routes require authentication
-creditsRouter.use(jwtAuth_1.jwtAuthMiddleware);
 /**
  * GET /credits/packages
- * Get available credit packages
+ * Get available credit packages (public, no auth required)
  */
 creditsRouter.get("/packages", (req, res) => {
     const packages = (0, creditsPurchaseService_1.getCreditPackages)();
     res.json({ packages });
 });
+// All other routes require authentication
+creditsRouter.use(jwtAuth_1.jwtAuthMiddleware);
 /**
  * GET /credits/balance
  * Get current credit balance

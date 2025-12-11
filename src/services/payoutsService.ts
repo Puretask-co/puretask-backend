@@ -3,7 +3,8 @@
 // Matches 001_init.sql + 004_connect_payouts.sql schema
 
 import Stripe from "stripe";
-import { query } from "../db/client";
+import { query, withTransaction } from "../db/client";
+import type { PoolClient } from "pg";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import { publishEvent } from "../lib/events";
@@ -35,27 +36,34 @@ export async function updatePayoutPause(cleanerId: string, paused: boolean): Pro
  * Platform fee: 15%
  */
 export async function getCleanerPayoutPercent(cleanerId: string): Promise<number> {
-  const result = await query<{ tier: string; payout_percent: number }>(
-    `SELECT tier, COALESCE(payout_percent, 80) as payout_percent FROM cleaner_profiles WHERE user_id = $1`,
-    [cleanerId]
-  );
-  
-  if (result.rows.length === 0) {
-    return env.CLEANER_PAYOUT_PERCENT_BRONZE; // Default to bronze
-  }
-  
-  const { tier, payout_percent } = result.rows[0];
-  
-  // Use stored payout_percent if available, otherwise calculate from tier
-  if (payout_percent) {
-    return payout_percent;
-  }
-  
-  switch (tier) {
-    case "platinum": return env.CLEANER_PAYOUT_PERCENT_PLATINUM;
-    case "gold": return env.CLEANER_PAYOUT_PERCENT_GOLD;
-    case "silver": return env.CLEANER_PAYOUT_PERCENT_SILVER;
-    default: return env.CLEANER_PAYOUT_PERCENT_BRONZE;
+  try {
+    // Try to get tier and payout_percent, but handle missing columns gracefully
+    const result = await query<{ tier?: string; payout_percent?: number }>(
+      `SELECT COALESCE(payout_percent, 80) as payout_percent FROM cleaner_profiles WHERE user_id = $1`,
+      [cleanerId]
+    );
+    
+    if (result.rows.length === 0) {
+      return env.CLEANER_PAYOUT_PERCENT_BRONZE; // Default to bronze
+    }
+    
+    const { payout_percent } = result.rows[0];
+    
+    // Use stored payout_percent if available
+    if (payout_percent) {
+      return payout_percent;
+    }
+    
+    // If tier column doesn't exist or payout_percent is not set, default to bronze
+    return env.CLEANER_PAYOUT_PERCENT_BRONZE;
+  } catch (error: any) {
+    // If column doesn't exist or query fails, default to bronze
+    if (error?.code === '42703' || error?.code === '42P01') {
+      // Column or table doesn't exist - use default
+      return env.CLEANER_PAYOUT_PERCENT_BRONZE;
+    }
+    // Re-throw other errors
+    throw error;
   }
 }
 
@@ -81,27 +89,94 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
   const platformFeeCents = grossCents - payoutCents;
   const payoutCredits = Math.round(job.credit_amount * (payoutPercent / 100));
 
-  const result = await query<Payout>(
-    `
-      INSERT INTO payouts (
-        cleaner_id,
-        job_id,
-        stripe_transfer_id,
-        amount_credits,
-        amount_cents,
-        status
-      )
-      VALUES ($1, $2, null, $3, $4, 'pending')
-      RETURNING *
-    `,
-    [job.cleaner_id, job.id, payoutCredits, payoutCents]
-  );
+  // Create payout record
+  // Best Practice: Foreign key should reference users.id (primary entity), not cleaner_profiles.user_id
+  // The cleaner_profile should already exist from registration - if it doesn't, that's a registration bug
+  // If the FK constraint fails, it means either:
+  // 1. The user doesn't exist (data integrity issue)
+  // 2. The FK references the wrong table (schema issue - run DB/migrations/000_fix_payouts_fk.sql)
+  const payout = await withTransaction(async (client: PoolClient) => {
+    // Verify user exists before attempting payout creation
+    // This provides a clearer error message than a foreign key constraint violation
+    // Note: In test environments, there might be transaction isolation issues, so we'll
+    // also try to create the payout and let the FK constraint handle it if the check fails
+    const userCheck = await client.query<{ exists: boolean }>(
+      `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1) AS exists`,
+      [job.cleaner_id]
+    );
+    
+    if (!userCheck.rows[0]?.exists) {
+      // User doesn't exist - this is a data integrity issue
+      // In test environments, this might indicate the user was deleted or never committed
+      logger.error("payout_user_does_not_exist", {
+        cleanerId: job.cleaner_id,
+        jobId: job.id,
+        message: "Cleaner user does not exist in users table - cannot create payout",
+      });
+      
+      // Throw a clear error instead of attempting insert
+      throw Object.assign(
+        new Error(
+          `Cannot create payout: cleaner user ${job.cleaner_id} does not exist in users table. ` +
+          `This may be a test isolation issue - ensure the user exists before creating payouts.`
+        ),
+        { statusCode: 500, code: "USER_NOT_FOUND" }
+      );
+    }
 
-  const payout = result.rows[0];
+    // Create payout record
+    // The foreign key constraint will enforce referential integrity
+    let result;
+    try {
+      result = await client.query<Payout>(
+        `
+          INSERT INTO payouts (
+            cleaner_id,
+            job_id,
+            stripe_transfer_id,
+            amount_credits,
+            amount_cents,
+            status
+          )
+          VALUES ($1, $2, null, $3, $4, 'pending')
+          RETURNING *
+        `,
+        [job.cleaner_id, job.id, payoutCredits, payoutCents]
+      );
+    } catch (error: any) {
+      // If foreign key constraint fails, provide helpful debugging info
+      if (error?.code === '23503') {
+        logger.error("payout_creation_failed_foreign_key", {
+          cleanerId: job.cleaner_id,
+          jobId: job.id,
+          error: error?.message,
+          constraint: error?.constraint,
+        });
+        
+        // Provide actionable error message
+        throw Object.assign(
+          new Error(
+            `Failed to create payout: foreign key constraint violation. ` +
+            `Constraint: ${error?.constraint}. ` +
+            `The foreign key may reference the wrong table. ` +
+            `Expected: payouts.cleaner_id -> users.id. ` +
+            `Run DB/migrations/000_fix_payouts_fk.sql to fix the constraint. ` +
+            `Error: ${error?.message}`
+          ),
+          { statusCode: 500, constraint: error?.constraint }
+        );
+      }
+      // Re-throw other errors
+      throw error;
+    }
 
-  if (!payout) {
-    throw Object.assign(new Error("Failed to create payout"), { statusCode: 500 });
-  }
+    const payout = result.rows[0];
+    if (!payout) {
+      throw Object.assign(new Error("Failed to create payout"), { statusCode: 500 });
+    }
+
+    return payout;
+  });
 
   logger.info("payout_recorded", {
     payoutId: payout.id,

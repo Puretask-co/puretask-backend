@@ -1,8 +1,19 @@
 import { Pool, PoolClient } from "pg";
 import { env } from "../config/env";
 
+// Detect test environment
+const isTestEnv = process.env.RUNNING_TESTS === 'true' || 
+                  process.env.NODE_ENV === 'test' ||
+                  process.env.VITEST === 'true';
+
 export const pool = new Pool({
-  connectionString: env.DATABASE_URL
+  connectionString: env.DATABASE_URL,
+  // Connection pool settings for better reliability
+  max: isTestEnv ? 5 : 20, // Very few connections in test environment (Neon free tier limit)
+  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  connectionTimeoutMillis: isTestEnv ? 15000 : 10000, // Longer timeout in tests (Neon can be slow)
+  // Retry settings
+  allowExitOnIdle: true, // Allow process to exit when pool is idle
 });
 
 export async function query<T extends Record<string, any> = any>(text: string, params?: any[]): Promise<{ rows: T[]; rowCount: number | null }> {

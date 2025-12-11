@@ -33,13 +33,14 @@ async function main() {
                 const scheduledEnd = new Date(scheduledStart);
                 scheduledEnd.setHours(scheduledEnd.getHours() + 3); // Default 3 hour job
                 // Create the job
-                const job = await (0, jobsService_1.createJob)(sub.client_id, {
-                    scheduled_start_at: scheduledStart.toISOString(),
-                    scheduled_end_at: scheduledEnd.toISOString(),
+                const job = await (0, jobsService_1.createJob)({
+                    clientId: sub.client_id,
+                    scheduledStartAt: scheduledStart.toISOString(),
+                    scheduledEndAt: scheduledEnd.toISOString(),
                     address: sub.address,
                     latitude: sub.latitude ?? undefined,
                     longitude: sub.longitude ?? undefined,
-                    credit_amount: sub.credit_amount,
+                    creditAmount: sub.credit_amount,
                 });
                 // Assign preferred cleaner if set
                 if (sub.cleaner_id) {

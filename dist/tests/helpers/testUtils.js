@@ -171,11 +171,12 @@ async function createTestJob(client, options) {
 // ============================================
 /**
  * Add credits to a user's account (directly in DB)
+ * Note: credit_ledger uses 'amount' and 'direction' columns, not 'delta_credits'
  */
 async function addCreditsToUser(userId, amount) {
     await (0, client_1.query)(`
-      INSERT INTO credit_ledger (user_id, delta_credits, reason)
-      VALUES ($1, $2, 'purchase')
+      INSERT INTO credit_ledger (user_id, amount, direction, reason)
+      VALUES ($1, $2, 'credit', 'purchase')
     `, [userId, amount]);
 }
 /**
@@ -203,18 +204,36 @@ async function transitionJobTo(jobId, targetStatus, cleanerId) {
 // ============================================
 /**
  * Clean up test data (call in afterAll or afterEach)
+ * Handles missing tables gracefully
  */
 async function cleanupTestData() {
     // Delete in order of dependencies
-    await (0, client_1.query)(`DELETE FROM notification_failures WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`);
-    await (0, client_1.query)(`DELETE FROM credit_ledger WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`);
-    await (0, client_1.query)(`DELETE FROM payouts WHERE cleaner_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`);
-    await (0, client_1.query)(`DELETE FROM disputes WHERE client_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`);
-    await (0, client_1.query)(`DELETE FROM job_events WHERE job_id IN (SELECT id FROM jobs WHERE client_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com'))`);
-    await (0, client_1.query)(`DELETE FROM jobs WHERE client_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`);
-    await (0, client_1.query)(`DELETE FROM cleaner_profiles WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`);
-    await (0, client_1.query)(`DELETE FROM client_profiles WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`);
-    await (0, client_1.query)(`DELETE FROM users WHERE email LIKE '%@test.puretask.com'`);
+    // Use DO blocks to handle missing tables gracefully
+    const cleanupQueries = [
+        `DELETE FROM notification_failures WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
+        `DELETE FROM credit_ledger WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
+        `DELETE FROM payouts WHERE cleaner_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
+        `DELETE FROM disputes WHERE client_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
+        `DELETE FROM job_events WHERE job_id IN (SELECT id FROM jobs WHERE client_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com'))`,
+        `DELETE FROM jobs WHERE client_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
+        `DELETE FROM cleaner_profiles WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
+        `DELETE FROM client_profiles WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
+        `DELETE FROM users WHERE email LIKE '%@test.puretask.com'`,
+    ];
+    for (const cleanupQuery of cleanupQueries) {
+        try {
+            await (0, client_1.query)(cleanupQuery);
+        }
+        catch (error) {
+            // Ignore errors about missing tables or columns (schema might not be fully migrated)
+            if (error?.code === '42P01' || error?.code === '42703') {
+                // Table or column doesn't exist - skip this cleanup step
+                continue;
+            }
+            // Re-throw other errors
+            throw error;
+        }
+    }
 }
 // ============================================
 // Assertion Helpers

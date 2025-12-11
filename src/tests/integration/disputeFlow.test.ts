@@ -38,12 +38,13 @@ describe("Dispute Flow Integration", () => {
     const jobRes = await request(app)
       .post("/jobs")
       .set("Authorization", `Bearer ${client.token}`)
-      .send({
-        scheduled_start_at: new Date().toISOString(),
-        scheduled_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-        address: "456 Dispute St",
-        credit_amount: 75,
-      });
+        .send({
+          scheduled_start_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+          scheduled_end_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
+          address: "456 Dispute St",
+          credit_amount: 75,
+          estimated_hours: 2,
+        });
 
     expect(jobRes.status).toBe(201);
     const jobId = jobRes.body.job.id;
@@ -56,8 +57,11 @@ describe("Dispute Flow Integration", () => {
       .post(`/jobs/${jobId}/transition`)
       .set("Authorization", `Bearer ${client.token}`)
       .send({
-        event_type: "job_disputed",
-        payload: { notes: "Not satisfied with the cleaning" },
+        event_type: "client_disputed",
+        payload: { 
+          dispute_reason: "quality",
+          dispute_details: "Not satisfied with the cleaning" 
+        },
       });
 
     expect(disputeRes.status).toBe(200);
@@ -82,12 +86,12 @@ describe("Dispute Flow Integration", () => {
       });
 
     expect(resolveRes.status).toBe(200);
-    expect(resolveRes.body.dispute.status).toBe("resolved_refund");
+    expect(resolveRes.body.dispute?.status).toBe("resolved_refund");
 
     // 6. Verify refund in credit_ledger
-    const ledgerRows = await query<{ delta_credits: number; reason: string }>(
+    const ledgerRows = await query<{ amount: number; direction: string; reason: string }>(
       `
-        SELECT delta_credits, reason
+        SELECT amount, direction, reason
         FROM credit_ledger
         WHERE user_id = $1 AND job_id = $2 AND reason = 'refund'
       `,
@@ -95,7 +99,8 @@ describe("Dispute Flow Integration", () => {
     );
 
     expect(ledgerRows.rows.length).toBe(1);
-    expect(ledgerRows.rows[0].delta_credits).toBe(75);
+    expect(ledgerRows.rows[0].amount).toBe(75);
+    expect(ledgerRows.rows[0].direction).toBe('credit');
     expect(ledgerRows.rows[0].reason).toBe("refund");
   });
 
@@ -104,12 +109,13 @@ describe("Dispute Flow Integration", () => {
     const jobRes = await request(app)
       .post("/jobs")
       .set("Authorization", `Bearer ${client.token}`)
-      .send({
-        scheduled_start_at: new Date().toISOString(),
-        scheduled_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-        address: "789 No Refund St",
-        credit_amount: 60,
-      });
+        .send({
+          scheduled_start_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+          scheduled_end_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
+          address: "789 No Refund St",
+          credit_amount: 60,
+          estimated_hours: 2,
+        });
 
     const jobId = jobRes.body.job.id;
     await transitionJobTo(jobId, "awaiting_approval", cleaner.id);
@@ -119,8 +125,11 @@ describe("Dispute Flow Integration", () => {
       .post(`/jobs/${jobId}/transition`)
       .set("Authorization", `Bearer ${client.token}`)
       .send({
-        event_type: "job_disputed",
-        payload: { notes: "Minor issue" },
+        event_type: "client_disputed",
+        payload: { 
+          dispute_reason: "quality",
+          dispute_details: "Minor issue" 
+        },
       });
 
     const disputes = await query<{ id: string }>(
@@ -139,7 +148,7 @@ describe("Dispute Flow Integration", () => {
       });
 
     expect(resolveRes.status).toBe(200);
-    expect(resolveRes.body.dispute.status).toBe("resolved_no_refund");
+    expect(resolveRes.body.dispute?.status).toBe("resolved_no_refund");
 
     // 4. Verify NO refund entry
     const refundRows = await query<{ id: string }>(
@@ -158,12 +167,13 @@ describe("Dispute Flow Integration", () => {
     const jobRes = await request(app)
       .post("/jobs")
       .set("Authorization", `Bearer ${client.token}`)
-      .send({
-        scheduled_start_at: new Date().toISOString(),
-        scheduled_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-        address: "111 Forbidden St",
-        credit_amount: 40,
-      });
+        .send({
+          scheduled_start_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+          scheduled_end_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
+          address: "111 Forbidden St",
+          credit_amount: 40,
+          estimated_hours: 2,
+        });
 
     const jobId = jobRes.body.job.id;
     await transitionJobTo(jobId, "awaiting_approval", cleaner.id);
@@ -173,8 +183,11 @@ describe("Dispute Flow Integration", () => {
       .post(`/jobs/${jobId}/transition`)
       .set("Authorization", `Bearer ${cleaner.token}`)
       .send({
-        event_type: "job_disputed",
-        payload: { notes: "Cleaner trying to dispute" },
+        event_type: "client_disputed",
+        payload: { 
+          dispute_reason: "quality",
+          dispute_details: "Cleaner trying to dispute" 
+        },
       });
 
     expect(disputeRes.status).toBe(403);
@@ -185,12 +198,13 @@ describe("Dispute Flow Integration", () => {
     const jobRes = await request(app)
       .post("/jobs")
       .set("Authorization", `Bearer ${client.token}`)
-      .send({
-        scheduled_start_at: new Date().toISOString(),
-        scheduled_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-        address: "222 Admin Only St",
-        credit_amount: 50,
-      });
+        .send({
+          scheduled_start_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+          scheduled_end_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
+          address: "222 Admin Only St",
+          credit_amount: 50,
+          estimated_hours: 2,
+        });
 
     const jobId = jobRes.body.job.id;
     await transitionJobTo(jobId, "awaiting_approval", cleaner.id);
@@ -198,7 +212,13 @@ describe("Dispute Flow Integration", () => {
     await request(app)
       .post(`/jobs/${jobId}/transition`)
       .set("Authorization", `Bearer ${client.token}`)
-      .send({ event_type: "job_disputed", payload: { notes: "Issue" } });
+      .send({ 
+        event_type: "client_disputed", 
+        payload: { 
+          dispute_reason: "quality",
+          dispute_details: "Issue" 
+        } 
+      });
 
     const disputes = await query<{ id: string }>(
       `SELECT id FROM disputes WHERE job_id = $1`,

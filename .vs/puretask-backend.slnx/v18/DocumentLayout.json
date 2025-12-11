@@ -1,73 +1,69 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\",
+  "WorkspaceRootPath": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\routes\\jobs.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\routes\\jobs.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\routes\\jobs.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\jobsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\jobsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\services\\jobsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\cleanerJobsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\cleanerJobsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\services\\cleanerJobsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\adminJobsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\adminJobsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\services\\adminJobsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\paymentService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\paymentService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\services\\paymentService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\creditsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\creditsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\services\\creditsService.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\jobEvents.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\jobEvents.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\services\\jobEvents.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\state\\jobStateMachine.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\state\\jobStateMachine.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\state\\jobStateMachine.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile2||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\NewFile2||{8B382828-6202-11D1-8870-0000F87579D2}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile2||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile1||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\NewFile1||{8B382828-6202-11D1-8870-0000F87579D2}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile1||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\NewFile||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\services\\NewFile||{8B382828-6202-11D1-8870-0000F87579D2}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\NewFile||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\NewFile||{8B382828-6202-11D1-8870-0000F87579D2}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\index.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\index.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\index.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\routes\\admin.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\routes\\admin.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\routes\\admin.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\routes\\health.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\routes\\health.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\routes\\health.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\package.json||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\package.json||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:package.json||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\.env||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\.env||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:.env||{8B382828-6202-11D1-8870-0000F87579D2}"
     }
   ],
@@ -85,164 +81,152 @@
               "DocumentIndex": 8,
               "Title": "NewFile2",
               "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile2",
-              "RelativeDocumentMoniker": "src\\NewFile2",
+              "RelativeDocumentMoniker": "..\\..\\..\\Documents\\GitHub\\puretask-backend\\src\\NewFile2",
               "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile2",
-              "RelativeToolTip": "src\\NewFile2",
+              "RelativeToolTip": "..\\..\\..\\Documents\\GitHub\\puretask-backend\\src\\NewFile2",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-11-30T00:33:20.714Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T00:33:20.714Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 9,
               "Title": "NewFile1",
               "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile1",
-              "RelativeDocumentMoniker": "src\\NewFile1",
+              "RelativeDocumentMoniker": "..\\..\\..\\Documents\\GitHub\\puretask-backend\\src\\NewFile1",
               "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile1",
-              "RelativeToolTip": "src\\NewFile1",
+              "RelativeToolTip": "..\\..\\..\\Documents\\GitHub\\puretask-backend\\src\\NewFile1",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-11-30T00:32:20.319Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T00:32:20.319Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 2,
               "Title": "cleanerJobsService.ts",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\cleanerJobsService.ts",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\cleanerJobsService.ts",
               "RelativeDocumentMoniker": "src\\services\\cleanerJobsService.ts",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\cleanerJobsService.ts",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\cleanerJobsService.ts",
               "RelativeToolTip": "src\\services\\cleanerJobsService.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-30T00:31:53.524Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T00:31:53.524Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 3,
               "Title": "adminJobsService.ts",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\adminJobsService.ts",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\adminJobsService.ts",
               "RelativeDocumentMoniker": "src\\services\\adminJobsService.ts",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\adminJobsService.ts",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\adminJobsService.ts",
               "RelativeToolTip": "src\\services\\adminJobsService.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-30T00:31:17.53Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T00:31:17.53Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 4,
               "Title": "paymentService.ts",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\paymentService.ts",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\paymentService.ts",
               "RelativeDocumentMoniker": "src\\services\\paymentService.ts",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\paymentService.ts",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\paymentService.ts",
               "RelativeToolTip": "src\\services\\paymentService.ts",
               "ViewState": "AgIAAAkAAAAAAAAAAAAYwDQAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-30T00:30:46.608Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T00:30:46.608Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 10,
               "Title": "NewFile",
               "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\NewFile",
-              "RelativeDocumentMoniker": "src\\services\\NewFile",
+              "RelativeDocumentMoniker": "..\\..\\..\\Documents\\GitHub\\puretask-backend\\src\\services\\NewFile",
               "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\NewFile",
-              "RelativeToolTip": "src\\services\\NewFile",
+              "RelativeToolTip": "..\\..\\..\\Documents\\GitHub\\puretask-backend\\src\\services\\NewFile",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-11-30T00:30:39.167Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T00:30:39.167Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 5,
               "Title": "creditsService.ts",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\creditsService.ts",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\creditsService.ts",
               "RelativeDocumentMoniker": "src\\services\\creditsService.ts",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\creditsService.ts",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\creditsService.ts",
               "RelativeToolTip": "src\\services\\creditsService.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACQAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-30T00:30:01.797Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T00:30:01.797Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 6,
               "Title": "jobEvents.ts",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\jobEvents.ts",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\jobEvents.ts",
               "RelativeDocumentMoniker": "src\\services\\jobEvents.ts",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\jobEvents.ts",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\jobEvents.ts",
               "RelativeToolTip": "src\\services\\jobEvents.ts",
               "ViewState": "AgIAABAAAAAAAAAAAAAYwDsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-30T00:27:52.856Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T00:27:52.856Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
               "Title": "jobsService.ts",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\jobsService.ts",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\jobsService.ts",
               "RelativeDocumentMoniker": "src\\services\\jobsService.ts",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\services\\jobsService.ts",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\services\\jobsService.ts",
               "RelativeToolTip": "src\\services\\jobsService.ts",
               "ViewState": "AgIAAIQAAAAAAAAAAAAYwK8AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-30T00:27:48.627Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T00:27:48.627Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 7,
               "Title": "jobStateMachine.ts",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\state\\jobStateMachine.ts",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\state\\jobStateMachine.ts",
               "RelativeDocumentMoniker": "src\\state\\jobStateMachine.ts",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\state\\jobStateMachine.ts",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\state\\jobStateMachine.ts",
               "RelativeToolTip": "src\\state\\jobStateMachine.ts",
               "ViewState": "AgIAABIAAAAAAAAAAAAYwD0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-30T00:26:03.304Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T00:26:03.304Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 11,
               "Title": "NewFile",
               "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile",
-              "RelativeDocumentMoniker": "src\\NewFile",
+              "RelativeDocumentMoniker": "..\\..\\..\\Documents\\GitHub\\puretask-backend\\src\\NewFile",
               "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\NewFile",
-              "RelativeToolTip": "src\\NewFile",
+              "RelativeToolTip": "..\\..\\..\\Documents\\GitHub\\puretask-backend\\src\\NewFile",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-11-30T00:25:09.533Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-30T00:25:09.533Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 14,
               "Title": "health.ts",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\routes\\health.ts",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\routes\\health.ts",
               "RelativeDocumentMoniker": "src\\routes\\health.ts",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\routes\\health.ts",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\routes\\health.ts",
               "RelativeToolTip": "src\\routes\\health.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-29T23:00:42.524Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-29T23:00:42.524Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "jobs.ts",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\routes\\jobs.ts",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\routes\\jobs.ts",
               "RelativeDocumentMoniker": "src\\routes\\jobs.ts",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\routes\\jobs.ts",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\routes\\jobs.ts",
               "RelativeToolTip": "src\\routes\\jobs.ts",
               "ViewState": "AgIAANAAAAAAAAAAAAAcwPsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
@@ -253,53 +237,49 @@
               "$type": "Document",
               "DocumentIndex": 13,
               "Title": "admin.ts",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\routes\\admin.ts",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\routes\\admin.ts",
               "RelativeDocumentMoniker": "src\\routes\\admin.ts",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\routes\\admin.ts",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\routes\\admin.ts",
               "RelativeToolTip": "src\\routes\\admin.ts",
               "ViewState": "AgIAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-29T22:02:41.195Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-29T22:02:41.195Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 15,
               "Title": "package.json",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\package.json",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\package.json",
               "RelativeDocumentMoniker": "package.json",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\package.json",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\package.json",
               "RelativeToolTip": "package.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-11-29T20:37:53.881Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-29T20:37:53.881Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 16,
               "Title": ".env",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\.env",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\.env",
               "RelativeDocumentMoniker": ".env",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\.env",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\.env",
               "RelativeToolTip": ".env",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-11-29T20:30:46.122Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-29T20:30:46.122Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 12,
               "Title": "index.ts",
-              "DocumentMoniker": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\index.ts",
+              "DocumentMoniker": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\index.ts",
               "RelativeDocumentMoniker": "src\\index.ts",
-              "ToolTip": "C:\\Users\\nefar\\Documents\\GitHub\\puretask-backend\\src\\index.ts",
+              "ToolTip": "C:\\Users\\nefar\\Desktop\\GitHub\\puretask-backend\\src\\index.ts",
               "RelativeToolTip": "src\\index.ts",
               "ViewState": "AgIAAAwAAAAAAAAAAAAuwDAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-29T20:28:08.172Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-29T20:28:08.172Z"
             }
           ]
         }

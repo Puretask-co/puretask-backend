@@ -30,7 +30,7 @@ export interface UpdatePreferencesInput {
 export async function getNotificationPreferences(
   userId: string
 ): Promise<NotificationPreferences> {
-  let result = await query<NotificationPreferences>(
+  const result = await query<NotificationPreferences>(
     `
       SELECT * FROM notification_preferences
       WHERE user_id = $1

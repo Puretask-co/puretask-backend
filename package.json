@@ -32,7 +32,9 @@
     "worker:queue-processor": "ts-node src/workers/queueProcessor.ts",
     "worker:cleaning-scores": "ts-node src/workers/cleaningScores.ts",
     "worker:goal-checker": "ts-node src/workers/goalChecker.ts",
-    "migrate:run": "echo 'Run migrations against your Neon DB using psql or a migration tool'",
+    "migrate:run": "node scripts/run-migration.js",
+    "migrate:fix-payouts-fk": "node scripts/run-migration.js DB/migrations/000_fix_payouts_fk.sql",
+    "migrate:verify": "node scripts/verify-migration.js",
     "db:seed": "ts-node src/db/seed.ts"
   },
   "dependencies": {
