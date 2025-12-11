@@ -23,6 +23,8 @@ import adminRouter from "./routes/admin";
 import stripeRouter from "./routes/stripe";
 import eventsRouter from "./routes/events";
 import paymentsRouter from "./routes/payments";
+import creditsRouter from "./routes/credits";
+import messagesRouter from "./routes/messages";
 import analyticsRouter from "./routes/analytics";
 import cleanerRouter from "./routes/cleaner";
 import trackingRouter from "./routes/tracking";
@@ -143,6 +145,8 @@ app.use("/assignment", assignmentRouter);
 app.use("/admin", adminRouter);
 app.use("/stripe", stripeRouter);
 app.use("/payments", paymentsRouter);
+app.use("/credits", creditsRouter);
+app.use("/messages", messagesRouter);
 app.use("/analytics", analyticsRouter);
 app.use("/cleaner", cleanerRouter);
 app.use("/cleaner", cleanerPortalRouter); // Cleaner portal: my clients + invoicing
@@ -204,9 +208,10 @@ app.use(
 // ============================================
 // Only start server if not in test mode
 // Tests import the app but don't need the server running
-const isTestMode = process.env.NODE_ENV === 'test' || 
+const isTestMode = process.env.RUNNING_TESTS === 'true' ||
+                   process.env.NODE_ENV === 'test' || 
                    process.env.VITEST === 'true' ||
-                   typeof process.env.VITEST !== 'undefined';
+                   typeof process.env.VITEST_WORKER_ID !== 'undefined';
 
 let server: ReturnType<typeof app.listen> | null = null;
 

@@ -3,7 +3,7 @@
 
 import { Router } from "express";
 import { z } from "zod";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { jwtAuthMiddleware, type JWTAuthedRequest } from "../middleware/jwtAuth";
 import {
   createJob,
   getJob,
@@ -25,10 +25,10 @@ import { env } from "../config/env";
 const jobsRouter = Router();
 
 // All routes require auth
-jobsRouter.use(authMiddleware);
+jobsRouter.use(jwtAuthMiddleware);
 
 // Helpers
-function getRole(req: AuthedRequest): "client" | "cleaner" | "admin" {
+function getRole(req: JWTAuthedRequest): "client" | "cleaner" | "admin" {
   return (req.user?.role ?? "client") as "client" | "cleaner" | "admin";
 }
 
@@ -36,7 +36,7 @@ function getRole(req: AuthedRequest): "client" | "cleaner" | "admin" {
  * POST /jobs
  * Create a new job (client)
  */
-jobsRouter.post("/", async (req: AuthedRequest, res) => {
+jobsRouter.post("/", async (req: JWTAuthedRequest, res) => {
   try {
     const schema = z.object({
       scheduled_start_at: z.string(), // ISO string
@@ -78,7 +78,7 @@ jobsRouter.post("/", async (req: AuthedRequest, res) => {
  * - cleaner -> their assigned jobs + available jobs
  * - admin -> use /admin/jobs instead
  */
-jobsRouter.get("/", async (req: AuthedRequest, res) => {
+jobsRouter.get("/", async (req: JWTAuthedRequest, res) => {
   try {
     const role = getRole(req);
 
@@ -108,7 +108,7 @@ jobsRouter.get("/", async (req: AuthedRequest, res) => {
 /**
  * GET /jobs/:jobId
  */
-jobsRouter.get("/:jobId", async (req: AuthedRequest, res) => {
+jobsRouter.get("/:jobId", async (req: JWTAuthedRequest, res) => {
   try {
     const { jobId } = req.params;
     const job = await getJob(jobId);
@@ -146,7 +146,7 @@ jobsRouter.get("/:jobId", async (req: AuthedRequest, res) => {
  * PATCH /jobs/:jobId
  * Update job details (client only, only when status = 'requested')
  */
-jobsRouter.patch("/:jobId", async (req: AuthedRequest, res) => {
+jobsRouter.patch("/:jobId", async (req: JWTAuthedRequest, res) => {
   try {
     const { jobId } = req.params;
 
@@ -201,7 +201,7 @@ jobsRouter.patch("/:jobId", async (req: AuthedRequest, res) => {
  * DELETE /jobs/:jobId
  * Cancel a job (client only)
  */
-jobsRouter.delete("/:jobId", async (req: AuthedRequest, res) => {
+jobsRouter.delete("/:jobId", async (req: JWTAuthedRequest, res) => {
   try {
     const { jobId } = req.params;
 
@@ -227,7 +227,7 @@ jobsRouter.delete("/:jobId", async (req: AuthedRequest, res) => {
  * GET /jobs/:jobId/events
  * Returns job events history
  */
-jobsRouter.get("/:jobId/events", async (req: AuthedRequest, res) => {
+jobsRouter.get("/:jobId/events", async (req: JWTAuthedRequest, res) => {
   try {
     const { jobId } = req.params;
     const events = await getEvents(jobId);
@@ -246,7 +246,7 @@ jobsRouter.get("/:jobId/events", async (req: AuthedRequest, res) => {
  * Apply a status transition to a job
  * Body: { event_type: JobEventType, payload?: {} }
  */
-jobsRouter.post("/:jobId/transition", async (req: AuthedRequest, res) => {
+jobsRouter.post("/:jobId/transition", async (req: JWTAuthedRequest, res) => {
   try {
     const { jobId } = req.params;
 
@@ -309,7 +309,7 @@ jobsRouter.post("/:jobId/transition", async (req: AuthedRequest, res) => {
  * 
  * Body: { stripeCustomerId?: string }
  */
-jobsRouter.post("/:jobId/pay", async (req: AuthedRequest, res) => {
+jobsRouter.post("/:jobId/pay", async (req: JWTAuthedRequest, res) => {
   try {
     const { jobId } = req.params;
     const clientId = req.user!.id;
@@ -424,7 +424,7 @@ jobsRouter.post("/:jobId/pay", async (req: AuthedRequest, res) => {
  * Get pricing breakdown for a job
  * Shows both wallet price and card price (with surcharge)
  */
-jobsRouter.get("/:jobId/pricing", async (req: AuthedRequest, res) => {
+jobsRouter.get("/:jobId/pricing", async (req: JWTAuthedRequest, res) => {
   try {
     const { jobId } = req.params;
     const clientId = req.user!.id;

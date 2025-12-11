@@ -144,6 +144,9 @@ export async function createJob(options: {
     throw Object.assign(new Error("End time must be after start time"), { statusCode: 400 });
   }
 
+  // Calculate estimated hours from the time difference
+  const estimatedHours = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60));
+
   // Insert job with 'requested' status
   const result = await query<Job>(
     `
@@ -152,19 +155,21 @@ export async function createJob(options: {
         status,
         scheduled_start_at,
         scheduled_end_at,
+        estimated_hours,
         address,
         latitude,
         longitude,
         credit_amount,
         client_notes
       )
-      VALUES ($1, 'requested', $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, 'requested', $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `,
     [
       clientId,
       scheduledStartAt,
       scheduledEndAt,
+      estimatedHours,
       address,
       latitude,
       longitude,

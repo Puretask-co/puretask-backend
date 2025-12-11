@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from "vitest";
 import request from "supertest";
-import { app } from "../../index";
+import app from "../../index";
 
 describe("Health Endpoint", () => {
   it("GET /health should return ok status", async () => {

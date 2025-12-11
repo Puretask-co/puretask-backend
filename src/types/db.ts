@@ -283,7 +283,9 @@ export interface Message {
   sender_type: ActorType;
   sender_id: string;
   content: string;
-  read: boolean;
+  is_read: boolean; // Matches schema column name
+  read_at: string | null; // Timestamp when message was read
+  attachments?: any; // JSONB array of attachments
   created_at: string;
 }
 
