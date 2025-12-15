@@ -9,6 +9,7 @@ import {
   applyReliabilityDecay,
   cleanupExpiredTierLocks,
   getOpenFraudAlerts,
+  FraudAlert,
 } from "../services/creditEconomyService";
 
 /**
@@ -28,7 +29,7 @@ async function main(): Promise<void> {
 
     // 3. Check for open fraud alerts (alert admins if critical)
     const alerts = await getOpenFraudAlerts();
-    const criticalAlerts = alerts.filter((a) => a.severity === "critical");
+    const criticalAlerts = alerts.filter((a: FraudAlert) => a.severity === "critical");
 
     if (criticalAlerts.length > 0) {
       logger.warn("critical_fraud_alerts_pending", {

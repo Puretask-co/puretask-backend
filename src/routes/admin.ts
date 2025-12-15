@@ -72,7 +72,6 @@ export const adminRouter = Router();
 
 // All admin routes require authentication
 adminRouter.use(authMiddleware);
-
 // Middleware to check admin role
 const requireAdmin = (req: AuthedRequest, res: Response, next: () => void) => {
   if (req.user?.role !== "admin") {
@@ -83,10 +82,7 @@ const requireAdmin = (req: AuthedRequest, res: Response, next: () => void) => {
   next();
 };
 
-/**
- * GET /admin/kpis
- * Get admin dashboard KPIs
- */
+// V1: Basic admin KPIs endpoint (simplified for V1)
 adminRouter.get("/kpis", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
     const { dateFrom, dateTo } = req.query;
@@ -109,82 +105,70 @@ adminRouter.get("/kpis", requireAdmin, async (req: AuthedRequest, res: Response)
   }
 });
 
-/**
- * GET /admin/kpis/history
- * Get KPI history
- */
-adminRouter.get("/kpis/history", requireAdmin, async (req: AuthedRequest, res: Response) => {
-  try {
-    const { days = "30" } = req.query;
-    const history = await getKpiHistory(parseInt(days as string, 10));
-    res.json({ history });
-  } catch (error) {
-    logger.error("get_kpi_history_failed", {
-      error: (error as Error).message,
-      adminId: req.user?.id,
-    });
-    res.status(500).json({
-      error: {
-        code: "GET_KPI_HISTORY_FAILED",
-        message: (error as Error).message,
-      },
-    });
-  }
-});
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// adminRouter.get("/kpis/history", requireAdmin, async (req: AuthedRequest, res: Response) => {
+//   try {
+//     const { days = "30" } = req.query;
+//     const history = await getKpiHistory(parseInt(days as string, 10));
+//     res.json({ history });
+//   } catch (error) {
+//     logger.error("get_kpi_history_failed", {
+//       error: (error as Error).message,
+//       adminId: req.user?.id,
+//     });
+//     res.status(500).json({
+//       error: {
+//         code: "GET_KPI_HISTORY_FAILED",
+//         message: (error as Error).message,
+//       },
+//     });
+//   }
+// });
 
 // ============================================
 // Operational Metrics
 // ============================================
 
-/**
- * GET /admin/metrics/operational
- * Get comprehensive operational metrics
- */
-adminRouter.get("/metrics/operational", requireAdmin, async (req: AuthedRequest, res: Response) => {
-  try {
-    const { days = "30" } = req.query;
-    const metrics = await getOperationalMetrics(parseInt(days as string, 10));
-    res.json({ metrics });
-  } catch (error) {
-    logger.error("get_operational_metrics_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_OPERATIONAL_METRICS_FAILED", message: (error as Error).message },
-    });
-  }
-});
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// adminRouter.get("/metrics/operational", requireAdmin, async (req: AuthedRequest, res: Response) => {
+//   try {
+//     const { days = "30" } = req.query;
+//     const metrics = await getOperationalMetrics(parseInt(days as string, 10));
+//     res.json({ metrics });
+//   } catch (error) {
+//     logger.error("get_operational_metrics_failed", { error: (error as Error).message });
+//     res.status(500).json({
+//       error: { code: "GET_OPERATIONAL_METRICS_FAILED", message: (error as Error).message },
+//     });
+//   }
+// });
 
-/**
- * GET /admin/metrics/trends
- * Get metric trends over time
- */
-adminRouter.get("/metrics/trends", requireAdmin, async (req: AuthedRequest, res: Response) => {
-  try {
-    const { days = "30" } = req.query;
-    const trends = await getMetricTrends(parseInt(days as string, 10));
-    res.json({ trends });
-  } catch (error) {
-    logger.error("get_metric_trends_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_METRIC_TRENDS_FAILED", message: (error as Error).message },
-    });
-  }
-});
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// adminRouter.get("/metrics/trends", requireAdmin, async (req: AuthedRequest, res: Response) => {
+//   try {
+//     const { days = "30" } = req.query;
+//     const trends = await getMetricTrends(parseInt(days as string, 10));
+//     res.json({ trends });
+//   } catch (error) {
+//     logger.error("get_metric_trends_failed", { error: (error as Error).message });
+//     res.status(500).json({
+//       error: { code: "GET_METRIC_TRENDS_FAILED", message: (error as Error).message },
+//     });
+//   }
+// });
 
-/**
- * GET /admin/metrics/health
- * Get real-time system health snapshot
- */
-adminRouter.get("/metrics/health", requireAdmin, async (_req: AuthedRequest, res: Response) => {
-  try {
-    const health = await getSystemHealthSnapshot();
-    res.json(health);
-  } catch (error) {
-    logger.error("get_system_health_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_SYSTEM_HEALTH_FAILED", message: (error as Error).message },
-    });
-  }
-});
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// adminRouter.get("/metrics/health", requireAdmin, async (_req: AuthedRequest, res: Response) => {
+//   try {
+//     const health = await getSystemHealthSnapshot();
+//     res.json(health);
+//   } catch (error) {
+//     logger.error("get_system_health_failed", { error: (error as Error).message });
+//     res.status(500).json({
+//       error: { code: "GET_SYSTEM_HEALTH_FAILED", message: (error as Error).message },
+//     });
+//   }
+// });
 
 /**
  * GET /admin/jobs
@@ -1055,7 +1039,7 @@ adminRouter.post(
  * Route a dispute to a queue or admin by updating metadata
  */
 const DISPUTE_ROUTE_QUEUES = ["ops", "finance", "trust_safety", "support"] as const;
-const routeDisputeSchema = z.object({
+export const routeDisputeSchema = z.object({
   routeTo: z.enum(DISPUTE_ROUTE_QUEUES),
   note: z.string().optional(),
 });

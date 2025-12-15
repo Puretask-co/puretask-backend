@@ -3,9 +3,9 @@
 //
 // Run hourly: node dist/workers/expireBoosts.js
 
-import { pool } from "../db/client";
-import { logger } from "../lib/logger";
-import { expireOldBoosts } from "../services/premiumService";
+import { pool } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { expireOldBoosts } from "../../services/premiumService";
 
 /**
  * Main worker function

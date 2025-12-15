@@ -1,5 +1,6 @@
 // src/routes/premium.ts
 // Premium features: Boosts, Rush Jobs, Subscriptions, Referrals
+// V2 FEATURE — DISABLED FOR NOW
 
 import { Router, Response } from "express";
 import { z } from "zod";

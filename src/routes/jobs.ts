@@ -16,6 +16,7 @@ import {
   getEvents,
   applyStatusTransition,
 } from "../services/jobsService";
+import { findMatchingCleaners, broadcastJobToCleaners } from "../services/jobMatchingService";
 import { createJobPaymentIntent } from "../services/paymentService";
 import { getUserCreditBalance } from "../services/creditsService";
 import { query } from "../db/client";
@@ -415,6 +416,189 @@ jobsRouter.post("/:jobId/pay", async (req: JWTAuthedRequest, res) => {
 
     res.status(error.statusCode || 500).json({
       error: { code: "PAYMENT_FAILED", message: error.message ?? "Error" },
+    });
+  }
+});
+
+/**
+ * GET /jobs/:jobId/candidates
+ * V1 CORE FEATURE: Get top matched cleaners for client to review and select
+ * Returns top 5-10 cleaners ranked by match score (reliability, tier, distance, etc.)
+ * Client can then select top 3 to send offers to
+ */
+jobsRouter.get("/:jobId/candidates", async (req: JWTAuthedRequest, res) => {
+  try {
+    const { jobId } = req.params;
+    const clientId = req.user!.id;
+    const role = getRole(req);
+
+    // Only clients can view candidates for their jobs
+    if (role !== "client") {
+      return res.status(403).json({
+        error: { code: "FORBIDDEN", message: "Only clients can view job candidates" },
+      });
+    }
+
+    // Get job with ownership check
+    const job = await getJobForClient(jobId, clientId);
+
+    // Only allow viewing candidates for jobs in 'requested' status
+    if (job.status !== "requested") {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_STATUS",
+          message: "Candidates can only be viewed for jobs in 'requested' status",
+          currentStatus: job.status,
+        },
+      });
+    }
+
+    // Get top matched cleaners (limit to 10, client will select top 3)
+    const limit = req.query.limit ? Number(req.query.limit) : 10;
+    const matchResult = await findMatchingCleaners(job, {
+      limit: Math.min(limit, 10), // Cap at 10
+      minReliability: 50, // Minimum reliability threshold
+      autoAssign: false, // V1: Never auto-assign, client must select
+    });
+
+    res.json({
+      jobId,
+      candidates: matchResult.candidates,
+      totalFound: matchResult.candidates.length,
+      message: "Select up to 3 cleaners to send job offers to",
+    });
+  } catch (err: unknown) {
+    const error = err as Error & { statusCode?: number };
+    logger.error("GET /jobs/:jobId/candidates failed", {
+      error: error.message,
+      jobId: req.params.jobId,
+    });
+
+    if (error.statusCode === 403) {
+      return res.status(403).json({
+        error: { code: "FORBIDDEN", message: error.message },
+      });
+    }
+
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        error: { code: "NOT_FOUND", message: error.message },
+      });
+    }
+
+    res.status(error.statusCode || 500).json({
+      error: { code: "CANDIDATES_FAILED", message: error.message ?? "Error" },
+    });
+  }
+});
+
+/**
+ * POST /jobs/:jobId/offer
+ * V1 CORE FEATURE: Client selects cleaners to send job offers to
+ * Body: { cleanerIds: string[] } (up to 3 cleaner IDs)
+ * Sends job offers to selected cleaners. First cleaner to accept wins.
+ */
+jobsRouter.post("/:jobId/offer", async (req: JWTAuthedRequest, res) => {
+  try {
+    const { jobId } = req.params;
+    const clientId = req.user!.id;
+    const role = getRole(req);
+
+    // Only clients can send offers for their jobs
+    if (role !== "client") {
+      return res.status(403).json({
+        error: { code: "FORBIDDEN", message: "Only clients can send job offers" },
+      });
+    }
+
+    const schema = z.object({
+      cleanerIds: z.array(z.string()).min(1).max(3), // V1: Client selects top 3
+    });
+
+    const body = schema.parse(req.body);
+
+    // Get job with ownership check
+    const job = await getJobForClient(jobId, clientId);
+
+    // Only allow sending offers for jobs in 'requested' status
+    if (job.status !== "requested") {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_STATUS",
+          message: "Offers can only be sent for jobs in 'requested' status",
+          currentStatus: job.status,
+        },
+      });
+    }
+
+    // Check if job already has offers or is assigned
+    if (job.cleaner_id) {
+      return res.status(400).json({
+        error: {
+          code: "ALREADY_ASSIGNED",
+          message: "Job already has a cleaner assigned",
+        },
+      });
+    }
+
+    // Verify cleaners are valid candidates (optional but recommended)
+    const matchResult = await findMatchingCleaners(job, {
+      limit: 10,
+      minReliability: 50,
+      autoAssign: false,
+    });
+
+    const validCleanerIds = matchResult.candidates.map((c) => c.cleanerId);
+    const invalidIds = body.cleanerIds.filter((id) => !validCleanerIds.includes(id));
+
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_CLEANERS",
+          message: "Some selected cleaners are not valid candidates for this job",
+          invalidIds,
+        },
+      });
+    }
+
+    // Send offers to selected cleaners (30 minute expiration)
+    await broadcastJobToCleaners(job, body.cleanerIds, 30);
+
+    logger.info("job_offers_sent", {
+      jobId,
+      clientId,
+      cleanerIds: body.cleanerIds,
+      count: body.cleanerIds.length,
+    });
+
+    res.json({
+      success: true,
+      jobId,
+      offersSent: body.cleanerIds.length,
+      cleanerIds: body.cleanerIds,
+      message: `Job offers sent to ${body.cleanerIds.length} cleaner(s). First to accept wins.`,
+    });
+  } catch (err: unknown) {
+    const error = err as Error & { statusCode?: number };
+    logger.error("POST /jobs/:jobId/offer failed", {
+      error: error.message,
+      jobId: req.params.jobId,
+    });
+
+    if (error.statusCode === 403) {
+      return res.status(403).json({
+        error: { code: "FORBIDDEN", message: error.message },
+      });
+    }
+
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        error: { code: "NOT_FOUND", message: error.message },
+      });
+    }
+
+    res.status(error.statusCode || 500).json({
+      error: { code: "OFFER_FAILED", message: error.message ?? "Error" },
     });
   }
 });

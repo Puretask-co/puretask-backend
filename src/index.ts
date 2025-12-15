@@ -25,12 +25,16 @@ import eventsRouter from "./routes/events";
 import paymentsRouter from "./routes/payments";
 import creditsRouter from "./routes/credits";
 import messagesRouter from "./routes/messages";
-import analyticsRouter from "./routes/analytics";
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// import analyticsRouter from "./routes/analytics";
 import cleanerRouter from "./routes/cleaner";
 import trackingRouter from "./routes/tracking";
-import premiumRouter from "./routes/premium";
-import managerRouter from "./routes/manager";
-import v2Router from "./routes/v2";
+// V2 FEATURE — DISABLED FOR NOW (goals/boosts/subscriptions)
+// import premiumRouter from "./routes/premium";
+// V2 FEATURE — DISABLED FOR NOW (manager/advanced dashboards)
+// import managerRouter from "./routes/manager";
+// V2 FEATURE — DISABLED FOR NOW (next-gen APIs)
+// import v2Router from "./routes/v2";
 import assignmentRouter from "./routes/assignment";
 import alertsRouter from "./routes/alerts";
 import cleanerPortalRouter from "./routes/cleanerPortal";
@@ -147,14 +151,18 @@ app.use("/stripe", stripeRouter);
 app.use("/payments", paymentsRouter);
 app.use("/credits", creditsRouter);
 app.use("/messages", messagesRouter);
-app.use("/analytics", analyticsRouter);
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// app.use("/analytics", analyticsRouter);
 app.use("/cleaner", cleanerRouter);
 app.use("/cleaner", cleanerPortalRouter); // Cleaner portal: my clients + invoicing
 app.use("/client", clientInvoicesRouter); // Client invoice management
 app.use("/tracking", trackingRouter);   // Job live tracking
-app.use("/premium", premiumRouter);     // Boosts, subscriptions, referrals
-app.use("/manager", managerRouter);     // Manager dashboard
-app.use("/v2", v2Router);               // V2 features: properties, teams, calendar, AI
+// V2 FEATURE — DISABLED FOR NOW (goals/boosts/subscriptions)
+// app.use("/premium", premiumRouter);     // Boosts, subscriptions, referrals
+// V2 FEATURE — DISABLED FOR NOW (manager/advanced dashboards)
+// app.use("/manager", managerRouter);     // Manager dashboard
+// V2 FEATURE — DISABLED FOR NOW (next-gen APIs)
+// app.use("/v2", v2Router);               // V2 features: properties, teams, calendar, AI
 app.use("/alerts", alertsRouter);
 app.use(eventsRouter); // Mounts /events and /n8n/events
 

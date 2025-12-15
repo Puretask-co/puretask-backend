@@ -1,6 +1,7 @@
 "use strict";
 // src/routes/v2.ts
 // V2 API routes: Properties, Teams, Calendar, AI, Goals
+// V2 FEATURE — DISABLED FOR NOW
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");

@@ -191,10 +191,31 @@ async function applyReliabilityDecay() {
 // ============================================
 /**
  * Check if cleaner's tier is locked
+ * Handles missing database function gracefully
  */
 async function isTierLocked(cleanerId) {
-    const result = await (0, client_1.query)(`SELECT is_tier_locked($1) as locked`, [cleanerId]);
-    return result.rows[0]?.locked ?? false;
+    try {
+        const result = await (0, client_1.query)(`SELECT is_tier_locked($1) as locked`, [cleanerId]);
+        return result.rows[0]?.locked ?? false;
+    }
+    catch (error) {
+        // If function doesn't exist, check tier_locks table directly
+        if (error?.code === '42883' || error?.message?.includes('does not exist')) {
+            logger_1.logger.warn("is_tier_locked_function_missing", {
+                cleanerId,
+                message: "is_tier_locked function not found, checking tier_locks table directly",
+            });
+            // Fallback: check tier_locks table directly
+            const lockResult = await (0, client_1.query)(`
+          SELECT id FROM tier_locks 
+          WHERE cleaner_id = $1 
+            AND locked_until > NOW()
+        `, [cleanerId]);
+            return lockResult.rows.length > 0;
+        }
+        // Re-throw other errors
+        throw error;
+    }
 }
 /**
  * Create tier lock after promotion

@@ -1,5 +1,6 @@
 // src/routes/analytics.ts
 // Analytics API routes - Revenue reports, trends, and business metrics
+// V2 FEATURE — DISABLED FOR NOW
 
 import { Router, Response } from "express";
 import { authMiddleware, AuthedRequest } from "../middleware/auth";

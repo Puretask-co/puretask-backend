@@ -23,12 +23,16 @@ const events_1 = __importDefault(require("./routes/events"));
 const payments_1 = __importDefault(require("./routes/payments"));
 const credits_1 = __importDefault(require("./routes/credits"));
 const messages_1 = __importDefault(require("./routes/messages"));
-const analytics_1 = __importDefault(require("./routes/analytics"));
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// import analyticsRouter from "./routes/analytics";
 const cleaner_1 = __importDefault(require("./routes/cleaner"));
 const tracking_1 = __importDefault(require("./routes/tracking"));
-const premium_1 = __importDefault(require("./routes/premium"));
-const manager_1 = __importDefault(require("./routes/manager"));
-const v2_1 = __importDefault(require("./routes/v2"));
+// V2 FEATURE — DISABLED FOR NOW (goals/boosts/subscriptions)
+// import premiumRouter from "./routes/premium";
+// V2 FEATURE — DISABLED FOR NOW (manager/advanced dashboards)
+// import managerRouter from "./routes/manager";
+// V2 FEATURE — DISABLED FOR NOW (next-gen APIs)
+// import v2Router from "./routes/v2";
 const assignment_1 = __importDefault(require("./routes/assignment"));
 const alerts_1 = __importDefault(require("./routes/alerts"));
 const cleanerPortal_1 = __importDefault(require("./routes/cleanerPortal"));
@@ -128,14 +132,18 @@ app.use("/stripe", stripe_1.default);
 app.use("/payments", payments_1.default);
 app.use("/credits", credits_1.default);
 app.use("/messages", messages_1.default);
-app.use("/analytics", analytics_1.default);
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// app.use("/analytics", analyticsRouter);
 app.use("/cleaner", cleaner_1.default);
 app.use("/cleaner", cleanerPortal_1.default); // Cleaner portal: my clients + invoicing
 app.use("/client", clientInvoices_1.default); // Client invoice management
 app.use("/tracking", tracking_1.default); // Job live tracking
-app.use("/premium", premium_1.default); // Boosts, subscriptions, referrals
-app.use("/manager", manager_1.default); // Manager dashboard
-app.use("/v2", v2_1.default); // V2 features: properties, teams, calendar, AI
+// V2 FEATURE — DISABLED FOR NOW (goals/boosts/subscriptions)
+// app.use("/premium", premiumRouter);     // Boosts, subscriptions, referrals
+// V2 FEATURE — DISABLED FOR NOW (manager/advanced dashboards)
+// app.use("/manager", managerRouter);     // Manager dashboard
+// V2 FEATURE — DISABLED FOR NOW (next-gen APIs)
+// app.use("/v2", v2Router);               // V2 features: properties, teams, calendar, AI
 app.use("/alerts", alerts_1.default);
 app.use(events_1.default); // Mounts /events and /n8n/events
 // ============================================
@@ -193,7 +201,7 @@ if (!isTestMode) {
     // ============================================
     // Graceful Shutdown
     // ============================================
-    async function gracefulShutdown(signal) {
+    const gracefulShutdown = async (signal) => {
         logger_1.logger.info("shutdown_initiated", { signal });
         if (server) {
             server.close(() => {
@@ -209,7 +217,7 @@ if (!isTestMode) {
         else {
             process.exit(0);
         }
-    }
+    };
     process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
     process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 }

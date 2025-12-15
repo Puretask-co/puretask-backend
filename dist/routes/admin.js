@@ -21,7 +21,6 @@ const env_1 = require("../config/env");
 const payoutsService_1 = require("../services/payoutsService");
 const logger_1 = require("../lib/logger");
 const invoiceService_1 = require("../services/invoiceService");
-const operationalMetricsService_1 = require("../services/operationalMetricsService");
 exports.adminRouter = (0, express_1.Router)();
 // All admin routes require authentication
 exports.adminRouter.use(auth_1.authMiddleware);
@@ -34,105 +33,88 @@ const requireAdmin = (req, res, next) => {
     }
     next();
 };
-/**
- * GET /admin/kpis
- * Get admin dashboard KPIs
- */
-exports.adminRouter.get("/kpis", requireAdmin, async (req, res) => {
-    try {
-        const { dateFrom, dateTo } = req.query;
-        const kpis = await (0, adminService_1.getAdminKPIs)(dateFrom, dateTo);
-        res.json({ kpis });
-    }
-    catch (error) {
-        logger_1.logger.error("get_admin_kpis_failed", {
-            error: error.message,
-            adminId: req.user?.id,
-        });
-        res.status(500).json({
-            error: {
-                code: "GET_KPIS_FAILED",
-                message: error.message,
-            },
-        });
-    }
-});
-/**
- * GET /admin/kpis/history
- * Get KPI history
- */
-exports.adminRouter.get("/kpis/history", requireAdmin, async (req, res) => {
-    try {
-        const { days = "30" } = req.query;
-        const history = await (0, adminService_1.getKpiHistory)(parseInt(days, 10));
-        res.json({ history });
-    }
-    catch (error) {
-        logger_1.logger.error("get_kpi_history_failed", {
-            error: error.message,
-            adminId: req.user?.id,
-        });
-        res.status(500).json({
-            error: {
-                code: "GET_KPI_HISTORY_FAILED",
-                message: error.message,
-            },
-        });
-    }
-});
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// adminRouter.get("/kpis", requireAdmin, async (req: AuthedRequest, res: Response) => {
+//   try {
+//     const { dateFrom, dateTo } = req.query;
+//     const kpis = await getAdminKPIs(
+//       dateFrom as string | undefined,
+//       dateTo as string | undefined
+//     );
+//     res.json({ kpis });
+//   } catch (error) {
+//     logger.error("get_admin_kpis_failed", {
+//       error: (error as Error).message,
+//       adminId: req.user?.id,
+//     });
+//     res.status(500).json({
+//       error: {
+//         code: "GET_KPIS_FAILED",
+//         message: (error as Error).message,
+//       },
+//     });
+//   }
+// });
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// adminRouter.get("/kpis/history", requireAdmin, async (req: AuthedRequest, res: Response) => {
+//   try {
+//     const { days = "30" } = req.query;
+//     const history = await getKpiHistory(parseInt(days as string, 10));
+//     res.json({ history });
+//   } catch (error) {
+//     logger.error("get_kpi_history_failed", {
+//       error: (error as Error).message,
+//       adminId: req.user?.id,
+//     });
+//     res.status(500).json({
+//       error: {
+//         code: "GET_KPI_HISTORY_FAILED",
+//         message: (error as Error).message,
+//       },
+//     });
+//   }
+// });
 // ============================================
 // Operational Metrics
 // ============================================
-/**
- * GET /admin/metrics/operational
- * Get comprehensive operational metrics
- */
-exports.adminRouter.get("/metrics/operational", requireAdmin, async (req, res) => {
-    try {
-        const { days = "30" } = req.query;
-        const metrics = await (0, operationalMetricsService_1.getOperationalMetrics)(parseInt(days, 10));
-        res.json({ metrics });
-    }
-    catch (error) {
-        logger_1.logger.error("get_operational_metrics_failed", { error: error.message });
-        res.status(500).json({
-            error: { code: "GET_OPERATIONAL_METRICS_FAILED", message: error.message },
-        });
-    }
-});
-/**
- * GET /admin/metrics/trends
- * Get metric trends over time
- */
-exports.adminRouter.get("/metrics/trends", requireAdmin, async (req, res) => {
-    try {
-        const { days = "30" } = req.query;
-        const trends = await (0, operationalMetricsService_1.getMetricTrends)(parseInt(days, 10));
-        res.json({ trends });
-    }
-    catch (error) {
-        logger_1.logger.error("get_metric_trends_failed", { error: error.message });
-        res.status(500).json({
-            error: { code: "GET_METRIC_TRENDS_FAILED", message: error.message },
-        });
-    }
-});
-/**
- * GET /admin/metrics/health
- * Get real-time system health snapshot
- */
-exports.adminRouter.get("/metrics/health", requireAdmin, async (_req, res) => {
-    try {
-        const health = await (0, operationalMetricsService_1.getSystemHealthSnapshot)();
-        res.json(health);
-    }
-    catch (error) {
-        logger_1.logger.error("get_system_health_failed", { error: error.message });
-        res.status(500).json({
-            error: { code: "GET_SYSTEM_HEALTH_FAILED", message: error.message },
-        });
-    }
-});
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// adminRouter.get("/metrics/operational", requireAdmin, async (req: AuthedRequest, res: Response) => {
+//   try {
+//     const { days = "30" } = req.query;
+//     const metrics = await getOperationalMetrics(parseInt(days as string, 10));
+//     res.json({ metrics });
+//   } catch (error) {
+//     logger.error("get_operational_metrics_failed", { error: (error as Error).message });
+//     res.status(500).json({
+//       error: { code: "GET_OPERATIONAL_METRICS_FAILED", message: (error as Error).message },
+//     });
+//   }
+// });
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// adminRouter.get("/metrics/trends", requireAdmin, async (req: AuthedRequest, res: Response) => {
+//   try {
+//     const { days = "30" } = req.query;
+//     const trends = await getMetricTrends(parseInt(days as string, 10));
+//     res.json({ trends });
+//   } catch (error) {
+//     logger.error("get_metric_trends_failed", { error: (error as Error).message });
+//     res.status(500).json({
+//       error: { code: "GET_METRIC_TRENDS_FAILED", message: (error as Error).message },
+//     });
+//   }
+// });
+// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
+// adminRouter.get("/metrics/health", requireAdmin, async (_req: AuthedRequest, res: Response) => {
+//   try {
+//     const health = await getSystemHealthSnapshot();
+//     res.json(health);
+//   } catch (error) {
+//     logger.error("get_system_health_failed", { error: (error as Error).message });
+//     res.status(500).json({
+//       error: { code: "GET_SYSTEM_HEALTH_FAILED", message: (error as Error).message },
+//     });
+//   }
+// });
 /**
  * GET /admin/jobs
  * List all jobs with filters (admin)

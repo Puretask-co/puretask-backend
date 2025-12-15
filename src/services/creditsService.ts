@@ -12,6 +12,7 @@ import { query, withTransaction } from "../db/client";
 import { PoolClient } from "pg";
 import { CreditReason, CreditLedgerEntry } from "../types/db";
 import { logger } from "../lib/logger";
+import { env } from "../config/env";
 
 export type { CreditReason };
 
@@ -39,6 +40,9 @@ export const getUserCreditBalance = getUserBalance;
  * Record a ledger entry
  * Positive deltaCredits = add credits (direction = 'credit')
  * Negative deltaCredits = remove credits (direction = 'debit')
+ * 
+ * V1 HARDENING: For idempotent operations (escrow, refund, etc.), uses ON CONFLICT
+ * to prevent duplicates via unique constraints.
  */
 export async function addLedgerEntry(input: {
   userId: string;
@@ -48,10 +52,58 @@ export async function addLedgerEntry(input: {
 }): Promise<CreditLedgerEntry> {
   const { userId, jobId = null, deltaCredits, reason } = input;
 
+  // V1 HARDENING: Check credits guard flag
+  if (!env.CREDITS_ENABLED && reason !== 'refund') {
+    throw Object.assign(
+      new Error("Credits are currently disabled"),
+      { statusCode: 503, code: "CREDITS_DISABLED" }
+    );
+  }
+
+  // V1 HARDENING: Check refunds guard flag
+  if (reason === 'refund' && !env.REFUNDS_ENABLED) {
+    throw Object.assign(
+      new Error("Refunds are currently disabled"),
+      { statusCode: 503, code: "REFUNDS_DISABLED" }
+    );
+  }
+
   // Convert deltaCredits to amount and direction
   const amount = Math.abs(deltaCredits);
   const direction = deltaCredits >= 0 ? 'credit' : 'debit';
 
+  // Check if this is an idempotent operation (has unique constraint)
+  const isIdempotentOperation = 
+    reason === 'job_escrow' || 
+    reason === 'job_release' || 
+    reason === 'refund' ||
+    reason === 'purchase';
+
+  if (isIdempotentOperation && jobId) {
+    // For idempotent operations, check for existing entry first
+    // The unique constraint (user_id, reason, job_id) will prevent duplicates
+    const existing = await query<CreditLedgerEntry>(
+      `
+        SELECT * FROM credit_ledger
+        WHERE user_id = $1 AND job_id = $2 AND reason = $3
+        ORDER BY created_at DESC
+        LIMIT 1
+      `,
+      [userId, jobId, reason]
+    );
+
+    if (existing.rows[0]) {
+      logger.info("credit_ledger_entry_duplicate_prevented", {
+        userId,
+        jobId,
+        reason,
+        existingEntryId: existing.rows[0].id,
+      });
+      return existing.rows[0];
+    }
+  }
+
+  // Non-idempotent operation or no jobId - insert normally
   const result = await query<CreditLedgerEntry>(
     `
       INSERT INTO credit_ledger (user_id, job_id, amount, direction, reason)
@@ -317,6 +369,27 @@ export async function escrowCreditsWithTransaction(options: {
   }
 
   return withTransaction(async (client: PoolClient) => {
+    // V1 HARDENING: Check for existing escrow entry (idempotency)
+    const existing = await client.query<CreditLedgerEntry>(
+      `
+        SELECT * FROM credit_ledger
+        WHERE user_id = $1 AND job_id = $2 AND reason = 'job_escrow'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `,
+      [clientId, jobId]
+    );
+
+    if (existing.rows[0]) {
+      logger.info("credit_ledger_entry_duplicate_prevented", {
+        userId: clientId,
+        jobId,
+        reason: "job_escrow",
+        existingEntryId: existing.rows[0].id,
+      });
+      return existing.rows[0];
+    }
+
     // Lock rows first, then calculate balance
     // We can't use FOR UPDATE with aggregate functions, so we lock rows in a CTE
     const balanceResult = await client.query<{ balance: string }>(
@@ -340,6 +413,8 @@ export async function escrowCreditsWithTransaction(options: {
     }
 
     // Insert escrow entry (debit = remove credits)
+    // Note: Pre-check above handles idempotency. If a race condition occurs,
+    // the unique index will throw an error (better than silent duplicate).
     const result = await client.query<CreditLedgerEntry>(
       `
         INSERT INTO credit_ledger (user_id, job_id, amount, direction, reason)

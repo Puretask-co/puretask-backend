@@ -3,9 +3,9 @@
 //
 // Run nightly: node dist/workers/goalChecker.js
 
-import { pool, query } from "../db/client";
-import { logger } from "../lib/logger";
-import { updateGoalProgress, createDefaultMonthlyGoals } from "../services/cleanerGoalsService";
+import { pool, query } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { updateGoalProgress, createDefaultMonthlyGoals } from "../../services/cleanerGoalsService";
 
 async function main(): Promise<void> {
   logger.info("goal_checker_worker_started");

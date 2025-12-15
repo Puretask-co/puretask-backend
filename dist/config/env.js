@@ -16,19 +16,25 @@ function requireEnv(name) {
     return value;
 }
 exports.env = {
-    // Core
-    NODE_ENV: process.env.NODE_ENV || "development",
-    PORT: process.env.PORT ? Number(process.env.PORT) : 4000,
+    // Required
     DATABASE_URL: requireEnv("DATABASE_URL"),
-    // Auth
     JWT_SECRET: requireEnv("JWT_SECRET"),
-    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "30d",
-    BCRYPT_SALT_ROUNDS: process.env.BCRYPT_SALT_ROUNDS ? Number(process.env.BCRYPT_SALT_ROUNDS) : 10,
-    // Stripe
     STRIPE_SECRET_KEY: requireEnv("STRIPE_SECRET_KEY"),
     STRIPE_WEBHOOK_SECRET: requireEnv("STRIPE_WEBHOOK_SECRET"),
-    // Payouts
+    N8N_WEBHOOK_SECRET: requireEnv("N8N_WEBHOOK_SECRET"),
+    // Core runtime
+    NODE_ENV: process.env.NODE_ENV || "development",
+    PORT: process.env.PORT ? Number(process.env.PORT) : 4000,
+    // Auth
+    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "30d",
+    BCRYPT_SALT_ROUNDS: process.env.BCRYPT_SALT_ROUNDS ? Number(process.env.BCRYPT_SALT_ROUNDS) : 10,
+    // V1 HARDENING: Production Guard Flags (kill switches)
+    BOOKINGS_ENABLED: process.env.BOOKINGS_ENABLED !== "false", // Default: enabled
     PAYOUTS_ENABLED: process.env.PAYOUTS_ENABLED === "true",
+    CREDITS_ENABLED: process.env.CREDITS_ENABLED !== "false", // Default: enabled
+    REFUNDS_ENABLED: process.env.REFUNDS_ENABLED !== "false", // Default: enabled
+    WORKERS_ENABLED: process.env.WORKERS_ENABLED !== "false", // Default: enabled
+    // Payouts
     PAYOUT_CURRENCY: process.env.PAYOUT_CURRENCY || "usd",
     // Credit system: 10 credits = $1 USD (per policy)
     CENTS_PER_CREDIT: process.env.CENTS_PER_CREDIT ? Number(process.env.CENTS_PER_CREDIT) : 10,
@@ -39,37 +45,26 @@ exports.env = {
     CLEANER_PAYOUT_PERCENT_SILVER: process.env.CLEANER_PAYOUT_PERCENT_SILVER ? Number(process.env.CLEANER_PAYOUT_PERCENT_SILVER) : 82,
     CLEANER_PAYOUT_PERCENT_GOLD: process.env.CLEANER_PAYOUT_PERCENT_GOLD ? Number(process.env.CLEANER_PAYOUT_PERCENT_GOLD) : 84,
     CLEANER_PAYOUT_PERCENT_PLATINUM: process.env.CLEANER_PAYOUT_PERCENT_PLATINUM ? Number(process.env.CLEANER_PAYOUT_PERCENT_PLATINUM) : 85,
-    // GPS check-in radius (per policy: 250 meters)
+    // Operational defaults (optional)
     GPS_CHECKIN_RADIUS_METERS: process.env.GPS_CHECKIN_RADIUS_METERS ? Number(process.env.GPS_CHECKIN_RADIUS_METERS) : 250,
-    // Photo requirements (per policy: minimum 3 total)
     MIN_PHOTOS_TOTAL: process.env.MIN_PHOTOS_TOTAL ? Number(process.env.MIN_PHOTOS_TOTAL) : 3,
     MIN_BEFORE_PHOTOS: process.env.MIN_BEFORE_PHOTOS ? Number(process.env.MIN_BEFORE_PHOTOS) : 2,
     MIN_AFTER_PHOTOS: process.env.MIN_AFTER_PHOTOS ? Number(process.env.MIN_AFTER_PHOTOS) : 2,
-    // Photo retention (per policy: 90 days)
     PHOTO_RETENTION_DAYS: process.env.PHOTO_RETENTION_DAYS ? Number(process.env.PHOTO_RETENTION_DAYS) : 90,
-    // Dispute window (per policy: 48 hours)
     DISPUTE_WINDOW_HOURS: process.env.DISPUTE_WINDOW_HOURS ? Number(process.env.DISPUTE_WINDOW_HOURS) : 48,
-    // No-show compensation for clients (per policy)
     CLEANER_NOSHOW_BONUS_CREDITS: process.env.CLEANER_NOSHOW_BONUS_CREDITS ? Number(process.env.CLEANER_NOSHOW_BONUS_CREDITS) : 50,
-    // Surcharge for non-credit (direct card) payments
-    // e.g. 5 = 5%, 10 = 10% - applied on top of base price for job_charge payments
     NON_CREDIT_SURCHARGE_PERCENT: process.env.NON_CREDIT_SURCHARGE_PERCENT
         ? Number(process.env.NON_CREDIT_SURCHARGE_PERCENT)
         : 10,
-    // Lead time before start (hours)
     MIN_LEAD_TIME_HOURS: process.env.MIN_LEAD_TIME_HOURS ? Number(process.env.MIN_LEAD_TIME_HOURS) : 2,
-    // Subscription credits fallback (if invoice metadata missing)
     SUBSCRIPTION_DEFAULT_CREDITS: process.env.SUBSCRIPTION_DEFAULT_CREDITS
         ? Number(process.env.SUBSCRIPTION_DEFAULT_CREDITS)
         : 100,
-    // Cancellation lock window (hours before start where cancellation is disallowed unless emergency)
     CANCELLATION_LOCK_HOURS: process.env.CANCELLATION_LOCK_HOURS
         ? Number(process.env.CANCELLATION_LOCK_HOURS)
         : 1,
-    // n8n Integration
-    N8N_WEBHOOK_SECRET: requireEnv("N8N_WEBHOOK_SECRET"),
+    // Integrations (optional but recommended)
     N8N_WEBHOOK_URL: process.env.N8N_WEBHOOK_URL || "",
-    // App URLs
     APP_URL: process.env.APP_URL || "http://localhost:3000",
     STORAGE_URL: process.env.STORAGE_URL || "https://storage.puretask.com",
     // Notifications - SendGrid (Email)
@@ -87,5 +82,66 @@ exports.env = {
     ALERT_EMAIL_TO: process.env.ALERT_EMAIL_TO || "",
     ALERT_EMAIL_FROM: process.env.ALERT_EMAIL_FROM || "alerts@puretask.com",
 };
+// V1 HARDENING: Boot-time validation
+function validateEnvironment() {
+    const errors = [];
+    const warnings = [];
+    // Check Stripe mode consistency
+    if (exports.env.STRIPE_SECRET_KEY) {
+        const isTestMode = exports.env.STRIPE_SECRET_KEY.startsWith("sk_test_");
+        const isLiveMode = exports.env.STRIPE_SECRET_KEY.startsWith("sk_live_");
+        if (!isTestMode && !isLiveMode) {
+            errors.push("STRIPE_SECRET_KEY must start with 'sk_test_' or 'sk_live_'");
+        }
+        // Production safety: warn if test mode in production
+        if (exports.env.NODE_ENV === "production" && isTestMode) {
+            warnings.push("⚠️  WARNING: Using Stripe test key in production! This will not process real payments.");
+        }
+        // Development safety: warn if live mode in development
+        if (exports.env.NODE_ENV === "development" && isLiveMode) {
+            warnings.push("⚠️  WARNING: Using Stripe live key in development! This will process real payments.");
+        }
+    }
+    // Check database URL format
+    if (!exports.env.DATABASE_URL.includes("postgres://") && !exports.env.DATABASE_URL.includes("postgresql://")) {
+        errors.push("DATABASE_URL must be a valid PostgreSQL connection string");
+    }
+    // Check JWT secret strength in production
+    if (exports.env.NODE_ENV === "production" && exports.env.JWT_SECRET.length < 32) {
+        warnings.push("⚠️  WARNING: JWT_SECRET should be at least 32 characters in production");
+    }
+    // Check guard flags in production
+    if (exports.env.NODE_ENV === "production") {
+        if (!exports.env.BOOKINGS_ENABLED) {
+            warnings.push("⚠️  INFO: Bookings are DISABLED in production");
+        }
+        if (!exports.env.PAYOUTS_ENABLED) {
+            warnings.push("⚠️  INFO: Payouts are DISABLED in production");
+        }
+        if (!exports.env.CREDITS_ENABLED) {
+            warnings.push("⚠️  INFO: Credits are DISABLED in production");
+        }
+        if (!exports.env.WORKERS_ENABLED) {
+            warnings.push("⚠️  INFO: Workers are DISABLED in production");
+        }
+    }
+    // Log warnings
+    if (warnings.length > 0) {
+        console.warn("\n" + "=".repeat(60));
+        console.warn("ENVIRONMENT WARNINGS:");
+        warnings.forEach((w) => console.warn(w));
+        console.warn("=".repeat(60) + "\n");
+    }
+    // Throw on errors
+    if (errors.length > 0) {
+        console.error("\n" + "=".repeat(60));
+        console.error("ENVIRONMENT VALIDATION FAILED:");
+        errors.forEach((e) => console.error(`❌ ${e}`));
+        console.error("=".repeat(60) + "\n");
+        throw new Error(`Environment validation failed: ${errors.join(", ")}`);
+    }
+}
+// Run validation on module load
+validateEnvironment();
 // Alias for backwards compatibility
 exports.config = exports.env;

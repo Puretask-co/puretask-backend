@@ -1,3 +1,4 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { processStripeRefund } from "../../services/refundProcessor";
 import { processChargeDispute } from "../../services/chargebackProcessor";
 
@@ -5,15 +6,21 @@ const ledger: Array<{ userId: string; jobId: string | null; deltaCredits: number
 const jobUpdates: Array<{ jobId: string; status: string }> = [];
 const payoutFlags: Array<{ payoutId: string; flag: boolean }> = [];
 
-jest.mock("../../services/creditsService", () => ({
-  addLedgerEntry: jest.fn(async (input) => {
+vi.mock("../../services/creditsService", () => ({
+  addLedgerEntry: vi.fn(async (input) => {
     ledger.push(input);
     return input;
   }),
 }));
 
-jest.mock("../../db/client", () => ({
-  query: jest.fn(async (sql: string, params: any[]) => {
+vi.mock("../../config/env", () => ({
+  env: {
+    CENTS_PER_CREDIT: 10, // 10 cents per credit
+  },
+}));
+
+vi.mock("../../db/client", () => ({
+  query: vi.fn(async (sql: string, params: any[]) => {
     if (sql.includes("UPDATE jobs SET status = 'cancelled'")) {
       jobUpdates.push({ jobId: params[0], status: "cancelled" });
       return { rows: [] };
@@ -50,7 +57,7 @@ describe("refundProcessor and chargebackProcessor", () => {
     expect(ledger[0]).toMatchObject({
       userId: "client1",
       jobId: "job1",
-      deltaCredits: 100,
+      deltaCredits: 100, // amount / CENTS_PER_CREDIT = 1000 / 10 = 100 credits
       reason: "refund",
     });
     expect(jobUpdates[0]).toMatchObject({ jobId: "job1", status: "cancelled" });
@@ -73,7 +80,7 @@ describe("refundProcessor and chargebackProcessor", () => {
     expect(ledger[0]).toMatchObject({
       userId: "client1",
       jobId: "job1",
-      deltaCredits: 100,
+      deltaCredits: 100, // amount / CENTS_PER_CREDIT = 1000 / 10 = 100 credits
       reason: "refund",
     });
     expect(jobUpdates[0]).toMatchObject({ jobId: "job1", status: "cancelled" });

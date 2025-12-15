@@ -60,8 +60,9 @@ DO $$ BEGIN CREATE TYPE reschedule_bucket AS ENUM ('lt24', '24_48', 'gt48'); EXC
 -- ============================================
 
 -- USERS table (base of everything)
+-- NOTE: Uses TEXT for users.id to allow flexible ID formats (canonical decision)
 CREATE TABLE IF NOT EXISTS users (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
   email           CITEXT NOT NULL UNIQUE,
   password_hash   TEXT NOT NULL,
   role            user_role NOT NULL DEFAULT 'client',
@@ -79,7 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 -- CLIENT PROFILES
 CREATE TABLE IF NOT EXISTS client_profiles (
   id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id                 UUID NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
+  user_id                 TEXT NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
   first_name              TEXT,
   last_name               TEXT,
   default_address         TEXT,
@@ -94,7 +95,7 @@ CREATE TABLE IF NOT EXISTS client_profiles (
 -- CLEANER PROFILES
 CREATE TABLE IF NOT EXISTS cleaner_profiles (
   id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id                  UUID NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
+  user_id                  TEXT NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
   first_name               TEXT,
   last_name                TEXT,
   bio                      TEXT,
@@ -167,7 +168,7 @@ CREATE TABLE IF NOT EXISTS platform_service_areas (
 
 CREATE TABLE IF NOT EXISTS properties (
   id              SERIAL PRIMARY KEY,
-  client_id       UUID NOT NULL REFERENCES users(id),
+  client_id       TEXT NOT NULL REFERENCES users(id),
   service_area_id INT REFERENCES platform_service_areas(id),
   label           TEXT NOT NULL,
   address_line1   TEXT NOT NULL,
@@ -197,7 +198,7 @@ CREATE INDEX IF NOT EXISTS idx_properties_client ON properties (client_id);
 -- ADDRESSES table (user addresses)
 CREATE TABLE IF NOT EXISTS addresses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     label TEXT,
     line1 TEXT NOT NULL,
     line2 TEXT,
@@ -220,7 +221,7 @@ CREATE INDEX IF NOT EXISTS idx_addresses_user_id ON addresses(user_id);
 
 CREATE TABLE IF NOT EXISTS cleaner_teams (
   id              SERIAL PRIMARY KEY,
-  owner_cleaner_id UUID NOT NULL REFERENCES users(id),
+  owner_cleaner_id TEXT NOT NULL REFERENCES users(id),
   name            TEXT NOT NULL,
   description     TEXT,
   max_members     INT NOT NULL DEFAULT 5,
@@ -232,7 +233,7 @@ CREATE TABLE IF NOT EXISTS cleaner_teams (
 CREATE TABLE IF NOT EXISTS team_members (
   id          SERIAL PRIMARY KEY,
   team_id     INT NOT NULL REFERENCES cleaner_teams(id) ON DELETE CASCADE,
-  cleaner_id  UUID NOT NULL REFERENCES users(id),
+  cleaner_id  TEXT NOT NULL REFERENCES users(id),
   role        TEXT NOT NULL DEFAULT 'member',
   invited_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   accepted_at TIMESTAMPTZ,
@@ -247,8 +248,8 @@ CREATE TABLE IF NOT EXISTS team_members (
 
 CREATE TABLE IF NOT EXISTS jobs (
   id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id               UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
-  cleaner_id              UUID REFERENCES users (id) ON DELETE SET NULL,
+  client_id               TEXT NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  cleaner_id              TEXT REFERENCES users (id) ON DELETE SET NULL,
   property_id             INT REFERENCES properties(id),
   address_id              UUID REFERENCES addresses(id),
   team_id                 INT REFERENCES cleaner_teams(id),
@@ -291,7 +292,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_status_start ON jobs(status, scheduled_start
 -- Credit ledger (source of truth)
 CREATE TABLE IF NOT EXISTS credit_ledger (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   job_id          UUID REFERENCES jobs (id) ON DELETE SET NULL,
   delta_credits   INTEGER NOT NULL,
   reason          credit_reason NOT NULL,
@@ -305,7 +306,7 @@ CREATE INDEX IF NOT EXISTS idx_credit_ledger_user_balance ON credit_ledger (user
 -- Credit accounts (balance cache)
 CREATE TABLE IF NOT EXISTS credit_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     current_balance INTEGER NOT NULL DEFAULT 0,
     held_balance INTEGER NOT NULL DEFAULT 0,
     lifetime_purchased INTEGER NOT NULL DEFAULT 0,
@@ -332,7 +333,7 @@ CREATE TABLE IF NOT EXISTS credit_transactions (
 -- Credit purchases
 CREATE TABLE IF NOT EXISTS credit_purchases (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   package_id      TEXT NOT NULL,
   credits_amount  INTEGER NOT NULL,
   price_usd       NUMERIC(10,2) NOT NULL,
@@ -346,7 +347,7 @@ CREATE TABLE IF NOT EXISTS credit_purchases (
 -- Credit bonuses
 CREATE TABLE IF NOT EXISTS credit_bonuses (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   bonus_type      TEXT NOT NULL,
   amount          INTEGER NOT NULL,
   week_of_year    INTEGER NOT NULL,
@@ -363,7 +364,7 @@ CREATE TABLE IF NOT EXISTS credit_bonuses (
 CREATE TABLE IF NOT EXISTS payment_intents (
   id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id                      UUID REFERENCES jobs (id) ON DELETE SET NULL,
-  client_id                   UUID REFERENCES users(id) ON DELETE SET NULL,
+  client_id                   TEXT REFERENCES users(id) ON DELETE SET NULL,
   stripe_payment_intent_id    TEXT NOT NULL UNIQUE,
   status                      TEXT NOT NULL,
   amount_cents                INTEGER NOT NULL,
@@ -377,7 +378,7 @@ CREATE TABLE IF NOT EXISTS payment_intents (
 -- Payouts
 CREATE TABLE IF NOT EXISTS payouts (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id          UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  cleaner_id          TEXT NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
   job_id              UUID NOT NULL REFERENCES jobs (id) ON DELETE CASCADE,
   stripe_transfer_id  TEXT UNIQUE,
   stripe_payout_id    TEXT,
@@ -398,12 +399,12 @@ CREATE INDEX IF NOT EXISTS idx_payouts_status ON payouts (status);
 CREATE TABLE IF NOT EXISTS payout_adjustments (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   payout_id       UUID REFERENCES payouts (id) ON DELETE SET NULL,
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
   adjustment_type TEXT NOT NULL,
   amount_cents    INTEGER NOT NULL,
   reason          TEXT NOT NULL,
   stripe_reversal_id TEXT,
-  initiated_by    UUID REFERENCES users (id) ON DELETE SET NULL,
+  initiated_by    TEXT REFERENCES users (id) ON DELETE SET NULL,
   status          TEXT NOT NULL DEFAULT 'pending',
   metadata        JSONB DEFAULT '{}'::jsonb,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -414,7 +415,7 @@ CREATE TABLE IF NOT EXISTS payout_adjustments (
 CREATE TABLE IF NOT EXISTS payout_retry_queue (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   payout_id       UUID NOT NULL REFERENCES payouts (id) ON DELETE CASCADE,
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   amount_cents    INTEGER NOT NULL,
   stripe_account_id TEXT,
   error_message   TEXT,
@@ -429,13 +430,13 @@ CREATE TABLE IF NOT EXISTS payout_retry_queue (
 -- Payout requests
 CREATE TABLE IF NOT EXISTS payout_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cleaner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     amount_credits INTEGER NOT NULL,
     amount_cents INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'processing', 'completed', 'failed')),
     requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     decided_at TIMESTAMPTZ,
-    decided_by UUID REFERENCES users(id),
+    decided_by TEXT REFERENCES users(id),
     rejection_reason TEXT,
     payout_id UUID REFERENCES payouts(id),
     metadata JSONB DEFAULT '{}'::jsonb,
@@ -446,7 +447,7 @@ CREATE TABLE IF NOT EXISTS payout_requests (
 -- Cleaner earnings
 CREATE TABLE IF NOT EXISTS cleaner_earnings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cleaner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
     amount_credits INTEGER NOT NULL,
     amount_cents INTEGER NOT NULL,
@@ -475,7 +476,7 @@ CREATE TABLE IF NOT EXISTS stripe_events (
 
 CREATE TABLE IF NOT EXISTS stripe_customers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     stripe_customer_id TEXT NOT NULL UNIQUE,
     default_payment_method_id TEXT,
     metadata JSONB DEFAULT '{}'::jsonb,
@@ -485,7 +486,7 @@ CREATE TABLE IF NOT EXISTS stripe_customers (
 
 CREATE TABLE IF NOT EXISTS stripe_connect_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cleaner_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     stripe_account_id TEXT NOT NULL UNIQUE,
     charges_enabled BOOLEAN NOT NULL DEFAULT false,
     payouts_enabled BOOLEAN NOT NULL DEFAULT false,
@@ -518,7 +519,7 @@ CREATE TABLE IF NOT EXISTS job_status_history (
     job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
     from_status TEXT,
     to_status TEXT NOT NULL,
-    changed_by_user_id UUID REFERENCES users(id),
+    changed_by_user_id TEXT REFERENCES users(id),
     changed_by_type TEXT CHECK (changed_by_type IN ('client', 'cleaner', 'admin', 'system')),
     reason TEXT,
     metadata JSONB DEFAULT '{}'::jsonb,
@@ -528,7 +529,7 @@ CREATE TABLE IF NOT EXISTS job_status_history (
 CREATE TABLE IF NOT EXISTS job_checkins (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
-    cleaner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type TEXT NOT NULL CHECK (type IN ('check_in', 'check_out')),
     lat NUMERIC(9,6),
     lng NUMERIC(9,6),
@@ -545,8 +546,8 @@ CREATE TABLE IF NOT EXISTS job_checkins (
 CREATE TABLE IF NOT EXISTS disputes (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id          UUID NOT NULL UNIQUE REFERENCES jobs (id) ON DELETE CASCADE,
-  client_id       UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
-  opened_by_user_id UUID REFERENCES users(id),
+  client_id       TEXT NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  opened_by_user_id TEXT REFERENCES users(id),
   status          dispute_status NOT NULL DEFAULT 'open',
   client_notes    TEXT NOT NULL,
   admin_notes     TEXT,
@@ -555,7 +556,7 @@ CREATE TABLE IF NOT EXISTS disputes (
   resolution_type TEXT,
   resolution_notes TEXT,
   refund_amount_credits INTEGER,
-  resolved_by_user_id UUID REFERENCES users(id),
+  resolved_by_user_id TEXT REFERENCES users(id),
   resolved_at     TIMESTAMPTZ,
   job_completed_at TIMESTAMPTZ,
   within_window   BOOLEAN DEFAULT true,
@@ -568,7 +569,7 @@ CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes (status);
 CREATE TABLE IF NOT EXISTS dispute_actions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     dispute_id UUID NOT NULL REFERENCES disputes(id) ON DELETE CASCADE,
-    actor_user_id UUID REFERENCES users(id),
+    actor_user_id TEXT REFERENCES users(id),
     actor_type TEXT NOT NULL CHECK (actor_type IN ('client', 'cleaner', 'admin', 'system')),
     action TEXT NOT NULL,
     details JSONB DEFAULT '{}'::jsonb,
@@ -583,7 +584,7 @@ CREATE TABLE IF NOT EXISTS dispute_actions (
 CREATE TABLE IF NOT EXISTS job_photos (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id       UUID NOT NULL REFERENCES jobs (id) ON DELETE CASCADE,
-  uploaded_by  UUID NOT NULL REFERENCES users (id) ON DELETE SET NULL,
+  uploaded_by  TEXT NOT NULL REFERENCES users (id) ON DELETE SET NULL,
   type         TEXT NOT NULL CHECK (type IN ('before', 'after')),
   url          TEXT NOT NULL,
   thumbnail_url TEXT,
@@ -598,7 +599,7 @@ CREATE INDEX IF NOT EXISTS idx_job_photos_job_id ON job_photos (job_id);
 CREATE TABLE IF NOT EXISTS photo_compliance (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id           UUID NOT NULL UNIQUE REFERENCES jobs (id) ON DELETE CASCADE,
-  cleaner_id       UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id       TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   total_photos     INTEGER NOT NULL DEFAULT 0,
   before_photos    INTEGER NOT NULL DEFAULT 0,
   after_photos     INTEGER NOT NULL DEFAULT 0,
@@ -613,7 +614,7 @@ CREATE TABLE IF NOT EXISTS photo_compliance (
 
 CREATE TABLE IF NOT EXISTS notification_preferences (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
   email_enabled   BOOLEAN NOT NULL DEFAULT true,
   sms_enabled     BOOLEAN NOT NULL DEFAULT false,
   push_enabled    BOOLEAN NOT NULL DEFAULT true,
@@ -623,7 +624,7 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 
 CREATE TABLE IF NOT EXISTS notification_log (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID REFERENCES users (id) ON DELETE SET NULL,
+  user_id         TEXT REFERENCES users (id) ON DELETE SET NULL,
   channel         TEXT NOT NULL,
   type            TEXT NOT NULL,
   payload         JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -635,7 +636,7 @@ CREATE TABLE IF NOT EXISTS notification_log (
 
 CREATE TABLE IF NOT EXISTS notification_failures (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID REFERENCES users (id) ON DELETE SET NULL,
+  user_id         TEXT REFERENCES users (id) ON DELETE SET NULL,
   channel         TEXT NOT NULL,
   type            TEXT NOT NULL,
   payload         JSONB NOT NULL,
@@ -662,7 +663,7 @@ CREATE TABLE IF NOT EXISTS notification_templates (
 
 CREATE TABLE IF NOT EXISTS notification_logs (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID REFERENCES users (id) ON DELETE SET NULL,
+  user_id         TEXT REFERENCES users (id) ON DELETE SET NULL,
   channel         TEXT NOT NULL,
   type            TEXT NOT NULL,
   recipient       TEXT NOT NULL,
@@ -675,7 +676,7 @@ CREATE TABLE IF NOT EXISTS notification_logs (
 
 CREATE TABLE IF NOT EXISTS device_tokens (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   token           TEXT NOT NULL,
   platform        TEXT NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
   device_name     TEXT,
@@ -692,7 +693,7 @@ CREATE TABLE IF NOT EXISTS device_tokens (
 
 CREATE TABLE IF NOT EXISTS cleaner_availability (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   day_of_week     SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
   start_time      TIME NOT NULL,
   end_time        TIME NOT NULL,
@@ -705,7 +706,7 @@ CREATE TABLE IF NOT EXISTS cleaner_availability (
 
 CREATE TABLE IF NOT EXISTS cleaner_time_off (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   start_date      DATE NOT NULL,
   end_date        DATE NOT NULL,
   all_day         BOOLEAN NOT NULL DEFAULT true,
@@ -718,7 +719,7 @@ CREATE TABLE IF NOT EXISTS cleaner_time_off (
 
 CREATE TABLE IF NOT EXISTS cleaner_service_areas (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   zip_code        TEXT,
   city            TEXT,
   state           TEXT,
@@ -730,7 +731,7 @@ CREATE TABLE IF NOT EXISTS cleaner_service_areas (
 
 CREATE TABLE IF NOT EXISTS cleaner_preferences (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id          UUID NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id          TEXT NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
   max_jobs_per_day    INTEGER NOT NULL DEFAULT 5,
   min_job_duration_h  NUMERIC(3,1) NOT NULL DEFAULT 1.0,
   max_job_duration_h  NUMERIC(3,1) NOT NULL DEFAULT 8.0,
@@ -746,7 +747,7 @@ CREATE TABLE IF NOT EXISTS cleaner_preferences (
 
 CREATE TABLE IF NOT EXISTS availability_blocks (
     id BIGSERIAL PRIMARY KEY,
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
@@ -758,7 +759,7 @@ CREATE TABLE IF NOT EXISTS availability_blocks (
 
 CREATE TABLE IF NOT EXISTS blackout_periods (
     id BIGSERIAL PRIMARY KEY,
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     start_ts TIMESTAMPTZ NOT NULL,
     end_ts TIMESTAMPTZ NOT NULL,
     reason VARCHAR(100),
@@ -773,7 +774,7 @@ CREATE TABLE IF NOT EXISTS blackout_periods (
 CREATE TABLE IF NOT EXISTS job_offers (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id          UUID NOT NULL REFERENCES jobs (id) ON DELETE CASCADE,
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   status          TEXT NOT NULL DEFAULT 'pending',
   expires_at      TIMESTAMPTZ NOT NULL,
   decline_reason  TEXT,
@@ -787,7 +788,7 @@ CREATE TABLE IF NOT EXISTS job_offers (
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS cleaner_metrics (
-    cleaner_id UUID PRIMARY KEY REFERENCES users(id),
+    cleaner_id TEXT PRIMARY KEY REFERENCES users(id),
     total_jobs_window INTEGER NOT NULL DEFAULT 0,
     attended_jobs INTEGER NOT NULL DEFAULT 0,
     no_show_jobs INTEGER NOT NULL DEFAULT 0,
@@ -802,7 +803,7 @@ CREATE TABLE IF NOT EXISTS cleaner_metrics (
 
 CREATE TABLE IF NOT EXISTS cleaner_events (
     id BIGSERIAL PRIMARY KEY,
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     job_id UUID REFERENCES jobs(id),
     event_type cleaner_event_type NOT NULL,
     weight INTEGER NOT NULL,
@@ -814,7 +815,7 @@ CREATE INDEX IF NOT EXISTS idx_cleaner_events_cleaner_id ON cleaner_events(clean
 
 CREATE TABLE IF NOT EXISTS cleaner_weekly_streaks (
     id BIGSERIAL PRIMARY KEY,
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     week_start DATE NOT NULL,
     is_streak BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -823,7 +824,7 @@ CREATE TABLE IF NOT EXISTS cleaner_weekly_streaks (
 
 CREATE TABLE IF NOT EXISTS reliability_snapshots (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cleaner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     score INTEGER NOT NULL,
     tier TEXT,
     inputs JSONB NOT NULL,
@@ -834,7 +835,7 @@ CREATE TABLE IF NOT EXISTS reliability_snapshots (
 
 CREATE TABLE IF NOT EXISTS reliability_history (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   old_score       NUMERIC(5,2) NOT NULL,
   new_score       NUMERIC(5,2) NOT NULL,
   old_tier        TEXT NOT NULL,
@@ -846,12 +847,12 @@ CREATE TABLE IF NOT EXISTS reliability_history (
 
 CREATE TABLE IF NOT EXISTS cleaner_tier_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cleaner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     from_tier TEXT,
     to_tier TEXT NOT NULL,
     reason TEXT,
     triggered_by TEXT CHECK (triggered_by IN ('system', 'admin')),
-    triggered_by_user_id UUID REFERENCES users(id),
+    triggered_by_user_id TEXT REFERENCES users(id),
     effective_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     effective_to TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -859,7 +860,7 @@ CREATE TABLE IF NOT EXISTS cleaner_tier_history (
 
 CREATE TABLE IF NOT EXISTS tier_locks (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   tier            TEXT NOT NULL,
   locked_until    TIMESTAMPTZ NOT NULL,
   reason          TEXT NOT NULL,
@@ -872,7 +873,7 @@ CREATE TABLE IF NOT EXISTS tier_locks (
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS client_risk_scores (
-    client_id UUID PRIMARY KEY REFERENCES users(id),
+    client_id TEXT PRIMARY KEY REFERENCES users(id),
     risk_score NUMERIC(5,2) NOT NULL DEFAULT 0,
     risk_band client_risk_band NOT NULL DEFAULT 'normal',
     last_recomputed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -880,7 +881,7 @@ CREATE TABLE IF NOT EXISTS client_risk_scores (
 
 CREATE TABLE IF NOT EXISTS client_risk_events (
     id BIGSERIAL PRIMARY KEY,
-    client_id UUID NOT NULL REFERENCES users(id),
+    client_id TEXT NOT NULL REFERENCES users(id),
     job_id UUID REFERENCES jobs(id),
     event_type client_risk_event_type NOT NULL,
     weight INTEGER NOT NULL,
@@ -906,8 +907,8 @@ CREATE TABLE IF NOT EXISTS reschedule_reason_codes (
 CREATE TABLE IF NOT EXISTS reschedule_events (
     id BIGSERIAL PRIMARY KEY,
     job_id UUID NOT NULL REFERENCES jobs(id),
-    client_id UUID NOT NULL REFERENCES users(id),
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    client_id TEXT NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     requested_by VARCHAR(10) NOT NULL CHECK (requested_by IN ('client', 'cleaner')),
     requested_to VARCHAR(10) NOT NULL CHECK (requested_to IN ('client', 'cleaner')),
     t_request TIMESTAMPTZ NOT NULL,
@@ -933,8 +934,8 @@ CREATE INDEX IF NOT EXISTS idx_reschedule_events_job_id ON reschedule_events(job
 CREATE TABLE IF NOT EXISTS cancellation_events (
     id BIGSERIAL PRIMARY KEY,
     job_id UUID NOT NULL REFERENCES jobs(id),
-    client_id UUID REFERENCES users(id),
-    cleaner_id UUID REFERENCES users(id),
+    client_id TEXT REFERENCES users(id),
+    cleaner_id TEXT REFERENCES users(id),
     cancelled_by VARCHAR(10) NOT NULL CHECK (cancelled_by IN ('client', 'cleaner', 'system', 'admin')),
     type VARCHAR(50),
     t_cancel TIMESTAMPTZ NOT NULL,
@@ -958,7 +959,7 @@ CREATE INDEX IF NOT EXISTS idx_cancellation_events_job_id ON cancellation_events
 
 CREATE TABLE IF NOT EXISTS grace_cancellations (
     id BIGSERIAL PRIMARY KEY,
-    client_id UUID NOT NULL REFERENCES users(id),
+    client_id TEXT NOT NULL REFERENCES users(id),
     job_id UUID REFERENCES jobs(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -968,7 +969,7 @@ CREATE INDEX IF NOT EXISTS idx_grace_cancellations_client_id ON grace_cancellati
 CREATE TABLE IF NOT EXISTS cancellation_records (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id          UUID NOT NULL REFERENCES jobs (id) ON DELETE CASCADE,
-  cancelled_by    UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cancelled_by    TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   cancelled_by_role TEXT NOT NULL,
   cancellation_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   scheduled_start   TIMESTAMPTZ NOT NULL,
@@ -984,8 +985,8 @@ CREATE TABLE IF NOT EXISTS cancellation_records (
 CREATE TABLE IF NOT EXISTS cleaner_no_shows (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id           UUID NOT NULL REFERENCES jobs (id) ON DELETE CASCADE,
-  cleaner_id       UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-  client_id        UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id       TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  client_id        TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   bonus_credits    INTEGER NOT NULL DEFAULT 50,
   processed        BOOLEAN NOT NULL DEFAULT false,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -998,8 +999,8 @@ CREATE TABLE IF NOT EXISTS cleaner_no_shows (
 CREATE TABLE IF NOT EXISTS match_recommendations (
     id BIGSERIAL PRIMARY KEY,
     job_id UUID NOT NULL REFERENCES jobs(id),
-    client_id UUID NOT NULL REFERENCES users(id),
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    client_id TEXT NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     match_score NUMERIC(6,4) NOT NULL,
     rank INTEGER NOT NULL,
     breakdown JSONB,
@@ -1011,8 +1012,8 @@ CREATE INDEX IF NOT EXISTS idx_match_recommendations_job_id ON match_recommendat
 CREATE TABLE IF NOT EXISTS inconvenience_logs (
     id BIGSERIAL PRIMARY KEY,
     job_id UUID NOT NULL REFERENCES jobs(id),
-    client_id UUID NOT NULL REFERENCES users(id),
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    client_id TEXT NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     caused_by VARCHAR(10) NOT NULL CHECK (caused_by IN ('client', 'cleaner')),
     score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 4),
     reason_link VARCHAR(50),
@@ -1028,7 +1029,7 @@ CREATE INDEX IF NOT EXISTS idx_inconvenience_logs_cleaner_id ON inconvenience_lo
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS cleaner_flex_profiles (
-    cleaner_id UUID PRIMARY KEY REFERENCES users(id),
+    cleaner_id TEXT PRIMARY KEY REFERENCES users(id),
     reasonable_declines_14d INTEGER NOT NULL DEFAULT 0,
     reasonable_declines_30d INTEGER NOT NULL DEFAULT 0,
     low_flexibility_active BOOLEAN NOT NULL DEFAULT false,
@@ -1039,13 +1040,13 @@ CREATE TABLE IF NOT EXISTS cleaner_flex_profiles (
 
 CREATE TABLE IF NOT EXISTS flexibility_decline_events (
     id BIGSERIAL PRIMARY KEY,
-    cleaner_id UUID NOT NULL REFERENCES users(id),
+    cleaner_id TEXT NOT NULL REFERENCES users(id),
     reschedule_event_id BIGINT REFERENCES reschedule_events(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS client_flex_profiles (
-    client_id UUID PRIMARY KEY REFERENCES users(id),
+    client_id TEXT PRIMARY KEY REFERENCES users(id),
     flex_score NUMERIC(3,2) NOT NULL DEFAULT 0.5,
     reschedules_30d INTEGER NOT NULL DEFAULT 0,
     late_reschedules_30d INTEGER NOT NULL DEFAULT 0,
@@ -1060,7 +1061,7 @@ CREATE TABLE IF NOT EXISTS client_flex_profiles (
 
 CREATE TABLE IF NOT EXISTS referral_codes (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   code            TEXT NOT NULL UNIQUE,
   type            TEXT NOT NULL DEFAULT 'standard',
   reward_credits  INTEGER NOT NULL DEFAULT 20,
@@ -1074,8 +1075,8 @@ CREATE TABLE IF NOT EXISTS referral_codes (
 
 CREATE TABLE IF NOT EXISTS referrals (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  referrer_id     UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
-  referee_id      UUID NOT NULL UNIQUE REFERENCES users (id) ON DELETE RESTRICT,
+  referrer_id     TEXT NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  referee_id      TEXT NOT NULL UNIQUE REFERENCES users (id) ON DELETE RESTRICT,
   referral_code   TEXT NOT NULL,
   status          TEXT NOT NULL DEFAULT 'pending',
   referee_role    TEXT NOT NULL,
@@ -1089,7 +1090,7 @@ CREATE TABLE IF NOT EXISTS referrals (
 
 CREATE TABLE IF NOT EXISTS cleaner_boosts (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   boost_type      TEXT NOT NULL DEFAULT 'standard',
   credits_spent   INTEGER NOT NULL,
   multiplier      NUMERIC(3,2) NOT NULL DEFAULT 1.5,
@@ -1117,8 +1118,8 @@ CREATE TABLE IF NOT EXISTS rush_job_settings (
 
 CREATE TABLE IF NOT EXISTS cleaning_subscriptions (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id       UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-  cleaner_id      UUID REFERENCES users (id) ON DELETE SET NULL,
+  client_id       TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT REFERENCES users (id) ON DELETE SET NULL,
   property_id     INT REFERENCES properties(id),
   frequency       TEXT NOT NULL,
   day_of_week     SMALLINT,
@@ -1141,8 +1142,8 @@ CREATE TABLE IF NOT EXISTS cleaning_subscriptions (
 
 CREATE TABLE IF NOT EXISTS favorite_cleaners (
   id          SERIAL PRIMARY KEY,
-  client_id   UUID NOT NULL REFERENCES users(id),
-  cleaner_id  UUID NOT NULL REFERENCES users(id),
+  client_id   TEXT NOT NULL REFERENCES users(id),
+  cleaner_id  TEXT NOT NULL REFERENCES users(id),
   notes       TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (client_id, cleaner_id)
@@ -1154,7 +1155,7 @@ CREATE TABLE IF NOT EXISTS favorite_cleaners (
 
 CREATE TABLE IF NOT EXISTS cleaner_goals (
   id           SERIAL PRIMARY KEY,
-  cleaner_id   UUID NOT NULL REFERENCES users(id),
+  cleaner_id   TEXT NOT NULL REFERENCES users(id),
   goal_type    TEXT NOT NULL DEFAULT 'jobs',
   month        DATE NOT NULL,
   target_value INT NOT NULL,
@@ -1172,7 +1173,7 @@ CREATE TABLE IF NOT EXISTS cleaner_goals (
 
 CREATE TABLE IF NOT EXISTS calendar_connections (
   id            SERIAL PRIMARY KEY,
-  user_id       UUID NOT NULL REFERENCES users(id),
+  user_id       TEXT NOT NULL REFERENCES users(id),
   provider      TEXT NOT NULL,
   external_id   TEXT NOT NULL,
   email         TEXT,
@@ -1216,14 +1217,14 @@ CREATE TABLE IF NOT EXISTS kpi_snapshots (
 
 CREATE TABLE IF NOT EXISTS support_tickets (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   job_id          UUID REFERENCES jobs (id) ON DELETE SET NULL,
   category        TEXT NOT NULL,
   subject         TEXT NOT NULL,
   description     TEXT NOT NULL,
   priority        TEXT NOT NULL DEFAULT 'normal',
   status          TEXT NOT NULL DEFAULT 'open',
-  assigned_to     UUID REFERENCES users (id) ON DELETE SET NULL,
+  assigned_to     TEXT REFERENCES users (id) ON DELETE SET NULL,
   resolution      TEXT,
   metadata        JSONB DEFAULT '{}'::jsonb,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -1234,7 +1235,7 @@ CREATE TABLE IF NOT EXISTS support_tickets (
 CREATE TABLE IF NOT EXISTS support_messages (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_id       UUID NOT NULL REFERENCES support_tickets (id) ON DELETE CASCADE,
-  sender_id       UUID REFERENCES users (id) ON DELETE SET NULL,
+  sender_id       TEXT REFERENCES users (id) ON DELETE SET NULL,
   sender_type     TEXT NOT NULL,
   message         TEXT NOT NULL,
   attachments     JSONB DEFAULT '[]'::jsonb,
@@ -1247,7 +1248,7 @@ CREATE TABLE IF NOT EXISTS support_messages (
 
 CREATE TABLE IF NOT EXISTS background_checks (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cleaner_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  cleaner_id      TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   provider        TEXT NOT NULL DEFAULT 'checkr',
   provider_id     TEXT,
   status          TEXT NOT NULL DEFAULT 'pending',
@@ -1307,7 +1308,7 @@ CREATE TABLE IF NOT EXISTS backups (
 
 CREATE TABLE IF NOT EXISTS audit_logs (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  actor_id        UUID REFERENCES users (id) ON DELETE SET NULL,
+  actor_id        TEXT REFERENCES users (id) ON DELETE SET NULL,
   actor_type      TEXT NOT NULL,
   action          TEXT NOT NULL,
   resource_type   TEXT NOT NULL,
@@ -1322,7 +1323,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 CREATE TABLE IF NOT EXISTS admin_audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_user_id UUID NOT NULL REFERENCES users(id),
+    admin_user_id TEXT NOT NULL REFERENCES users(id),
     action TEXT NOT NULL,
     entity_type TEXT,
     entity_id UUID,
@@ -1337,13 +1338,13 @@ CREATE TABLE IF NOT EXISTS admin_audit_log (
 
 CREATE TABLE IF NOT EXISTS fraud_alerts (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID REFERENCES users (id) ON DELETE SET NULL,
+  user_id         TEXT REFERENCES users (id) ON DELETE SET NULL,
   alert_type      TEXT NOT NULL,
   severity        TEXT NOT NULL DEFAULT 'medium',
   description     TEXT NOT NULL,
   metadata        JSONB DEFAULT '{}'::jsonb,
   status          TEXT NOT NULL DEFAULT 'open',
-  resolved_by     UUID REFERENCES users (id) ON DELETE SET NULL,
+  resolved_by     TEXT REFERENCES users (id) ON DELETE SET NULL,
   resolved_at     TIMESTAMPTZ,
   resolution_notes TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -1372,7 +1373,7 @@ CREATE TABLE IF NOT EXISTS feature_flags (
 
 CREATE TABLE IF NOT EXISTS user_preferences (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     email_notifications BOOLEAN NOT NULL DEFAULT true,
     sms_notifications BOOLEAN NOT NULL DEFAULT true,
     push_notifications BOOLEAN NOT NULL DEFAULT true,
@@ -1387,7 +1388,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
-    sender_id UUID NOT NULL REFERENCES users(id),
+    sender_id TEXT NOT NULL REFERENCES users(id),
     sender_type TEXT NOT NULL CHECK (sender_type IN ('client', 'cleaner', 'admin', 'system')),
     content TEXT NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT false,
@@ -1405,8 +1406,8 @@ CREATE INDEX IF NOT EXISTS idx_messages_job ON messages(job_id);
 CREATE TABLE IF NOT EXISTS reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID NOT NULL UNIQUE REFERENCES jobs(id) ON DELETE CASCADE,
-    reviewer_id UUID NOT NULL REFERENCES users(id),
-    reviewee_id UUID NOT NULL REFERENCES users(id),
+    reviewer_id TEXT NOT NULL REFERENCES users(id),
+    reviewee_id TEXT NOT NULL REFERENCES users(id),
     reviewer_type TEXT NOT NULL CHECK (reviewer_type IN ('client', 'cleaner')),
     rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
     comment TEXT,

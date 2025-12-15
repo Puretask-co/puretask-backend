@@ -25,6 +25,7 @@ exports.getBalanceWithSummary = getBalanceWithSummary;
 exports.escrowCreditsWithTransaction = escrowCreditsWithTransaction;
 const client_1 = require("../db/client");
 const logger_1 = require("../lib/logger");
+const env_1 = require("../config/env");
 /**
  * Get user's current credit balance
  * Balance = SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END) from credit_ledger
@@ -41,12 +42,48 @@ exports.getUserCreditBalance = getUserBalance;
  * Record a ledger entry
  * Positive deltaCredits = add credits (direction = 'credit')
  * Negative deltaCredits = remove credits (direction = 'debit')
+ *
+ * V1 HARDENING: For idempotent operations (escrow, refund, etc.), uses ON CONFLICT
+ * to prevent duplicates via unique constraints.
  */
 async function addLedgerEntry(input) {
     const { userId, jobId = null, deltaCredits, reason } = input;
+    // V1 HARDENING: Check credits guard flag
+    if (!env_1.env.CREDITS_ENABLED && reason !== 'refund') {
+        throw Object.assign(new Error("Credits are currently disabled"), { statusCode: 503, code: "CREDITS_DISABLED" });
+    }
+    // V1 HARDENING: Check refunds guard flag
+    if (reason === 'refund' && !env_1.env.REFUNDS_ENABLED) {
+        throw Object.assign(new Error("Refunds are currently disabled"), { statusCode: 503, code: "REFUNDS_DISABLED" });
+    }
     // Convert deltaCredits to amount and direction
     const amount = Math.abs(deltaCredits);
     const direction = deltaCredits >= 0 ? 'credit' : 'debit';
+    // Check if this is an idempotent operation (has unique constraint)
+    const isIdempotentOperation = reason === 'job_escrow' ||
+        reason === 'job_release' ||
+        reason === 'refund' ||
+        reason === 'purchase';
+    if (isIdempotentOperation && jobId) {
+        // For idempotent operations, check for existing entry first
+        // The unique constraint (user_id, reason, job_id) will prevent duplicates
+        const existing = await (0, client_1.query)(`
+        SELECT * FROM credit_ledger
+        WHERE user_id = $1 AND job_id = $2 AND reason = $3
+        ORDER BY created_at DESC
+        LIMIT 1
+      `, [userId, jobId, reason]);
+        if (existing.rows[0]) {
+            logger_1.logger.info("credit_ledger_entry_duplicate_prevented", {
+                userId,
+                jobId,
+                reason,
+                existingEntryId: existing.rows[0].id,
+            });
+            return existing.rows[0];
+        }
+    }
+    // Non-idempotent operation or no jobId - insert normally
     const result = await (0, client_1.query)(`
       INSERT INTO credit_ledger (user_id, job_id, amount, direction, reason)
       VALUES ($1, $2, $3, $4, $5)

@@ -10,7 +10,8 @@ const jwtAuth_1 = require("../middleware/jwtAuth");
 const cleanerOnboardingService_1 = require("../services/cleanerOnboardingService");
 const payoutsService_1 = require("../services/payoutsService");
 const availabilityService_1 = require("../services/availabilityService");
-const reliabilityService_1 = require("../services/reliabilityService");
+// V2 FEATURE — DISABLED FOR NOW (reliability)
+// import { getCleanerReliabilityInfo } from "../services/reliabilityService";
 const cleanerRouter = (0, express_1.Router)();
 // All routes require authentication as cleaner
 cleanerRouter.use(jwtAuth_1.jwtAuthMiddleware);
@@ -397,22 +398,17 @@ cleanerRouter.get("/schedule/:date", async (req, res) => {
     }
 });
 // ============================================
-// Reliability Score
+// Reliability Score (V2 FEATURE — DISABLED FOR NOW)
 // ============================================
-/**
- * GET /cleaner/reliability
- * Get cleaner's reliability info
- */
-cleanerRouter.get("/reliability", async (req, res) => {
-    try {
-        const reliability = await (0, reliabilityService_1.getCleanerReliabilityInfo)(req.user.id);
-        res.json({ reliability });
-    }
-    catch (error) {
-        logger_1.logger.error("get_reliability_failed", { error: error.message });
-        res.status(500).json({
-            error: { code: "GET_RELIABILITY_FAILED", message: "Failed to get reliability" },
-        });
-    }
-});
+// cleanerRouter.get("/reliability", async (req: JWTAuthedRequest, res: Response) => {
+//   try {
+//    const reliability = await getCleanerReliabilityInfo(req.user!.id);
+//     res.json({ reliability });
+//   } catch (error) {
+//     logger.error("get_reliability_failed", { error: (error as Error).message });
+//     res.status(500).json({
+//       error: { code: "GET_RELIABILITY_FAILED", message: "Failed to get reliability" },
+//     });
+//   }
+// });
 exports.default = cleanerRouter;

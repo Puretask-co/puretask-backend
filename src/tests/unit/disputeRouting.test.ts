@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import { routeDisputeSchema } from "../../routes/admin";
 
 describe("dispute routing schema", () => {

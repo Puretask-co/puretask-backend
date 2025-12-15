@@ -11,7 +11,7 @@ const logger_1 = require("../../lib/logger");
  * Creates default preferences if they don't exist
  */
 async function getNotificationPreferences(userId) {
-    let result = await (0, client_1.query)(`
+    const result = await (0, client_1.query)(`
       SELECT * FROM notification_preferences
       WHERE user_id = $1
     `, [userId]);

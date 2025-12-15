@@ -89,7 +89,9 @@ describe("Credit System Integration", () => {
           estimated_hours: 2,
         });
 
-      expect(res.status).toBe(201);
+      if (res.status !== 201) {
+        throw new Error(`Job creation failed (${res.status}): ${JSON.stringify(res.body)}`);
+      }
 
       const balanceAfter = await getUserCreditBalance(client.id);
       expect(balanceAfter).toBe(balanceBefore - 150);
@@ -142,6 +144,10 @@ describe("Credit System Integration", () => {
           estimated_hours: 2,
         });
 
+      if (jobRes.status !== 201) {
+        throw new Error(`Job creation failed (${jobRes.status}): ${JSON.stringify(jobRes.body)}`);
+      }
+
       const jobId = jobRes.body.job.id;
 
       // Fast-forward to awaiting_approval with cleaner assigned
@@ -185,6 +191,10 @@ describe("Credit System Integration", () => {
           credit_amount: 80,
           estimated_hours: 2,
         });
+
+      if (jobRes.status !== 201) {
+        throw new Error(`Job creation failed (${jobRes.status}): ${JSON.stringify(jobRes.body)}`);
+      }
 
       const jobId = jobRes.body.job.id;
       const balanceAfterCreate = await getUserCreditBalance(client.id);

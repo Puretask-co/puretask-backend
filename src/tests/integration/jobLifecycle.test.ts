@@ -5,6 +5,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";
+import { TEST_PASSWORD_HASH } from "../helpers/testConstants";
 
 // Test user IDs (should exist in test database)
 const TEST_CLIENT_ID = "11111111-1111-1111-1111-111111111111";
@@ -36,12 +37,12 @@ describe("Job Lifecycle Integration Tests", () => {
       `
         INSERT INTO users (id, email, password_hash, role)
         VALUES 
-          ($1, 'test-client@example.com', '$2b$10$dummy', 'client'),
-          ($2, 'test-cleaner@example.com', '$2b$10$dummy', 'cleaner'),
-          ($3, 'test-admin@example.com', '$2b$10$dummy', 'admin')
+          ($1, 'test-client@example.com', $4, 'client'),
+          ($2, 'test-cleaner@example.com', $4, 'cleaner'),
+          ($3, 'test-admin@example.com', $4, 'admin')
         ON CONFLICT (id) DO NOTHING
       `,
-      [TEST_CLIENT_ID, TEST_CLEANER_ID, TEST_ADMIN_ID]
+      [TEST_CLIENT_ID, TEST_CLEANER_ID, TEST_ADMIN_ID, TEST_PASSWORD_HASH]
     );
   });
 
