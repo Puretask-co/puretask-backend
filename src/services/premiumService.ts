@@ -1,5 +1,6 @@
 // src/services/premiumService.ts
 // Premium features: Boosts, Rush Jobs, Subscriptions
+// V2 FEATURE — DISABLED FOR NOW
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";

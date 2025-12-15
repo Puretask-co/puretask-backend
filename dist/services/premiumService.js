@@ -1,6 +1,7 @@
 "use strict";
 // src/services/premiumService.ts
 // Premium features: Boosts, Rush Jobs, Subscriptions
+// V2 FEATURE — DISABLED FOR NOW
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RUSH_CONFIG = exports.BOOST_CONFIG = void 0;
 exports.purchaseBoost = purchaseBoost;
@@ -253,7 +254,7 @@ async function markSubscriptionJobCreated(subscriptionId, jobId) {
 // ============================================
 function calculateNextJobDate(frequency, preferredDayOfWeek) {
     const now = new Date();
-    let next = new Date(now);
+    const next = new Date(now);
     // Set to next occurrence of preferred day if specified
     if (preferredDayOfWeek !== undefined) {
         const daysUntil = (preferredDayOfWeek - now.getDay() + 7) % 7;

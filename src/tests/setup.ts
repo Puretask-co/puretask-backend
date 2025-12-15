@@ -6,7 +6,7 @@ import { pool } from "../db/client";
 
 // Helper to retry database connection with exponential backoff
 // Add a small random delay to prevent thundering herd when multiple test files start simultaneously
-async function waitForDatabase(maxRetries = 5, delayMs = 1000): Promise<void> {
+async function waitForDatabase(maxRetries = 8, delayMs = 1500): Promise<void> {
   // Add random jitter (0-1000ms) to stagger connection attempts across test files
   // This helps when tests run in parallel (though we're using singleFork now)
   const jitter = Math.random() * 1000;
@@ -16,12 +16,12 @@ async function waitForDatabase(maxRetries = 5, delayMs = 1000): Promise<void> {
     try {
       // Use a simple query with a longer timeout (10 seconds per attempt)
       // Neon connections can be slow, especially on free tier
-      await Promise.race([
-        pool.query("SELECT 1"),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Connection timeout")), 10000)
-        )
-      ]);
+        await Promise.race([
+          pool.query("SELECT 1"),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Connection timeout")), 15000)
+          ),
+        ]);
       console.log("✓ Database connection established");
       return;
     } catch (error: any) {
@@ -34,7 +34,7 @@ async function waitForDatabase(maxRetries = 5, delayMs = 1000): Promise<void> {
         console.warn("⚠️  Continuing with tests - some may fail if DB is unavailable");
         return;
       }
-      const waitTime = delayMs * Math.pow(2, attempt - 1);
+        const waitTime = delayMs * Math.pow(2, attempt - 1);
       console.warn(`⚠️  Database connection attempt ${attempt}/${maxRetries} failed, retrying in ${waitTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }

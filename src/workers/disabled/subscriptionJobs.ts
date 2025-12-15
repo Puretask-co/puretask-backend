@@ -3,13 +3,13 @@
 //
 // Run daily: node dist/workers/subscriptionJobs.js
 
-import { pool, query } from "../db/client";
-import { logger } from "../lib/logger";
+import { pool, query } from "../../db/client";
+import { logger } from "../../lib/logger";
 import {
   getSubscriptionsDueForJobCreation,
   markSubscriptionJobCreated,
-} from "../services/premiumService";
-import { createJob } from "../services/jobsService";
+} from "../../services/premiumService";
+import { createJob } from "../../services/jobsService";
 
 /**
  * Main worker function

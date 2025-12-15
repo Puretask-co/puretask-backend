@@ -1,6 +1,7 @@
 "use strict";
 // src/routes/manager.ts
 // Manager dashboard API routes
+// V2 FEATURE — DISABLED FOR NOW
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const logger_1 = require("../lib/logger");

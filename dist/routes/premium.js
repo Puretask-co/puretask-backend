@@ -1,6 +1,7 @@
 "use strict";
 // src/routes/premium.ts
 // Premium features: Boosts, Rush Jobs, Subscriptions, Referrals
+// V2 FEATURE — DISABLED FOR NOW
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");

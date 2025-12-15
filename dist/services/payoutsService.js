@@ -98,14 +98,16 @@ async function recordEarningsForCompletedJob(job) {
         // also try to create the payout and let the FK constraint handle it if the check fails
         const userCheck = await client.query(`SELECT EXISTS(SELECT 1 FROM users WHERE id = $1) AS exists`, [job.cleaner_id]);
         if (!userCheck.rows[0]?.exists) {
-            // In test environments, this might be a false negative due to transaction isolation
-            // Log a warning but still attempt the insert - the FK constraint will catch it if truly missing
-            logger_1.logger.warn("payout_user_check_failed_but_attempting_insert", {
+            // User doesn't exist - this is a data integrity issue
+            // In test environments, this might indicate the user was deleted or never committed
+            logger_1.logger.error("payout_user_does_not_exist", {
                 cleanerId: job.cleaner_id,
                 jobId: job.id,
-                message: "User check failed, but attempting insert anyway (FK constraint will validate)",
+                message: "Cleaner user does not exist in users table - cannot create payout",
             });
-            // Continue to attempt insert - foreign key constraint will provide final validation
+            // Throw a clear error instead of attempting insert
+            throw Object.assign(new Error(`Cannot create payout: cleaner user ${job.cleaner_id} does not exist in users table. ` +
+                `This may be a test isolation issue - ensure the user exists before creating payouts.`), { statusCode: 500, code: "USER_NOT_FOUND" });
         }
         // Create payout record
         // The foreign key constraint will enforce referential integrity

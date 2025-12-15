@@ -27,7 +27,7 @@ import {
   setPreferences,
   getCleanerSchedule,
 } from "../services/availabilityService";
-import { getCleanerReliabilityInfo } from "../services/reliabilityService";
+// V1 CORE FEATURE: Reliability scoring (market safety mechanism)
 
 const cleanerRouter = Router();
 
@@ -473,15 +473,11 @@ cleanerRouter.get("/schedule/:date", async (req: JWTAuthedRequest, res: Response
 });
 
 // ============================================
-// Reliability Score
+// Reliability Score (V1 CORE FEATURE)
 // ============================================
-
-/**
- * GET /cleaner/reliability
- * Get cleaner's reliability info
- */
-cleanerRouter.get("/reliability", async (req: JWTAuthedRequest, res: Response) => {
+cleanerRouter.get("/reliability", requireRole("cleaner"), async (req: JWTAuthedRequest, res: Response) => {
   try {
+    const { getCleanerReliabilityInfo } = await import("../services/reliabilityService");
     const reliability = await getCleanerReliabilityInfo(req.user!.id);
     res.json({ reliability });
   } catch (error) {

@@ -1,6 +1,7 @@
 "use strict";
 // src/routes/analytics.ts
 // Analytics API routes - Revenue reports, trends, and business metrics
+// V2 FEATURE — DISABLED FOR NOW
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_1 = require("../middleware/auth");

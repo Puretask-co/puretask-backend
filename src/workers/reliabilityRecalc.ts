@@ -8,7 +8,7 @@
 
 import { pool } from "../db/client";
 import { logger } from "../lib/logger";
-import { recalcAllCleanersReliability } from "../services/reliabilityService";
+import { recalcAllCleanersReliability, ReliabilityUpdate } from "../services/reliabilityService";
 
 /**
  * Main worker function
@@ -23,13 +23,13 @@ async function main(): Promise<void> {
 
     // Log significant score changes
     const significantChanges = result.updates.filter(
-      (u) => Math.abs(u.newScore - u.previousScore) >= 5
+      (u: ReliabilityUpdate) => Math.abs(u.newScore - u.previousScore) >= 5
     );
 
     if (significantChanges.length > 0) {
       logger.info("reliability_significant_changes", {
         count: significantChanges.length,
-        changes: significantChanges.map((c) => ({
+        changes: significantChanges.map((c: ReliabilityUpdate) => ({
           cleanerId: c.cleanerId,
           from: c.previousScore,
           to: c.newScore,

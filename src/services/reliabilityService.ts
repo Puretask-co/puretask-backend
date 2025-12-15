@@ -1,5 +1,6 @@
 // src/services/reliabilityService.ts
 // Cleaner reliability score calculation and management
+// V1 CORE FEATURE: Market safety mechanism - MUST BE ENABLED
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
@@ -426,8 +427,13 @@ export async function getCleanerReliabilityInfo(cleanerId: string): Promise<{
 
   const stats = await computeCleanerStats(cleanerId);
 
+  // reliability_score may come back as string from DB, ensure it's a number
+  const score = typeof profileResult.rows[0].reliability_score === 'string' 
+    ? parseFloat(profileResult.rows[0].reliability_score) 
+    : profileResult.rows[0].reliability_score;
+
   return {
-    score: profileResult.rows[0].reliability_score,
+    score: score,
     tier: profileResult.rows[0].tier,
     stats,
   };

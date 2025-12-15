@@ -10,10 +10,7 @@ This is a minimal but real backend for PureTask, built with:
 
 ## Quick start
 
-1. Create a `.env` file in the project root:
-
-   DATABASE_URL=postgres://user:password@host:port/dbname
-   PORT=4000
+1. Copy `.env.example` to `.env` and fill the required secrets.
 
 2. Install dependencies:
 

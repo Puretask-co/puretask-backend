@@ -1,5 +1,6 @@
 // src/routes/manager.ts
 // Manager dashboard API routes
+// V2 FEATURE — DISABLED FOR NOW
 
 import { Router, Response } from "express";
 import { logger } from "../lib/logger";

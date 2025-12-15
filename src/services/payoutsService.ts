@@ -37,9 +37,9 @@ export async function updatePayoutPause(cleanerId: string, paused: boolean): Pro
  */
 export async function getCleanerPayoutPercent(cleanerId: string): Promise<number> {
   try {
-    // Try to get tier and payout_percent, but handle missing columns gracefully
+    // Get tier and payout_percent (tier is calculated from reliability score)
     const result = await query<{ tier?: string; payout_percent?: number }>(
-      `SELECT COALESCE(payout_percent, 80) as payout_percent FROM cleaner_profiles WHERE user_id = $1`,
+      `SELECT tier, payout_percent FROM cleaner_profiles WHERE user_id = $1`,
       [cleanerId]
     );
     
@@ -47,14 +47,30 @@ export async function getCleanerPayoutPercent(cleanerId: string): Promise<number
       return env.CLEANER_PAYOUT_PERCENT_BRONZE; // Default to bronze
     }
     
-    const { payout_percent } = result.rows[0];
+    const { tier, payout_percent } = result.rows[0];
     
-    // Use stored payout_percent if available
-    if (payout_percent) {
+    // Use stored payout_percent if explicitly set (allows manual override)
+    if (payout_percent !== null && payout_percent !== undefined) {
       return payout_percent;
     }
     
-    // If tier column doesn't exist or payout_percent is not set, default to bronze
+    // V1 CORE FEATURE: Calculate payout percentage from tier (which comes from reliability score)
+    // Tier is updated when reliability score changes (see reliabilityService.ts)
+    if (tier) {
+      switch (tier.toLowerCase()) {
+        case "platinum":
+          return env.CLEANER_PAYOUT_PERCENT_PLATINUM; // 85%
+        case "gold":
+          return env.CLEANER_PAYOUT_PERCENT_GOLD; // 84%
+        case "silver":
+          return env.CLEANER_PAYOUT_PERCENT_SILVER; // 82%
+        case "bronze":
+        default:
+          return env.CLEANER_PAYOUT_PERCENT_BRONZE; // 80%
+      }
+    }
+    
+    // If tier is not set, default to bronze
     return env.CLEANER_PAYOUT_PERCENT_BRONZE;
   } catch (error: any) {
     // If column doesn't exist or query fails, default to bronze

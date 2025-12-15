@@ -135,8 +135,13 @@ async function getJobForCleanerStrict(jobId, cleanerId) {
  * Create a new job
  * - Creates job row with 'requested' status
  * - Escrows credits from client's balance
+ * V1 HARDENING: Checks BOOKINGS_ENABLED guard flag
  */
 async function createJob(options) {
+    // V1 HARDENING: Check bookings guard flag
+    if (!env_1.env.BOOKINGS_ENABLED) {
+        throw Object.assign(new Error("Bookings are currently disabled"), { statusCode: 503, code: "BOOKINGS_DISABLED" });
+    }
     const { clientId, scheduledStartAt, scheduledEndAt, address, latitude = null, longitude = null, creditAmount, clientNotes = null, } = options;
     if (creditAmount <= 0) {
         throw new Error("Credit amount must be positive");

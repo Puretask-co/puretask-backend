@@ -1,10 +1,14 @@
 // src/services/jobTrackingService.ts
 // Complete job live tracking for clients and cleaners
 
-import { query } from "../db/client";
+import { query, withTransaction } from "../db/client";
+import { PoolClient } from "pg";
 import { logger } from "../lib/logger";
 import { publishEvent } from "../lib/events";
 import { updateCleanerReliability } from "./reliabilityService";
+import { releaseJobCreditsToCleaner } from "./creditsService";
+import { recordEarningsForCompletedJob } from "./payoutsService";
+import { Job } from "../types/db";
 import { env } from "../config/env";
 
 // ============================================
@@ -468,7 +472,12 @@ export async function updateCleanerLocation(
 // ============================================
 
 /**
- * Client approves completed job
+ * V1 HARDENING: Client approves completed job (atomic transaction)
+ * - Updates job status to 'completed' (with WHERE clause guard)
+ * - Releases escrowed credits to cleaner
+ * - Creates payout record
+ * - Handles tip if provided
+ * All in a single transaction to prevent partial state
  */
 export async function approveJob(
   jobId: string,
@@ -483,40 +492,76 @@ export async function approveJob(
     throw Object.assign(new Error("Job not awaiting approval"), { statusCode: 400 });
   }
 
-  // Update job
-  await query(
-    `
-      UPDATE jobs 
-      SET status = 'completed', 
-          rating = $2,
-          updated_at = NOW() 
-      WHERE id = $1
-    `,
-    [jobId, rating]
-  );
-
-  // Handle tip if provided
-  if (tip && tip > 0 && job.cleaner_id) {
-    await query(
-      `INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason) VALUES ($1, $2, $3, 'adjustment')`,
-      [job.cleaner_id, jobId, tip]
+  // V1 HARDENING: Use transaction to ensure atomicity
+  return withTransaction(async (client: PoolClient) => {
+    // Step 1: Update job status with WHERE clause guard (prevents race conditions)
+    const updateResult = await client.query<Job>(
+      `
+        UPDATE jobs 
+        SET status = 'completed', 
+            rating = $2,
+            updated_at = NOW() 
+        WHERE id = $1
+          AND status = 'awaiting_approval'
+        RETURNING *
+      `,
+      [jobId, rating]
     );
-  }
 
-  await publishEvent({
-    jobId,
-    actorType: "client",
-    actorId: clientId,
-    eventName: "job.approved",
-    payload: { rating, tip, feedback },
+    if (updateResult.rows.length === 0) {
+      // Job was already completed or status changed (race condition)
+      throw Object.assign(
+        new Error("Job status changed - cannot approve"),
+        { statusCode: 409, code: "CONFLICT" }
+      );
+    }
+
+    const updatedJob = updateResult.rows[0];
+
+    // Step 2: Release escrowed credits to cleaner (if cleaner assigned and credits exist)
+    if (updatedJob.cleaner_id && updatedJob.credit_amount > 0) {
+      await releaseJobCreditsToCleaner(updatedJob.cleaner_id, jobId, updatedJob.credit_amount);
+      
+      // Step 3: Create payout record
+      const jobForPayout = {
+        id: updatedJob.id,
+        cleaner_id: updatedJob.cleaner_id,
+        credit_amount: updatedJob.credit_amount,
+      } as Job;
+      await recordEarningsForCompletedJob(jobForPayout);
+    }
+
+    // Step 4: Handle tip if provided (within transaction)
+    if (tip && tip > 0 && updatedJob.cleaner_id) {
+      await client.query(
+        `INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason) VALUES ($1, $2, $3, 'adjustment')`,
+        [updatedJob.cleaner_id, jobId, tip]
+      );
+    }
+
+    // Step 5: Publish event (after transaction commits)
+    await publishEvent({
+      jobId,
+      actorType: "client",
+      actorId: clientId,
+      eventName: "job.approved",
+      payload: { rating, tip, feedback },
+    });
+
+    // Step 6: Update cleaner reliability (async, non-critical)
+    if (updatedJob.cleaner_id) {
+      // Don't await - let it run async to not block transaction
+      updateCleanerReliability(updatedJob.cleaner_id, "job_completed").catch((err) => {
+        logger.error("reliability_update_failed_after_approval", {
+          cleanerId: updatedJob.cleaner_id,
+          jobId,
+          error: (err as Error).message,
+        });
+      });
+    }
+
+    logger.info("job_approved", { jobId, clientId, rating, tip, cleanerId: updatedJob.cleaner_id });
   });
-
-  // Update cleaner reliability
-  if (job.cleaner_id) {
-    await updateCleanerReliability(job.cleaner_id, "job_completed");
-  }
-
-  logger.info("job_approved", { jobId, clientId, rating, tip });
 }
 
 /**

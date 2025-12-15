@@ -3,19 +3,19 @@
 //
 // Run every 15 minutes: node dist/workers/stuckJobDetection.js
 
-import { pool, query } from "../db/client";
-import { logger } from "../lib/logger";
+import { pool, query } from "../../db/client";
+import { logger } from "../../lib/logger";
 import {
   findStuckJobs,
   findStuckPayouts,
   findLedgerInconsistencies,
   findPayoutEarningMismatches,
   runSystemHealthCheck,
-} from "../services/adminRepairService";
-import { upsertReconciliationFlag } from "../services/reconciliationService";
-import { getOpenFraudAlerts } from "../services/creditEconomyService";
-import { publishEvent } from "../lib/events";
-import { sendAlert as sendAlertLib } from "../lib/alerting";
+} from "../../services/adminRepairService";
+import { upsertReconciliationFlag } from "../../services/reconciliationService";
+import { getOpenFraudAlerts, FraudAlert } from "../../services/creditEconomyService";
+import { publishEvent } from "../../lib/events";
+import { sendAlert as sendAlertLib } from "../../lib/alerting";
 
 // Thresholds for alerting
 const ALERT_THRESHOLDS = {
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
     // Check fraud alerts
     if (health.openFraudAlerts >= ALERT_THRESHOLDS.FRAUD_ALERTS) {
       const alerts = await getOpenFraudAlerts();
-      const criticalAlerts = alerts.filter((a) => a.severity === "critical");
+      const criticalAlerts = alerts.filter((a: FraudAlert) => a.severity === "critical");
 
       if (criticalAlerts.length > 0) {
         await sendAlert({
@@ -184,7 +184,7 @@ async function autoHandleStuckJobs(stuckJobs: Array<{ id: string; reason: string
       logger.info("auto_approving_stuck_job", { jobId: job.id, hoursStuck: job.hours_stuck });
 
       // Import dynamically to avoid circular deps
-      const { forceCompleteJob } = await import("../services/adminRepairService");
+      const { forceCompleteJob } = await import("../../services/adminRepairService");
       
       try {
         await forceCompleteJob(job.id, "system", "Auto-approved after 7+ days awaiting approval");

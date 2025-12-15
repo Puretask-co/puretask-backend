@@ -1,16 +1,17 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { isObjectAlreadyProcessed, markObjectProcessed } from "../../services/paymentService";
 import { query } from "../../db/client";
 
-jest.mock("../../db/client", () => {
+vi.mock("../../db/client", () => {
   const processed = new Set<string>();
   return {
-    query: jest.fn(async (sql: string, params: any[]) => {
+    query: vi.fn(async (sql: string, params: any[]) => {
       if (sql.includes("SELECT object_id")) {
         const key = `${params[0]}|${params[1]}`;
         return { rows: processed.has(key) ? [{ object_id: params[0] }] : [] };
       }
       if (sql.includes("INSERT INTO stripe_object_processed")) {
-        const key = `${params[0]}|${params[1]}`;
+        const key = `${params[0]}|${params[1]}`; // object_id, object_type
         processed.add(key);
         return { rows: [] };
       }

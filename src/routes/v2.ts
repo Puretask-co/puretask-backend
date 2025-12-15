@@ -1,5 +1,6 @@
 // src/routes/v2.ts
 // V2 API routes: Properties, Teams, Calendar, AI, Goals
+// V2 FEATURE — DISABLED FOR NOW
 
 import { Router, Response } from "express";
 import { z } from "zod";

@@ -1,6 +1,7 @@
 "use strict";
 // src/services/reliabilityService.ts
 // Cleaner reliability score calculation and management
+// V2 FEATURE — DISABLED FOR NOW
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeCleanerStats = computeCleanerStats;
 exports.getPhotoComplianceStats = getPhotoComplianceStats;
@@ -46,28 +47,66 @@ async function computeCleanerStats(cleanerId) {
 /**
  * Get photo compliance stats for a cleaner
  * Per Photo Proof policy: Photo compliance boosts reliability by +10 points
+ *
+ * Note: Calculates compliance from job_photos table directly
+ * (photo_compliance table/view may not exist in all environments)
  */
 async function getPhotoComplianceStats(cleanerId) {
-    const result = await (0, client_1.query)(`
-      SELECT 
-        COUNT(DISTINCT j.id)::text as total,
-        COUNT(DISTINCT pc.job_id)::text as compliant
-      FROM jobs j
-      LEFT JOIN photo_compliance pc ON pc.job_id = j.id AND pc.meets_minimum = true
-      WHERE j.cleaner_id = $1
-        AND j.status = 'completed'
-        AND j.created_at >= NOW() - INTERVAL '90 days'
-    `, [cleanerId]);
-    const total = Number(result.rows[0]?.total || 0);
-    const compliant = Number(result.rows[0]?.compliant || 0);
-    const complianceRate = total > 0 ? compliant / total : 0;
-    // Eligible for bonus if compliance rate >= 90%
-    return {
-        totalJobs: total,
-        compliantJobs: compliant,
-        complianceRate,
-        bonusEligible: complianceRate >= 0.9,
-    };
+    try {
+        // Try to use photo_compliance table/view if it exists
+        const result = await (0, client_1.query)(`
+        SELECT 
+          COUNT(DISTINCT j.id)::text as total,
+          COUNT(DISTINCT pc.job_id)::text as compliant
+        FROM jobs j
+        LEFT JOIN photo_compliance pc ON pc.job_id = j.id AND pc.meets_minimum = true
+        WHERE j.cleaner_id = $1
+          AND j.status = 'completed'
+          AND j.created_at >= NOW() - INTERVAL '90 days'
+      `, [cleanerId]);
+        const total = Number(result.rows[0]?.total || 0);
+        const compliant = Number(result.rows[0]?.compliant || 0);
+        const complianceRate = total > 0 ? compliant / total : 0;
+        // Eligible for bonus if compliance rate >= 90%
+        return {
+            totalJobs: total,
+            compliantJobs: compliant,
+            complianceRate,
+            bonusEligible: complianceRate >= 0.9,
+        };
+    }
+    catch (error) {
+        // If photo_compliance table doesn't exist, calculate from job_photos directly
+        if (error?.code === '42P01' || error?.message?.includes('photo_compliance')) {
+            logger_1.logger.warn("photo_compliance_table_missing", {
+                cleanerId,
+                message: "photo_compliance table not found, calculating from job_photos",
+            });
+            // Fallback: calculate compliance from job_photos table
+            // A job is compliant if it has at least one 'after' photo
+            const fallbackResult = await (0, client_1.query)(`
+          SELECT 
+            COUNT(DISTINCT j.id)::text as total,
+            COUNT(DISTINCT CASE WHEN jp.id IS NOT NULL THEN j.id END)::text as compliant
+          FROM jobs j
+          LEFT JOIN job_photos jp ON jp.job_id = j.id AND jp.type = 'after'
+          WHERE j.cleaner_id = $1
+            AND j.status = 'completed'
+            AND j.created_at >= NOW() - INTERVAL '90 days'
+        `, [cleanerId]);
+            const total = Number(fallbackResult.rows[0]?.total || 0);
+            const compliant = Number(fallbackResult.rows[0]?.compliant || 0);
+            const complianceRate = total > 0 ? compliant / total : 0;
+            return {
+                totalJobs: total,
+                compliantJobs: compliant,
+                complianceRate,
+                bonusEligible: complianceRate >= 0.9,
+            };
+        }
+        // Re-throw other errors
+        throw error;
+    }
 }
 /**
  * Compute reliability score from stats
@@ -162,7 +201,7 @@ async function updateCleanerReliability(cleanerId, reason = "job_completed") {
     // Check photo compliance for bonus (per Photo Proof policy: +10 points)
     const photoStats = await getPhotoComplianceStats(cleanerId);
     const photoBonus = photoStats.bonusEligible;
-    let newScore = computeReliabilityScoreFromStats(stats, photoBonus);
+    const newScore = computeReliabilityScoreFromStats(stats, photoBonus);
     let newTier = getTierFromScore(newScore);
     // Check tier lock - prevent demotion during lock period
     const tierLocked = await (0, creditEconomyService_1.isTierLocked)(cleanerId);

@@ -1,10 +1,12 @@
 "use strict";
 // src/workers/processPayouts.ts
 // Worker to process pending payouts via Stripe Connect
+// V1 HARDENING: Uses workerUtils for advisory locks and run tracking
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runPayoutsWorker = runPayoutsWorker;
 const client_1 = require("../db/client");
 const logger_1 = require("../lib/logger");
+const workerUtils_1 = require("../lib/workerUtils");
 const payoutsService_1 = require("../services/payoutsService");
 // Configuration
 const BATCH_SIZE = parseInt(process.env.PAYOUT_BATCH_SIZE || "50", 10);
@@ -113,24 +115,37 @@ async function processPendingPayouts() {
     return { processed, failed };
 }
 /**
- * Main worker function
+ * V1 HARDENING: Main worker function with advisory lock and idempotency
+ * Uses workerUtils.runWorkerWithLock for concurrency protection
  */
 async function runPayoutsWorker() {
-    logger_1.logger.info("payouts_worker_started", {
-        batchSize: BATCH_SIZE,
-        minPayoutUsd: MIN_PAYOUT_USD,
+    const WORKER_NAME = "payouts";
+    const LOCK_ID = 1001; // Unique lock ID for payout worker (manual override)
+    const result = await (0, workerUtils_1.runWorkerWithLock)(WORKER_NAME, LOCK_ID, async () => {
+        logger_1.logger.info("payouts_worker_executing", {
+            batchSize: BATCH_SIZE,
+            minPayoutUsd: MIN_PAYOUT_USD,
+        });
+        // Step 1: Create payouts for cleaners with pending earnings
+        const createResult = await createPayoutsForCleaners();
+        // Step 2: Process pending payouts
+        const processResult = await processPendingPayouts();
+        return {
+            processed: createResult.created + processResult.processed,
+            failed: createResult.failed + processResult.failed,
+            payoutsCreated: createResult.created,
+            payoutsProcessed: processResult.processed,
+        };
     });
-    // Step 1: Create payouts for cleaners with pending earnings
-    const createResult = await createPayoutsForCleaners();
-    // Step 2: Process pending payouts
-    const processResult = await processPendingPayouts();
-    const result = {
-        payoutsCreated: createResult.created,
-        payoutsProcessed: processResult.processed,
-        failed: createResult.failed + processResult.failed,
+    // If lock was held (null), return zero stats
+    if (!result) {
+        return { payoutsCreated: 0, payoutsProcessed: 0, failed: 0 };
+    }
+    return {
+        payoutsCreated: result.payoutsCreated || 0,
+        payoutsProcessed: result.payoutsProcessed || 0,
+        failed: result.failed || 0,
     };
-    logger_1.logger.info("payouts_worker_completed", result);
-    return result;
 }
 // Run if executed directly
 if (require.main === module) {
