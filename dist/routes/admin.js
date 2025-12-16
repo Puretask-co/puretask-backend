@@ -2,7 +2,7 @@
 // src/routes/admin.ts
 // Admin API routes matching 001_init.sql schema
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminRouter = void 0;
+exports.routeDisputeSchema = exports.adminRouter = void 0;
 const express_1 = require("express");
 const client_1 = require("../db/client");
 const auth_1 = require("../middleware/auth");
@@ -33,28 +33,26 @@ const requireAdmin = (req, res, next) => {
     }
     next();
 };
-// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
-// adminRouter.get("/kpis", requireAdmin, async (req: AuthedRequest, res: Response) => {
-//   try {
-//     const { dateFrom, dateTo } = req.query;
-//     const kpis = await getAdminKPIs(
-//       dateFrom as string | undefined,
-//       dateTo as string | undefined
-//     );
-//     res.json({ kpis });
-//   } catch (error) {
-//     logger.error("get_admin_kpis_failed", {
-//       error: (error as Error).message,
-//       adminId: req.user?.id,
-//     });
-//     res.status(500).json({
-//       error: {
-//         code: "GET_KPIS_FAILED",
-//         message: (error as Error).message,
-//       },
-//     });
-//   }
-// });
+// V1: Basic admin KPIs endpoint (simplified for V1)
+exports.adminRouter.get("/kpis", requireAdmin, async (req, res) => {
+    try {
+        const { dateFrom, dateTo } = req.query;
+        const kpis = await (0, adminService_1.getAdminKPIs)(dateFrom, dateTo);
+        res.json({ kpis });
+    }
+    catch (error) {
+        logger_1.logger.error("get_admin_kpis_failed", {
+            error: error.message,
+            adminId: req.user?.id,
+        });
+        res.status(500).json({
+            error: {
+                code: "GET_KPIS_FAILED",
+                message: error.message,
+            },
+        });
+    }
+});
 // V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
 // adminRouter.get("/kpis/history", requireAdmin, async (req: AuthedRequest, res: Response) => {
 //   try {
@@ -835,11 +833,11 @@ exports.adminRouter.post("/refunds/:jobId/approve", requireAdmin, (0, validation
  * Route a dispute to a queue or admin by updating metadata
  */
 const DISPUTE_ROUTE_QUEUES = ["ops", "finance", "trust_safety", "support"];
-const routeDisputeSchema = zod_1.z.object({
+exports.routeDisputeSchema = zod_1.z.object({
     routeTo: zod_1.z.enum(DISPUTE_ROUTE_QUEUES),
     note: zod_1.z.string().optional(),
 });
-exports.adminRouter.post("/disputes/:disputeId/route", requireAdmin, (0, validation_1.validateBody)(routeDisputeSchema), async (req, res) => {
+exports.adminRouter.post("/disputes/:disputeId/route", requireAdmin, (0, validation_1.validateBody)(exports.routeDisputeSchema), async (req, res) => {
     try {
         const { disputeId } = req.params;
         const { routeTo, note } = req.body;

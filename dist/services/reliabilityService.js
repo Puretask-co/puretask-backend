@@ -1,7 +1,7 @@
 "use strict";
 // src/services/reliabilityService.ts
 // Cleaner reliability score calculation and management
-// V2 FEATURE — DISABLED FOR NOW
+// V1 CORE FEATURE: Market safety mechanism - MUST BE ENABLED
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeCleanerStats = computeCleanerStats;
 exports.getPhotoComplianceStats = getPhotoComplianceStats;
@@ -322,8 +322,12 @@ async function getCleanerReliabilityInfo(cleanerId) {
         throw Object.assign(new Error("Cleaner profile not found"), { statusCode: 404 });
     }
     const stats = await computeCleanerStats(cleanerId);
+    // reliability_score may come back as string from DB, ensure it's a number
+    const score = typeof profileResult.rows[0].reliability_score === 'string'
+        ? parseFloat(profileResult.rows[0].reliability_score)
+        : profileResult.rows[0].reliability_score;
     return {
-        score: profileResult.rows[0].reliability_score,
+        score: score,
         tier: profileResult.rows[0].tier,
         stats,
     };

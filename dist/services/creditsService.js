@@ -258,6 +258,22 @@ async function escrowCreditsWithTransaction(options) {
         throw new Error("Credit amount must be positive");
     }
     return (0, client_1.withTransaction)(async (client) => {
+        // V1 HARDENING: Check for existing escrow entry (idempotency)
+        const existing = await client.query(`
+        SELECT * FROM credit_ledger
+        WHERE user_id = $1 AND job_id = $2 AND reason = 'job_escrow'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `, [clientId, jobId]);
+        if (existing.rows[0]) {
+            logger_1.logger.info("credit_ledger_entry_duplicate_prevented", {
+                userId: clientId,
+                jobId,
+                reason: "job_escrow",
+                existingEntryId: existing.rows[0].id,
+            });
+            return existing.rows[0];
+        }
         // Lock rows first, then calculate balance
         // We can't use FOR UPDATE with aggregate functions, so we lock rows in a CTE
         const balanceResult = await client.query(`
@@ -272,6 +288,8 @@ async function escrowCreditsWithTransaction(options) {
             throw Object.assign(new Error(`Insufficient credits. Required: ${creditAmount}, Available: ${balance}`), { statusCode: 400, code: "INSUFFICIENT_CREDITS" });
         }
         // Insert escrow entry (debit = remove credits)
+        // Note: Pre-check above handles idempotency. If a race condition occurs,
+        // the unique index will throw an error (better than silent duplicate).
         const result = await client.query(`
         INSERT INTO credit_ledger (user_id, job_id, amount, direction, reason)
         VALUES ($1, $2, $3, 'debit', 'job_escrow')

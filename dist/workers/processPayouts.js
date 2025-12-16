@@ -12,20 +12,20 @@ const payoutsService_1 = require("../services/payoutsService");
 const BATCH_SIZE = parseInt(process.env.PAYOUT_BATCH_SIZE || "50", 10);
 const MIN_PAYOUT_USD = parseFloat(process.env.MIN_PAYOUT_USD || "10.00");
 /**
- * Find cleaners with pending earnings above minimum threshold
+ * Find cleaners with pending payouts above minimum threshold
+ * V1: Uses payouts table directly (cleaner_earnings is not actively used in V1)
  */
-async function findCleanersWithPendingEarnings() {
+async function findCleanersWithPendingPayouts() {
     const result = await (0, client_1.query)(`
       SELECT 
         cleaner_id,
-        SUM(usd_due) as total_pending_usd,
+        SUM(amount_cents) / 100.0 as total_pending_usd,
         COUNT(*) as earnings_count
-      FROM cleaner_earnings
+      FROM payouts
       WHERE status = 'pending'
-        AND payout_id IS NULL
       GROUP BY cleaner_id
-      HAVING SUM(usd_due) >= $1
-      ORDER BY SUM(usd_due) DESC
+      HAVING SUM(amount_cents) / 100.0 >= $1
+      ORDER BY SUM(amount_cents) DESC
       LIMIT $2
     `, [MIN_PAYOUT_USD, BATCH_SIZE]);
     return result.rows;
@@ -38,8 +38,9 @@ async function findPendingPayouts() {
       SELECT p.*
       FROM payouts p
       JOIN users u ON p.cleaner_id = u.id
+      LEFT JOIN cleaner_profiles cp ON cp.user_id = p.cleaner_id
       WHERE p.status = 'pending'
-        AND u.stripe_connect_id IS NOT NULL
+        AND cp.stripe_account_id IS NOT NULL
       ORDER BY p.created_at ASC
       LIMIT $1
     `, [BATCH_SIZE]);
@@ -47,43 +48,19 @@ async function findPendingPayouts() {
 }
 /**
  * Create payouts for cleaners with pending earnings
+ * V1: This function is not needed since payouts are created directly when jobs complete
+ * via recordEarningsForCompletedJob. This is kept for compatibility but returns 0.
  */
 async function createPayoutsForCleaners() {
-    const cleaners = await findCleanersWithPendingEarnings();
+    // V1: Payouts are already created when jobs complete via recordEarningsForCompletedJob
+    // This function is a no-op in V1
+    logger_1.logger.debug("create_payouts_skipped_v1", {
+        message: "Payouts are created automatically when jobs complete. No batch creation needed.",
+    });
+    return { created: 0, failed: 0 };
     let created = 0;
     let failed = 0;
-    for (const cleaner of cleaners) {
-        try {
-            // Check if cleaner already has a pending payout
-            const existingPayout = await (0, client_1.query)(`
-          SELECT id FROM payouts
-          WHERE cleaner_id = $1 AND status = 'pending'
-          LIMIT 1
-        `, [cleaner.cleaner_id]);
-            if (existingPayout.rows.length > 0) {
-                logger_1.logger.debug("cleaner_already_has_pending_payout", {
-                    cleanerId: cleaner.cleaner_id,
-                });
-                continue;
-            }
-            // TODO: Implement createPayoutForCleaner or use processPendingPayoutsService
-            // For now, use processPendingPayoutsService which handles creating payouts
-            await (0, payoutsService_1.processPendingPayouts)();
-            created++;
-            logger_1.logger.info("payout_created_for_cleaner", {
-                cleanerId: cleaner.cleaner_id,
-                totalUsd: cleaner.total_pending_usd,
-                earningsCount: cleaner.earnings_count,
-            });
-        }
-        catch (error) {
-            failed++;
-            logger_1.logger.error("create_payout_for_cleaner_failed", {
-                cleanerId: cleaner.cleaner_id,
-                error: error.message,
-            });
-        }
-    }
+    // V1: No-op - payouts are created automatically
     return { created, failed };
 }
 /**

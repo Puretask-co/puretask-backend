@@ -39,7 +39,10 @@
     "migrate:run": "node scripts/run-migration.js",
     "migrate:fix-payouts-fk": "node scripts/run-migration.js DB/migrations/000_fix_payouts_fk.sql",
     "migrate:verify": "node scripts/verify-migration.js",
-    "db:seed": "ts-node src/db/seed.ts"
+    "db:seed": "ts-node src/db/seed.ts",
+    "deploy:staging": "bash scripts/deploy-staging.sh",
+    "deploy:production": "bash scripts/deploy-production.sh",
+    "setup:staging": "bash scripts/setup-staging.sh"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.0",
