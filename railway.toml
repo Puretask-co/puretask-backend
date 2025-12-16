@@ -1,0 +1,17 @@
+# Railway Configuration for PureTask Backend
+# https://docs.railway.app/reference/railway-toml
+
+[build]
+builder = "nixpacks"
+buildCommand = "npm ci && npm run build"
+
+[deploy]
+startCommand = "node dist/index.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+# Environment variables are set in Railway dashboard
+# See docs/RAILWAY_SETUP.md for required variables
+

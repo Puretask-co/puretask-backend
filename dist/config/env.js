@@ -106,6 +106,13 @@ function validateEnvironment() {
     if (!exports.env.DATABASE_URL.includes("postgres://") && !exports.env.DATABASE_URL.includes("postgresql://")) {
         errors.push("DATABASE_URL must be a valid PostgreSQL connection string");
     }
+    // Check for SSL mode (required for Neon and most cloud databases)
+    if (!exports.env.DATABASE_URL.includes("sslmode=")) {
+        warnings.push("⚠️  WARNING: DATABASE_URL missing sslmode parameter. Neon and most cloud databases require SSL. Add ?sslmode=require to your connection string.");
+    }
+    else if (!exports.env.DATABASE_URL.includes("sslmode=require") && !exports.env.DATABASE_URL.includes("sslmode=prefer")) {
+        warnings.push("⚠️  WARNING: DATABASE_URL sslmode is not 'require' or 'prefer'. For production, use ?sslmode=require");
+    }
     // Check JWT secret strength in production
     if (exports.env.NODE_ENV === "production" && exports.env.JWT_SECRET.length < 32) {
         warnings.push("⚠️  WARNING: JWT_SECRET should be at least 32 characters in production");
