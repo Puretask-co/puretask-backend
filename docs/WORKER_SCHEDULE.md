@@ -1,10 +1,12 @@
-# ⏰ Worker Schedule - V1 Production
+# ⏰ Worker Schedule - V1/V2/V3 Production
 
 Recommended cron schedule for all background workers in production.
 
 ---
 
-## 🔄 Active Workers (V1)
+## 🔄 Active Workers
+
+### V1 Core Workers
 
 ### 1. **Reliability Recalculation** (`reliabilityRecalc`)
 **Purpose**: Recalculate all cleaner reliability scores nightly  
@@ -16,8 +18,6 @@ Recommended cron schedule for all background workers in production.
 # Daily at 3 AM UTC
 0 3 * * * cd /app && npm run worker:reliability-recalc
 ```
-
-**Why 3 AM**: Low traffic time, ensures scores are fresh for next day
 
 ---
 
@@ -31,8 +31,6 @@ Recommended cron schedule for all background workers in production.
 # Daily at 4 AM UTC
 0 4 * * * cd /app && npm run worker:credit-economy
 ```
-
-**Why 4 AM**: Runs after reliability recalc to apply decay based on updated scores
 
 ---
 
@@ -62,20 +60,7 @@ Recommended cron schedule for all background workers in production.
 
 ---
 
-### 5. **Process Payouts** (`processPayouts`)
-**Purpose**: Process individual payouts to Stripe  
-**Frequency**: Every hour  
-**Recommended Time**: Continuous  
-**Command**: `npm run worker:payouts` or `node dist/workers/processPayouts.js`
-
-```cron
-# Every hour
-0 * * * * cd /app && npm run worker:payouts
-```
-
----
-
-### 6. **Weekly Payouts** (`payoutWeekly`)
+### 5. **Weekly Payouts** (`payoutWeekly`)
 **Purpose**: Create weekly payout batches  
 **Frequency**: Weekly (Monday mornings)  
 **Recommended Time**: Monday 6:00 AM UTC  
@@ -88,11 +73,11 @@ Recommended cron schedule for all background workers in production.
 
 ---
 
-### 7. **KPI Snapshot** (`kpiSnapshot`)
+### 6. **KPI Snapshot** (`kpiSnapshot`)
 **Purpose**: Daily KPI snapshot for business metrics  
 **Frequency**: Daily  
 **Recommended Time**: 1:00 AM UTC (after day ends)  
-**Command**: `npm run worker:kpi-daily` or `node dist/workers/kpiSnapshot.js`
+**Command**: `npm run worker:kpi-daily` or `node dist/workers/kpiDailySnapshot.js`
 
 ```cron
 # Daily at 1 AM UTC
@@ -101,20 +86,7 @@ Recommended cron schedule for all background workers in production.
 
 ---
 
-### 8. **Retry Failed Events** (`retryFailedEvents`)
-**Purpose**: Retry failed Stripe webhook events  
-**Frequency**: Every 30 minutes  
-**Recommended Time**: Continuous  
-**Command**: `npm run worker:webhook-retry` or `node dist/workers/retryFailedEvents.js`
-
-```cron
-# Every 30 minutes
-*/30 * * * * cd /app && npm run worker:webhook-retry
-```
-
----
-
-### 9. **Retry Failed Notifications** (`retryFailedNotifications`)
+### 7. **Retry Failed Notifications** (`retryFailedNotifications`)
 **Purpose**: Retry failed email/SMS/push notifications  
 **Frequency**: Every 15 minutes  
 **Recommended Time**: Continuous  
@@ -127,20 +99,7 @@ Recommended cron schedule for all background workers in production.
 
 ---
 
-### 10. **Photo Retention Cleanup** (`photoRetentionCleanup`)
-**Purpose**: Delete photos older than 90 days (per Photo Proof policy)  
-**Frequency**: Daily  
-**Recommended Time**: 2:00 AM UTC  
-**Command**: `npm run worker:photo-cleanup` or `node dist/workers/photoRetentionCleanup.js`
-
-```cron
-# Daily at 2 AM UTC
-0 2 * * * cd /app && npm run worker:photo-cleanup
-```
-
----
-
-### 11. **Daily Backup** (`backupDaily`)
+### 8. **Daily Backup** (`backupDaily`)
 **Purpose**: Daily database backup  
 **Frequency**: Daily  
 **Recommended Time**: 12:00 AM UTC  
@@ -153,26 +112,83 @@ Recommended cron schedule for all background workers in production.
 
 ---
 
+## 🔄 V2 Workers
+
+### 9. **Cleaning Scores** (`cleaningScores`)
+**Purpose**: Recalculate cleaning scores for properties  
+**Frequency**: Daily  
+**Recommended Time**: 2:00 AM UTC  
+**Command**: `npm run worker:cleaning-scores` or `node dist/workers/cleaningScores.js`
+
+```cron
+# Daily at 2 AM UTC
+0 2 * * * cd /app && npm run worker:cleaning-scores
+```
+
+---
+
+### 10. **Goal Checker** (`goalChecker`)
+**Purpose**: Check and award cleaner goals  
+**Frequency**: Daily  
+**Recommended Time**: 3:30 AM UTC  
+**Command**: `npm run worker:goal-checker` or `node dist/workers/goalChecker.js`
+
+```cron
+# Daily at 3:30 AM UTC
+30 3 * * * cd /app && npm run worker:goal-checker
+```
+
+---
+
+### 11. **Stuck Job Detection** (`stuckJobDetection`)
+**Purpose**: Detect and alert on stuck jobs, payouts, and system issues  
+**Frequency**: Every 30 minutes  
+**Recommended Time**: Continuous  
+**Command**: `npm run worker:stuck-detection` or `node dist/workers/stuckJobDetection.js`
+
+```cron
+# Every 30 minutes
+*/30 * * * * cd /app && npm run worker:stuck-detection
+```
+
+---
+
+## 🔄 V3 Workers
+
+### 12. **Subscription Jobs** (`subscriptionJobs`)
+**Purpose**: Generate jobs from active subscriptions  
+**Frequency**: Daily  
+**Recommended Time**: 2:00 AM UTC  
+**Command**: `npm run worker:subscription-jobs` or `node dist/workers/subscriptionJobs.js`
+
+```cron
+# Daily at 2 AM UTC
+0 2 * * * cd /app && npm run worker:subscription-jobs
+```
+
+**Note**: This worker should run before the matching/assignment process to ensure subscription jobs are created in time.
+
+---
+
 ## 📋 Complete Cron Schedule
 
 ```cron
-# V1 Production Worker Schedule
-
-# Hourly
-0 * * * * cd /app && npm run worker:payouts
+# V1/V2/V3 Production Worker Schedule
 
 # Every 15 minutes
 */15 * * * * cd /app && npm run worker:auto-cancel
 */15 * * * * cd /app && npm run worker:retry-notifications
 
 # Every 30 minutes
-*/30 * * * * cd /app && npm run worker:webhook-retry
+*/30 * * * * cd /app && npm run worker:stuck-detection
 
 # Daily (UTC)
 0 0 * * * cd /app && npm run worker:backup-daily
 0 1 * * * cd /app && npm run worker:kpi-daily
-0 2 * * * cd /app && npm run worker:photo-cleanup
+0 2 * * * cd /app && npm run worker:cleaning-scores
+0 2 * * * cd /app && npm run worker:subscription-jobs
 0 3 * * * cd /app && npm run worker:reliability-recalc
+30 3 * * * cd /app && npm run worker:goal-checker
 0 4 * * * cd /app && npm run worker:credit-economy
 0 5 * * * cd /app && npm run worker:auto-expire
 
@@ -203,17 +219,18 @@ Use Railway's built-in cron job feature to schedule individual workers.
 - ✅ `reliabilityRecalc` - Market safety
 - ✅ `creditEconomyMaintenance` - Market safety
 - ✅ `autoCancelJobs` - User experience
-- ✅ `processPayouts` - Financial operations
 - ✅ `payoutWeekly` - Financial operations
+- ✅ `subscriptionJobs` - V3 Feature (subscription fulfillment)
 
 **Important**:
 - ✅ `autoExpireAwaitingApproval` - User experience
-- ✅ `retryFailedEvents` - Payment processing
 - ✅ `retryFailedNotifications` - User communication
+- ✅ `stuckJobDetection` - System health
+- ✅ `cleaningScores` - V2 Feature (property scoring)
+- ✅ `goalChecker` - V2 Feature (cleaner goals)
 
 **Maintenance**:
 - ✅ `kpiSnapshot` - Business metrics
-- ✅ `photoRetentionCleanup` - Storage management
 - ✅ `backupDaily` - Data safety
 
 ---
@@ -240,8 +257,9 @@ Monitor worker execution via:
 3. **Error Handling**: Workers log errors and continue (non-fatal)
 4. **Resource Usage**: Spread workers across different times to avoid resource spikes
 5. **Testing**: Test workers in staging before production deployment
+6. **V3 Subscription Jobs**: Must run daily before jobs are matched/assigned to ensure subscription jobs are created
 
 ---
 
-**Last Updated**: 2025-12-14  
-**Status**: Ready for production deployment
+**Last Updated**: 2025-01-15  
+**Status**: Ready for V1/V2/V3 production deployment

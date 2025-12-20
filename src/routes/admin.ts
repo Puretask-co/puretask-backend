@@ -48,6 +48,13 @@ import {
   resolvePayoutReconciliationFlag,
 } from "../services/reconciliationService";
 import { sendAlert, alertTemplates } from "../lib/alerting";
+import {
+  getUserRiskProfile,
+  getRiskReviewQueue,
+  calculateRiskScore,
+  calculateRiskFlags,
+  RiskFlagType,
+} from "../services/riskService";
 import { getOpenFraudAlerts, resolveFraudAlert } from "../services/creditEconomyService";
 import { processStripeRefund } from "../services/refundProcessor";
 import { processChargeDispute } from "../services/chargebackProcessor";
@@ -1491,5 +1498,58 @@ adminRouter.patch(
     }
   }
 );
+
+// ============================================
+// V4 FEATURE: Risk Review
+// ============================================
+
+/**
+ * GET /admin/risk/review
+ * Get list of users with active risk flags for review
+ */
+adminRouter.get("/risk/review", requireAdmin, async (_req: AuthedRequest, res: Response) => {
+  try {
+    // For MVP, return empty queue
+    // In production, this would query risk_flags table for active flags
+    const queue = await getRiskReviewQueue();
+    
+    res.json({
+      queue,
+      count: queue.length,
+      message: "Risk review queue. Query specific users for risk profiles.",
+    });
+  } catch (error) {
+    logger.error("get_risk_review_queue_failed", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "GET_RISK_QUEUE_FAILED", message: (error as Error).message },
+    });
+  }
+});
+
+/**
+ * GET /admin/risk/:userId
+ * Get risk profile for a specific user
+ */
+adminRouter.get("/risk/:userId", requireAdmin, async (req: AuthedRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const role = (req.query.role as "client" | "cleaner") || "client";
+
+    const profile = await getUserRiskProfile(userId, role);
+    
+    res.json({
+      profile,
+      message: "User risk profile",
+    });
+  } catch (error) {
+    logger.error("get_user_risk_profile_failed", {
+      userId: req.params.userId,
+      error: (error as Error).message,
+    });
+    res.status(500).json({
+      error: { code: "GET_RISK_PROFILE_FAILED", message: (error as Error).message },
+    });
+  }
+});
 
 export default adminRouter;

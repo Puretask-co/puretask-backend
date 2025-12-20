@@ -16,6 +16,7 @@ import {
   getCleanerProfile,
 } from "../services/cleanerOnboardingService";
 import { getCleanerPayouts } from "../services/payoutsService";
+import { getCleanerEarnings } from "../services/earningsService";
 import {
   getTimeOff,
   addTimeOff,
@@ -484,6 +485,30 @@ cleanerRouter.get("/reliability", requireRole("cleaner"), async (req: JWTAuthedR
     logger.error("get_reliability_failed", { error: (error as Error).message });
     res.status(500).json({
       error: { code: "GET_RELIABILITY_FAILED", message: "Failed to get reliability" },
+    });
+  }
+});
+
+// ============================================
+// Earnings Dashboard (V3 FEATURE)
+// ============================================
+
+/**
+ * GET /cleaner/earnings
+ * V3 FEATURE: Get cleaner earnings dashboard - simple, user-friendly view
+ * Shows pending earnings, paid out, and next payout date
+ */
+cleanerRouter.get("/earnings", requireRole("cleaner"), async (req: JWTAuthedRequest, res: Response) => {
+  try {
+    const earnings = await getCleanerEarnings(req.user!.id);
+    res.json({ earnings });
+  } catch (error) {
+    logger.error("get_cleaner_earnings_failed", {
+      error: (error as Error).message,
+      userId: req.user?.id,
+    });
+    res.status(500).json({
+      error: { code: "GET_EARNINGS_FAILED", message: "Failed to get earnings" },
     });
   }
 });
