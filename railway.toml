@@ -8,9 +8,14 @@ buildCommand = "npm ci && npm run build"
 [deploy]
 startCommand = "node dist/index.js"
 healthcheckPath = "/health"
-healthcheckTimeout = 300
+healthcheckTimeout = 10
+healthcheckInterval = 30
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
+
+# Railway automatically sets PORT, but we can be explicit
+[variables]
+PORT = "${{PORT}}"
 
 # Environment variables are set in Railway dashboard
 # See docs/RAILWAY_SETUP.md for required variables

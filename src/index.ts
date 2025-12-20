@@ -25,21 +25,22 @@ import eventsRouter from "./routes/events";
 import paymentsRouter from "./routes/payments";
 import creditsRouter from "./routes/credits";
 import messagesRouter from "./routes/messages";
-// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
-// import analyticsRouter from "./routes/analytics";
+// V4 FEATURE — ENABLED (analytics dashboards)
+import analyticsRouter from "./routes/analytics";
 import cleanerRouter from "./routes/cleaner";
 import trackingRouter from "./routes/tracking";
-// V2 FEATURE — DISABLED FOR NOW (goals/boosts/subscriptions)
-// import premiumRouter from "./routes/premium";
-// V2 FEATURE — DISABLED FOR NOW (manager/advanced dashboards)
-// import managerRouter from "./routes/manager";
-// V2 FEATURE — DISABLED FOR NOW (next-gen APIs)
-// import v2Router from "./routes/v2";
+// V3 FEATURE — ENABLED (subscriptions)
+import premiumRouter from "./routes/premium";
+// V4 FEATURE — ENABLED (manager dashboard)
+import managerRouter from "./routes/manager";
+// V2 FEATURE — ENABLED
+import v2Router from "./routes/v2";
 import assignmentRouter from "./routes/assignment";
 import alertsRouter from "./routes/alerts";
 import cleanerPortalRouter from "./routes/cleanerPortal";
 import clientInvoicesRouter from "./routes/clientInvoices";
 import statusRouter from "./routes/status";
+import pricingRouter from "./routes/pricing";
 
 // Create Express app
 const app = express();
@@ -151,18 +152,19 @@ app.use("/stripe", stripeRouter);
 app.use("/payments", paymentsRouter);
 app.use("/credits", creditsRouter);
 app.use("/messages", messagesRouter);
-// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
-// app.use("/analytics", analyticsRouter);
+// V4 FEATURE — ENABLED (analytics dashboards)
+app.use("/analytics", analyticsRouter);
 app.use("/cleaner", cleanerRouter);
 app.use("/cleaner", cleanerPortalRouter); // Cleaner portal: my clients + invoicing
 app.use("/client", clientInvoicesRouter); // Client invoice management
 app.use("/tracking", trackingRouter);   // Job live tracking
-// V2 FEATURE — DISABLED FOR NOW (goals/boosts/subscriptions)
-// app.use("/premium", premiumRouter);     // Boosts, subscriptions, referrals
-// V2 FEATURE — DISABLED FOR NOW (manager/advanced dashboards)
-// app.use("/manager", managerRouter);     // Manager dashboard
-// V2 FEATURE — DISABLED FOR NOW (next-gen APIs)
-// app.use("/v2", v2Router);               // V2 features: properties, teams, calendar, AI
+// V3 FEATURE — ENABLED (subscriptions)
+app.use("/premium", premiumRouter);     // Boosts, subscriptions, referrals
+// V4 FEATURE — ENABLED (manager dashboard)
+app.use("/manager", managerRouter);     // Manager dashboard
+// V2 FEATURE — ENABLED
+app.use("/v2", v2Router);               // V2 features: properties, teams, calendar, AI
+app.use("/pricing", pricingRouter);     // V3 feature: tier-aware pricing
 app.use("/alerts", alertsRouter);
 app.use(eventsRouter); // Mounts /events and /n8n/events
 

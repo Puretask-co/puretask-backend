@@ -90,6 +90,16 @@ export const env = {
   ALERT_SLACK_WEBHOOK_URL: process.env.ALERT_SLACK_WEBHOOK_URL || "",
   ALERT_EMAIL_TO: process.env.ALERT_EMAIL_TO || "",
   ALERT_EMAIL_FROM: process.env.ALERT_EMAIL_FROM || "alerts@puretask.com",
+
+  // V2 Features - Optional
+  // Google Calendar Integration
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
+  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || "",
+
+  // AI Features
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+  OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",
 };
 
 // V1 HARDENING: Boot-time validation
