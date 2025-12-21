@@ -8,9 +8,9 @@
 // Cron example: 0 1 * * * node /app/dist/workers/kpiDailySnapshot.js
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runKpiDailySnapshot = main;
-const client_1 = require("../db/client");
-const logger_1 = require("../lib/logger");
-const kpiService_1 = require("../services/kpiService");
+const client_1 = require("../../db/client");
+const logger_1 = require("../../lib/logger");
+const kpiService_1 = require("../../services/kpiService");
 /**
  * Main worker function
  */

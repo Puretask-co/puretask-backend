@@ -1,5 +1,6 @@
 // src/services/notifications/notificationService.ts
 // Main notification service - dispatches to providers
+// Supports both event-based (n8n) and direct provider calls
 
 import { env } from "../../config/env";
 import { query } from "../../db/client";
@@ -17,6 +18,7 @@ import {
   getPushTitle,
   getPushBody,
 } from "./templates";
+import { sendNotificationViaEvent } from "./eventBasedNotificationService";
 
 // ============================================
 // Main Notification Dispatcher
@@ -24,11 +26,28 @@ import {
 
 /**
  * Send a notification via the specified channel
+ * - Uses event-based (n8n) if configured, otherwise falls back to direct provider calls
  * - Does not throw if channel is not configured; logs and returns
  * - Records failures to notification_failures table for retry
  */
 export async function sendNotification(input: NotificationPayload): Promise<NotificationResult> {
   try {
+    // Use event-based notifications if n8n is configured and feature flag is enabled
+    // Push notifications always use direct calls (OneSignal)
+    const shouldUseEventBased = 
+      env.N8N_WEBHOOK_URL && 
+      env.USE_EVENT_BASED_NOTIFICATIONS && 
+      (input.channel === "email" || input.channel === "sms");
+
+    if (shouldUseEventBased) {
+      logger.debug("using_event_based_notification", {
+        channel: input.channel,
+        type: input.type,
+      });
+      return await sendNotificationViaEvent(input);
+    }
+
+    // Fallback to direct provider calls (legacy or push notifications)
     let result: NotificationResult;
 
     switch (input.channel) {

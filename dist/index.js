@@ -23,21 +23,22 @@ const events_1 = __importDefault(require("./routes/events"));
 const payments_1 = __importDefault(require("./routes/payments"));
 const credits_1 = __importDefault(require("./routes/credits"));
 const messages_1 = __importDefault(require("./routes/messages"));
-// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
-// import analyticsRouter from "./routes/analytics";
+// V4 FEATURE — ENABLED (analytics dashboards)
+const analytics_1 = __importDefault(require("./routes/analytics"));
 const cleaner_1 = __importDefault(require("./routes/cleaner"));
 const tracking_1 = __importDefault(require("./routes/tracking"));
-// V2 FEATURE — DISABLED FOR NOW (goals/boosts/subscriptions)
-// import premiumRouter from "./routes/premium";
-// V2 FEATURE — DISABLED FOR NOW (manager/advanced dashboards)
-// import managerRouter from "./routes/manager";
-// V2 FEATURE — DISABLED FOR NOW (next-gen APIs)
-// import v2Router from "./routes/v2";
+// V3 FEATURE — ENABLED (subscriptions)
+const premium_1 = __importDefault(require("./routes/premium"));
+// V4 FEATURE — ENABLED (manager dashboard)
+const manager_1 = __importDefault(require("./routes/manager"));
+// V2 FEATURE — ENABLED
+const v2_1 = __importDefault(require("./routes/v2"));
 const assignment_1 = __importDefault(require("./routes/assignment"));
 const alerts_1 = __importDefault(require("./routes/alerts"));
 const cleanerPortal_1 = __importDefault(require("./routes/cleanerPortal"));
 const clientInvoices_1 = __importDefault(require("./routes/clientInvoices"));
 const status_1 = __importDefault(require("./routes/status"));
+const pricing_1 = __importDefault(require("./routes/pricing"));
 // Create Express app
 const app = (0, express_1.default)();
 // ============================================
@@ -132,18 +133,19 @@ app.use("/stripe", stripe_1.default);
 app.use("/payments", payments_1.default);
 app.use("/credits", credits_1.default);
 app.use("/messages", messages_1.default);
-// V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
-// app.use("/analytics", analyticsRouter);
+// V4 FEATURE — ENABLED (analytics dashboards)
+app.use("/analytics", analytics_1.default);
 app.use("/cleaner", cleaner_1.default);
 app.use("/cleaner", cleanerPortal_1.default); // Cleaner portal: my clients + invoicing
 app.use("/client", clientInvoices_1.default); // Client invoice management
 app.use("/tracking", tracking_1.default); // Job live tracking
-// V2 FEATURE — DISABLED FOR NOW (goals/boosts/subscriptions)
-// app.use("/premium", premiumRouter);     // Boosts, subscriptions, referrals
-// V2 FEATURE — DISABLED FOR NOW (manager/advanced dashboards)
-// app.use("/manager", managerRouter);     // Manager dashboard
-// V2 FEATURE — DISABLED FOR NOW (next-gen APIs)
-// app.use("/v2", v2Router);               // V2 features: properties, teams, calendar, AI
+// V3 FEATURE — ENABLED (subscriptions)
+app.use("/premium", premium_1.default); // Boosts, subscriptions, referrals
+// V4 FEATURE — ENABLED (manager dashboard)
+app.use("/manager", manager_1.default); // Manager dashboard
+// V2 FEATURE — ENABLED
+app.use("/v2", v2_1.default); // V2 features: properties, teams, calendar, AI
+app.use("/pricing", pricing_1.default); // V3 feature: tier-aware pricing
 app.use("/alerts", alerts_1.default);
 app.use(events_1.default); // Mounts /events and /n8n/events
 // ============================================

@@ -1,0 +1,292 @@
+"use strict";
+// src/services/riskService.ts
+// Risk scoring and flagging service for V4
+// NOTE: No auto-bans - all actions require manual admin review
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.calculateRiskScore = calculateRiskScore;
+exports.calculateRiskFlags = calculateRiskFlags;
+exports.getUserRiskProfile = getUserRiskProfile;
+exports.getRiskReviewQueue = getRiskReviewQueue;
+const client_1 = require("../db/client");
+// ============================================
+// Risk Score Calculation
+// ============================================
+/**
+ * Calculate risk score for a user
+ * Factors: cancellation rate, payment failures, disputes, suspicious patterns
+ */
+async function calculateRiskScore(userId, userRole) {
+    const factors = [];
+    let totalScore = 0;
+    // 1. Cancellation rate (0-40 points)
+    const cancellationScore = await calculateCancellationRisk(userId, userRole);
+    totalScore += cancellationScore.score;
+    factors.push(cancellationScore.factor);
+    // 2. Payment failures (0-30 points)
+    const paymentScore = await calculatePaymentFailureRisk(userId);
+    totalScore += paymentScore.score;
+    factors.push(paymentScore.factor);
+    // 3. Disputes (0-30 points)
+    const disputeScore = await calculateDisputeRisk(userId, userRole);
+    totalScore += disputeScore.score;
+    factors.push(disputeScore.factor);
+    // Cap at 100
+    const finalScore = Math.min(100, totalScore);
+    return {
+        userId,
+        userRole,
+        score: finalScore,
+        factors,
+        calculatedAt: new Date(),
+    };
+}
+/**
+ * Calculate cancellation risk (0-40 points)
+ */
+async function calculateCancellationRisk(userId, userRole) {
+    const column = userRole === "client" ? "client_id" : "cleaner_id";
+    const result = await (0, client_1.query)(`
+    SELECT 
+      COUNT(*)::text as total,
+      COUNT(*) FILTER (WHERE status = 'cancelled')::text as cancelled
+    FROM jobs
+    WHERE ${column} = $1
+      AND created_at > NOW() - INTERVAL '90 days'
+    `, [userId]);
+    const total = Number(result.rows[0]?.total || 0);
+    const cancelled = Number(result.rows[0]?.cancelled || 0);
+    const cancellationRate = total > 0 ? cancelled / total : 0;
+    let score = 0;
+    let severity = "low";
+    if (cancellationRate > 0.5) {
+        // >50% cancellation rate
+        score = 40;
+        severity = "high";
+    }
+    else if (cancellationRate > 0.3) {
+        // 30-50% cancellation rate
+        score = 25;
+        severity = "medium";
+    }
+    else if (cancellationRate > 0.2) {
+        // 20-30% cancellation rate
+        score = 15;
+        severity = "low";
+    }
+    return {
+        score,
+        factor: {
+            type: "cancellation_rate",
+            severity,
+            description: `${(cancellationRate * 100).toFixed(0)}% cancellation rate (${cancelled}/${total} jobs)`,
+            count: cancelled,
+        },
+    };
+}
+/**
+ * Calculate payment failure risk (0-30 points)
+ */
+async function calculatePaymentFailureRisk(userId) {
+    // Check for failed payments in stripe_events or payment_intents
+    // For now, we'll use a simple query on credit_ledger to detect payment issues
+    // In production, you'd query Stripe events table
+    // Simplified: check for negative balances that weren't resolved
+    const result = await (0, client_1.query)(`
+    SELECT COUNT(*)::text as failures
+    FROM credit_ledger cl
+    WHERE cl.user_id = $1
+      AND cl.reason = 'payment_failed'
+      AND cl.created_at > NOW() - INTERVAL '90 days'
+    `, [userId]);
+    const failures = Number(result.rows[0]?.failures || 0);
+    let score = 0;
+    let severity = "low";
+    if (failures > 3) {
+        score = 30;
+        severity = "high";
+    }
+    else if (failures > 1) {
+        score = 15;
+        severity = "medium";
+    }
+    else if (failures === 1) {
+        score = 5;
+        severity = "low";
+    }
+    return {
+        score,
+        factor: {
+            type: "payment_failures",
+            severity,
+            description: `${failures} payment failure(s) in last 90 days`,
+            count: failures,
+        },
+    };
+}
+/**
+ * Calculate dispute risk (0-30 points)
+ */
+async function calculateDisputeRisk(userId, userRole) {
+    const column = userRole === "client" ? "client_id" : "cleaner_id";
+    // Get disputes where user is involved
+    const result = await (0, client_1.query)(`
+    SELECT COUNT(*)::text as disputes
+    FROM disputes d
+    JOIN jobs j ON j.id = d.job_id
+    WHERE j.${column} = $1
+      AND d.created_at > NOW() - INTERVAL '90 days'
+    `, [userId]);
+    const disputes = Number(result.rows[0]?.disputes || 0);
+    let score = 0;
+    let severity = "low";
+    if (disputes > 3) {
+        score = 30;
+        severity = "high";
+    }
+    else if (disputes > 1) {
+        score = 20;
+        severity = "medium";
+    }
+    else if (disputes === 1) {
+        score = 10;
+        severity = "low";
+    }
+    return {
+        score,
+        factor: {
+            type: "disputes",
+            severity,
+            description: `${disputes} dispute(s) in last 90 days`,
+            count: disputes,
+        },
+    };
+}
+// ============================================
+// Risk Flags
+// ============================================
+/**
+ * Calculate and generate risk flags based on risk score
+ * Flags are stored in memory/cache for now (can be persisted to DB later)
+ */
+async function calculateRiskFlags(userId, userRole) {
+    const riskScore = await calculateRiskScore(userId, userRole);
+    const flags = [];
+    // Check each factor and create flags
+    for (const factor of riskScore.factors) {
+        if (factor.severity === "high") {
+            let flagType;
+            if (factor.type === "cancellation_rate") {
+                flagType = "HIGH_CANCELLATION_RATE";
+            }
+            else if (factor.type === "payment_failures") {
+                flagType = "PAYMENT_FAILURES";
+            }
+            else if (factor.type === "disputes") {
+                flagType = "REPEATED_DISPUTES";
+            }
+            else {
+                continue;
+            }
+            flags.push({
+                id: `${userId}-${flagType}-${Date.now()}`,
+                userId,
+                flagType,
+                severity: factor.severity,
+                description: factor.description,
+                evidence: {
+                    factorType: factor.type,
+                    count: factor.count,
+                },
+                createdAt: new Date(),
+                expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+                status: "active",
+            });
+        }
+    }
+    // Check for suspicious booking patterns
+    const suspiciousPattern = await detectSuspiciousBookingPattern(userId, userRole);
+    if (suspiciousPattern) {
+        flags.push({
+            id: `${userId}-SUSPICIOUS_BOOKING_PATTERN-${Date.now()}`,
+            userId,
+            flagType: "SUSPICIOUS_BOOKING_PATTERN",
+            severity: suspiciousPattern.severity,
+            description: suspiciousPattern.description,
+            evidence: suspiciousPattern.evidence,
+            createdAt: new Date(),
+            expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+            status: "active",
+        });
+    }
+    return flags;
+}
+/**
+ * Detect suspicious booking patterns
+ */
+async function detectSuspiciousBookingPattern(userId, userRole) {
+    if (userRole !== "client") {
+        return null; // Only check clients for booking patterns
+    }
+    // Check for rapid job creation/cancellation pattern
+    const result = await (0, client_1.query)(`
+    SELECT 
+      COUNT(*)::text as created,
+      COUNT(*) FILTER (WHERE status = 'cancelled')::text as cancelled,
+      COUNT(*) FILTER (
+        WHERE status = 'cancelled' 
+        AND updated_at - created_at < INTERVAL '1 hour'
+      )::text as rapid_cancelled
+    FROM jobs
+    WHERE client_id = $1
+      AND created_at > NOW() - INTERVAL '7 days'
+    `, [userId]);
+    const created = Number(result.rows[0]?.created || 0);
+    const cancelled = Number(result.rows[0]?.cancelled || 0);
+    const rapidCancelled = Number(result.rows[0]?.rapid_cancelled || 0);
+    // Flag if: >5 jobs created and >50% cancelled rapidly
+    if (created > 5 && rapidCancelled > created * 0.5) {
+        return {
+            severity: "high",
+            description: `Suspicious pattern: ${rapidCancelled} jobs cancelled within 1 hour out of ${created} created`,
+            evidence: {
+                created,
+                cancelled,
+                rapidCancelled,
+                pattern: "rapid_cancellation",
+            },
+        };
+    }
+    return null;
+}
+// ============================================
+// Risk Profile
+// ============================================
+/**
+ * Get complete risk profile for a user
+ */
+async function getUserRiskProfile(userId, userRole) {
+    const riskScore = await calculateRiskScore(userId, userRole);
+    const flags = await calculateRiskFlags(userId, userRole);
+    return {
+        userId,
+        userRole,
+        riskScore: riskScore.score,
+        flags,
+        factors: riskScore.factors,
+        calculatedAt: riskScore.calculatedAt,
+    };
+}
+// ============================================
+// Risk Review Queue
+// ============================================
+/**
+ * Get list of users with active risk flags (for admin review)
+ */
+async function getRiskReviewQueue() {
+    // For now, this is a placeholder
+    // In production, you'd query a risk_flags table
+    // For MVP, we can calculate on-demand
+    // This would typically query active flags from database
+    // For now, return empty array - admins can query specific users
+    return [];
+}

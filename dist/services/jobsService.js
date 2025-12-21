@@ -396,6 +396,38 @@ async function applyStatusTransition(options) {
         updateFields.push(`cleaner_id = $${paramIndex}`);
         updateParams.push(requesterId);
         paramIndex++;
+        // V3 FEATURE: Calculate and store pricing snapshot when cleaner accepts job
+        try {
+            const cleanerTierResult = await (0, client_1.query)(`SELECT tier FROM cleaner_profiles WHERE user_id = $1`, [requesterId]);
+            // Get job estimated_hours from database (job type might not have it loaded)
+            const jobHoursResult = await (0, client_1.query)(`SELECT estimated_hours FROM jobs WHERE id = $1`, [jobId]);
+            const cleanerTier = cleanerTierResult.rows[0]?.tier || "bronze";
+            const estimatedHours = jobHoursResult.rows[0]?.estimated_hours || 2;
+            // Calculate tier-aware pricing
+            const { calculateJobPricing, createPricingSnapshot } = await Promise.resolve().then(() => __importStar(require("./pricingService")));
+            const pricingBreakdown = calculateJobPricing({
+                cleanerTier,
+                baseHours: estimatedHours,
+                cleaningType: "basic", // Default, can be enhanced later
+            });
+            const pricingSnapshot = createPricingSnapshot({
+                cleanerTier,
+                baseHours: estimatedHours,
+                cleaningType: "basic",
+            }, pricingBreakdown);
+            updateFields.push(`pricing_snapshot = $${paramIndex}::jsonb`);
+            updateParams.push(JSON.stringify(pricingSnapshot));
+            paramIndex++;
+        }
+        catch (error) {
+            // Log error but don't fail assignment if pricing calculation fails
+            logger_1.logger.warn("pricing_snapshot_failed_on_accept", {
+                jobId,
+                cleanerId: requesterId,
+                error: error.message,
+            });
+            // Continue without pricing snapshot
+        }
         // Apply penalty if reassignment late (if cleaner already assigned and being replaced)
         // Note: This assumes callers manage the reassignment. Here we just ensure any previous assignment is overwritten.
     }
