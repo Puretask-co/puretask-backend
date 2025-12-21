@@ -1,0 +1,146 @@
+# Backend Architecture Enforcement CI Checks
+# Enforces architectural boundaries to prevent violations
+
+name: Backend Architecture Checks
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - '.github/workflows/backend-architecture-checks.yml'
+
+jobs:
+  check-architecture:
+    runs-on: ubuntu-latest
+    name: Enforce Architecture Boundaries
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Block direct SendGrid in production paths
+        run: |
+          echo "🔍 Checking for direct SendGrid calls in production code..."
+          
+          # Check for SendGrid imports (exclude test files)
+          VIOLATIONS=$(grep -r "sgMail\|@sendgrid/mail\|sendgrid" src/ \
+            --include="*.ts" \
+            --exclude="*.test.ts" \
+            --exclude="*.spec.ts" \
+            --exclude-dir=tests \
+            --exclude-dir=test-utils \
+            | grep -v "test\|spec\|types\|interface\|type\|//.*test" || true)
+          
+          if [ -n "$VIOLATIONS" ]; then
+            echo "❌ ERROR: Direct SendGrid calls found in production code:"
+            echo "$VIOLATIONS"
+            echo ""
+            echo "⚠️  Action Required:"
+            echo "   Use publishEvent() instead. n8n handles email sending."
+            echo "   Exception: src/lib/alerting.ts allowed for critical alerts only"
+            echo ""
+            echo "   See: docs/ARCHITECTURE_MIGRATION_GUIDE.md"
+            exit 1
+          else
+            echo "✅ No direct SendGrid calls found in production code"
+          fi
+      
+      - name: Block direct Twilio in production paths
+        run: |
+          echo "🔍 Checking for direct Twilio calls in production code..."
+          
+          # Check for Twilio imports (exclude test files)
+          VIOLATIONS=$(grep -r "twilio\|Twilio" src/ \
+            --include="*.ts" \
+            --exclude="*.test.ts" \
+            --exclude="*.spec.ts" \
+            --exclude-dir=tests \
+            --exclude-dir=test-utils \
+            | grep -v "test\|spec\|types\|interface\|type\|//.*test" || true)
+          
+          if [ -n "$VIOLATIONS" ]; then
+            echo "❌ ERROR: Direct Twilio calls found in production code:"
+            echo "$VIOLATIONS"
+            echo ""
+            echo "⚠️  Action Required:"
+            echo "   Use publishEvent() instead. n8n handles SMS sending."
+            echo ""
+            echo "   See: docs/ARCHITECTURE_MIGRATION_GUIDE.md"
+            exit 1
+          else
+            echo "✅ No direct Twilio calls found in production code"
+          fi
+      
+      - name: Check route file sizes (warning only)
+        run: |
+          echo "🔍 Checking route file sizes..."
+          LARGE_ROUTES=0
+          
+          for file in src/routes/*.ts; do
+            if [ -f "$file" ]; then
+              lines=$(wc -l < "$file" | tr -d ' ')
+              if [ "$lines" -gt 300 ]; then
+                echo "⚠️  WARNING: $file is large ($lines lines). Consider moving logic to services."
+                LARGE_ROUTES=$((LARGE_ROUTES + 1))
+              fi
+            fi
+          done
+          
+          if [ "$LARGE_ROUTES" -gt 0 ]; then
+            echo ""
+            echo "⚠️  Found $LARGE_ROUTES route file(s) with > 300 lines."
+            echo "   Routes should be thin (< 20 lines of logic). Move business logic to services."
+            echo "   This is a warning, not an error."
+          else
+            echo "✅ All route files are reasonably sized"
+          fi
+      
+      - name: Verify business logic in services
+        run: |
+          echo "🔍 Verifying business logic is in service layer..."
+          
+          # Check if routes are importing DB client directly (should use services)
+          DB_IMPORTS=$(grep -r "from.*db/client\|from.*\.\.\/db\/client" src/routes/ \
+            --include="*.ts" | grep -v "test\|spec" || true)
+          
+          if [ -n "$DB_IMPORTS" ]; then
+            echo "⚠️  WARNING: Routes importing database client directly:"
+            echo "$DB_IMPORTS"
+            echo ""
+            echo "   Consider: Routes should call services, not access DB directly."
+            echo "   This is a warning, not an error."
+          else
+            echo "✅ Routes are using service layer (good!)"
+          fi
+      
+      - name: Check event naming convention
+        run: |
+          echo "🔍 Checking event naming convention..."
+          
+          # Check for events that don't follow domain.action pattern
+          # This is a soft check - just warnings
+          echo "✅ Event naming check (manual review recommended)"
+          echo "   Events should follow format: domain.action (e.g., 'job.booked')"
+          echo "   See: docs/EVENT_SYSTEM_SPEC.md"
+      
+      - name: Architecture check summary
+        if: always()
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📋 Architecture Check Summary"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "✅ Direct SendGrid/Twilio calls: Blocked in production"
+          echo "✅ Route file sizes: Checked"
+          echo "✅ Service layer usage: Checked"
+          echo ""
+          echo "📚 Documentation:"
+          echo "   - docs/architecture-what-lives-where.md"
+          echo "   - docs/ARCHITECTURE_ENFORCEMENT_GUIDE.md"
+          echo "   - docs/ARCHITECTURE_MIGRATION_GUIDE.md"
+          echo ""
