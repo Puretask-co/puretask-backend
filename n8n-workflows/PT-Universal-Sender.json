@@ -1,0 +1,343 @@
+{
+  "name": "PT-Universal-Sender",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "puretask-communications",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "puretask-communications"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate payload structure\nconst body = $input.item.json.body || $input.item.json;\nconst communication = body.communication;\n\nif (!communication) {\n  throw new Error('Missing communication object');\n}\n\nif (!communication.channel || !['email', 'sms'].includes(communication.channel)) {\n  throw new Error('Invalid or missing channel');\n}\n\nif (communication.channel === 'email' && !communication.to_email) {\n  throw new Error('Missing to_email for email channel');\n}\n\nif (communication.channel === 'sms' && !communication.to_phone) {\n  throw new Error('Missing to_phone for SMS channel');\n}\n\nreturn { json: body };"
+      },
+      "id": "validate-node",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.communication.channel }}",
+              "operation": "equal",
+              "value2": "email"
+            }
+          ]
+        }
+      },
+      "id": "route-channel",
+      "name": "Route by Channel",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.sendgrid.com/v3/mail/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SENDGRID_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "={\"email\": \"{{ $env.SENDGRID_FROM_EMAIL }}\", \"name\": \"PureTask\"}"
+            },
+            {
+              "name": "personalizations",
+              "value": "=[{\"to\": [{\"email\": \"{{ $json.communication.to_email }}\"}], \"dynamic_template_data\": {{ JSON.stringify($json.communication.dynamic_data) }}}]"
+            },
+            {
+              "name": "template_id",
+              "value": "={{ $json.communication.templateId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "sendgrid-node",
+      "name": "SendGrid Send Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check SendGrid response\nconst statusCode = $input.item.json.statusCode || $input.item.json.response?.statusCode;\n\nif (statusCode === 202) {\n  return {\n    json: {\n      success: true,\n      channel: 'email',\n      messageId: $input.item.json.headers?.['x-message-id'],\n      timestamp: new Date().toISOString(),\n      originalEvent: $('Webhook').item.json\n    }\n  };\n} else {\n  throw new Error(`SendGrid error: ${statusCode}`);\n}"
+      },
+      "id": "check-sendgrid",
+      "name": "Check SendGrid Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Construct SMS message\nconst data = $json.communication.dynamic_data;\nlet message = 'PureTask: ';\n\nif (data.message) {\n  message += data.message;\n} else if (data.jobAddress) {\n  message += `Update for ${data.jobAddress}`;\n} else {\n  message += 'You have a new update. Check the app for details.';\n}\n\nreturn {\n  json: {\n    to: $json.communication.to_phone,\n    body: message,\n    from: $env.TWILIO_FROM_NUMBER,\n    originalEvent: $('Webhook').item.json\n  }\n};"
+      },
+      "id": "construct-sms",
+      "name": "Construct SMS Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.twilio.com/2010-04-01/Accounts/{{ $env.TWILIO_ACCOUNT_SID }}/Messages.json",
+        "authentication": "basicAuth",
+        "sendBody": true,
+        "bodyContentType": "form-urlencoded",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "To",
+              "value": "={{ $json.to }}"
+            },
+            {
+              "name": "From",
+              "value": "={{ $json.from }}"
+            },
+            {
+              "name": "Body",
+              "value": "={{ $json.body }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "twilio-node",
+      "name": "Twilio Send SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check Twilio response\nconst response = $input.item.json;\n\nif (response.status === 'queued' || response.status === 'sent') {\n  return {\n    json: {\n      success: true,\n      channel: 'sms',\n      messageId: response.sid,\n      timestamp: new Date().toISOString(),\n      originalEvent: $('Webhook').item.json\n    }\n  };\n} else {\n  throw new Error(`Twilio error: ${response.status}`);\n}"
+      },
+      "id": "check-twilio",
+      "name": "Check Twilio Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-success",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"messageId\": $json.messageId, \"channel\": $json.channel } }}"
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": "={{ $env.SLACK_ALERT_CHANNEL || '#puretask-alerts' }}",
+        "text": "=🚨 *Email/SMS Send Failed*\n*Template:* {{ $json.communication.templateEnvVar }}\n*To:* {{ $json.communication.to_email || $json.communication.to_phone }}\n*Error:* {{ $json.error }}\n*Job ID:* {{ $json.communication.dynamic_data.jobId || 'N/A' }}",
+        "otherOptions": {}
+      },
+      "id": "slack-alert",
+      "name": "Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1650, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 500,
+        "responseBody": "={{ { \"success\": false, \"error\": $json.error } }}"
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1850, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Payload": {
+      "main": [
+        [
+          {
+            "node": "Route by Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Channel": {
+      "main": [
+        [
+          {
+            "node": "SendGrid Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Construct SMS Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SendGrid Send Email": {
+      "main": [
+        [
+          {
+            "node": "Check SendGrid Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check SendGrid Response": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construct SMS Message": {
+      "main": [
+        [
+          {
+            "node": "Twilio Send SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twilio Send SMS": {
+      "main": [
+        [
+          {
+            "node": "Check Twilio Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Twilio Response": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Alert": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-21T00:00:00.000Z",
+  "versionId": "1"
+}
+

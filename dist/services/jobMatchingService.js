@@ -1,6 +1,39 @@
 "use strict";
 // src/services/jobMatchingService.ts
 // Job matching algorithm - Auto-assign cleaners to jobs
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.findMatchingCleaners = findMatchingCleaners;
 exports.assignCleanerToJob = assignCleanerToJob;
@@ -13,6 +46,7 @@ exports.processUnassignedJobs = processUnassignedJobs;
 const client_1 = require("../db/client");
 const logger_1 = require("../lib/logger");
 const availabilityService_1 = require("./availabilityService");
+const premiumService_1 = require("./premiumService");
 // Default weights for scoring
 const DEFAULT_WEIGHTS = {
     reliability: 0.30, // 30% weight on reliability
@@ -103,7 +137,7 @@ async function findMatchingCleaners(job, options = {}) {
         const accepted = Number(responseRateResult.rows[0]?.accepted || 0);
         const responseRate = offered > 0 ? accepted / offered : 1;
         // Calculate match score
-        const { score, reasons } = calculateMatchScore({
+        const { score: baseScore, reasons } = calculateMatchScore({
             reliability: cleaner.reliability_score,
             tier: cleaner.tier,
             distance: distanceMiles,
@@ -113,6 +147,15 @@ async function findMatchingCleaners(job, options = {}) {
             responseRate,
             weights: finalWeights,
         });
+        // V4 FEATURE: Apply boost multiplier (capped at 1.5x to prevent unfairness)
+        const boostMultiplier = await (0, premiumService_1.getBoostMultiplier)(cleaner.user_id);
+        const cappedBoost = Math.min(boostMultiplier, 1.5); // Cap at 1.5x
+        const finalScore = Math.round(baseScore * cappedBoost);
+        // Add boost info to reasons if active
+        const finalReasons = [...reasons];
+        if (boostMultiplier > 1.0) {
+            finalReasons.push(`Boost: ${(cappedBoost * 100).toFixed(0)}% multiplier`);
+        }
         candidates.push({
             cleanerId: cleaner.user_id,
             email: cleaner.email,
@@ -120,8 +163,8 @@ async function findMatchingCleaners(job, options = {}) {
             reliabilityScore: cleaner.reliability_score,
             hourlyRateCredits: cleaner.hourly_rate_credits,
             distanceMiles,
-            score,
-            reasons,
+            score: finalScore,
+            reasons: finalReasons,
         });
     }
     // Sort by score descending
@@ -221,9 +264,49 @@ function toRad(deg) {
 }
 /**
  * Assign a cleaner to a job
+ * V3 FEATURE: Stores pricing snapshot when cleaner is assigned
  */
 async function assignCleanerToJob(jobId, cleanerId) {
-    await (0, client_1.query)(`UPDATE jobs SET cleaner_id = $2, status = 'accepted', updated_at = NOW() WHERE id = $1`, [jobId, cleanerId]);
+    // V3 FEATURE: Calculate and store pricing snapshot when cleaner is assigned
+    try {
+        // Get job details and cleaner tier for pricing calculation
+        const jobResult = await (0, client_1.query)(`SELECT estimated_hours, credit_amount FROM jobs WHERE id = $1`, [jobId]);
+        const cleanerResult = await (0, client_1.query)(`SELECT tier FROM cleaner_profiles WHERE user_id = $1`, [cleanerId]);
+        if (jobResult.rows[0] && cleanerResult.rows[0]) {
+            const job = jobResult.rows[0];
+            const cleanerTier = cleanerResult.rows[0].tier || "bronze";
+            const baseHours = job.estimated_hours || 2; // Default 2 hours if not set
+            // Calculate tier-aware pricing
+            const { calculateJobPricing, createPricingSnapshot } = await Promise.resolve().then(() => __importStar(require("../services/pricingService")));
+            const pricingBreakdown = calculateJobPricing({
+                cleanerTier,
+                baseHours,
+                cleaningType: "basic", // Default, can be enhanced later
+            });
+            const pricingSnapshot = createPricingSnapshot({
+                cleanerTier,
+                baseHours,
+                cleaningType: "basic",
+            }, pricingBreakdown);
+            // Update job with cleaner assignment and pricing snapshot
+            await (0, client_1.query)(`UPDATE jobs SET cleaner_id = $2, status = 'accepted', pricing_snapshot = $3::jsonb, updated_at = NOW() WHERE id = $1`, [jobId, cleanerId, JSON.stringify(pricingSnapshot)]);
+        }
+        else {
+            // Fallback: assign without pricing snapshot if data not available
+            await (0, client_1.query)(`UPDATE jobs SET cleaner_id = $2, status = 'accepted', updated_at = NOW() WHERE id = $1`, [jobId, cleanerId]);
+        }
+    }
+    catch (error) {
+        // Log error but don't fail assignment if pricing calculation fails
+        const { logger } = await Promise.resolve().then(() => __importStar(require("../lib/logger")));
+        logger.error("pricing_snapshot_failed", {
+            jobId,
+            cleanerId,
+            error: error.message,
+        });
+        // Proceed with assignment without pricing snapshot
+        await (0, client_1.query)(`UPDATE jobs SET cleaner_id = $2, status = 'accepted', updated_at = NOW() WHERE id = $1`, [jobId, cleanerId]);
+    }
     // Log the assignment event
     await (0, client_1.query)(`
       INSERT INTO job_events (job_id, actor_type, actor_id, event_type, payload)
@@ -279,8 +362,44 @@ async function reassignCleanerWithPenalty(options) {
     await (0, client_1.query)(`UPDATE job_offers SET status = 'expired' WHERE job_id = $1 AND status = 'pending'`, [
         jobId,
     ]);
-    // Assign new cleaner
-    await (0, client_1.query)(`UPDATE jobs SET cleaner_id = $2, status = 'accepted', updated_at = NOW() WHERE id = $1`, [jobId, newCleanerId]);
+    // V3 FEATURE: Calculate and store pricing snapshot when reassigning cleaner
+    let pricingSnapshot = null;
+    try {
+        const cleanerTierResult = await (0, client_1.query)(`SELECT tier FROM cleaner_profiles WHERE user_id = $1`, [newCleanerId]);
+        const jobDetailsResult = await (0, client_1.query)(`SELECT estimated_hours FROM jobs WHERE id = $1`, [jobId]);
+        if (cleanerTierResult.rows[0] && jobDetailsResult.rows[0]) {
+            const cleanerTier = cleanerTierResult.rows[0].tier || "bronze";
+            const estimatedHours = jobDetailsResult.rows[0].estimated_hours || 2;
+            const { calculateJobPricing, createPricingSnapshot } = await Promise.resolve().then(() => __importStar(require("../services/pricingService")));
+            const pricingBreakdown = calculateJobPricing({
+                cleanerTier,
+                baseHours: estimatedHours,
+                cleaningType: "basic",
+            });
+            const snapshot = createPricingSnapshot({
+                cleanerTier,
+                baseHours: estimatedHours,
+                cleaningType: "basic",
+            }, pricingBreakdown);
+            pricingSnapshot = JSON.stringify(snapshot);
+        }
+    }
+    catch (error) {
+        // Log error but don't fail reassignment if pricing calculation fails
+        const { logger } = await Promise.resolve().then(() => __importStar(require("../lib/logger")));
+        logger.warn("pricing_snapshot_failed_on_reassign", {
+            jobId,
+            cleanerId: newCleanerId,
+            error: error.message,
+        });
+    }
+    // Assign new cleaner with pricing snapshot (if calculated)
+    if (pricingSnapshot) {
+        await (0, client_1.query)(`UPDATE jobs SET cleaner_id = $2, status = 'accepted', pricing_snapshot = $3::jsonb, updated_at = NOW() WHERE id = $1`, [jobId, newCleanerId, pricingSnapshot]);
+    }
+    else {
+        await (0, client_1.query)(`UPDATE jobs SET cleaner_id = $2, status = 'accepted', updated_at = NOW() WHERE id = $1`, [jobId, newCleanerId]);
+    }
     await (0, client_1.query)(`
       INSERT INTO job_events (job_id, actor_type, actor_id, event_type, payload)
       VALUES ($1, 'system', $2, 'job.reassigned', $3::jsonb)

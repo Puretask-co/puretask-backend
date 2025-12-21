@@ -14,6 +14,7 @@ const adminRepairService_1 = require("../services/adminRepairService");
 const payoutImprovementsService_1 = require("../services/payoutImprovementsService");
 const reconciliationService_1 = require("../services/reconciliationService");
 const alerting_1 = require("../lib/alerting");
+const riskService_1 = require("../services/riskService");
 const creditEconomyService_1 = require("../services/creditEconomyService");
 const refundProcessor_1 = require("../services/refundProcessor");
 const chargebackProcessor_1 = require("../services/chargebackProcessor");
@@ -1191,6 +1192,55 @@ exports.adminRouter.patch("/invoices/:invoiceId/deny", requireAdmin, (0, validat
         logger_1.logger.error("deny_invoice_failed", { error: err.message, invoiceId: req.params.invoiceId });
         res.status(err.statusCode || 500).json({
             error: { code: "DENY_INVOICE_FAILED", message: err.message },
+        });
+    }
+});
+// ============================================
+// V4 FEATURE: Risk Review
+// ============================================
+/**
+ * GET /admin/risk/review
+ * Get list of users with active risk flags for review
+ */
+exports.adminRouter.get("/risk/review", requireAdmin, async (_req, res) => {
+    try {
+        // For MVP, return empty queue
+        // In production, this would query risk_flags table for active flags
+        const queue = await (0, riskService_1.getRiskReviewQueue)();
+        res.json({
+            queue,
+            count: queue.length,
+            message: "Risk review queue. Query specific users for risk profiles.",
+        });
+    }
+    catch (error) {
+        logger_1.logger.error("get_risk_review_queue_failed", { error: error.message });
+        res.status(500).json({
+            error: { code: "GET_RISK_QUEUE_FAILED", message: error.message },
+        });
+    }
+});
+/**
+ * GET /admin/risk/:userId
+ * Get risk profile for a specific user
+ */
+exports.adminRouter.get("/risk/:userId", requireAdmin, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const role = req.query.role || "client";
+        const profile = await (0, riskService_1.getUserRiskProfile)(userId, role);
+        res.json({
+            profile,
+            message: "User risk profile",
+        });
+    }
+    catch (error) {
+        logger_1.logger.error("get_user_risk_profile_failed", {
+            userId: req.params.userId,
+            error: error.message,
+        });
+        res.status(500).json({
+            error: { code: "GET_RISK_PROFILE_FAILED", message: error.message },
         });
     }
 });

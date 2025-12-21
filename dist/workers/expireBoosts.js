@@ -5,9 +5,9 @@
 // Run hourly: node dist/workers/expireBoosts.js
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runExpireBoosts = main;
-const client_1 = require("../db/client");
-const logger_1 = require("../lib/logger");
-const premiumService_1 = require("../services/premiumService");
+const client_1 = require("../../db/client");
+const logger_1 = require("../../lib/logger");
+const premiumService_1 = require("../../services/premiumService");
 /**
  * Main worker function
  */

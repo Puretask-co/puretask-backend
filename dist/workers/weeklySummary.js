@@ -5,9 +5,9 @@
 // Run weekly (Sunday evening): node dist/workers/weeklySummary.js
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runWeeklySummary = main;
-const client_1 = require("../db/client");
-const logger_1 = require("../lib/logger");
-const weeklySummaryService_1 = require("../services/weeklySummaryService");
+const client_1 = require("../../db/client");
+const logger_1 = require("../../lib/logger");
+const weeklySummaryService_1 = require("../../services/weeklySummaryService");
 /**
  * Main worker function
  */

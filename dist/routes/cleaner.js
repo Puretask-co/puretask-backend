@@ -42,6 +42,7 @@ const logger_1 = require("../lib/logger");
 const jwtAuth_1 = require("../middleware/jwtAuth");
 const cleanerOnboardingService_1 = require("../services/cleanerOnboardingService");
 const payoutsService_1 = require("../services/payoutsService");
+const earningsService_1 = require("../services/earningsService");
 const availabilityService_1 = require("../services/availabilityService");
 // V1 CORE FEATURE: Reliability scoring (market safety mechanism)
 const cleanerRouter = (0, express_1.Router)();
@@ -442,6 +443,29 @@ cleanerRouter.get("/reliability", (0, jwtAuth_1.requireRole)("cleaner"), async (
         logger_1.logger.error("get_reliability_failed", { error: error.message });
         res.status(500).json({
             error: { code: "GET_RELIABILITY_FAILED", message: "Failed to get reliability" },
+        });
+    }
+});
+// ============================================
+// Earnings Dashboard (V3 FEATURE)
+// ============================================
+/**
+ * GET /cleaner/earnings
+ * V3 FEATURE: Get cleaner earnings dashboard - simple, user-friendly view
+ * Shows pending earnings, paid out, and next payout date
+ */
+cleanerRouter.get("/earnings", (0, jwtAuth_1.requireRole)("cleaner"), async (req, res) => {
+    try {
+        const earnings = await (0, earningsService_1.getCleanerEarnings)(req.user.id);
+        res.json({ earnings });
+    }
+    catch (error) {
+        logger_1.logger.error("get_cleaner_earnings_failed", {
+            error: error.message,
+            userId: req.user?.id,
+        });
+        res.status(500).json({
+            error: { code: "GET_EARNINGS_FAILED", message: "Failed to get earnings" },
         });
     }
 });
