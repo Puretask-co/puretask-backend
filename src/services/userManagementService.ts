@@ -7,6 +7,19 @@ import { hashPassword } from "../lib/auth";
 import { User, UserRole, ClientProfile, CleanerProfile } from "../types/db";
 
 // ============================================
+// User Sanitization
+// ============================================
+
+/**
+ * Sanitize user for admin response (excludes password_hash)
+ * Admins can see more fields than regular users, but never password hashes
+ */
+export function sanitizeUserForAdmin(user: User | UserWithProfile): Omit<User | UserWithProfile, 'password_hash'> {
+  const { password_hash, ...sanitized } = user as any;
+  return sanitized;
+}
+
+// ============================================
 // Types
 // ============================================
 

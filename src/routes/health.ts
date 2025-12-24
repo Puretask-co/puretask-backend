@@ -16,9 +16,7 @@ healthRouter.get("/", (_req, res) => {
     ok: true,
     status: "ok",
     service: "puretask-backend",
-    time: new Date().toISOString(),
     timestamp: new Date().toISOString(),
-    env: env.NODE_ENV,
   });
 });
 
@@ -45,10 +43,10 @@ healthRouter.get("/ready", async (_req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    logger.error("health_check_db_error", { error: (error as Error).message });
     res.status(503).json({
       status: "not_ready",
       database: "error",
-      error: (error as Error).message,
     });
   }
 });
