@@ -3,7 +3,7 @@
 
 import { Router } from "express";
 import { pool } from "../db/client";
-import { env } from "../config/env";
+import { logger } from "../lib/logger";
 
 const healthRouter = Router();
 
