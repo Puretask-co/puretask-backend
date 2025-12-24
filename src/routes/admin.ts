@@ -26,6 +26,7 @@ import {
   resetUserPassword,
   adjustUserCredits,
   getUserStats,
+  sanitizeUserForAdmin,
 } from "../services/userManagementService";
 import {
   findStuckJobs,
@@ -569,7 +570,9 @@ adminRouter.get("/users", requireAdmin, async (req: AuthedRequest, res: Response
       offset: parseInt(offset as string, 10),
     });
 
-    res.json(result);
+    // Sanitize users to exclude password_hash
+    const sanitizedUsers = result.users.map(user => sanitizeUserForAdmin(user));
+    res.json({ users: sanitizedUsers, total: result.total });
   } catch (error) {
     logger.error("list_users_failed", { error: (error as Error).message });
     res.status(500).json({
@@ -609,7 +612,8 @@ adminRouter.get("/users/:userId", requireAdmin, async (req: AuthedRequest, res: 
       });
     }
 
-    res.json({ user });
+    // Sanitize user to exclude password_hash
+    res.json({ user: sanitizeUserForAdmin(user) });
   } catch (error) {
     logger.error("get_user_failed", { error: (error as Error).message });
     res.status(500).json({
@@ -638,7 +642,8 @@ adminRouter.post(
   async (req: AuthedRequest, res: Response) => {
     try {
       const user = await createUser(req.body);
-      res.status(201).json({ user });
+      // Sanitize user to exclude password_hash
+      res.status(201).json({ user: sanitizeUserForAdmin(user) });
     } catch (error) {
       const err = error as Error & { statusCode?: number };
       logger.error("create_user_failed", { error: err.message });
@@ -670,7 +675,8 @@ adminRouter.patch(
     try {
       const { userId } = req.params;
       const user = await updateUser(userId, req.body);
-      res.json({ user });
+      // Sanitize user to exclude password_hash
+      res.json({ user: sanitizeUserForAdmin(user) });
     } catch (error) {
       const err = error as Error & { statusCode?: number };
       logger.error("update_user_failed", { error: err.message, userId: req.params.userId });
