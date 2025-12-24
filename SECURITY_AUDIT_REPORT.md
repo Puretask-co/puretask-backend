@@ -578,14 +578,16 @@ SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = $1
 - Proper CORS configuration
 - Security headers in place
 
-### What Needs Attention ⚠️
-1. **User query safety** - Verify password_hash never exposed
-2. **Status endpoint** - Consider protecting operational details
-3. **Health endpoint** - Remove environment from response
-4. **Error messages** - Don't expose DB errors in health check
+### Issues Found & Fixed ✅
+1. ✅ **CRITICAL FIXED:** Admin routes now sanitize user objects (removed password_hash exposure)
+2. ✅ **FIXED:** Health endpoint no longer exposes environment
+3. ✅ **FIXED:** Health check no longer exposes database error messages
+4. ⚠️ **RECOMMENDED:** Status endpoint should be protected (not critical)
+5. ⚠️ **RECOMMENDED:** Replace `SELECT *` with explicit columns in user queries (defense in depth)
 
 ### Critical Issues 🔴
-**None found!** ✅
+**CRITICAL ISSUE FOUND AND FIXED:**
+- Admin routes were exposing `password_hash` - ✅ **FIXED** - All admin user responses now sanitized
 
 ---
 
