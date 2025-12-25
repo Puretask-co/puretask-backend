@@ -1,4 +1,4 @@
-﻿// src/index.ts
+// src/index.ts
 // Main application entry point
 
 import express from "express";
@@ -14,6 +14,10 @@ import {
   sanitizeBody,
 } from "./lib/security";
 import { requestContextMiddleware, enrichRequestContext } from "./middleware/requestContext";
+import { initializeSpeedInsights, speedInsightsMiddleware } from "./lib/speedInsights";
+
+// Initialize Vercel Speed Insights
+initializeSpeedInsights();
 
 // Import routes
 import healthRouter from "./routes/health";
@@ -65,6 +69,9 @@ app.use(additionalSecurityHeaders);
 
 // Request context for tracing (generates request ID)
 app.use(requestContextMiddleware);
+
+// Vercel Speed Insights middleware for performance tracking
+app.use(speedInsightsMiddleware());
 
 // CORS configuration
 app.use(
