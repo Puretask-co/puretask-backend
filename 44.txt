@@ -1,0 +1,21 @@
+4 results - 4 files
+
+dist\tests\helpers\testUtils.js:
+  135          email: user.email,
+  136:         role: "admin",
+  137          token: loginRes.body.token,
+
+dist\tests\smoke\auth.test.js:
+  71                  password: testPassword,
+  72:                 role: "admin",
+  73              });
+
+src\tests\helpers\testUtils.ts:
+  164      email: user.email,
+  165:     role: "admin",
+  166      token: loginRes.body.token,
+
+src\tests\smoke\auth.test.ts:
+  79            password: testPassword,
+  80:           role: "admin",
+  81          });

@@ -3,6 +3,7 @@
 // Ensures email/SMS payloads match registry before emission
 
 import { z } from "zod";
+import { env } from "../config/env";
 
 // ============================================
 // Communication Payload Schemas
@@ -155,7 +156,6 @@ function templateKeyToEnvVar(templateKey: string): string {
  * Get template ID from environment variable
  */
 export function getTemplateIdFromEnvVar(envVar: TemplateEnvVar): string {
-  const { env } = require("../config/env");
   const templateId = (env as any)[envVar];
 
   if (!templateId) {

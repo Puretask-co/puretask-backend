@@ -77,6 +77,15 @@ export async function sendNotificationViaEvent(
   input: NotificationPayload
 ): Promise<NotificationResult> {
   try {
+    // Push notifications are not yet supported via n8n event-based architecture
+    if (input.channel === "push") {
+      logger.info("push_notification_skipped", {
+        type: input.type,
+        message: "Push notifications not supported via event-based architecture",
+      });
+      return { success: false, error: "Push notifications not supported via events" };
+    }
+
     // Map notification type to template key
     const templateKey = NOTIFICATION_TYPE_TO_TEMPLATE_KEY[input.type];
     if (!templateKey) {
@@ -86,8 +95,8 @@ export async function sendNotificationViaEvent(
       return { success: false, error: `Unknown notification type: ${input.type}` };
     }
 
-    // Determine channel from input
-    const channel = input.channel;
+    // Determine channel from input (now guaranteed to be email or sms)
+    const channel = input.channel as "email" | "sms";
 
     // Get template ID from env var
     let templateId: string;

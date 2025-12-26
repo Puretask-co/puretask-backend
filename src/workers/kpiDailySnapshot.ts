@@ -6,9 +6,9 @@
 // 
 // Cron example: 0 1 * * * node /app/dist/workers/kpiDailySnapshot.js
 
-import { pool } from "../../db/client";
-import { logger } from "../../lib/logger";
-import { createDailyKpiSnapshot, getExtendedDailyMetrics } from "../../services/kpiService";
+import { pool } from "../db/client";
+import { logger } from "../lib/logger";
+import { createDailyKpiSnapshot, getExtendedDailyMetrics } from "../services/kpiService";
 
 /**
  * Main worker function

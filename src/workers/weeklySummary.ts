@@ -3,13 +3,13 @@
 //
 // Run weekly (Sunday evening): node dist/workers/weeklySummary.js
 
-import { pool } from "../../db/client";
-import { logger } from "../../lib/logger";
+import { pool } from "../db/client";
+import { logger } from "../lib/logger";
 import {
   sendAllClientWeeklySummaries,
   sendAllCleanerWeeklySummaries,
   getPreviousWeekRange,
-} from "../../services/weeklySummaryService";
+} from "../services/weeklySummaryService";
 
 /**
  * Main worker function
