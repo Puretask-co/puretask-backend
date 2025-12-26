@@ -1,0 +1,53 @@
+# Railway Ignore File
+# Files and directories to exclude from Railway deployment
+
+# Development
+node_modules/
+.git/
+.github/
+.cursor/
+.vscode/
+
+# Tests
+src/tests/
+*.test.ts
+*.spec.ts
+coverage/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Local env files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Build artifacts (will be rebuilt on Railway)
+dist/
+
+# Temp files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Setup directories (not needed in production)
+reactSetup/
+typescriptSetup/
+nodeSetup/
+
+# Scripts (most not needed in production)
+scripts/test-*.ts
+scripts/verify-*.ps1
+scripts/fix-*.ps1
+
+# MCP servers (run separately if needed)
+mcp/
+
