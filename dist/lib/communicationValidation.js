@@ -10,6 +10,7 @@ exports.getTemplateIdFromEnvVar = getTemplateIdFromEnvVar;
 exports.createCommunicationPayload = createCommunicationPayload;
 exports.getEventNameFromTemplateKey = getEventNameFromTemplateKey;
 const zod_1 = require("zod");
+const env_1 = require("../config/env");
 // ============================================
 // Communication Payload Schemas
 // ============================================
@@ -122,8 +123,7 @@ function templateKeyToEnvVar(templateKey) {
  * Get template ID from environment variable
  */
 function getTemplateIdFromEnvVar(envVar) {
-    const { env } = require("../config/env");
-    const templateId = env[envVar];
+    const templateId = env_1.env[envVar];
     if (!templateId) {
         throw new Error(`Template ID not found for env var: ${envVar}. Check environment configuration.`);
     }

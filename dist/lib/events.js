@@ -84,14 +84,18 @@ async function publishEvent(input) {
         actorType,
         actorId,
     });
-    // Send notifications for key events (non-blocking, errors are logged but don't fail the request)
-    maybeSendNotifications(jobId, eventName, payload).catch((err) => {
-        logger_1.logger.error("event_notification_failed_non_blocking", {
-            jobId,
-            eventName,
-            error: err.message,
-        });
-    });
+    // NOTE: maybeSendNotifications is disabled - all email/SMS notifications now go through n8n
+    // n8n workflows triggered by events handle all communications
+    // If n8n is not configured, notifications can still be sent via the notification service
+    // which will use direct provider calls as fallback
+    // Legacy notification sending (disabled in favor of event-driven n8n architecture):
+    // maybeSendNotifications(jobId, eventName, payload).catch((err) => {
+    //   logger.error("event_notification_failed_non_blocking", {
+    //     jobId,
+    //     eventName,
+    //     error: (err as Error).message,
+    //   });
+    // });
     // Forward to n8n webhook if configured (non-blocking, errors are logged but don't fail the request)
     maybeForwardToN8n(jobId, actorType, actorId, eventName, payload).catch((err) => {
         logger_1.logger.error("n8n_forward_failed_non_blocking", {

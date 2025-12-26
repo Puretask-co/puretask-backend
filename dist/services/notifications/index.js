@@ -16,13 +16,15 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateNotificationPreferences = exports.getNotificationPreferences = exports.getUserContactInfo = exports.sendNotificationToUser = exports.sendNotification = void 0;
+exports.updateNotificationPreferences = exports.getNotificationPreferences = exports.sendNotificationViaEvent = exports.getUserContactInfo = exports.sendNotificationToUser = exports.sendNotification = void 0;
 __exportStar(require("./types"), exports);
 __exportStar(require("./templates"), exports);
 var notificationService_1 = require("./notificationService");
 Object.defineProperty(exports, "sendNotification", { enumerable: true, get: function () { return notificationService_1.sendNotification; } });
 Object.defineProperty(exports, "sendNotificationToUser", { enumerable: true, get: function () { return notificationService_1.sendNotificationToUser; } });
 Object.defineProperty(exports, "getUserContactInfo", { enumerable: true, get: function () { return notificationService_1.getUserContactInfo; } });
+var eventBasedNotificationService_1 = require("./eventBasedNotificationService");
+Object.defineProperty(exports, "sendNotificationViaEvent", { enumerable: true, get: function () { return eventBasedNotificationService_1.sendNotificationViaEvent; } });
 // Notification preferences
 var preferencesService_1 = require("./preferencesService");
 Object.defineProperty(exports, "getNotificationPreferences", { enumerable: true, get: function () { return preferencesService_1.getNotificationPreferences; } });

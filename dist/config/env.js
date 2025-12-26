@@ -67,6 +67,8 @@ exports.env = {
     N8N_WEBHOOK_URL: process.env.N8N_WEBHOOK_URL || "",
     APP_URL: process.env.APP_URL || "http://localhost:3000",
     STORAGE_URL: process.env.STORAGE_URL || "https://storage.puretask.com",
+    // Feature flags
+    USE_EVENT_BASED_NOTIFICATIONS: process.env.USE_EVENT_BASED_NOTIFICATIONS !== "false", // Default: true if n8n is configured
     // Notifications - SendGrid (Email)
     SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || "",
     SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL || "no-reply@puretask.com",

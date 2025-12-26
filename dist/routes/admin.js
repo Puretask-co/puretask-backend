@@ -428,7 +428,9 @@ exports.adminRouter.get("/users", requireAdmin, async (req, res) => {
             limit: parseInt(limit, 10),
             offset: parseInt(offset, 10),
         });
-        res.json(result);
+        // Sanitize users to exclude password_hash
+        const sanitizedUsers = result.users.map(user => (0, userManagementService_1.sanitizeUserForAdmin)(user));
+        res.json({ users: sanitizedUsers, total: result.total });
     }
     catch (error) {
         logger_1.logger.error("list_users_failed", { error: error.message });
@@ -466,7 +468,8 @@ exports.adminRouter.get("/users/:userId", requireAdmin, async (req, res) => {
                 error: { code: "USER_NOT_FOUND", message: "User not found" },
             });
         }
-        res.json({ user });
+        // Sanitize user to exclude password_hash
+        res.json({ user: (0, userManagementService_1.sanitizeUserForAdmin)(user) });
     }
     catch (error) {
         logger_1.logger.error("get_user_failed", { error: error.message });
@@ -490,7 +493,8 @@ const createUserSchema = zod_1.z.object({
 exports.adminRouter.post("/users", requireAdmin, (0, validation_1.validateBody)(createUserSchema), async (req, res) => {
     try {
         const user = await (0, userManagementService_1.createUser)(req.body);
-        res.status(201).json({ user });
+        // Sanitize user to exclude password_hash
+        res.status(201).json({ user: (0, userManagementService_1.sanitizeUserForAdmin)(user) });
     }
     catch (error) {
         const err = error;
@@ -516,7 +520,8 @@ exports.adminRouter.patch("/users/:userId", requireAdmin, (0, validation_1.valid
     try {
         const { userId } = req.params;
         const user = await (0, userManagementService_1.updateUser)(userId, req.body);
-        res.json({ user });
+        // Sanitize user to exclude password_hash
+        res.json({ user: (0, userManagementService_1.sanitizeUserForAdmin)(user) });
     }
     catch (error) {
         const err = error;

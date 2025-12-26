@@ -4,7 +4,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const client_1 = require("../db/client");
-const env_1 = require("../config/env");
+const logger_1 = require("../lib/logger");
 const healthRouter = (0, express_1.Router)();
 /**
  * GET /health
@@ -15,9 +15,7 @@ healthRouter.get("/", (_req, res) => {
         ok: true,
         status: "ok",
         service: "puretask-backend",
-        time: new Date().toISOString(),
         timestamp: new Date().toISOString(),
-        env: env_1.env.NODE_ENV,
     });
 });
 /**
@@ -42,10 +40,10 @@ healthRouter.get("/ready", async (_req, res) => {
         });
     }
     catch (error) {
+        logger_1.logger.error("health_check_db_error", { error: error.message });
         res.status(503).json({
             status: "not_ready",
             database: "error",
-            error: error.message,
         });
     }
 });

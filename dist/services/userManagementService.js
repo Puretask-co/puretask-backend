@@ -2,6 +2,7 @@
 // src/services/userManagementService.ts
 // Admin user management service - CRUD operations for users
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.sanitizeUserForAdmin = sanitizeUserForAdmin;
 exports.listUsers = listUsers;
 exports.getUserById = getUserById;
 exports.getUserByEmail = getUserByEmail;
@@ -14,6 +15,17 @@ exports.getUserStats = getUserStats;
 const client_1 = require("../db/client");
 const logger_1 = require("../lib/logger");
 const auth_1 = require("../lib/auth");
+// ============================================
+// User Sanitization
+// ============================================
+/**
+ * Sanitize user for admin response (excludes password_hash)
+ * Admins can see more fields than regular users, but never password hashes
+ */
+function sanitizeUserForAdmin(user) {
+    const { password_hash, ...sanitized } = user;
+    return sanitized;
+}
 // ============================================
 // List Users
 // ============================================
