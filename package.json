@@ -46,7 +46,11 @@
     "db:seed": "ts-node src/db/seed.ts",
     "deploy:staging": "bash scripts/deploy-staging.sh",
     "deploy:production": "bash scripts/deploy-production.sh",
-    "setup:staging": "bash scripts/setup-staging.sh"
+    "setup:staging": "bash scripts/setup-staging.sh",
+    "mcp:docs": "ts-node -P mcp/tsconfig.json mcp/docsServer.ts",
+    "mcp:ops": "ts-node -P mcp/tsconfig.json mcp/opsServer.ts",
+    "mcp:logs": "ts-node -P mcp/tsconfig.json mcp/logsServer.ts",
+    "mcp:config": "ts-node -P mcp/tsconfig.json mcp/configServer.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.0",
