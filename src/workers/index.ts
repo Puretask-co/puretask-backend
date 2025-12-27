@@ -1,21 +1,32 @@
 // src/workers/index.ts
 // Worker runner - can run all workers or specific ones
 
-import { runAutoCancelWorker } from "./autoCancelJobs";
-import { runPayoutsWorker } from "./processPayouts";
-import { runKPISnapshotWorker } from "./kpiSnapshot";
-import { runRetryFailedEventsWorker } from "./retryFailedEvents";
-import { runPhotoRetentionCleanup } from "./photoRetentionCleanup";
-import { runNightlyScoreRecompute } from "./nightlyScoreRecompute";
-import { runCleaningScores } from "./cleaningScores";
-import { runCreditEconomyMaintenance } from "./creditEconomyMaintenance";
-import { runExpireBoosts } from "./expireBoosts";
-import { runGoalChecker } from "./goalChecker";
-import { runKpiDailySnapshot } from "./kpiDailySnapshot";
-import { runReliabilityRecalc } from "./reliabilityRecalc";
-import { runStuckJobDetection } from "./stuckJobDetection";
-import { runSubscriptionJobs } from "./subscriptionJobs";
-import { runWeeklySummary } from "./weeklySummary";
+// V1 Core Workers
+import { runAutoCancelWorker } from "./v1-core/autoCancelJobs";
+import { runPayoutsWorker } from "./_deprecated/processPayouts";
+import { runKPISnapshotWorker } from "./_deprecated/kpiSnapshot";
+import { runRetryFailedEventsWorker } from "./_deprecated/retryFailedEvents";
+
+// V2 Operations Workers
+import { runPhotoRetentionCleanup } from "./v2-operations/photoRetentionCleanup";
+import { runCreditEconomyMaintenance } from "./v2-operations/creditEconomyMaintenance";
+
+// V3 Automation Workers
+import { runSubscriptionJobs } from "./v3-automation/subscriptionJobs";
+
+// V4 Analytics Workers
+import { runExpireBoosts } from "./v4-analytics/expireBoosts";
+import { runKpiDailySnapshot } from "./v4-analytics/kpiDailySnapshot";
+import { runWeeklySummary } from "./v4-analytics/weeklySummary";
+
+// Reliability Workers
+import { runNightlyScoreRecompute } from "./reliability/nightlyScoreRecompute";
+import { runCleaningScores } from "./reliability/cleaningScores";
+import { runReliabilityRecalc } from "./reliability/reliabilityRecalc";
+
+// Deprecated Workers (kept for backward compatibility)
+import { runGoalChecker } from "./_deprecated/goalChecker";
+import { runStuckJobDetection } from "./_deprecated/stuckJobDetection";
 import { logger } from "../lib/logger";
 import { env } from "../config/env";
 
