@@ -5,12 +5,12 @@
 // Run on a schedule (e.g., hourly):
 // node dist/workers/autoExpireAwaitingApproval.js
 
-import { pool, query } from "../db/client";
-import { logger } from "../lib/logger";
-import { publishEvent } from "../lib/events";
-import { releaseJobCreditsToCleaner } from "../services/creditsService";
-import { recordEarningsForCompletedJob } from "../services/payoutsService";
-import { Job } from "../types/db";
+import { pool, query } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { publishEvent } from "../../lib/events";
+import { releaseJobCreditsToCleaner } from "../../services/creditsService";
+import { recordEarningsForCompletedJob } from "../../services/payoutsService";
+import { Job } from "../../types/db";
 
 // Configuration
 const AUTO_APPROVE_HOURS = parseInt(process.env.AUTO_APPROVE_HOURS || "24", 10);

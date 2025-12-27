@@ -4,13 +4,13 @@
 // Run on a schedule (e.g., every 5 minutes):
 // node dist/workers/webhookRetry.js
 
-import { pool } from "../db/client";
-import { logger } from "../lib/logger";
+import { pool } from "../../db/client";
+import { logger } from "../../lib/logger";
 import {
   processWebhookRetries,
   cleanupOldWebhooks,
   getWebhookStats,
-} from "../services/webhookRetryService";
+} from "../../services/webhookRetryService";
 
 const BATCH_SIZE = 50;
 const CLEANUP_DAYS = 30;

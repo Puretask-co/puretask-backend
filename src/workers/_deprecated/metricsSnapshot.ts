@@ -1,8 +1,8 @@
 // src/workers/metricsSnapshot.ts
 // Periodic operational metrics logging worker
 
-import { workerLogger } from "../lib/logger";
-import { logOperationalSnapshot } from "../services/operationalMetricsService";
+import { workerLogger } from "../../lib/logger";
+import { logOperationalSnapshot } from "../../services/operationalMetricsService";
 
 const log = workerLogger("metricsSnapshot");
 const INTERVAL_MS = 60 * 60 * 1000; // Every hour

@@ -3,9 +3,9 @@
 //
 // Run daily: node dist/workers/cleaningScores.js
 
-import { pool } from "../db/client";
-import { logger } from "../lib/logger";
-import { recalculateAllScores } from "../services/propertiesService";
+import { pool } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { recalculateAllScores } from "../../services/propertiesService";
 
 async function main(): Promise<void> {
   logger.info("cleaning_scores_worker_started");

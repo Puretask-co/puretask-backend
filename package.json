@@ -4,25 +4,25 @@
   "description": "PureTask Backend API - Uber-style cleaning marketplace",
   "private": true,
   "main": "dist/index.js",
+  "license": "UNLICENSED",
+
+  "engines": {
+    "node": ">=20.0.0"
+  },
+
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "lint": "eslint . --ext .ts --ignore-pattern \"scripts/**\"",
     "typecheck": "tsc --noEmit",
+
     "test": "vitest run",
     "test:watch": "vitest",
     "test:smoke": "vitest run src/tests/smoke",
     "test:integration": "vitest run src/tests/integration",
-    "test:v1-hardening": "vitest run src/tests/integration/v1Hardening.test.ts",
     "test:coverage": "vitest run --coverage",
-    "test:worker-dryrun": "ts-node scripts/test-worker-dryrun.ts",
-    "test:stripe-e2e": "ts-node scripts/test-stripe-e2e.ts",
-    "test:v1-features": "ts-node scripts/test-v1-features.ts",
-    "test:v3-endpoints": "ts-node scripts/test-v3-endpoints.ts",
-    "verify:v3": "node scripts/verify-v3-deployment.js",
-    "test:v4-endpoints": "ts-node scripts/test-v4-endpoints.ts",
-    "verify:v4": "node scripts/verify-v4-deployment.js",
+
     "worker:auto-cancel": "ts-node src/workers/autoCancelJobs.ts",
     "worker:auto-expire": "ts-node src/workers/autoExpireAwaitingApproval.ts",
     "worker:payout-weekly": "ts-node src/workers/payoutWeekly.ts",
@@ -33,29 +33,12 @@
     "worker:webhook-retry": "ts-node src/workers/webhookRetry.ts",
     "worker:credit-economy": "ts-node src/workers/creditEconomyMaintenance.ts",
     "worker:stuck-detection": "ts-node src/workers/stuckJobDetection.ts",
-    "worker:weekly-summary": "ts-node src/workers/weeklySummary.ts",
-    "worker:payout-retry": "ts-node src/workers/payoutRetry.ts",
-    "worker:subscription-jobs": "ts-node src/workers/subscriptionJobs.ts",
-    "worker:expire-boosts": "ts-node src/workers/expireBoosts.ts",
-    "worker:queue-processor": "ts-node src/workers/queueProcessor.ts",
-    "worker:cleaning-scores": "ts-node src/workers/cleaningScores.ts",
-    "worker:goal-checker": "ts-node src/workers/goalChecker.ts",
-    "migrate:run": "node scripts/run-migration.js",
-    "migrate:fix-payouts-fk": "node scripts/run-migration.js DB/migrations/000_fix_payouts_fk.sql",
-    "migrate:verify": "node scripts/verify-migration.js",
-    "db:seed": "ts-node src/db/seed.ts",
-    "deploy:staging": "bash scripts/deploy-staging.sh",
-    "deploy:production": "bash scripts/deploy-production.sh",
-    "setup:staging": "bash scripts/setup-staging.sh",
-    "mcp:docs": "ts-node -P mcp/tsconfig.json mcp/docsServer.ts",
-    "mcp:ops": "ts-node -P mcp/tsconfig.json mcp/opsServer.ts",
-    "mcp:logs": "ts-node -P mcp/tsconfig.json mcp/logsServer.ts",
-    "mcp:config": "ts-node -P mcp/tsconfig.json mcp/configServer.ts"
+    "worker:weekly-summary": "ts-node src/workers/weeklySummary.ts"
   },
+
   "dependencies": {
     "@neondatabase/serverless": "^0.9.0",
     "@sendgrid/mail": "^8.1.0",
-    "@types/helmet": "^0.0.48",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
@@ -67,6 +50,7 @@
     "twilio": "^5.0.0",
     "zod": "^3.23.0"
   },
+
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
@@ -85,9 +69,7 @@
     "typescript": "^5.9.3",
     "vitest": "^1.6.0"
   },
-  "engines": {
-    "node": ">=20.0.0"
-  },
+
   "keywords": [
     "puretask",
     "cleaning",
@@ -96,6 +78,5 @@
     "express",
     "typescript",
     "stripe"
-  ],
-  "license": "UNLICENSED"
+  ]
 }

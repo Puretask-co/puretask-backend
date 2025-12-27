@@ -2,9 +2,9 @@
 // Worker to capture KPI snapshots for historical tracking
 // Uses kpi_snapshots table from 001_init.sql
 
-import { query } from "../db/client";
-import { logger } from "../lib/logger";
-import { KpiSnapshot } from "../types/db";
+import { query } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { KpiSnapshot } from "../../types/db";
 
 /**
  * Get job counts by status for a date range

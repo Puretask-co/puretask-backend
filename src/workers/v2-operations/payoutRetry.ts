@@ -3,9 +3,9 @@
 //
 // Run every 30 minutes: node dist/workers/payoutRetry.js
 
-import { pool } from "../db/client";
-import { logger } from "../lib/logger";
-import { processPayoutRetries } from "../services/payoutImprovementsService";
+import { pool } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { processPayoutRetries } from "../../services/payoutImprovementsService";
 
 /**
  * Main worker function

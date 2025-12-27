@@ -4,11 +4,11 @@
 // Run on a schedule (e.g., every 5 minutes):
 // node dist/workers/retryFailedNotifications.js
 
-import { query } from "../db/client";
-import { pool } from "../db/client";
-import { logger } from "../lib/logger";
-import { sendNotification } from "../services/notifications";
-import { NotificationChannel, NotificationType } from "../services/notifications/types";
+import { query } from "../../db/client";
+import { pool } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { sendNotification } from "../../services/notifications";
+import { NotificationChannel, NotificationType } from "../../services/notifications/types";
 
 const MAX_RETRIES = 5;
 const BATCH_SIZE = 100;

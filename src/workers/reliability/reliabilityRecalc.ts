@@ -6,9 +6,9 @@
 //
 // Cron example: 0 3 * * * node /app/dist/workers/reliabilityRecalc.js
 
-import { pool } from "../db/client";
-import { logger } from "../lib/logger";
-import { recalcAllCleanersReliability, ReliabilityUpdate } from "../services/reliabilityService";
+import { pool } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { recalcAllCleanersReliability, ReliabilityUpdate } from "../../services/reliabilityService";
 
 /**
  * Main worker function

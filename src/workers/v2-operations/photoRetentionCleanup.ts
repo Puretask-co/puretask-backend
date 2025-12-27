@@ -5,9 +5,9 @@
 // "Photos are retained for 90 days after booking completion, then automatically deleted
 //  unless a dispute is open."
 
-import { query } from "../db/client";
-import { logger } from "../lib/logger";
-import { env } from "../config/env";
+import { query } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { env } from "../../config/env";
 
 const BATCH_SIZE = 100;
 

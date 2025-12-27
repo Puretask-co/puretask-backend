@@ -2,11 +2,11 @@
 // Worker to process pending payouts via Stripe Connect
 // V1 HARDENING: Uses workerUtils for advisory locks and run tracking
 
-import { query } from "../db/client";
-import { logger } from "../lib/logger";
-import { runWorkerWithLock, getWorkerLockId } from "../lib/workerUtils";
-import { processSinglePayout, processPendingPayouts as processPendingPayoutsService } from "../services/payoutsService";
-import type { Payout, CleanerEarning } from "../types/db";
+import { query } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { runWorkerWithLock, getWorkerLockId } from "../../lib/workerUtils";
+import { processSinglePayout, processPendingPayouts as processPendingPayoutsService } from "../../services/payoutsService";
+import type { Payout, CleanerEarning } from "../../types/db";
 
 // Configuration
 const BATCH_SIZE = parseInt(process.env.PAYOUT_BATCH_SIZE || "50", 10);

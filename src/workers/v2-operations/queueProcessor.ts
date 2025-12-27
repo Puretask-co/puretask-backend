@@ -3,11 +3,11 @@
 //
 // Run continuously: node dist/workers/queueProcessor.js
 
-import { pool } from "../db/client";
-import { logger } from "../lib/logger";
-import { queueService, QUEUE_NAMES, processQueue } from "../lib/queue";
-import { syncJobToCalendar } from "../services/calendarService";
-import { generateChecklist, generateDisputeSuggestion } from "../services/aiService";
+import { pool } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { queueService, QUEUE_NAMES, processQueue } from "../../lib/queue";
+import { syncJobToCalendar } from "../../services/calendarService";
+import { generateChecklist, generateDisputeSuggestion } from "../../services/aiService";
 
 // ============================================
 // Register Queue Handlers

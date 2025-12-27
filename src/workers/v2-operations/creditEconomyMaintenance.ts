@@ -3,14 +3,14 @@
 //
 // Run daily: node dist/workers/creditEconomyMaintenance.js
 
-import { pool } from "../db/client";
-import { logger } from "../lib/logger";
+import { pool } from "../../db/client";
+import { logger } from "../../lib/logger";
 import {
   applyReliabilityDecay,
   cleanupExpiredTierLocks,
   getOpenFraudAlerts,
   FraudAlert,
-} from "../services/creditEconomyService";
+} from "../../services/creditEconomyService";
 
 /**
  * Main worker function

@@ -1,8 +1,8 @@
 // src/workers/autoPausePayouts.ts
 // Auto-pause payouts for cleaners with flagged reconciliation items
 
-import { pool } from "../db/client";
-import { logger } from "../lib/logger";
+import { pool } from "../../db/client";
+import { logger } from "../../lib/logger";
 
 async function main(): Promise<void> {
   logger.info("auto_pause_payouts_started");

@@ -2,10 +2,10 @@
 // Worker to auto-cancel jobs that are past their scheduled start time
 // Matches 001_init.sql schema
 
-import { query } from "../db/client";
-import { logger } from "../lib/logger";
-import { publishEvent } from "../lib/events";
-import { releaseEscrowedCredits } from "../services/creditsService";
+import { query } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { publishEvent } from "../../lib/events";
+import { releaseEscrowedCredits } from "../../services/creditsService";
 
 // Configuration
 const AUTO_CANCEL_DELAY_MINUTES = parseInt(process.env.AUTO_CANCEL_DELAY_MINUTES || "30", 10);

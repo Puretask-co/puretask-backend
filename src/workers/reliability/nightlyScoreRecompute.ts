@@ -8,11 +8,11 @@
 // - Client flexibility profiles
 // - Inconvenience pattern detection
 
-import { logger } from "../lib/logger";
-import { ClientRiskService } from "../core/clientRiskService";
-import { ReliabilityScoreV2Service } from "../core/reliabilityScoreV2Service";
-import { FlexibilityService } from "../core/flexibilityService";
-import { InconvenienceService } from "../core/inconvenienceService";
+import { logger } from "../../lib/logger";
+import { ClientRiskService } from "../../core/clientRiskService";
+import { ReliabilityScoreV2Service } from "../../core/reliabilityScoreV2Service";
+import { FlexibilityService } from "../../core/flexibilityService";
+import { InconvenienceService } from "../../core/inconvenienceService";
 
 interface NightlyRecomputeResult {
   clientRisk: { processed: number; failed: number };

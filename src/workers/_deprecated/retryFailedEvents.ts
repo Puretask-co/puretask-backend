@@ -2,9 +2,9 @@
 // Worker to retry failed Stripe webhook events
 // Uses stripe_events table from 001_init.sql
 
-import { query } from "../db/client";
-import { logger } from "../lib/logger";
-import { handleStripeEvent } from "../services/paymentService";
+import { query } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { handleStripeEvent } from "../../services/paymentService";
 import Stripe from "stripe";
 
 // Configuration

@@ -5,9 +5,9 @@
 // Example: node dist/workers/payoutWeekly.js
 // Or via cron: 0 0 * * 0 node dist/workers/payoutWeekly.js (every Sunday at midnight)
 
-import { logger } from "../lib/logger";
-import { payoutsService } from "../services/payoutsService";
-import { pool } from "../db/client";
+import { logger } from "../../lib/logger";
+import { payoutsService } from "../../services/payoutsService";
+import { pool } from "../../db/client";
 
 /**
  * Main worker function

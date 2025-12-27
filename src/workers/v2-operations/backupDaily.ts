@@ -6,9 +6,9 @@
 //
 // Cron example: 0 2 * * * node /app/dist/workers/backupDaily.js
 
-import { pool } from "../db/client";
-import { logger } from "../lib/logger";
-import { runBackupJob, cleanupOldBackups, getLatestBackup, compareBackups } from "../services/backupService";
+import { pool } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { runBackupJob, cleanupOldBackups, getLatestBackup, compareBackups } from "../../services/backupService";
 
 /**
  * Main worker function
