@@ -14,6 +14,7 @@ export interface AuthUser {
   id: string;
   role: UserRole;
   email?: string | null;
+  jti?: string; // JWT ID for session tracking
 }
 
 // Extend Express Request to include user
@@ -49,10 +50,17 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 
 /**
  * Sign a JWT token for an authenticated user
+ * Includes JTI (JWT ID) for session tracking
  */
-export function signAuthToken(user: AuthUser): string {
+export function signAuthToken(user: AuthUser, jti?: string): string {
+  const tokenId = jti || require("crypto").randomBytes(16).toString("hex");
+  
   return jwt.sign(
-    { id: user.id, role: user.role },
+    { 
+      id: user.id, 
+      role: user.role,
+      jti: tokenId 
+    },
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
   );
@@ -63,7 +71,11 @@ export function signAuthToken(user: AuthUser): string {
  */
 export function verifyAuthToken(token: string): AuthUser {
   const decoded = jwt.verify(token, env.JWT_SECRET) as AuthUser;
-  return { id: decoded.id, role: decoded.role };
+  return { 
+    id: decoded.id, 
+    role: decoded.role,
+    jti: decoded.jti 
+  };
 }
 
 // ============================================

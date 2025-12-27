@@ -51,6 +51,30 @@ export interface User {
   phone: string | null;
   first_name: string | null;
   last_name: string | null;
+  // Email verification
+  email_verified: boolean;
+  email_verification_token: string | null;
+  email_verification_token_expires_at: string | null;
+  email_verified_at: string | null;
+  // Password reset
+  password_reset_token: string | null;
+  password_reset_token_expires_at: string | null;
+  password_reset_at: string | null;
+  password_changed_at: string | null;
+  // Two-factor authentication
+  two_factor_enabled: boolean;
+  two_factor_method: "totp" | "sms" | null;
+  two_factor_secret: string | null;
+  two_factor_phone: string | null;
+  two_factor_backup_codes: string[] | null;
+  two_factor_enabled_at: string | null;
+  // Login tracking
+  last_login_at: string | null;
+  last_login_ip: string | null;
+  // Account lockout
+  locked_until: string | null;
+  failed_login_attempts: number;
+  last_failed_login_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -569,6 +593,11 @@ export interface UserPreferences {
   language: string;
   timezone: string;
   currency: string;
+  // Auth notification preferences
+  notify_login_from_new_device: boolean;
+  notify_password_changed: boolean;
+  notify_email_changed: boolean;
+  notify_2fa_disabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -750,4 +779,120 @@ export interface PublishEventInput {
   actor_id?: string;
   event_type: string;
   payload?: Record<string, unknown>;
+}
+
+// -------------------------
+// AUTH ENHANCEMENT TYPES
+// -------------------------
+
+/**
+ * User sessions table (JWT tracking and revocation)
+ */
+export interface UserSession {
+  id: string;
+  user_id: string;
+  token_jti: string;
+  device_info: Record<string, unknown> | null;
+  ip_address: string | null;
+  country: string | null;
+  city: string | null;
+  last_activity_at: string;
+  expires_at: string;
+  revoked: boolean;
+  revoked_at: string | null;
+  revoked_reason: string | null;
+  created_at: string;
+}
+
+/**
+ * OAuth accounts table (Google, Facebook, etc.)
+ */
+export interface OAuthAccount {
+  id: string;
+  user_id: string;
+  provider: "google" | "facebook" | "apple" | "github";
+  provider_account_id: string;
+  provider_email: string | null;
+  access_token: string | null;
+  refresh_token: string | null;
+  token_expires_at: string | null;
+  profile_data: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Two-factor codes table (SMS 2FA)
+ */
+export interface TwoFactorCode {
+  id: string;
+  user_id: string;
+  code: string;
+  method: "sms" | "totp";
+  phone: string | null;
+  used: boolean;
+  used_at: string | null;
+  expires_at: string;
+  created_at: string;
+}
+
+/**
+ * Security events table (audit log)
+ */
+export interface SecurityEvent {
+  id: string;
+  user_id: string | null;
+  event_type: string;
+  status: "success" | "failed" | "suspicious";
+  ip_address: string | null;
+  user_agent: string | null;
+  device_info: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+/**
+ * Login attempts table
+ */
+export interface LoginAttempt {
+  id: string;
+  email: string;
+  ip_address: string;
+  success: boolean;
+  user_agent: string | null;
+  failure_reason: string | null;
+  created_at: string;
+}
+
+/**
+ * Email change requests table
+ */
+export interface EmailChangeRequest {
+  id: string;
+  user_id: string;
+  old_email: string;
+  new_email: string;
+  verification_token: string;
+  token_expires_at: string;
+  verified: boolean;
+  verified_at: string | null;
+  created_at: string;
+}
+
+/**
+ * Trusted devices table
+ */
+export interface TrustedDevice {
+  id: string;
+  user_id: string;
+  device_fingerprint: string;
+  device_name: string | null;
+  device_info: Record<string, unknown> | null;
+  ip_address: string | null;
+  last_used_at: string;
+  trusted_at: string;
+  expires_at: string | null;
+  revoked: boolean;
+  revoked_at: string | null;
+  created_at: string;
 }

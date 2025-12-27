@@ -18,6 +18,7 @@ import { requestContextMiddleware, enrichRequestContext } from "./middleware/req
 // Import routes
 import healthRouter from "./routes/health";
 import authRouter from "./routes/auth";
+import authEnhancedRouter from "./routes/authEnhanced"; // New enhanced auth routes
 import jobsRouter from "./routes/jobs";
 import adminRouter from "./routes/admin";
 import stripeRouter from "./routes/stripe";
@@ -144,7 +145,8 @@ app.use((req, res, next) => {
 // ============================================
 app.use("/health", healthRouter);
 app.use("/status", statusRouter);  // Operational status dashboard
-app.use("/auth", authRouter);
+app.use("/auth", authRouter); // Basic auth routes (register, login, etc.)
+app.use("/auth", authEnhancedRouter); // Enhanced auth routes (2FA, OAuth, sessions, etc.)
 app.use("/jobs", jobsRouter);
 app.use("/assignment", assignmentRouter);
 app.use("/admin", adminRouter);
