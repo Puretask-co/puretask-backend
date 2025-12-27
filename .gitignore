@@ -40,3 +40,9 @@ out/
 # IDE junk
 .vs/
 .vscode/
+dist/
+.vs/
+.vscode/
+.env
+.env.*
+nodeSetup/.env
