@@ -25,3 +25,18 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+# Environment variables (ignore all, keep examples)
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Dependencies / builds
+node_modules/
+dist/
+build/
+out/
+
+# IDE junk
+.vs/
+.vscode/
