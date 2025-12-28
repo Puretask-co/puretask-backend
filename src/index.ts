@@ -6,6 +6,7 @@ import helmet from "helmet";
 import cors from "cors";
 import { env } from "./config/env";
 import { logger } from "./lib/logger";
+import { initRedis, closeRedis } from "./lib/redis";
 import { authMiddlewareAttachUser } from "./lib/auth";
 import {
   generalRateLimiter,
@@ -230,6 +231,14 @@ let server: ReturnType<typeof app.listen> | null = null;
 if (!isTestMode) {
   const PORT = env.PORT;
   
+  // Initialize Redis for rate limiting
+  initRedis().catch((err) => {
+    logger.warn("redis_init_skipped", {
+      error: err.message,
+      fallback: "Using in-memory rate limiting",
+    });
+  });
+  
   // Bind to 0.0.0.0 for Railway/Docker compatibility
   server = app.listen(PORT, "0.0.0.0", () => {
     logger.info("server_started", {
@@ -246,6 +255,9 @@ if (!isTestMode) {
   // ============================================
   const gracefulShutdown = async (signal: string) => {
     logger.info("shutdown_initiated", { signal });
+
+    // Close Redis connection
+    await closeRedis();
 
     if (server) {
       server.close(() => {

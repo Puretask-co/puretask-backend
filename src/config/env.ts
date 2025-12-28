@@ -75,6 +75,10 @@ export const env = {
   APP_URL: process.env.APP_URL || "http://localhost:3000",
   STORAGE_URL: process.env.STORAGE_URL || "https://storage.puretask.com",
   
+  // Redis (for rate limiting in production)
+  REDIS_URL: process.env.REDIS_URL || "",
+  USE_REDIS_RATE_LIMITING: process.env.USE_REDIS_RATE_LIMITING === "true",
+  
   // Feature flags
   USE_EVENT_BASED_NOTIFICATIONS: process.env.USE_EVENT_BASED_NOTIFICATIONS !== "false", // Default: true if n8n is configured
 

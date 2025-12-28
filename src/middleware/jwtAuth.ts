@@ -4,6 +4,7 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAuthToken, AuthUser } from "../lib/auth";
 import { logger } from "../lib/logger";
+import { env } from "../config/env";
 import type { UserRole } from "../types/db";
 
 // For backwards compatibility
@@ -24,6 +25,9 @@ export interface JWTAuthedRequest extends Request {
 /**
  * JWT authentication middleware
  * Validates Bearer token and attaches user to request
+ * 
+ * SECURITY NOTE: Legacy x-user-id/x-user-role headers are DISABLED in production
+ * They are only allowed in development/test environments for testing convenience
  */
 export function jwtAuthMiddleware(
   req: JWTAuthedRequest,
@@ -32,19 +36,28 @@ export function jwtAuthMiddleware(
 ) {
   const authHeader = req.headers.authorization;
 
-  // Also support legacy header-based auth for backwards compatibility
-  const legacyRole = req.header("x-user-role");
-  const legacyId = req.header("x-user-id");
+  // Legacy auth ONLY in development/test - NEVER in production
+  if (env.NODE_ENV !== "production") {
+    const legacyRole = req.header("x-user-role");
+    const legacyId = req.header("x-user-id");
 
-  if (legacyRole && legacyId) {
-    // Legacy auth (for testing/development)
-    if (!["client", "cleaner", "admin"].includes(legacyRole)) {
-      return res.status(403).json({
-        error: { code: "INVALID_ROLE", message: "Invalid role" },
+    if (legacyRole && legacyId) {
+      logger.warn("legacy_auth_used", {
+        reason: "x-user-id/x-user-role headers in use",
+        warning: "This is disabled in production",
+        userId: legacyId,
+        role: legacyRole,
       });
+
+      if (!["client", "cleaner", "admin"].includes(legacyRole)) {
+        return res.status(403).json({
+          error: { code: "INVALID_ROLE", message: "Invalid role" },
+        });
+      }
+      
+      req.user = { id: legacyId, role: legacyRole as UserRole, email: null };
+      return next();
     }
-    req.user = { id: legacyId, role: legacyRole as UserRole, email: null };
-    return next();
   }
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
