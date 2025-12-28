@@ -1,0 +1,19 @@
+# Railway Deployment Configuration
+
+# Build command
+build = "npm run build"
+
+# Start command  
+start = "npm start"
+
+# Health check
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+
+# Watch paths (optional)
+watch = ["src/**/*.ts", "package.json"]
+
+# Restart policy
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+

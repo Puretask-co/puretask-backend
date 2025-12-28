@@ -230,13 +230,15 @@ let server: ReturnType<typeof app.listen> | null = null;
 if (!isTestMode) {
   const PORT = env.PORT;
   
-  server = app.listen(PORT, () => {
+  // Bind to 0.0.0.0 for Railway/Docker compatibility
+  server = app.listen(PORT, "0.0.0.0", () => {
     logger.info("server_started", {
       port: PORT,
+      host: "0.0.0.0",
       env: env.NODE_ENV,
       timestamp: new Date().toISOString(),
     });
-    console.log(`🚀 PureTask Backend running on port ${PORT}`);
+    console.log(`🚀 PureTask Backend running on 0.0.0.0:${PORT}`);
   });
 
   // ============================================
