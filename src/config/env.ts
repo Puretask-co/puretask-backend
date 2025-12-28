@@ -71,6 +71,7 @@ export const env = {
   // Integrations (optional but recommended)
   N8N_WEBHOOK_URL: process.env.N8N_WEBHOOK_URL || "",
   N8N_MCP_SERVER_URL: process.env.N8N_MCP_SERVER_URL || "",
+  N8N_API_KEY: process.env.N8N_API_KEY || "",
   APP_URL: process.env.APP_URL || "http://localhost:3000",
   STORAGE_URL: process.env.STORAGE_URL || "https://storage.puretask.com",
   
