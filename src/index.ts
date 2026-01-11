@@ -21,7 +21,7 @@ import healthRouter from "./routes/health";
 import authRouter from "./routes/auth";
 import authEnhancedRouter from "./routes/authEnhanced"; // New enhanced auth routes
 import jobsRouter from "./routes/jobs";
-import adminRouter from "./routes/admin";
+import adminRouter from "./routes/admin/index"; // V4 FEATURE: Comprehensive admin dashboard
 import stripeRouter from "./routes/stripe";
 import eventsRouter from "./routes/events";
 import paymentsRouter from "./routes/payments";
@@ -30,6 +30,11 @@ import messagesRouter from "./routes/messages";
 // V4 FEATURE — ENABLED (analytics dashboards)
 import analyticsRouter from "./routes/analytics";
 import cleanerRouter from "./routes/cleaner";
+import searchRouter from "./routes/search"; // Search/browse cleaners
+import cleanerAIRouter from "./routes/cleaner-ai-settings"; // V4 FEATURE: AI Assistant Settings for Cleaners
+import cleanerAIAdvancedRouter from "./routes/cleaner-ai-advanced"; // V4 FEATURE: Advanced AI features (export, preview, etc.)
+import gamificationRouter from "./routes/gamification"; // V4 FEATURE: Gamification & Onboarding
+import messageHistoryRouter from "./routes/message-history"; // V4 FEATURE: Message History & Saved Messages
 import trackingRouter from "./routes/tracking";
 // V3 FEATURE — ENABLED (subscriptions)
 import premiumRouter from "./routes/premium";
@@ -43,6 +48,8 @@ import cleanerPortalRouter from "./routes/cleanerPortal";
 import clientInvoicesRouter from "./routes/clientInvoices";
 import statusRouter from "./routes/status";
 import pricingRouter from "./routes/pricing";
+// V4 FEATURE — AI ASSISTANT (communication automation & scheduling)
+import aiRouter from "./routes/ai";
 
 // Create Express app
 const app = express();
@@ -157,7 +164,12 @@ app.use("/credits", creditsRouter);
 app.use("/messages", messagesRouter);
 // V4 FEATURE — ENABLED (analytics dashboards)
 app.use("/analytics", analyticsRouter);
+app.use("/search", searchRouter); // Search/browse cleaners (client-facing)
 app.use("/cleaner", cleanerRouter);
+app.use("/cleaner/ai/advanced", cleanerAIAdvancedRouter); // V4 FEATURE: Advanced AI features
+app.use("/cleaner/ai", cleanerAIRouter); // V4 FEATURE: AI Assistant Settings for Cleaners
+app.use("/cleaner", messageHistoryRouter); // V4 FEATURE: Message History & Saved Messages
+app.use("/cleaner", gamificationRouter); // V4 FEATURE: Gamification & Onboarding
 app.use("/cleaner", cleanerPortalRouter); // Cleaner portal: my clients + invoicing
 app.use("/client", clientInvoicesRouter); // Client invoice management
 app.use("/tracking", trackingRouter);   // Job live tracking
@@ -169,6 +181,8 @@ app.use("/manager", managerRouter);     // Manager dashboard
 app.use("/v2", v2Router);               // V2 features: properties, teams, calendar, AI
 app.use("/pricing", pricingRouter);     // V3 feature: tier-aware pricing
 app.use("/alerts", alertsRouter);
+// V4 FEATURE — ENABLED (AI Assistant)
+app.use("/ai", aiRouter);               // AI communication automation & scheduling
 app.use(eventsRouter); // Mounts /events and /n8n/events
 
 // ============================================
