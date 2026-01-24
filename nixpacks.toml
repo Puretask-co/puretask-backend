@@ -1,15 +1,18 @@
-# Nixpacks Configuration for Railway
-# https://docs.railway.app/deploy/builds/nixpacks
+# nixpacks.toml
+# Explicit build configuration for Railway/Nixpacks
 
 [phases.setup]
-nixPkgs = ["nodejs-20_x", "npm"]
+nixPkgs = ["nodejs-18_x", "npm-9_x"]
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = [
+  "npm ci"
+]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = [
+  "npm run build"
+]
 
 [start]
-cmd = "node dist/index.js"
-
+cmd = "npm start"
