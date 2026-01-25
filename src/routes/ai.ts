@@ -2,7 +2,7 @@
 // AI Assistant API Routes
 
 import { Router, Response } from 'express';
-import { authMiddleware, AuthedRequest } from '../middleware/auth';
+import { requireAuth, AuthedRequest } from '../middleware/authCanonical';
 import { validateBody } from '../lib/validation';
 import { z } from 'zod';
 import { logger } from '../lib/logger';
@@ -14,7 +14,7 @@ import { query } from '../db/client';
 const aiRouter = Router();
 
 // All routes require authentication
-aiRouter.use(authMiddleware);
+aiRouter.use(requireAuth);
 
 /**
  * GET /ai/settings

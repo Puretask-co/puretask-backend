@@ -2,8 +2,9 @@
 // Redis-based caching service for PureTask
 // Implements efficient caching strategy with automatic invalidation
 
-import { redis } from './redis';
+import { getRedisClient } from './redis';
 import { logger } from './logger';
+import type { RedisClientType } from 'redis';
 
 /**
  * Cache configuration options
@@ -64,9 +65,19 @@ export const DefaultTTL = {
  */
 export class CacheService {
   /**
+   * Get Redis client (helper method)
+   */
+  private static getRedis(): RedisClientType | null {
+    return getRedisClient();
+  }
+
+  /**
    * Get value from cache
    */
   static async get<T>(key: string): Promise<T | null> {
+    const redis = this.getRedis();
+    if (!redis) return null;
+    
     try {
       const data = await redis.get(key);
       if (!data) return null;
@@ -91,9 +102,12 @@ export class CacheService {
     value: T, 
     ttl: number = DefaultTTL.MEDIUM
   ): Promise<void> {
+    const redis = this.getRedis();
+    if (!redis) return;
+    
     try {
       const data = JSON.stringify(value);
-      await redis.setex(key, ttl, data);
+      await redis.setEx(key, ttl, data);
       logger.debug('cache_set', { key, ttl });
     } catch (error) {
       logger.error('cache_set_error', { 
@@ -107,6 +121,9 @@ export class CacheService {
    * Delete value from cache
    */
   static async del(key: string): Promise<void> {
+    const redis = this.getRedis();
+    if (!redis) return;
+    
     try {
       await redis.del(key);
       logger.debug('cache_delete', { key });
@@ -122,10 +139,13 @@ export class CacheService {
    * Delete multiple keys matching a pattern
    */
   static async delPattern(pattern: string): Promise<void> {
+    const redis = this.getRedis();
+    if (!redis) return;
+    
     try {
       const keys = await redis.keys(pattern);
       if (keys.length > 0) {
-        await redis.del(...keys);
+        await redis.del(keys);
         logger.debug('cache_delete_pattern', { pattern, count: keys.length });
       }
     } catch (error) {
@@ -140,6 +160,9 @@ export class CacheService {
    * Check if key exists
    */
   static async exists(key: string): Promise<boolean> {
+    const redis = this.getRedis();
+    if (!redis) return false;
+    
     try {
       const result = await redis.exists(key);
       return result === 1;
@@ -156,6 +179,9 @@ export class CacheService {
    * Get remaining TTL for a key
    */
   static async ttl(key: string): Promise<number> {
+    const redis = this.getRedis();
+    if (!redis) return -1;
+    
     try {
       return await redis.ttl(key);
     } catch (error) {
@@ -171,8 +197,11 @@ export class CacheService {
    * Increment a numeric value
    */
   static async increment(key: string, amount: number = 1): Promise<number> {
+    const redis = this.getRedis();
+    if (!redis) return 0;
+    
     try {
-      return await redis.incrby(key, amount);
+      return await redis.incrBy(key, amount);
     } catch (error) {
       logger.error('cache_increment_error', { 
         key, 
@@ -280,7 +309,7 @@ export class CacheInvalidation {
       CacheService.del(CacheKeys.CLEANER_PROFILE(cleanerId)),
       CacheService.del(CacheKeys.CLEANER_RATING(cleanerId)),
       CacheService.del(CacheKeys.CLEANER_AVAILABILITY(cleanerId)),
-      CacheService.delPattern(CacheKeys.CLEANER_REVIEWS(cleanerId, '*')),
+      CacheService.delPattern(`cleaner:reviews:${cleanerId}:*`),
       CacheService.del(CacheKeys.CLEANER_JOBS(cleanerId)),
       CacheService.delPattern('search:cleaners:*'), // Invalidate all searches
       CacheService.del(CacheKeys.FEATURED_CLEANERS()),

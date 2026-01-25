@@ -6,7 +6,7 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 
 // Services
 import {
@@ -53,7 +53,7 @@ import {
 const v2Router = Router();
 
 // All V2 routes require authentication
-v2Router.use(authMiddleware);
+v2Router.use(requireAuth);
 
 // ============================================
 // Properties

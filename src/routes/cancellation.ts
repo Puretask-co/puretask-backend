@@ -3,7 +3,7 @@
 
 import { Router } from "express";
 import { z } from "zod";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { CancellationServiceV2 } from "../core/cancellationService";
 import { coreDb } from "../core/db";
@@ -15,7 +15,7 @@ import { env } from "../config/env";
 const cancellationRouter = Router();
 
 // All routes require auth
-cancellationRouter.use(authMiddleware);
+cancellationRouter.use(requireAuth);
 
 // ============================================
 // POST /cancellations/jobs/:id - Client cancels job

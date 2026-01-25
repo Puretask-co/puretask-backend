@@ -1,7 +1,7 @@
 // src/tests/smoke/events.test.ts
 // Smoke tests for events endpoint
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "@jest/globals";
 import request from "supertest";
 import app from "../../index";
 import { computeN8nSignature } from "../../lib/auth";

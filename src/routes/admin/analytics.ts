@@ -1,5 +1,5 @@
 // src/routes/admin/analytics.ts
-import { Router, Response, NextFunction } from 'express';
+import { Router, Response, NextFunction, Request } from 'express';
 import { AuthedRequest } from '../../types/express';
 import { query } from '../../db/client';
 import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
@@ -11,15 +11,16 @@ const router = Router();
 
 // Apply authentication middleware to all routes
 router.use(jwtAuthMiddleware);
-router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
+router.use((req, res, next) => requireAdmin(req as AuthedRequest, res, next));
 
 /**
  * GET /admin/analytics/overview
  * Get comprehensive analytics overview
  */
-router.get('/overview', async (req: AuthedRequest, res: Response) => {
+router.get('/overview', async (req: Request, res: Response, next: NextFunction) => {
+  const authedReq = req as AuthedRequest;
   try {
-    const { period = '30d' } = req.query;
+    const { period = '30d' } = authedReq.query;
 
     // Calculate date range
     const daysBack = period === '7d' ? 7 : period === '30d' ? 30 : 90;
@@ -179,7 +180,7 @@ router.get('/overview', async (req: AuthedRequest, res: Response) => {
     };
 
     logger.info('Admin analytics retrieved', {
-      adminId: req.user?.id,
+      adminId: authedReq.user?.id,
       period
     });
 
@@ -194,9 +195,10 @@ router.get('/overview', async (req: AuthedRequest, res: Response) => {
  * GET /admin/analytics/revenue
  * Get detailed revenue analytics
  */
-router.get('/revenue', async (req: AuthedRequest, res: Response) => {
+router.get('/revenue', async (req: Request, res: Response, next: NextFunction) => {
+  const authedReq = req as AuthedRequest;
   try {
-    const { period = '30d', groupBy = 'day' } = req.query;
+    const { period = '30d', groupBy = 'day' } = authedReq.query;
 
     const daysBack = period === '7d' ? 7 : period === '30d' ? 30 : 90;
     const startDate = new Date();
@@ -236,7 +238,8 @@ router.get('/revenue', async (req: AuthedRequest, res: Response) => {
  * GET /admin/analytics/platform-metrics
  * Get platform health metrics
  */
-router.get('/platform-metrics', async (req: AuthedRequest, res: Response) => {
+router.get('/platform-metrics', async (req: Request, res: Response, next: NextFunction) => {
+  const authedReq = req as AuthedRequest;
   try {
     const metrics = await query(`
       SELECT 

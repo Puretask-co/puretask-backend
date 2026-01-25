@@ -4,7 +4,7 @@
 
 import { Router, Response } from "express";
 import { logger } from "../lib/logger";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, requireAdmin, AuthedRequest } from "../middleware/authCanonical";
 import {
   getDashboardOverview,
   getSupplyDemandHeatmap,
@@ -18,16 +18,8 @@ import { getBackgroundCheckStats } from "../services/backgroundCheckService";
 const managerRouter = Router();
 
 // All routes require auth and admin role
-managerRouter.use(authMiddleware);
-
-const requireAdmin = (req: AuthedRequest, res: Response, next: () => void) => {
-  if (req.user?.role !== "admin") {
-    return res.status(403).json({
-      error: { code: "FORBIDDEN", message: "Admin access required" },
-    });
-  }
-  next();
-};
+managerRouter.use(requireAuth);
+managerRouter.use(requireAdmin);
 
 managerRouter.use(requireAdmin);
 

@@ -6,7 +6,7 @@
 
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
-import { db } from "../db/client";
+import { query, withTransaction } from "../db/client";
 import { jwtAuthMiddleware } from "../middleware/jwtAuth";
 import { AuthedRequest } from "../types/express";
 
@@ -80,7 +80,7 @@ router.get("/settings", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
-    const settings = await db.query(
+    const settings = await query(
       `SELECT 
         setting_category as category,
         setting_key as key,
@@ -131,7 +131,7 @@ router.get("/settings/:category", async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const { category } = req.params;
 
-    const settings = await db.query(
+    const settings = await query(
       `SELECT 
         setting_key as key,
         setting_value as value,
@@ -185,7 +185,7 @@ router.patch("/settings/:settingKey", async (req: AuthedRequest, res) => {
 
     updates.push(`last_updated_at = NOW()`);
 
-    const result = await db.query(
+    const result = await query(
       `UPDATE cleaner_ai_settings
        SET ${updates.join(", ")}
        WHERE cleaner_id = $1 AND setting_key = $2
@@ -235,10 +235,7 @@ router.post("/settings/bulk-update", async (req: AuthedRequest, res) => {
       });
     }
 
-    const client = await db.connect();
-    try {
-      await client.query("BEGIN");
-
+    await withTransaction(async (client) => {
       const updated = [];
       for (const setting of settings) {
         const result = await client.query(
@@ -256,19 +253,12 @@ router.post("/settings/bulk-update", async (req: AuthedRequest, res) => {
         }
       }
 
-      await client.query("COMMIT");
-
       res.json({
         message: "Settings updated successfully",
         updated: updated.length,
         settings: updated,
       });
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   } catch (error: any) {
     console.error("Error bulk updating settings:", error);
     res.status(500).json({
@@ -316,7 +306,7 @@ router.get("/templates", async (req: AuthedRequest, res) => {
 
     query += ` ORDER BY template_type, is_default DESC, template_name`;
 
-    const result = await db.query(query, params);
+    const result = await query(query, params);
 
     res.json({
       templates: result.rows,
@@ -339,7 +329,7 @@ router.post("/templates", async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const validated = createTemplateSchema.parse(req.body);
 
-    const result = await db.query(
+    const result = await query(
       `INSERT INTO cleaner_ai_templates 
         (cleaner_id, template_type, template_name, template_content, variables, is_default)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -413,7 +403,7 @@ router.patch("/templates/:templateId", async (req: AuthedRequest, res) => {
 
     updates.push(`updated_at = NOW()`);
 
-    const result = await db.query(
+    const result = await query(
       `UPDATE cleaner_ai_templates
        SET ${updates.join(", ")}
        WHERE id = $1 AND cleaner_id = $2
@@ -458,7 +448,7 @@ router.delete("/templates/:templateId", async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const { templateId } = req.params;
 
-    const result = await db.query(
+    const result = await query(
       `DELETE FROM cleaner_ai_templates
        WHERE id = $1 AND cleaner_id = $2
        RETURNING id`,
@@ -511,7 +501,7 @@ router.get("/quick-responses", async (req: AuthedRequest, res) => {
 
     query += ` ORDER BY is_favorite DESC, usage_count DESC, created_at DESC`;
 
-    const result = await db.query(query, params);
+    const result = await query(query, params);
 
     res.json({
       responses: result.rows,
@@ -534,7 +524,7 @@ router.post("/quick-responses", async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const validated = createQuickResponseSchema.parse(req.body);
 
-    const result = await db.query(
+    const result = await query(
       `INSERT INTO cleaner_quick_responses 
         (cleaner_id, response_category, trigger_keywords, response_text)
        VALUES ($1, $2, $3, $4)
@@ -603,7 +593,7 @@ router.patch("/quick-responses/:responseId", async (req: AuthedRequest, res) => 
 
     updates.push(`updated_at = NOW()`);
 
-    const result = await db.query(
+    const result = await query(
       `UPDATE cleaner_quick_responses
        SET ${updates.join(", ")}
        WHERE id = $1 AND cleaner_id = $2
@@ -647,7 +637,7 @@ router.delete("/quick-responses/:responseId", async (req: AuthedRequest, res) =>
     const cleanerId = req.user!.id;
     const { responseId } = req.params;
 
-    const result = await db.query(
+    const result = await query(
       `DELETE FROM cleaner_quick_responses
        WHERE id = $1 AND cleaner_id = $2
        RETURNING id`,
@@ -677,7 +667,7 @@ router.get("/preferences", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
-    const result = await db.query(
+    const result = await query(
       `SELECT 
         communication_tone as "communicationTone",
         formality_level as "formalityLevel",
@@ -778,7 +768,7 @@ router.patch("/preferences", async (req: AuthedRequest, res) => {
 
     updates.push(`updated_at = NOW()`);
 
-    const result = await db.query(
+    const result = await query(
       `UPDATE cleaner_ai_preferences
        SET ${updates.join(", ")}
        WHERE cleaner_id = $1

@@ -6,7 +6,7 @@
 
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
-import { db } from "../db/client";
+import { query } from "../db/client";
 import { jwtAuthMiddleware } from "../middleware/jwtAuth";
 import { AuthedRequest } from "../types/express";
 
@@ -21,7 +21,7 @@ router.get("/onboarding/progress", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
-    const result = await db.query(
+    const result = await query(
       `SELECT 
         profile_completion_percentage as "completionPercentage",
         setup_wizard_completed as "wizardCompleted",
@@ -48,7 +48,7 @@ router.get("/onboarding/progress", async (req: AuthedRequest, res) => {
 
     if (result.rows.length === 0) {
       // Initialize if not exists
-      await db.query(
+      await query(
         `INSERT INTO cleaner_onboarding_progress (cleaner_id) VALUES ($1)`,
         [cleanerId]
       );
@@ -135,7 +135,7 @@ router.get("/achievements", async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
 
     // Get all achievements with earned status
-    const result = await db.query(
+    const result = await query(
       `SELECT 
         a.id,
         a.achievement_key as "key",
@@ -221,7 +221,7 @@ router.get("/certifications", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
-    const result = await db.query(
+    const result = await query(
       `SELECT 
         c.id,
         c.certification_key as "key",
@@ -275,7 +275,7 @@ router.post("/certifications/:certificationId/claim", async (req: AuthedRequest,
     const { certificationId } = req.params;
 
     // Check if requirements met
-    const cert = await db.query(
+    const cert = await query(
       `SELECT requirements FROM certifications WHERE id = $1`,
       [certificationId]
     );
@@ -295,7 +295,7 @@ router.post("/certifications/:certificationId/claim", async (req: AuthedRequest,
     }
 
     // Award certification
-    const result = await db.query(
+    const result = await query(
       `INSERT INTO cleaner_certifications (cleaner_id, certification_id)
        VALUES ($1, $2)
        ON CONFLICT (cleaner_id, certification_id) DO UPDATE SET is_active = true
@@ -377,7 +377,7 @@ router.get("/template-library", async (req: AuthedRequest, res) => {
 
     query += ` LIMIT 50`;
 
-    const result = await db.query(query, params);
+    const result = await query(query, params);
 
     res.json({
       templates: result.rows,
@@ -399,7 +399,7 @@ router.post("/template-library/:templateId/save", async (req: AuthedRequest, res
     const { customizedContent } = req.body;
 
     // Get template from library
-    const template = await db.query(
+    const template = await query(
       `SELECT * FROM template_library WHERE id = $1`,
       [templateId]
     );
@@ -472,7 +472,7 @@ router.get("/template-library/saved", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
-    const result = await db.query(
+    const result = await query(
       `SELECT 
         st.id,
         st.customized_content as "customizedContent",
@@ -510,7 +510,7 @@ router.get("/tooltips", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
-    const result = await db.query(
+    const result = await query(
       `SELECT 
         t.id,
         t.tooltip_key as "key",
@@ -595,7 +595,7 @@ router.post("/template-library", async (req: AuthedRequest, res) => {
     }
 
     // Insert template into library
-    const result = await db.query(
+    const result = await query(
       `INSERT INTO template_library (
         template_type,
         template_name,
@@ -649,7 +649,7 @@ router.get("/template-library/:templateId", async (req: AuthedRequest, res) => {
   try {
     const { templateId } = req.params;
 
-    const result = await db.query(
+    const result = await query(
       `SELECT 
         id,
         template_type as type,
@@ -694,7 +694,7 @@ router.get("/template-library/:templateId", async (req: AuthedRequest, res) => {
 async function checkAndUnlockAchievements(cleanerId: string) {
   try {
     // Get user's progress
-    const progress = await db.query(
+    const progress = await query(
       `SELECT * FROM cleaner_onboarding_progress WHERE cleaner_id = $1`,
       [cleanerId]
     );
@@ -704,7 +704,7 @@ async function checkAndUnlockAchievements(cleanerId: string) {
     const userProgress = progress.rows[0];
 
     // Get all unearned achievements
-    const achievements = await db.query(
+    const achievements = await query(
       `SELECT a.* 
        FROM achievements a
        WHERE a.is_active = true 
@@ -740,7 +740,7 @@ async function checkAndUnlockAchievements(cleanerId: string) {
       }
 
       if (earned) {
-        await db.query(
+        await query(
           `INSERT INTO cleaner_achievements (cleaner_id, achievement_id)
            VALUES ($1, $2)
            ON CONFLICT (cleaner_id, achievement_id) DO NOTHING`,
@@ -755,7 +755,7 @@ async function checkAndUnlockAchievements(cleanerId: string) {
 
 async function calculateCertificationProgress(cleanerId: string, requirements: any): Promise<number> {
   try {
-    const progress = await db.query(
+    const progress = await query(
       `SELECT * FROM cleaner_onboarding_progress WHERE cleaner_id = $1`,
       [cleanerId]
     );

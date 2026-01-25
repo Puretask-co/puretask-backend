@@ -1,0 +1,78 @@
+# Gitleaks configuration for PureTask Backend
+# Scans for secrets and credentials in code
+
+title = "PureTask Backend Secret Detection"
+
+[extend]
+# Use default Gitleaks rules
+useDefault = true
+
+[allowlist]
+description = "Allowlist for false positives"
+
+# Allow example/placeholder values
+[[allowlist.regexes]]
+regex = '''YOUR_.*'''
+reason = "Placeholder values in .env.example and documentation"
+
+[[allowlist.regexes]]
+regex = '''REPLACE.*'''
+reason = "Placeholder values in documentation"
+
+[[allowlist.regexes]]
+regex = '''example.*'''
+reason = "Example values in documentation"
+
+[[allowlist.regexes]]
+regex = '''placeholder.*'''
+reason = "Placeholder values"
+
+[[allowlist.regexes]]
+regex = '''sk_test_YOUR.*'''
+reason = "Placeholder Stripe test key in examples"
+
+[[allowlist.regexes]]
+regex = '''sk_live_YOUR.*'''
+reason = "Placeholder Stripe live key in examples"
+
+[[allowlist.regexes]]
+regex = '''whsec_YOUR.*'''
+reason = "Placeholder webhook secret in examples"
+
+# Allow test keys in test files
+[[allowlist.paths]]
+path = '''.*\.test\.(ts|js)'''
+reason = "Test files may contain test keys"
+
+[[allowlist.paths]]
+path = '''.*\.spec\.(ts|js)'''
+reason = "Test files may contain test keys"
+
+# Allow example files
+[[allowlist.paths]]
+path = '''\.env\.example'''
+reason = "Example environment file"
+
+[[allowlist.paths]]
+path = '''docs/.*'''
+reason = "Documentation may contain example values"
+
+# Ignore archived docs
+[[allowlist.paths]]
+path = '''docs/archive/.*'''
+reason = "Archived documentation"
+
+# Ignore node_modules
+[[allowlist.paths]]
+path = '''node_modules/.*'''
+reason = "Third-party dependencies"
+
+# Ignore build output
+[[allowlist.paths]]
+path = '''dist/.*'''
+reason = "Build output"
+
+# Ignore lock files (they may contain hashes that look like secrets)
+[[allowlist.paths]]
+path = '''package-lock\.json'''
+reason = "Package lock file may contain hashes"

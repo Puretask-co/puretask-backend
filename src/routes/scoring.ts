@@ -5,7 +5,7 @@
 // - Score viewing endpoints
 
 import { Router } from "express";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { ReliabilityScoreV2Service } from "../core/reliabilityScoreV2Service";
 import { ClientRiskService } from "../core/clientRiskService";
@@ -17,7 +17,7 @@ import { query } from "../db/client";
 const scoringRouter = Router();
 
 // All routes require auth
-scoringRouter.use(authMiddleware);
+scoringRouter.use(requireAuth);
 
 // ============================================
 // Reliability Score Endpoints

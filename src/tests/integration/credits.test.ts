@@ -2,7 +2,7 @@
 // Credit system integration tests
 
 import request from "supertest";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import app from "../../index";
 import { query } from "../../db/client";
 import {
@@ -39,8 +39,7 @@ describe("Credit System Integration", () => {
 
       await purchaseCredits({
         userId: client.id,
-        creditsAmount: 200,
-        paymentIntentId: `pi_test_${Date.now()}`,
+        creditAmount: 200,
       });
 
       const newBalance = await getUserCreditBalance(client.id);
@@ -50,8 +49,7 @@ describe("Credit System Integration", () => {
     it("records purchase in credit_ledger", async () => {
       await purchaseCredits({
         userId: client.id,
-        creditsAmount: 100,
-        paymentIntentId: `pi_test_${Date.now()}`,
+        creditAmount: 100,
       });
 
       const entries = await query<{ amount: number; direction: string; reason: string }>(
@@ -228,9 +226,7 @@ describe("Credit System Integration", () => {
 
       await adjustCredits({
         userId: client.id,
-        amount: 50,
-        reason: "Courtesy credit",
-        adminId: "admin-123",
+        creditAmount: 50,
       });
 
       const balanceAfter = await getUserCreditBalance(client.id);
@@ -243,7 +239,7 @@ describe("Credit System Integration", () => {
 
       await adjustCredits({
         userId: client.id,
-        amount: -30,
+        creditAmount: -30,
         reason: "Penalty",
         adminId: "admin-123",
       });

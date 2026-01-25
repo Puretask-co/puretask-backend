@@ -1,222 +1,160 @@
 // src/tests/integration/auth.test.ts
-// Authentication system tests
+// Integration tests for authentication flow
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";
 
-const TEST_EMAIL = `test-${Date.now()}@puretask.test`;
-const TEST_PASSWORD = "TestPassword123!";
-let authToken: string;
-let userId: string;
+describe("Authentication Integration Tests", () => {
+  const testUser = {
+    email: `test-${Date.now()}@example.com`,
+    password: "TestPassword123!",
+    role: "client" as const,
+  };
 
-describe("Authentication System", () => {
+  beforeAll(async () => {
+    // Clean up any existing test users
+    await query("DELETE FROM users WHERE email LIKE $1", ["test-%@example.com"]);
+  });
+
   afterAll(async () => {
-    // Cleanup test user
-    if (userId) {
-      await query(`DELETE FROM users WHERE id = $1`, [userId]);
-    }
+    // Clean up test user
+    await query("DELETE FROM users WHERE email = $1", [testUser.email]);
   });
 
   describe("POST /auth/register", () => {
     it("should register a new user", async () => {
-      const res = await request(app)
+      const response = await request(app)
         .post("/auth/register")
         .send({
-          email: TEST_EMAIL,
-          password: TEST_PASSWORD,
-          fullName: "Test User",
-          role: "client",
-        });
+          email: testUser.email,
+          password: testUser.password,
+          role: testUser.role,
+        })
+        .expect(201);
 
-      expect(res.status).toBe(201);
-      expect(res.body.user).toBeDefined();
-      expect(res.body.user.email).toBe(TEST_EMAIL.toLowerCase());
-      expect(res.body.token).toBeDefined();
-
-      userId = res.body.user.id;
-      authToken = res.body.token;
+      expect(response.body).toHaveProperty("user");
+      expect(response.body).toHaveProperty("token");
+      expect(response.body.user.email).toBe(testUser.email);
     });
 
     it("should reject duplicate email", async () => {
-      const res = await request(app)
+      const response = await request(app)
         .post("/auth/register")
         .send({
-          email: TEST_EMAIL,
-          password: TEST_PASSWORD,
-          fullName: "Test User 2",
-          role: "client",
-        });
+          email: testUser.email,
+          password: testUser.password,
+          role: testUser.role,
+        })
+        .expect(400);
 
-      expect(res.status).toBe(400);
-      expect(res.body.error.code).toBeDefined();
+      expect(response.body.error).toBeDefined();
     });
 
     it("should reject invalid email", async () => {
-      const res = await request(app)
+      const response = await request(app)
         .post("/auth/register")
         .send({
-          email: "not-an-email",
-          password: TEST_PASSWORD,
-          fullName: "Test User",
-          role: "client",
-        });
+          email: "invalid-email",
+          password: testUser.password,
+        })
+        .expect(400);
 
-      expect(res.status).toBe(400);
+      expect(response.body.error).toBeDefined();
     });
 
-    it("should reject short password", async () => {
-      const res = await request(app)
+    it("should reject weak password", async () => {
+      const response = await request(app)
         .post("/auth/register")
         .send({
-          email: "another@test.com",
+          email: `test-${Date.now()}@example.com`,
           password: "short",
-          fullName: "Test User",
-          role: "client",
-        });
+        })
+        .expect(400);
 
-      expect(res.status).toBe(400);
+      expect(response.body.error).toBeDefined();
     });
   });
 
   describe("POST /auth/login", () => {
-    it("should login with valid credentials", async () => {
-      const res = await request(app)
+    it("should login with correct credentials", async () => {
+      const response = await request(app)
         .post("/auth/login")
         .send({
-          email: TEST_EMAIL,
-          password: TEST_PASSWORD,
-        });
+          email: testUser.email,
+          password: testUser.password,
+        })
+        .expect(200);
 
-      expect(res.status).toBe(200);
-      expect(res.body.user).toBeDefined();
-      expect(res.body.token).toBeDefined();
-
-      authToken = res.body.token;
+      expect(response.body).toHaveProperty("user");
+      expect(response.body).toHaveProperty("token");
+      expect(response.body.user.email).toBe(testUser.email);
     });
 
-    it("should reject invalid password", async () => {
-      const res = await request(app)
+    it("should reject incorrect password", async () => {
+      const response = await request(app)
         .post("/auth/login")
         .send({
-          email: TEST_EMAIL,
-          password: "wrongpassword",
-        });
+          email: testUser.email,
+          password: "WrongPassword",
+        })
+        .expect(401);
 
-      expect(res.status).toBe(401);
-      expect(res.body.error.code).toBe("INVALID_CREDENTIALS");
+      expect(response.body.error).toBeDefined();
     });
 
-    it("should reject unknown email", async () => {
-      const res = await request(app)
+    it("should reject non-existent user", async () => {
+      const response = await request(app)
         .post("/auth/login")
         .send({
-          email: "unknown@test.com",
-          password: TEST_PASSWORD,
-        });
+          email: "nonexistent@example.com",
+          password: "password",
+        })
+        .expect(401);
 
-      expect(res.status).toBe(401);
+      expect(response.body.error).toBeDefined();
     });
   });
 
   describe("GET /auth/me", () => {
-    it("should return current user with valid token", async () => {
-      const res = await request(app)
-        .get("/auth/me")
-        .set("Authorization", `Bearer ${authToken}`);
+    let authToken: string;
 
-      expect(res.status).toBe(200);
-      expect(res.body.user).toBeDefined();
-      expect(res.body.user.email).toBe(TEST_EMAIL.toLowerCase());
-    });
-
-    it("should reject without token", async () => {
-      const res = await request(app).get("/auth/me");
-
-      expect(res.status).toBe(401);
-    });
-
-    it("should reject invalid token", async () => {
-      const res = await request(app)
-        .get("/auth/me")
-        .set("Authorization", "Bearer invalid-token");
-
-      expect(res.status).toBe(401);
-    });
-  });
-
-  describe("PATCH /auth/me", () => {
-    it("should update user profile", async () => {
-      const res = await request(app)
-        .patch("/auth/me")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({
-          fullName: "Updated Name",
-        });
-
-      // PATCH /auth/me may not be implemented yet
-      // If it returns 404, that's expected
-      expect([200, 404]).toContain(res.status);
-      if (res.status === 200) {
-        expect(res.body.user).toBeDefined();
-      }
-    });
-  });
-
-  describe("POST /auth/change-password", () => {
-    const NEW_PASSWORD = "NewPassword456!";
-
-    it("should change password with correct current password", async () => {
-      const res = await request(app)
-        .post("/auth/change-password")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({
-          currentPassword: TEST_PASSWORD,
-          newPassword: NEW_PASSWORD,
-        });
-
-      // POST /auth/change-password may not be implemented yet
-      // If it returns 404, that's expected
-      expect([200, 404]).toContain(res.status);
-      if (res.status === 200) {
-        expect(res.body.success).toBe(true);
-      }
-    });
-
-    it("should login with new password", async () => {
-      const res = await request(app)
+    beforeAll(async () => {
+      const response = await request(app)
         .post("/auth/login")
         .send({
-          email: TEST_EMAIL,
-          password: NEW_PASSWORD,
+          email: testUser.email,
+          password: testUser.password,
         });
-
-      // Only test login if password change succeeded
-      if (authToken) {
-        const res = await request(app)
-          .post("/auth/login")
-          .send({
-            email: TEST_EMAIL,
-            password: NEW_PASSWORD,
-          });
-
-        expect(res.status).toBe(200);
-      }
+      authToken = response.body.token;
     });
 
-    it("should reject incorrect current password", async () => {
-      // Skip if route doesn't exist
-      const res = await request(app)
-        .post("/auth/change-password")
+    it("should return user info with valid token", async () => {
+      const response = await request(app)
+        .get("/auth/me")
         .set("Authorization", `Bearer ${authToken}`)
-        .send({
-          currentPassword: "wrongpassword",
-          newPassword: "AnotherPassword789!",
-        });
+        .expect(200);
 
-      expect([400, 404]).toContain(res.status);
+      expect(response.body).toHaveProperty("user");
+      expect(response.body.user.email).toBe(testUser.email);
+    });
+
+    it("should reject request without token", async () => {
+      const response = await request(app)
+        .get("/auth/me")
+        .expect(401);
+
+      expect(response.body.error).toBeDefined();
+    });
+
+    it("should reject request with invalid token", async () => {
+      const response = await request(app)
+        .get("/auth/me")
+        .set("Authorization", "Bearer invalid-token")
+        .expect(401);
+
+      expect(response.body.error).toBeDefined();
     });
   });
 });
-

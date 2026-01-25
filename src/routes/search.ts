@@ -1,228 +1,153 @@
-// src/routes/search.ts
-// Search and browse cleaners - public/client accessible endpoint
+/**
+ * Search Routes
+ * Backend routes for global search and autocomplete
+ */
 
-import { Router, Response } from "express";
-import { z } from "zod";
-import { query } from "../db/client";
-import { logger } from "../lib/logger";
-import { jwtAuthMiddleware, JWTAuthedRequest } from "../middleware/jwtAuth";
+import { Router } from 'express';
+import { requireAuth } from '../middleware/authCanonical';
+import { db } from '../lib/db';
 
-const searchRouter = Router();
-
-// These routes can be accessed by authenticated users (clients)
-searchRouter.use(jwtAuthMiddleware);
+const router = Router();
 
 /**
- * GET /search/cleaners
- * Search and browse available cleaners
- * Query params:
- * - limit: number of results (default 20, max 100)
- * - offset: pagination offset
- * - minRating: minimum rating (1-5)
- * - maxRate: maximum hourly rate
- * - serviceArea: filter by city/zip
- * - verified: only verified cleaners
+ * GET /search/global
+ * Global search across cleaners, bookings, clients, jobs
  */
-searchRouter.get("/cleaners", async (req: JWTAuthedRequest, res: Response) => {
+router.get('/global', requireAuth, async (req, res) => {
   try {
-    const {
-      limit = "20",
-      offset = "0",
-      minRating,
-      maxRate,
-      serviceArea,
-      verified,
-    } = req.query;
+    const { q, limit = 10 } = req.query;
+    const query = (q as string)?.toLowerCase().trim();
 
-    const limitNum = Math.min(parseInt(limit as string, 10), 100);
-    const offsetNum = parseInt(offset as string, 10);
-
-    // Build dynamic query
-    let whereConditions: string[] = ["u.role = 'cleaner'", "u.is_active = true"];
-    let queryParams: any[] = [];
-    let paramCount = 1;
-
-    if (minRating) {
-      whereConditions.push(`u.rating >= $${paramCount}`);
-      queryParams.push(parseFloat(minRating as string));
-      paramCount++;
+    if (!query || query.length < 2) {
+      return res.json({ results: [] });
     }
 
-    if (maxRate) {
-      whereConditions.push(`u.base_rate_cph <= $${paramCount}`);
-      queryParams.push(parseFloat(maxRate as string));
-      paramCount++;
-    }
+    const results: any[] = [];
 
-    if (verified === "true") {
-      whereConditions.push(`u.verified_badge = true`);
-    }
-
-    // Add limit and offset
-    queryParams.push(limitNum, offsetNum);
-
-    const sql = `
-      SELECT 
-        u.id,
-        u.email,
-        u.full_name,
-        u.phone,
-        u.rating,
-        u.reviews_count,
-        u.jobs_completed,
-        u.base_rate_cph,
-        u.deep_addon_cph,
-        u.moveout_addon_cph,
-        u.verified_badge,
-        u.reliability_score,
-        u.avatar_url,
-        u.bio,
-        u.created_at,
-        u.last_active_at
-      FROM users u
-      WHERE ${whereConditions.join(" AND ")}
-      ORDER BY 
-        u.verified_badge DESC,
-        u.rating DESC,
-        u.jobs_completed DESC,
-        u.created_at DESC
-      LIMIT $${paramCount} OFFSET $${paramCount + 1}
-    `;
-
-    const result = await query<any>(sql, queryParams);
-
-    // Get total count for pagination
-    const countSql = `
-      SELECT COUNT(*) as total
-      FROM users u
-      WHERE ${whereConditions.join(" AND ")}
-    `;
-    const countResult = await query<{ total: string }>(
-      countSql,
-      queryParams.slice(0, -2)
-    );
-    const total = parseInt(countResult.rows[0]?.total || "0", 10);
-
-    res.json({
-      cleaners: result.rows,
-      pagination: {
-        total,
-        limit: limitNum,
-        offset: offsetNum,
-        hasMore: offsetNum + limitNum < total,
-      },
-    });
-  } catch (error) {
-    logger.error("search_cleaners_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "SEARCH_FAILED", message: "Failed to search cleaners" },
-    });
-  }
-});
-
-/**
- * GET /search/cleaners/:id
- * Get detailed cleaner profile
- */
-searchRouter.get("/cleaners/:id", async (req: JWTAuthedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    const result = await query<any>(
-      `
-      SELECT 
-        u.id,
-        u.email,
-        u.full_name,
-        u.phone,
-        u.rating,
-        u.reviews_count,
-        u.jobs_completed,
-        u.base_rate_cph,
-        u.deep_addon_cph,
-        u.moveout_addon_cph,
-        u.verified_badge,
-        u.reliability_score,
-        u.avatar_url,
-        u.bio,
-        u.created_at,
-        u.last_active_at,
-        u.has_own_supplies,
-        u.has_vehicle
-      FROM users u
-      WHERE u.id = $1 AND u.role = 'cleaner' AND u.is_active = true
-    `,
-      [id]
+    // Search cleaners
+    const cleaners = await query(
+      `SELECT id, full_name, email, 'cleaner' as type
+       FROM users
+       WHERE role = 'cleaner'
+       AND (LOWER(full_name) LIKE $1 OR LOWER(email) LIKE $1)
+       LIMIT $2`,
+      [`%${query}%`, Math.floor(Number(limit) / 4)]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "CLEANER_NOT_FOUND", message: "Cleaner not found" },
+    cleaners.rows.forEach((row) => {
+      results.push({
+        type: 'cleaner',
+        id: row.id,
+        title: row.full_name,
+        subtitle: row.email,
+        url: `/cleaner/${row.id}`,
+      });
+    });
+
+    // Search bookings (if user is client or admin)
+    if (req.user?.role === 'client' || req.user?.role === 'admin') {
+      const bookings = await query(
+        `SELECT j.id, j.address, j.service_type, 'booking' as type
+         FROM jobs j
+         WHERE (LOWER(j.address) LIKE $1 OR LOWER(j.service_type) LIKE $1)
+         ${req.user?.role === 'client' ? 'AND j.client_id = $3' : ''}
+         LIMIT $2`,
+        req.user?.role === 'client'
+          ? [`%${query}%`, Math.floor(Number(limit) / 4), req.user.id]
+          : [`%${query}%`, Math.floor(Number(limit) / 4)]
+      );
+
+      bookings.rows.forEach((row) => {
+        results.push({
+          type: 'booking',
+          id: row.id,
+          title: `Booking at ${row.address}`,
+          subtitle: row.service_type,
+          url: `/client/bookings/${row.id}`,
+        });
       });
     }
 
-    // Get recent reviews (optional - if you have a reviews table)
-    // For now, just return the cleaner profile
-    res.json({ cleaner: result.rows[0] });
-  } catch (error) {
-    logger.error("get_cleaner_profile_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-      cleanerId: req.params.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_CLEANER_FAILED", message: "Failed to get cleaner" },
-    });
+    // Search clients (admin only)
+    if (req.user?.role === 'admin') {
+      const clients = await query(
+        `SELECT id, full_name, email, 'client' as type
+         FROM users
+         WHERE role = 'client'
+         AND (LOWER(full_name) LIKE $1 OR LOWER(email) LIKE $1)
+         LIMIT $2`,
+        [`%${query}%`, Math.floor(Number(limit) / 4)]
+      );
+
+      clients.rows.forEach((row) => {
+        results.push({
+          type: 'client',
+          id: row.id,
+          title: row.full_name,
+          subtitle: row.email,
+          url: `/admin/users/${row.id}`,
+        });
+      });
+    }
+
+    res.json({ results: results.slice(0, Number(limit)) });
+  } catch (error: any) {
+    console.error('Global search error:', error);
+    res.status(500).json({ error: { message: 'Search failed' } });
   }
 });
 
 /**
- * GET /search/cleaners/:id/availability
- * Get cleaner's availability for booking
+ * GET /search/autocomplete
+ * Autocomplete suggestions for search
  */
-searchRouter.get("/cleaners/:id/availability", async (req: JWTAuthedRequest, res: Response) => {
+router.get('/autocomplete', requireAuth, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { date } = req.query;
+    const { q, limit = 8 } = req.query;
+    const query = (q as string)?.toLowerCase().trim();
 
-    // Verify cleaner exists
-    const cleanerResult = await query<any>(
-      `SELECT id FROM users WHERE id = $1 AND role = 'cleaner' AND is_active = true`,
-      [id]
-    );
-
-    if (cleanerResult.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "CLEANER_NOT_FOUND", message: "Cleaner not found" },
-      });
+    if (!query || query.length < 2) {
+      return res.json({ suggestions: [] });
     }
 
-    // Get availability data
-    const availabilityResult = await query<any>(
-      `SELECT availability_data FROM users WHERE id = $1`,
-      [id]
+    const suggestions: any[] = [];
+
+    // Cleaner name suggestions
+    const cleaners = await query(
+      `SELECT DISTINCT full_name as text, id, 'cleaner' as type
+       FROM users
+       WHERE role = 'cleaner'
+       AND LOWER(full_name) LIKE $1
+       LIMIT $2`,
+      [`%${query}%`, Math.floor(Number(limit) / 2)]
     );
 
-    res.json({
-      availability: availabilityResult.rows[0]?.availability_data || {},
+    cleaners.rows.forEach((row) => {
+      suggestions.push({
+        id: row.id,
+        text: row.text,
+        type: 'cleaner',
+      });
     });
-  } catch (error) {
-    logger.error("get_cleaner_availability_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-      cleanerId: req.params.id,
-    });
-    res.status(500).json({
-      error: {
-        code: "GET_AVAILABILITY_FAILED",
-        message: "Failed to get availability",
-      },
-    });
+
+    // Service type suggestions
+    const services = ['standard', 'deep', 'move_in_out', 'airbnb'];
+    const matchingServices = services
+      .filter((s) => s.toLowerCase().includes(query))
+      .slice(0, 3)
+      .map((s) => ({
+        id: `service-${s}`,
+        text: s.replace('_', ' '),
+        type: 'service' as const,
+      }));
+
+    suggestions.push(...matchingServices);
+
+    res.json({ suggestions: suggestions.slice(0, Number(limit)) });
+  } catch (error: any) {
+    console.error('Autocomplete error:', error);
+    res.status(500).json({ error: { message: 'Autocomplete failed' } });
   }
 });
 
-export default searchRouter;
-
+export default router;

@@ -1,7 +1,7 @@
 // src/tests/smoke/health.test.ts
 // Smoke tests for health endpoint
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "@jest/globals";
 import request from "supertest";
 import app from "../../index";
 

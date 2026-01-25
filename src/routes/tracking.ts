@@ -5,7 +5,7 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import {
   getJobTrackingState,
   startEnRoute,
@@ -20,7 +20,7 @@ import {
 const trackingRouter = Router();
 
 // All routes require auth
-trackingRouter.use(authMiddleware);
+trackingRouter.use(requireAuth);
 
 // ============================================
 // Client Tracking View

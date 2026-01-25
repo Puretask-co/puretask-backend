@@ -6,7 +6,7 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import {
   purchaseBoost,
   getActiveBoost,
@@ -28,7 +28,7 @@ import {
 const premiumRouter = Router();
 
 // All routes require auth
-premiumRouter.use(authMiddleware);
+premiumRouter.use(requireAuth);
 
 // ============================================
 // Boosts

@@ -2,7 +2,7 @@
 // Notification preferences API routes
 
 import { Router, Response } from "express";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { jwtAuthMiddleware, JWTAuthedRequest } from "../middleware/jwtAuth";
 import { validateBody } from "../lib/validation";
 import { z } from "zod";
 import { logger } from "../lib/logger";
@@ -15,7 +15,47 @@ import { query } from "../db/client";
 const notificationsRouter = Router();
 
 // All routes require authentication
-notificationsRouter.use(authMiddleware);
+notificationsRouter.use(jwtAuthMiddleware);
+
+/**
+ * GET /notifications
+ * Return notifications feed (placeholder until full system wired)
+ */
+notificationsRouter.get("/", async (_req: JWTAuthedRequest, res: Response) => {
+  res.json({ data: [], unread_count: 0 });
+});
+
+/**
+ * GET /notifications/unread-count
+ * Return unread count (placeholder)
+ */
+notificationsRouter.get("/unread-count", async (_req: JWTAuthedRequest, res: Response) => {
+  res.json({ count: 0 });
+});
+
+/**
+ * PATCH /notifications/:id/read
+ * Mark one notification as read (placeholder)
+ */
+notificationsRouter.patch("/:id/read", async (_req: JWTAuthedRequest, res: Response) => {
+  res.json({ success: true });
+});
+
+/**
+ * POST /notifications/read-all
+ * Mark all notifications as read (placeholder)
+ */
+notificationsRouter.post("/read-all", async (_req: JWTAuthedRequest, res: Response) => {
+  res.json({ success: true });
+});
+
+/**
+ * DELETE /notifications/:id
+ * Delete notification (placeholder)
+ */
+notificationsRouter.delete("/:id", async (_req: JWTAuthedRequest, res: Response) => {
+  res.json({ success: true });
+});
 
 /**
  * GET /notifications/preferences
@@ -23,7 +63,7 @@ notificationsRouter.use(authMiddleware);
  */
 notificationsRouter.get(
   "/preferences",
-  async (req: AuthedRequest, res: Response) => {
+  async (req: JWTAuthedRequest, res: Response) => {
     try {
       const userId = req.user!.id;
       const preferences = await getNotificationPreferences(userId);
@@ -59,7 +99,7 @@ const updatePreferencesSchema = z.object({
 notificationsRouter.put(
   "/preferences",
   validateBody(updatePreferencesSchema),
-  async (req: AuthedRequest, res: Response) => {
+  async (req: JWTAuthedRequest, res: Response) => {
     try {
       const userId = req.user!.id;
       const preferences = await updateNotificationPreferences(userId, req.body);
@@ -97,7 +137,7 @@ const registerPushTokenSchema = z.object({
 notificationsRouter.post(
   "/push-token",
   validateBody(registerPushTokenSchema),
-  async (req: AuthedRequest, res: Response) => {
+  async (req: JWTAuthedRequest, res: Response) => {
     try {
       const userId = req.user!.id;
       const { token, platform } = req.body;
@@ -141,7 +181,7 @@ notificationsRouter.post(
  */
 notificationsRouter.delete(
   "/push-token",
-  async (req: AuthedRequest, res: Response) => {
+  async (req: JWTAuthedRequest, res: Response) => {
     try {
       const userId = req.user!.id;
 
@@ -179,7 +219,7 @@ notificationsRouter.delete(
  */
 notificationsRouter.get(
   "/history",
-  async (req: AuthedRequest, res: Response) => {
+  async (req: JWTAuthedRequest, res: Response) => {
     try {
       const userId = req.user!.id;
       const { limit = "50", offset = "0" } = req.query;

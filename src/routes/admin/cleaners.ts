@@ -1,5 +1,5 @@
 // src/routes/admin/cleaners.ts
-import { Router, Response, NextFunction } from 'express';
+import { Router, Response, NextFunction, Request } from 'express';
 import { AuthedRequest } from '../../types/express';
 import { query } from '../../db/client';
 import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
@@ -10,13 +10,14 @@ import { CleanerManagementItem } from '../../types/admin';
 const router = Router();
 
 router.use(jwtAuthMiddleware);
-router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
+router.use((req: Request, res: Response, next: NextFunction) => requireAdmin(req as AuthedRequest, res, next));
 
 /**
  * GET /admin/cleaners
  * Get paginated list of cleaners with filters
  */
-router.get('/', async (req: AuthedRequest, res: Response) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  const authedReq = req as AuthedRequest;
   try {
     const {
       tier,

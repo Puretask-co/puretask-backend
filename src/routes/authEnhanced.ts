@@ -4,6 +4,8 @@
 import { Router, Response, Request } from "express";
 import { z } from "zod";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import { env } from "../config/env";
 import { auth } from "../lib/auth";
 import { authRateLimiter } from "../lib/security";
 import { logger } from "../lib/logger";
@@ -575,6 +577,143 @@ router.post("/logout-all", auth(), async (req, res: Response) => {
 // ============================================
 // OAUTH ROUTES
 // ============================================
+
+/**
+ * GET /auth/oauth/google/start
+ * Redirect user to Google OAuth consent screen
+ */
+router.get("/oauth/google/start", (req, res: Response) => {
+  try {
+    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
+      return res.status(500).json({
+        error: { code: "OAUTH_CONFIG_MISSING", message: "Google OAuth is not configured" },
+      });
+    }
+
+    const roleParam = typeof req.query.role === "string" ? req.query.role : "";
+    const role = roleParam === "cleaner" ? "cleaner" : "client";
+    const redirect = typeof req.query.redirect === "string" ? req.query.redirect : "";
+
+    const state = jwt.sign(
+      { role, redirect },
+      env.JWT_SECRET,
+      { expiresIn: "10m", audience: "oauth", issuer: "puretask" }
+    );
+
+    const params = new URLSearchParams({
+      client_id: env.GOOGLE_CLIENT_ID,
+      redirect_uri: env.GOOGLE_REDIRECT_URI,
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "offline",
+      include_granted_scopes: "true",
+      prompt: "select_account",
+      state,
+    });
+
+    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  } catch (err) {
+    const error = err as Error;
+    res.status(500).json({
+      error: { code: "OAUTH_START_FAILED", message: error.message },
+    });
+  }
+});
+
+/**
+ * GET /auth/oauth/google/callback
+ * Handle Google OAuth callback
+ */
+router.get("/oauth/google/callback", async (req, res: Response) => {
+  const appUrl = env.APP_URL || "http://localhost:3000";
+  const redirectTarget = new URL("/auth/oauth-callback", appUrl);
+
+  try {
+    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
+      redirectTarget.searchParams.set("error", "oauth_config_missing");
+      return res.redirect(redirectTarget.toString());
+    }
+
+    const code = typeof req.query.code === "string" ? req.query.code : "";
+    const state = typeof req.query.state === "string" ? req.query.state : "";
+
+    if (!code || !state) {
+      redirectTarget.searchParams.set("error", "oauth_missing_params");
+      return res.redirect(redirectTarget.toString());
+    }
+
+    const statePayload = jwt.verify(state, env.JWT_SECRET, {
+      audience: "oauth",
+      issuer: "puretask",
+    }) as { role?: "client" | "cleaner"; redirect?: string };
+
+    const role = statePayload.role === "cleaner" ? "cleaner" : "client";
+
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: env.GOOGLE_CLIENT_ID,
+        client_secret: env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: env.GOOGLE_REDIRECT_URI,
+        grant_type: "authorization_code",
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      redirectTarget.searchParams.set("error", "oauth_token_exchange_failed");
+      return res.redirect(redirectTarget.toString());
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token as string | undefined;
+    const refreshToken = tokenData.refresh_token as string | undefined;
+    const expiresIn = tokenData.expires_in as number | undefined;
+
+    if (!accessToken) {
+      redirectTarget.searchParams.set("error", "oauth_no_access_token");
+      return res.redirect(redirectTarget.toString());
+    }
+
+    const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!userInfoResponse.ok) {
+      redirectTarget.searchParams.set("error", "oauth_userinfo_failed");
+      return res.redirect(redirectTarget.toString());
+    }
+
+    const userInfo = await userInfoResponse.json();
+
+    const profile: OAuthProfile = {
+      provider: "google",
+      providerId: userInfo.id,
+      email: userInfo.email,
+      firstName: userInfo.given_name,
+      lastName: userInfo.family_name,
+      profilePicture: userInfo.picture,
+      accessToken,
+      refreshToken,
+      expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : undefined,
+    };
+
+    const { token } = await handleOAuthLogin(profile, role);
+
+    redirectTarget.searchParams.set("token", token);
+    if (statePayload.redirect) {
+      redirectTarget.searchParams.set("redirect", statePayload.redirect);
+    }
+
+    return res.redirect(redirectTarget.toString());
+  } catch (err) {
+    const error = err as Error;
+    logger.error("google_oauth_callback_failed", { error: error.message });
+    redirectTarget.searchParams.set("error", "oauth_callback_failed");
+    return res.redirect(redirectTarget.toString());
+  }
+});
 
 /**
  * GET /auth/oauth/accounts

@@ -1,5 +1,5 @@
 // src/routes/admin/clients.ts
-import { Router, Response, NextFunction } from 'express';
+import { Router, Response, NextFunction, Request } from 'express';
 import { AuthedRequest } from '../../types/express';
 import { query } from '../../db/client';
 import { jwtAuthMiddleware } from '../../middleware/jwtAuth';

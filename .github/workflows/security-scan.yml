@@ -1,0 +1,185 @@
+name: Security & Secret Scanning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for secret scanning
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for forbidden files
+        run: |
+          echo "🔍 Checking for forbidden files..."
+          FORBIDDEN_FILES=0
+          
+          # Check for .env files (should never be committed)
+          if find . -name ".env" -not -path "./node_modules/*" -not -path "./.git/*" | grep -q .; then
+            echo "❌ ERROR: .env file found in repository!"
+            find . -name ".env" -not -path "./node_modules/*" -not -path "./.git/*"
+            FORBIDDEN_FILES=1
+          fi
+          
+          # Check for .env.production, .env.staging
+          if find . -name ".env.production" -o -name ".env.staging" -not -path "./node_modules/*" -not -path "./.git/*" | grep -q .; then
+            echo "❌ ERROR: Production/staging .env files found!"
+            find . -name ".env.production" -o -name ".env.staging" -not -path "./node_modules/*" -not -path "./.git/*"
+            FORBIDDEN_FILES=1
+          fi
+          
+          # Check for node_modules (should be in .gitignore)
+          if [ -d "node_modules" ] && [ "$(git ls-files node_modules 2>/dev/null | wc -l)" -gt 0 ]; then
+            echo "❌ ERROR: node_modules is tracked in git!"
+            FORBIDDEN_FILES=1
+          fi
+          
+          # Check for dist (should be in .gitignore)
+          if [ -d "dist" ] && [ "$(git ls-files dist 2>/dev/null | wc -l)" -gt 0 ]; then
+            echo "❌ ERROR: dist is tracked in git!"
+            FORBIDDEN_FILES=1
+          fi
+          
+          if [ $FORBIDDEN_FILES -eq 1 ]; then
+            echo "❌ Security check failed: Forbidden files detected"
+            exit 1
+          fi
+          
+          echo "✅ No forbidden files found"
+
+      - name: Secret Scanning with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config-path: .gitleaks.toml
+          no-git: false
+          verbose: true
+          redact: true
+        continue-on-error: false
+
+      - name: Check for common secret patterns
+        run: |
+          echo "🔍 Scanning for common secret patterns..."
+          
+          # Patterns to detect
+          PATTERNS=(
+            "sk_live_[a-zA-Z0-9]{24,}"  # Stripe live keys
+            "sk_test_[a-zA-Z0-9]{24,}"  # Stripe test keys (shouldn't be in prod)
+            "whsec_[a-zA-Z0-9]{32,}"    # Stripe webhook secrets
+            "SG\\.[a-zA-Z0-9_-]{22}\\.[a-zA-Z0-9_-]{43}"  # SendGrid API keys
+            "AC[a-z0-9]{32}"            # Twilio Account SID
+            "[0-9a-f]{32}"              # Twilio Auth Token (32 char hex)
+            "sk-[a-zA-Z0-9]{32,}"       # OpenAI API keys
+            "AIza[0-9A-Za-z\\-_]{35}"   # Google API keys
+            "ya29\\.[0-9A-Za-z\\-_]+"   # Google OAuth tokens
+            "[a-zA-Z0-9_-]{32,}"        # Generic long secrets
+          )
+          
+          FOUND_SECRETS=0
+          
+          for pattern in "${PATTERNS[@]}"; do
+            # Search in code files only (exclude node_modules, .git, dist)
+            if git grep -E "$pattern" -- ':!node_modules' ':!.git' ':!dist' ':!package-lock.json' ':!.env.example' | grep -v "YOUR_" | grep -v "REPLACE" | grep -v "example" | grep -v "placeholder" | grep -q .; then
+              echo "⚠️  WARNING: Potential secret pattern found: $pattern"
+              git grep -E "$pattern" -- ':!node_modules' ':!.git' ':!dist' ':!package-lock.json' ':!.env.example' | grep -v "YOUR_" | grep -v "REPLACE" | grep -v "example" | grep -v "placeholder" || true
+              FOUND_SECRETS=1
+            fi
+          done
+          
+          if [ $FOUND_SECRETS -eq 1 ]; then
+            echo "❌ Secret scanning found potential secrets. Review the output above."
+            echo "If these are false positives, add them to .gitleaks.toml allowlist"
+            exit 1
+          fi
+          
+          echo "✅ No secrets detected"
+
+  auth-enforcement:
+    name: Auth Middleware Enforcement
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for legacy auth imports
+        run: |
+          echo "🔍 Checking for legacy auth middleware imports..."
+          
+          # Check for imports from deprecated auth middleware
+          if git grep -E "from ['\"].*middleware/auth['\"]" -- ':!node_modules' ':!.git' ':!src/middleware/auth.ts' ':!docs/**' | grep -v "authCanonical" | grep -q .; then
+            echo "❌ ERROR: Legacy auth middleware imports detected!"
+            echo "All routes must use requireAuth from src/middleware/authCanonical.ts"
+            git grep -E "from ['\"].*middleware/auth['\"]" -- ':!node_modules' ':!.git' ':!src/middleware/auth.ts' ':!docs/**' | grep -v "authCanonical"
+            exit 1
+          fi
+          
+          echo "✅ No legacy auth imports found"
+
+      - name: Run ESLint
+        run: npm run lint
+        continue-on-error: false
+
+  build-check:
+    name: Build & Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify no secrets in build output
+        run: |
+          echo "🔍 Checking build output for secrets..."
+          if [ -d "dist" ]; then
+            # Check for common secret patterns in build output
+            if grep -rE "(sk_live_|sk_test_|whsec_|SG\\.[a-zA-Z0-9_-]{22}|AC[a-z0-9]{32})" dist/ 2>/dev/null | grep -v "YOUR_" | grep -v "REPLACE" | grep -q .; then
+              echo "❌ ERROR: Potential secrets found in build output!"
+              grep -rE "(sk_live_|sk_test_|whsec_|SG\\.[a-zA-Z0-9_-]{22}|AC[a-z0-9]{32})" dist/ 2>/dev/null | grep -v "YOUR_" | grep -v "REPLACE"
+              exit 1
+            fi
+          fi
+          echo "✅ Build output is clean"

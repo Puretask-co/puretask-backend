@@ -30,7 +30,11 @@ import messagesRouter from "./routes/messages";
 // V4 FEATURE — ENABLED (analytics dashboards)
 import analyticsRouter from "./routes/analytics";
 import cleanerRouter from "./routes/cleaner";
+import cleanerOnboardingRouter from "./routes/cleanerOnboarding";
+import onboardingReminderRouter from "./routes/onboardingReminders";
+import adminIdVerificationsRouter from "./routes/adminIdVerifications";
 import searchRouter from "./routes/search"; // Search/browse cleaners
+import searchGlobalRouter from "./routes/search"; // Global search and autocomplete
 import cleanerAIRouter from "./routes/cleaner-ai-settings"; // V4 FEATURE: AI Assistant Settings for Cleaners
 import cleanerAIAdvancedRouter from "./routes/cleaner-ai-advanced"; // V4 FEATURE: Advanced AI features (export, preview, etc.)
 import gamificationRouter from "./routes/gamification"; // V4 FEATURE: Gamification & Onboarding
@@ -46,8 +50,14 @@ import assignmentRouter from "./routes/assignment";
 import alertsRouter from "./routes/alerts";
 import cleanerPortalRouter from "./routes/cleanerPortal";
 import clientInvoicesRouter from "./routes/clientInvoices";
+import clientRouter from "./routes/client";
+import clientEnhancedRouter from "./routes/clientEnhanced";
+import cleanerEnhancedRouter from "./routes/cleanerEnhanced";
+import adminEnhancedRouter from "./routes/adminEnhanced";
 import statusRouter from "./routes/status";
 import pricingRouter from "./routes/pricing";
+import holidaysRouter from "./routes/holidays";
+import notificationsRouter from "./routes/notifications";
 // V4 FEATURE — AI ASSISTANT (communication automation & scheduling)
 import aiRouter from "./routes/ai";
 
@@ -65,9 +75,18 @@ app.set("trust proxy", 1);
 
 // Helmet for secure headers
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP for API
+  contentSecurityPolicy: false, // We handle CSP manually for API
   crossOriginEmbedderPolicy: false,
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
 }));
+
+// Enhanced security headers (includes CSP)
+import { securityHeaders } from "./middleware/security";
+app.use(securityHeaders);
 
 // Additional security headers
 app.use(additionalSecurityHeaders);
@@ -158,20 +177,27 @@ app.use("/auth", authEnhancedRouter); // Enhanced auth routes (2FA, OAuth, sessi
 app.use("/jobs", jobsRouter);
 app.use("/assignment", assignmentRouter);
 app.use("/admin", adminRouter);
+app.use("/admin", adminEnhancedRouter); // Enhanced admin routes (real-time, insights, etc.)
 app.use("/stripe", stripeRouter);
 app.use("/payments", paymentsRouter);
 app.use("/credits", creditsRouter);
 app.use("/messages", messagesRouter);
 // V4 FEATURE — ENABLED (analytics dashboards)
 app.use("/analytics", analyticsRouter);
-app.use("/search", searchRouter); // Search/browse cleaners (client-facing)
+app.use("/search", searchRouter); // Search/browse cleaners + global search/autocomplete
 app.use("/cleaner", cleanerRouter);
+app.use("/cleaner/onboarding", cleanerOnboardingRouter); // Enhanced 10-step onboarding
+app.use("/admin/onboarding-reminders", onboardingReminderRouter); // Onboarding reminder management
+app.use("/admin/id-verifications", adminIdVerificationsRouter); // Admin ID verification dashboard
 app.use("/cleaner/ai/advanced", cleanerAIAdvancedRouter); // V4 FEATURE: Advanced AI features
 app.use("/cleaner/ai", cleanerAIRouter); // V4 FEATURE: AI Assistant Settings for Cleaners
 app.use("/cleaner", messageHistoryRouter); // V4 FEATURE: Message History & Saved Messages
 app.use("/cleaner", gamificationRouter); // V4 FEATURE: Gamification & Onboarding
 app.use("/cleaner", cleanerPortalRouter); // Cleaner portal: my clients + invoicing
+app.use("/cleaner", cleanerEnhancedRouter); // Enhanced cleaner routes (analytics, goals, etc.)
 app.use("/client", clientInvoicesRouter); // Client invoice management
+app.use("/client", clientRouter); // Client routes (favorites, addresses, payment methods, recurring bookings, reviews)
+app.use("/client", clientEnhancedRouter); // Enhanced client routes (insights, drafts, etc.)
 app.use("/tracking", trackingRouter);   // Job live tracking
 // V3 FEATURE — ENABLED (subscriptions)
 app.use("/premium", premiumRouter);     // Boosts, subscriptions, referrals
@@ -180,6 +206,8 @@ app.use("/manager", managerRouter);     // Manager dashboard
 // V2 FEATURE — ENABLED
 app.use("/v2", v2Router);               // V2 features: properties, teams, calendar, AI
 app.use("/pricing", pricingRouter);     // V3 feature: tier-aware pricing
+app.use("/holidays", holidaysRouter);   // Federal holiday source of truth
+app.use("/notifications", notificationsRouter);
 app.use("/alerts", alertsRouter);
 // V4 FEATURE — ENABLED (AI Assistant)
 app.use("/ai", aiRouter);               // AI communication automation & scheduling

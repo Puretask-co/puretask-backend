@@ -1,5 +1,5 @@
 // src/routes/admin/bookings.ts
-import { Router, Response, NextFunction } from 'express';
+import { Router, Response, NextFunction, Request } from 'express';
 import { AuthedRequest } from '../../types/express';
 import { query } from '../../db/client';
 import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
@@ -10,13 +10,14 @@ import { BookingConsoleFilters, BookingConsoleItem } from '../../types/admin';
 const router = Router();
 
 router.use(jwtAuthMiddleware);
-router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
+router.use((req: Request, res: Response, next: NextFunction) => requireAdmin(req as AuthedRequest, res, next));
 
 /**
  * GET /admin/bookings
  * Get paginated list of bookings with filters
  */
-router.get('/', async (req: AuthedRequest, res: Response) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  const authedReq = req as AuthedRequest;
   try {
     const {
       status,
@@ -29,7 +30,7 @@ router.get('/', async (req: AuthedRequest, res: Response) => {
       limit = '50',
       sortBy = 'date',
       sortOrder = 'DESC'
-    } = req.query;
+    } = authedReq.query;
 
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
@@ -172,7 +173,7 @@ router.get('/', async (req: AuthedRequest, res: Response) => {
     });
 
     logger.info('Admin bookings list retrieved', {
-      adminId: req.user?.id,
+      adminId: authedReq.user?.id,
       filters: { status, dateFrom, dateTo, cleanerId, clientId, search },
       count: bookings.length
     });
@@ -186,9 +187,10 @@ router.get('/', async (req: AuthedRequest, res: Response) => {
  * GET /admin/bookings/:id
  * Get detailed booking information
  */
-router.get('/:id', async (req: AuthedRequest, res: Response) => {
+router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  const authedReq = req as AuthedRequest;
   try {
-    const { id } = req.params;
+    const { id } = authedReq.params;
 
     const result = await query(
       `SELECT 
@@ -220,7 +222,7 @@ router.get('/:id', async (req: AuthedRequest, res: Response) => {
 
     res.json(result.rows[0]);
   } catch (error) {
-    logger.error('Error fetching booking details', { error, bookingId: req.params.id });
+    logger.error('Error fetching booking details', { error, bookingId: authedReq.params.id });
     res.status(500).json({ error: 'Failed to fetch booking details' });
   }
 });
@@ -229,10 +231,11 @@ router.get('/:id', async (req: AuthedRequest, res: Response) => {
  * PATCH /admin/bookings/:id/status
  * Update booking status (admin override)
  */
-router.patch('/:id/status', async (req: AuthedRequest, res: Response) => {
+router.patch('/:id/status', async (req: Request, res: Response, next: NextFunction) => {
+  const authedReq = req as AuthedRequest;
   try {
-    const { id } = req.params;
-    const { status, reason } = req.body;
+    const { id } = authedReq.params;
+    const { status, reason } = authedReq.body;
 
     const validStatuses = [
       'pending_acceptance',
@@ -275,7 +278,7 @@ router.patch('/:id/status', async (req: AuthedRequest, res: Response) => {
     );
 
     logger.info('Admin updated booking status', {
-      adminId: req.user?.id,
+      adminId: authedReq.user?.id,
       bookingId: id,
       newStatus: status,
       reason
@@ -283,7 +286,7 @@ router.patch('/:id/status', async (req: AuthedRequest, res: Response) => {
 
     res.json(result.rows[0]);
   } catch (error) {
-    logger.error('Error updating booking status', { error, bookingId: req.params.id });
+    logger.error('Error updating booking status', { error, bookingId: authedReq.params.id });
     res.status(500).json({ error: 'Failed to update booking status' });
   }
 });
@@ -292,7 +295,8 @@ router.patch('/:id/status', async (req: AuthedRequest, res: Response) => {
  * GET /admin/bookings/stats/summary
  * Get booking statistics summary
  */
-router.get('/stats/summary', async (req: AuthedRequest, res: Response) => {
+router.get('/stats/summary', async (req: Request, res: Response, next: NextFunction) => {
+  const authedReq = req as AuthedRequest;
   try {
     const stats = await query(`
       SELECT 
@@ -319,9 +323,10 @@ router.get('/stats/summary', async (req: AuthedRequest, res: Response) => {
  * POST /admin/bookings/bulk-update
  * Bulk update bookings
  */
-router.post('/bulk-update', async (req: AuthedRequest, res: Response) => {
+router.post('/bulk-update', async (req: Request, res: Response, next: NextFunction) => {
+  const authedReq = req as AuthedRequest;
   try {
-    const { bookingIds, action, value } = req.body;
+    const { bookingIds, action, value } = authedReq.body;
 
     if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
       return res.status(400).json({ error: 'Invalid booking IDs' });
@@ -346,7 +351,7 @@ router.post('/bulk-update', async (req: AuthedRequest, res: Response) => {
     const result = await query(query_text, params);
 
     logger.info('Admin bulk updated bookings', {
-      adminId: req.user?.id,
+      adminId: authedReq.user?.id,
       action,
       count: result.rowCount
     });

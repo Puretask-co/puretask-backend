@@ -28,6 +28,12 @@ import {
   setPreferences,
   getCleanerSchedule,
 } from "../services/availabilityService";
+import {
+  getCleanerHolidaySettings,
+  updateCleanerHolidaySettings,
+  listCleanerHolidayOverrides,
+  upsertCleanerHolidayOverride,
+} from "../services/holidayService";
 // V1 CORE FEATURE: Reliability scoring (market safety mechanism)
 
 const cleanerRouter = Router();
@@ -227,6 +233,133 @@ cleanerRouter.put(
       });
       res.status(400).json({
         error: { code: "UPDATE_FAILED", message: (error as Error).message },
+      });
+    }
+  }
+);
+
+/**
+ * GET /cleaner/holiday-settings
+ * Get cleaner holiday settings (global defaults)
+ */
+cleanerRouter.get(
+  "/holiday-settings",
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const settings = await getCleanerHolidaySettings(req.user!.id);
+      res.json({ settings });
+    } catch (error) {
+      logger.error("get_holiday_settings_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_HOLIDAY_SETTINGS_FAILED", message: "Failed to get holiday settings" },
+      });
+    }
+  }
+);
+
+const holidaySettingsSchema = z.object({
+  available_on_federal_holidays: z.boolean().optional(),
+  holiday_rate_enabled: z.boolean().optional(),
+  holiday_rate_multiplier: z.number().min(1).max(2).optional(),
+});
+
+/**
+ * PUT /cleaner/holiday-settings
+ * Update cleaner holiday settings (global defaults)
+ */
+cleanerRouter.put(
+  "/holiday-settings",
+  validateBody(holidaySettingsSchema),
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const settings = await updateCleanerHolidaySettings(req.user!.id, req.body);
+      res.json({ settings });
+    } catch (error) {
+      logger.error("update_holiday_settings_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(400).json({
+        error: { code: "UPDATE_HOLIDAY_SETTINGS_FAILED", message: (error as Error).message },
+      });
+    }
+  }
+);
+
+/**
+ * GET /cleaner/holiday-overrides
+ * List cleaner holiday overrides within a date range
+ */
+cleanerRouter.get(
+  "/holiday-overrides",
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const from = (req.query.from as string) ?? new Date().toISOString().slice(0, 10);
+      const toDate = new Date(from);
+      toDate.setDate(toDate.getDate() + 365);
+      const to = (req.query.to as string) ?? toDate.toISOString().slice(0, 10);
+
+      const overrides = await listCleanerHolidayOverrides({
+        cleanerId: req.user!.id,
+        from,
+        to,
+      });
+
+      res.json({ overrides, range: { from, to } });
+    } catch (error) {
+      logger.error("list_holiday_overrides_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "LIST_HOLIDAY_OVERRIDES_FAILED", message: "Failed to list holiday overrides" },
+      });
+    }
+  }
+);
+
+const holidayOverrideSchema = z.object({
+  available: z.boolean(),
+  start_time_local: z.string().optional().nullable(),
+  end_time_local: z.string().optional().nullable(),
+  use_holiday_rate: z.boolean().optional().nullable(),
+  min_job_hours: z.number().min(0.5).max(24).optional().nullable(),
+  notes: z.string().max(500).optional().nullable(),
+});
+
+/**
+ * PUT /cleaner/holiday-overrides/:date
+ * Upsert cleaner override for a specific holiday date
+ */
+cleanerRouter.put(
+  "/holiday-overrides/:date",
+  validateBody(holidayOverrideSchema),
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const holidayDate = req.params.date;
+
+      const override = await upsertCleanerHolidayOverride({
+        cleanerId: req.user!.id,
+        holidayDate,
+        available: req.body.available,
+        startTimeLocal: req.body.start_time_local ?? null,
+        endTimeLocal: req.body.end_time_local ?? null,
+        useHolidayRate: req.body.use_holiday_rate ?? null,
+        minJobHours: req.body.min_job_hours ?? null,
+        notes: req.body.notes ?? null,
+      });
+
+      res.json({ override });
+    } catch (error) {
+      logger.error("upsert_holiday_override_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status((error as any).statusCode ?? 400).json({
+        error: { code: (error as any).code ?? "UPDATE_HOLIDAY_OVERRIDE_FAILED", message: (error as Error).message },
       });
     }
   }

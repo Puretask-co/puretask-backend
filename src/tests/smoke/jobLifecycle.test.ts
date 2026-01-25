@@ -2,7 +2,7 @@
 // Full job lifecycle smoke test
 
 import request from "supertest";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import app from "../../index";
 import {
   createTestClient,

@@ -3,7 +3,7 @@
 
 import { Router } from "express";
 import { z } from "zod";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { RescheduleServiceV2 } from "../core/rescheduleService";
 import { coreDb } from "../core/db";
@@ -13,7 +13,7 @@ import { query } from "../db/client";
 const rescheduleRouter = Router();
 
 // All routes require auth
-rescheduleRouter.use(authMiddleware);
+rescheduleRouter.use(requireAuth);
 
 // ============================================
 // POST /reschedules/job/:jobId - Create reschedule request

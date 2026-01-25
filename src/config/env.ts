@@ -24,6 +24,7 @@ export const env = {
   // Core runtime
   NODE_ENV: process.env.NODE_ENV || "development",
   PORT: process.env.PORT ? Number(process.env.PORT) : 4000,
+  FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:3000",
 
   // Auth
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "30d",

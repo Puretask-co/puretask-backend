@@ -8,7 +8,7 @@
 import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
-import { auth } from "../lib/auth";
+import { requireAuth } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { query } from "../db/client";
 import {
@@ -24,7 +24,7 @@ import { env } from "../config/env";
 const paymentsRouter = Router();
 
 // All payment routes require authentication
-paymentsRouter.use(auth());
+paymentsRouter.use(requireAuth);
 
 // ============================================
 // Wallet Top-up Flow

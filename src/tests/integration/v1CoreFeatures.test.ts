@@ -1,7 +1,7 @@
 // src/tests/integration/v1CoreFeatures.test.ts
 // V1 CORE FEATURES: Tests for reliability system and top 3 cleaner selection
 
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "@jest/globals";
 import { query } from "../../db/client";
 import { createJob } from "../../services/jobsService";
 import { findMatchingCleaners, broadcastJobToCleaners, acceptJobOffer } from "../../services/jobMatchingService";

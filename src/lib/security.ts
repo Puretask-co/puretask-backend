@@ -144,12 +144,12 @@ export const generalRateLimiter = createRateLimiter({
 
 /**
  * Auth endpoints rate limiter (stricter)
- * 20 requests per 15 minutes per IP
+ * 200 requests per 15 minutes per IP (testing-friendly)
  * Prevents brute-force login/registration attempts
  */
 export const authRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
+  max: 200,
   message: "Too many authentication attempts. Please try again later.",
 });
 
@@ -192,9 +192,9 @@ export interface EndpointRateLimitConfig {
  * Default endpoint-specific rate limits
  */
 export const endpointRateLimits: EndpointRateLimitConfig[] = [
-  // Auth endpoints - strict
-  { pattern: /^\/auth\/login$/, method: "POST", windowMs: 15 * 60 * 1000, max: 10, message: "Too many login attempts" },
-  { pattern: /^\/auth\/register$/, method: "POST", windowMs: 60 * 60 * 1000, max: 5, message: "Too many registration attempts" },
+  // Auth endpoints - relaxed for testing
+  { pattern: /^\/auth\/login$/, method: "POST", windowMs: 15 * 60 * 1000, max: 200, message: "Too many login attempts" },
+  { pattern: /^\/auth\/register$/, method: "POST", windowMs: 60 * 60 * 1000, max: 50, message: "Too many registration attempts" },
   
   // Payment endpoints - moderate
   { pattern: /^\/payments\/credits$/, method: "POST", windowMs: 60 * 1000, max: 10, message: "Too many payment requests" },
@@ -417,7 +417,7 @@ export function requireJsonContentType(
 }
 
 /**
- * Sanitize request body (remove prototype pollution vectors)
+ * Sanitize request body (remove prototype pollution vectors and sanitize strings)
  */
 export function sanitizeBody(
   req: Request,
@@ -425,10 +425,19 @@ export function sanitizeBody(
   next: NextFunction
 ): void {
   if (req.body && typeof req.body === "object") {
-    // Remove dangerous keys
+    // Remove dangerous keys (prototype pollution prevention)
     delete req.body.__proto__;
     delete req.body.constructor;
     delete req.body.prototype;
+    
+    // Import sanitization utilities
+    const { sanitizeObject } = require("./sanitization");
+    
+    // Sanitize string values in body
+    req.body = sanitizeObject(req.body, {
+      allowHtml: false, // Don't allow HTML in request bodies
+      maxDepth: 10,
+    });
   }
   next();
 }

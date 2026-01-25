@@ -3,7 +3,7 @@
 
 import { Router, Response } from "express";
 import { query } from "../db/client";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, requireAdmin, AuthedRequest } from "../middleware/authCanonical";
 import { validateBody } from "../lib/validation";
 import { z } from "zod";
 import {
@@ -78,17 +78,9 @@ import {
 
 export const adminRouter = Router();
 
-// All admin routes require authentication
-adminRouter.use(authMiddleware);
-// Middleware to check admin role
-const requireAdmin = (req: AuthedRequest, res: Response, next: () => void) => {
-  if (req.user?.role !== "admin") {
-    return res.status(403).json({
-      error: { code: "FORBIDDEN", message: "Admin access required" },
-    });
-  }
-  next();
-};
+// All admin routes require authentication and admin role
+adminRouter.use(requireAuth);
+adminRouter.use(requireAdmin);
 
 // V1: Basic admin KPIs endpoint (simplified for V1)
 adminRouter.get("/kpis", requireAdmin, async (req: AuthedRequest, res: Response) => {

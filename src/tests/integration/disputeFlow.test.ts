@@ -2,7 +2,7 @@
 // Dispute flow integration tests
 
 import request from "supertest";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import app from "../../index";
 import { query } from "../../db/client";
 import {

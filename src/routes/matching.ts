@@ -2,7 +2,7 @@
 // REST API endpoints for Matching System (Task 5.2)
 
 import { Router } from "express";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { MatchingService } from "../core/matchingService";
 import { coreDb } from "../core/db";
@@ -10,7 +10,7 @@ import { coreDb } from "../core/db";
 const matchingRouter = Router();
 
 // All routes require auth
-matchingRouter.use(authMiddleware);
+matchingRouter.use(requireAuth);
 
 // ============================================
 // GET /matching/jobs/:id/candidates - Get ranked cleaner candidates

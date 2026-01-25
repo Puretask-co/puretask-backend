@@ -6,7 +6,7 @@
 
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
-import { db } from "../db/client";
+import { query } from "../db/client";
 import { jwtAuthMiddleware } from "../middleware/jwtAuth";
 import { AuthedRequest } from "../types/express";
 
@@ -45,7 +45,7 @@ router.post("/messages/log", async (req: AuthedRequest, res) => {
     const character_count = message_content.length;
     const word_count = message_content.trim().split(/\s+/).length;
 
-    const result = await db.query(
+    const result = await query(
       `INSERT INTO cleaner_message_history (
         cleaner_id,
         message_content,
@@ -149,10 +149,10 @@ router.get("/messages/history", async (req: AuthedRequest, res) => {
     query += ` ORDER BY sent_at DESC LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
     params.push(limit, offset);
 
-    const result = await db.query(query, params);
+    const result = await query(query, params);
 
     // Get total count
-    const countResult = await db.query(
+    const countResult = await query(
       `SELECT COUNT(*) FROM cleaner_message_history WHERE cleaner_id = $1`,
       [cleanerId]
     );
@@ -176,7 +176,7 @@ router.get("/messages/stats", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
-    const stats = await db.query(
+    const stats = await query(
       `SELECT 
         COUNT(*) as total_messages,
         COUNT(DISTINCT DATE(sent_at)) as days_active,
@@ -189,7 +189,7 @@ router.get("/messages/stats", async (req: AuthedRequest, res) => {
       [cleanerId]
     );
 
-    const byType = await db.query(
+    const byType = await query(
       `SELECT 
         message_type as type,
         COUNT(*) as count
@@ -200,7 +200,7 @@ router.get("/messages/stats", async (req: AuthedRequest, res) => {
       [cleanerId]
     );
 
-    const byChannel = await db.query(
+    const byChannel = await query(
       `SELECT 
         channel,
         COUNT(*) as count
@@ -233,7 +233,7 @@ router.get("/messages/saved", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
-    const result = await db.query(
+    const result = await query(
       `SELECT 
         id,
         title,
@@ -275,7 +275,7 @@ router.post("/messages/saved", async (req: AuthedRequest, res) => {
       });
     }
 
-    const result = await db.query(
+    const result = await query(
       `INSERT INTO cleaner_saved_messages (
         cleaner_id,
         title,
@@ -318,7 +318,7 @@ router.put("/messages/saved/:id", async (req: AuthedRequest, res) => {
     const { id } = req.params;
     const { title, content, category, tags, is_favorite } = req.body;
 
-    const result = await db.query(
+    const result = await query(
       `UPDATE cleaner_saved_messages
        SET 
          title = COALESCE($1, title),
@@ -356,7 +356,7 @@ router.delete("/messages/saved/:id", async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const { id } = req.params;
 
-    const result = await db.query(
+    const result = await query(
       `DELETE FROM cleaner_saved_messages
        WHERE id = $1 AND cleaner_id = $2
        RETURNING id`,
@@ -384,7 +384,7 @@ router.post("/messages/saved/:id/use", async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const { id } = req.params;
 
-    await db.query(
+    await query(
       `UPDATE cleaner_saved_messages
        SET 
          times_used = times_used + 1,

@@ -2,13 +2,13 @@
 // Assignment engine endpoints (wave-based, voluntary accept)
 
 import { Router } from "express";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import { getJob } from "../services/jobsService";
 import { getWaveEligibleCleaners } from "../services/jobMatchingService";
 
 const assignmentRouter = Router();
 
-assignmentRouter.use(authMiddleware);
+assignmentRouter.use(requireAuth);
 
 /**
  * GET /assignment/:jobId/wave

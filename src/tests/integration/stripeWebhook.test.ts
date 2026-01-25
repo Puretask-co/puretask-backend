@@ -1,7 +1,7 @@
 // src/tests/integration/stripeWebhook.test.ts
 // Stripe webhook integration tests
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import { query } from "../../db/client";
 import { handleStripeEvent } from "../../services/paymentService";
 import {

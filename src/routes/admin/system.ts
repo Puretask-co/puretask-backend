@@ -103,7 +103,7 @@ router.get('/health', async (req: AuthedRequest, res: Response) => {
       AND created_at >= NOW() - INTERVAL '1 hour'
     `);
 
-    const errorCount = parseInt(recentErrors.rows[0]?.error_count || 0);
+    const errorCount = parseInt(recentErrors.rows[0]?.error_count || '0', 10);
 
     const health = {
       status: dbHealthy && errorCount < 10 ? 'healthy' : errorCount < 50 ? 'warning' : 'critical',

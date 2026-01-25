@@ -3,11 +3,11 @@
 
 import { Router } from "express";
 import { sendAlert } from "../lib/alerting";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 
 const alertsRouter = Router();
 
-alertsRouter.use(authMiddleware);
+alertsRouter.use(requireAuth);
 
 alertsRouter.post("/smoke", async (req: AuthedRequest, res) => {
   try {

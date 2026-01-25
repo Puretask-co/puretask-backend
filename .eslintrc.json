@@ -23,7 +23,36 @@
     "prefer-const": "warn",
     "no-inner-declarations": "off",
     "no-case-declarations": "off",
-    "no-constant-condition": ["warn", { "checkLoops": false }]
+    "no-constant-condition": ["warn", { "checkLoops": false }],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "../middleware/auth",
+            "message": "Legacy auth middleware is deprecated. Use requireAuth from '../middleware/authCanonical' instead."
+          },
+          {
+            "name": "../../middleware/auth",
+            "message": "Legacy auth middleware is deprecated. Use requireAuth from '../../middleware/authCanonical' instead."
+          },
+          {
+            "name": "../../../middleware/auth",
+            "message": "Legacy auth middleware is deprecated. Use requireAuth from '../../../middleware/authCanonical' instead."
+          },
+          {
+            "name": "src/middleware/auth",
+            "message": "Legacy auth middleware is deprecated. Use requireAuth from 'src/middleware/authCanonical' instead."
+          }
+        ],
+        "patterns": [
+          {
+            "group": ["**/middleware/auth"],
+            "message": "Legacy auth middleware is deprecated. Use requireAuth from '../middleware/authCanonical' instead."
+          }
+        ]
+      }
+    ]
   },
   "ignorePatterns": [
     "dist/**",

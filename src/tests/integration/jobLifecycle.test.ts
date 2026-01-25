@@ -1,7 +1,7 @@
 // src/tests/integration/jobLifecycle.test.ts
 // Integration tests for full job lifecycle
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";

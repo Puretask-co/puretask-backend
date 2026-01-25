@@ -29,8 +29,8 @@ if ! command -v node &> /dev/null; then
 fi
 
 NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-if [ "$NODE_VERSION" -lt 18 ]; then
-    echo -e "${YELLOW}⚠️  Warning: Node.js version should be >= 18${NC}"
+if [ "$NODE_VERSION" -lt 20 ]; then
+    echo -e "${YELLOW}⚠️  Warning: Node.js version should be >= 20${NC}"
 fi
 
 # Check if database connection is available

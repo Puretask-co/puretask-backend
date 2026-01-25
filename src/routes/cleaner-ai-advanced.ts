@@ -23,22 +23,22 @@ router.get("/export", async (req: AuthedRequest, res) => {
 
     // Get all data
     const [settings, templates, responses, preferences] = await Promise.all([
-      db.query(
+      query(
         `SELECT setting_category, setting_key, setting_value, is_enabled, description
          FROM cleaner_ai_settings WHERE cleaner_id = $1`,
         [cleanerId]
       ),
-      db.query(
+      query(
         `SELECT template_type, template_name, template_content, variables, is_default, is_active
          FROM cleaner_ai_templates WHERE cleaner_id = $1`,
         [cleanerId]
       ),
-      db.query(
+      query(
         `SELECT response_category, trigger_keywords, response_text, is_favorite
          FROM cleaner_quick_responses WHERE cleaner_id = $1`,
         [cleanerId]
       ),
-      db.query(
+      query(
         `SELECT * FROM cleaner_ai_preferences WHERE cleaner_id = $1`,
         [cleanerId]
       )
@@ -84,11 +84,8 @@ router.post("/import", async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const validated = importSchema.parse(req.body);
 
-    const client = await db.connect();
-    let imported = { settings: 0, templates: 0, responses: 0, preferences: 0 };
-
-    try {
-      await client.query("BEGIN");
+    await withTransaction(async (client) => {
+      let imported = { settings: 0, templates: 0, responses: 0, preferences: 0 };
 
       // Import settings
       if (validated.settings && validated.settings.length > 0) {
@@ -177,12 +174,7 @@ router.post("/import", async (req: AuthedRequest, res) => {
         message: "Settings imported successfully",
         imported,
       });
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -248,7 +240,7 @@ router.post("/templates/:templateId/duplicate", async (req: AuthedRequest, res) 
     const { newName } = req.body;
 
     // Get original template
-    const original = await db.query(
+    const original = await query(
       `SELECT * FROM cleaner_ai_templates 
        WHERE id = $1 AND cleaner_id = $2`,
       [templateId, cleanerId]
@@ -263,7 +255,7 @@ router.post("/templates/:templateId/duplicate", async (req: AuthedRequest, res) 
     const template = original.rows[0];
 
     // Create duplicate
-    const result = await db.query(
+    const result = await query(
       `INSERT INTO cleaner_ai_templates 
         (cleaner_id, template_type, template_name, template_content, variables, is_active)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -299,11 +291,8 @@ router.post("/reset-to-defaults", async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const { resetType } = req.body; // 'settings', 'templates', 'responses', 'preferences', 'all'
 
-    const client = await db.connect();
-    let reset = { settings: 0, templates: 0, responses: 0, preferences: 0 };
-
-    try {
-      await client.query("BEGIN");
+    await withTransaction(async (client) => {
+      let reset = { settings: 0, templates: 0, responses: 0, preferences: 0 };
 
       if (resetType === 'settings' || resetType === 'all') {
         // Reset all settings to enabled state
@@ -364,18 +353,11 @@ router.post("/reset-to-defaults", async (req: AuthedRequest, res) => {
         reset.preferences = result.rowCount || 0;
       }
 
-      await client.query("COMMIT");
-
       res.json({
         message: "Settings reset to defaults successfully",
         reset,
       });
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   } catch (error: any) {
     console.error("Error resetting to defaults:", error);
     res.status(500).json({
@@ -399,7 +381,7 @@ router.post("/templates/batch-toggle", async (req: AuthedRequest, res) => {
       });
     }
 
-    const result = await db.query(
+    const result = await query(
       `UPDATE cleaner_ai_templates 
        SET is_active = $1, updated_at = NOW()
        WHERE id = ANY($2) AND cleaner_id = $3
@@ -450,7 +432,7 @@ router.get("/templates/search", async (req: AuthedRequest, res) => {
 
     query += ` ORDER BY usage_count DESC, template_name`;
 
-    const result = await db.query(query, params);
+    const result = await query(query, params);
 
     res.json({
       templates: result.rows,
@@ -495,7 +477,7 @@ router.get("/quick-responses/search", async (req: AuthedRequest, res) => {
 
     query += ` ORDER BY is_favorite DESC, usage_count DESC`;
 
-    const result = await db.query(query, params);
+    const result = await query(query, params);
 
     res.json({
       responses: result.rows,
@@ -519,7 +501,7 @@ router.post("/templates/:templateId/use", async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const { templateId } = req.params;
 
-    await db.query(
+    await query(
       `UPDATE cleaner_ai_templates 
        SET usage_count = usage_count + 1
        WHERE id = $1 AND cleaner_id = $2`,
@@ -540,7 +522,7 @@ router.post("/quick-responses/:responseId/use", async (req: AuthedRequest, res) 
     const cleanerId = req.user!.id;
     const { responseId } = req.params;
 
-    await db.query(
+    await query(
       `UPDATE cleaner_quick_responses 
        SET usage_count = usage_count + 1
        WHERE id = $1 AND cleaner_id = $2`,

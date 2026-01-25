@@ -7,7 +7,7 @@ import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import { createPaymentIntent, handleStripeEvent, getPaymentIntentByJobId } from "../services/paymentService";
 import { queueWebhookForRetry } from "../services/webhookRetryService";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, requireClient, AuthedRequest } from "../middleware/authCanonical";
 import { validateBody } from "../lib/validation";
 import { z } from "zod";
 
@@ -29,7 +29,8 @@ const createPaymentIntentSchema = z.object({
 
 stripeRouter.post(
   "/create-payment-intent",
-  authMiddleware,
+  requireAuth,
+  requireClient,
   validateBody(createPaymentIntentSchema),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -141,7 +142,7 @@ stripeRouter.post("/webhook", async (req: Request, res: Response) => {
  */
 stripeRouter.get(
   "/payment-intent/:jobId",
-  authMiddleware,
+  requireAuth,
   async (req: AuthedRequest, res: Response) => {
     try {
       const { jobId } = req.params;
