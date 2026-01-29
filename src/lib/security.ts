@@ -31,7 +31,7 @@ setInterval(() => {
 /**
  * Get client IP address (handles proxies)
  */
-function getClientIp(req: Request): string {
+export function getClientIp(req: Request): string {
   const forwardedFor = req.headers["x-forwarded-for"];
   if (forwardedFor) {
     // x-forwarded-for can be a comma-separated list

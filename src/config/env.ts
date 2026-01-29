@@ -24,7 +24,8 @@ export const env = {
   // Core runtime
   NODE_ENV: process.env.NODE_ENV || "development",
   PORT: process.env.PORT ? Number(process.env.PORT) : 4000,
-  FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:3000",
+  // Local dev default is 3001 (matches puretask-frontend `next dev -p 3001`)
+  FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:3001",
 
   // Auth
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "30d",
@@ -75,6 +76,9 @@ export const env = {
   N8N_API_KEY: process.env.N8N_API_KEY || "",
   APP_URL: process.env.APP_URL || "http://localhost:3000",
   STORAGE_URL: process.env.STORAGE_URL || "https://storage.puretask.com",
+  
+  // Monitoring (optional)
+  SENTRY_DSN: process.env.SENTRY_DSN || "",
   
   // Redis (for rate limiting in production)
   REDIS_URL: process.env.REDIS_URL || "",

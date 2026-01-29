@@ -96,18 +96,21 @@ describe('onboardingReminderService', () => {
         onboarding_current_step: 'phone-verification',
       };
 
-      (sgMail.send as any).mockRejectedValueOnce({
-        response: {
-          body: {
-            errors: [{ message: 'Invalid email' }],
-          },
+      const errorMessage = 'Invalid email';
+      const sendGridError = new Error(errorMessage);
+      (sendGridError as any).response = {
+        body: {
+          errors: [{ message: errorMessage }],
         },
-      });
+      };
+
+      (sgMail.send as any).mockRejectedValueOnce(sendGridError);
 
       const result = await sendOnboardingReminder(mockCleaner);
 
       expect(result.success).toBe(false);
       expect(result.error).toBeTruthy();
+      expect(result.error).toBe(errorMessage);
     });
 
     it('skips when SendGrid not configured', async () => {

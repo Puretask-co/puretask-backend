@@ -12,13 +12,173 @@ import {
   NotificationType,
 } from "./types";
 import {
+  renderNotification,
   getEmailSubject,
   getEmailBody,
   getSmsBody,
   getPushTitle,
   getPushBody,
+  TEMPLATE_VERSION,
+  type TemplateData,
+  type Channel,
 } from "./templates";
 import { sendNotificationViaEvent } from "./eventBasedNotificationService";
+
+// ============================================
+// Idempotency & Delivery Logging
+// ============================================
+
+/**
+ * Get deduplication window for a notification type
+ * Some notifications should allow re-sends after a cooldown (e.g., password reset)
+ * Others should be "ever sent" (e.g., welcome, job lifecycle events)
+ */
+function getDedupeWindow(type: NotificationType): { window: "ever" | "time"; minutes?: number } {
+  // Strict "ever sent" - these should never be sent twice with same dedupe key
+  const everSentTypes: NotificationType[] = [
+    "welcome",
+    "job.created",
+    "job.accepted",
+    "job.on_my_way",
+    "job.started",
+    "job.completed",
+    "job.awaiting_approval",
+    "job.approved",
+    "job.disputed",
+    "job.cancelled",
+    "job.reminder_24h", // Has timestamp bucket in dedupe key
+    "job.reminder_2h",  // Has timestamp bucket in dedupe key
+    "job.no_show_warning", // Has timestamp bucket in dedupe key
+    "credits.purchased",
+    "payout.processed",
+  ];
+
+  if (everSentTypes.includes(type)) {
+    return { window: "ever" };
+  }
+
+  // Time-windowed dedupe - allow re-send after cooldown
+  const timeWindowedTypes: Record<NotificationType, number> = {
+    "password.reset": 60,        // 1 hour - user can request reset again
+    "payment.failed": 60,       // 1 hour - payment can fail multiple times
+    "payout.failed": 1440,      // 24 hours - payout issues need attention
+    "credits.low": 1440,        // 24 hours - warn again if still low
+    "subscription.renewal_reminder": 1440, // 24 hours - daily reminder is fine
+  };
+
+  const windowMinutes = timeWindowedTypes[type];
+  if (windowMinutes) {
+    return { window: "time", minutes: windowMinutes };
+  }
+
+  // Default: "ever sent" for safety (prevents accidental duplicates)
+  return { window: "ever" };
+}
+
+/**
+ * Check if a notification with the given dedupe key was already sent
+ * Uses type-aware deduplication:
+ * - "ever sent" for job lifecycle, welcome, etc. (dedupe key includes jobId/timestamp)
+ * - Time-windowed for password reset, payment failed, etc. (allow re-send after cooldown)
+ */
+async function alreadySent(dedupeKey: string, type: NotificationType): Promise<boolean> {
+  if (!dedupeKey) return false;
+
+  const dedupeConfig = getDedupeWindow(type);
+
+  try {
+    let queryText: string;
+    let params: string[];
+
+    if (dedupeConfig.window === "ever") {
+      // Check "ever sent" - prevents all duplicates
+      queryText = `
+        SELECT id FROM notification_log
+        WHERE payload->>'dedupeKey' = $1
+          AND status = 'sent'
+        LIMIT 1
+      `;
+      params = [dedupeKey];
+    } else {
+      // Check within time window - allows re-send after cooldown
+      queryText = `
+        SELECT id FROM notification_log
+        WHERE payload->>'dedupeKey' = $1
+          AND status = 'sent'
+          AND created_at > NOW() - INTERVAL '${dedupeConfig.minutes} minutes'
+        LIMIT 1
+      `;
+      params = [dedupeKey];
+    }
+
+    const result = await query<{ id: string }>(queryText, params);
+    return result.rows.length > 0;
+  } catch (err) {
+    logger.error("idempotency_check_failed", {
+      dedupeKey,
+      type,
+      error: (err as Error).message,
+    });
+    // On error, allow send (fail open) but log
+    return false;
+  }
+}
+
+/**
+ * Log a notification delivery attempt to notification_log table
+ * Includes rich context for debugging and support
+ */
+async function logDeliveryAttempt(args: {
+  userId?: string | null;
+  type: NotificationType;
+  channel: NotificationChannel;
+  status: "sent" | "failed" | "skipped";
+  error?: string;
+  providerMessageId?: string;
+  dedupeKey?: string;
+  recipient?: string;
+  jobId?: string;
+  primaryActionUrl?: string;
+}): Promise<void> {
+  try {
+    await query(
+      `
+        INSERT INTO notification_log (
+          user_id,
+          channel,
+          type,
+          payload,
+          status,
+          error_message,
+          sent_at
+        )
+        VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)
+      `,
+      [
+        args.userId ?? null,
+        args.channel,
+        args.type,
+        JSON.stringify({
+          dedupeKey: args.dedupeKey,
+          recipient: args.recipient,
+          providerMessageId: args.providerMessageId,
+          jobId: args.jobId,
+          primaryActionUrl: args.primaryActionUrl,
+          templateVersion: TEMPLATE_VERSION,
+        }),
+        args.status,
+        args.error ?? null,
+        args.status === "sent" ? new Date() : null,
+      ]
+    );
+  } catch (err) {
+    logger.error("failed_to_log_notification_delivery", {
+      error: (err as Error).message,
+      type: args.type,
+      channel: args.channel,
+    });
+  }
+}
 
 // ============================================
 // Main Notification Dispatcher
@@ -29,8 +189,42 @@ import { sendNotificationViaEvent } from "./eventBasedNotificationService";
  * - Uses event-based (n8n) if configured, otherwise falls back to direct provider calls
  * - Does not throw if channel is not configured; logs and returns
  * - Records failures to notification_failures table for retry
+ * - Checks idempotency if dedupeKey is provided
+ * - Logs all delivery attempts to notification_log table
  */
 export async function sendNotification(input: NotificationPayload): Promise<NotificationResult> {
+  // Check idempotency if dedupeKey is provided
+  if (input.dedupeKey) {
+    const wasAlreadySent = await alreadySent(input.dedupeKey, input.type);
+    if (wasAlreadySent) {
+      logger.debug("notification_skipped_duplicate", {
+        dedupeKey: input.dedupeKey,
+        type: input.type,
+        channel: input.channel,
+      });
+
+      // Extract context for logging
+      const jobId = (input.data as any)?.jobId as string | undefined;
+      const rendered = renderNotification(input.type, input.data as TemplateData, [input.channel]);
+      const primaryActionUrl = rendered?.email?.primaryActionUrl || 
+                               rendered?.sms?.primaryActionUrl || 
+                               rendered?.push?.url;
+      
+      await logDeliveryAttempt({
+        userId: input.userId ?? null,
+        type: input.type,
+        channel: input.channel,
+        status: "skipped",
+        dedupeKey: input.dedupeKey,
+        recipient: input.email || input.phone || undefined,
+        jobId,
+        primaryActionUrl,
+      });
+
+      return { success: true, messageId: undefined, channel: input.channel };
+    }
+  }
+
   try {
     // Use event-based notifications if n8n is configured and feature flag is enabled
     // Push notifications always use direct calls (OneSignal)
@@ -44,7 +238,29 @@ export async function sendNotification(input: NotificationPayload): Promise<Noti
         channel: input.channel,
         type: input.type,
       });
-      return await sendNotificationViaEvent(input);
+      const result = await sendNotificationViaEvent(input);
+      
+      // Log delivery attempt
+      // Extract context for logging
+      const jobId = (input.data as any)?.jobId as string | undefined;
+      const primaryActionUrl = rendered?.email?.primaryActionUrl || 
+                               rendered?.sms?.primaryActionUrl || 
+                               rendered?.push?.url;
+
+      await logDeliveryAttempt({
+        userId: input.userId ?? null,
+        type: input.type,
+        channel: input.channel,
+        status: result.success ? "sent" : "failed",
+        error: result.error,
+        providerMessageId: result.messageId,
+        dedupeKey: input.dedupeKey,
+        recipient: input.email || input.phone || undefined,
+        jobId,
+        primaryActionUrl,
+      });
+
+      return result;
     }
 
     // Fallback to direct provider calls (legacy or push notifications)
@@ -65,14 +281,45 @@ export async function sendNotification(input: NotificationPayload): Promise<Noti
           channel: input.channel,
           type: input.type,
         });
+        await logDeliveryAttempt({
+          userId: input.userId ?? null,
+          type: input.type,
+          channel: input.channel,
+          status: "failed",
+          error: "Unknown channel",
+          dedupeKey: input.dedupeKey,
+          recipient: input.email || input.phone || undefined,
+        });
         return { success: false, error: "Unknown channel" };
     }
+
+    // Extract context for logging
+    const rendered = renderNotification(input.type, input.data as TemplateData, [input.channel]);
+    const jobId = (input.data as any)?.jobId as string | undefined;
+    const primaryActionUrl = rendered?.email?.primaryActionUrl || 
+                             rendered?.sms?.primaryActionUrl || 
+                             rendered?.push?.url;
+
+    // Log delivery attempt
+    await logDeliveryAttempt({
+      userId: input.userId ?? null,
+      type: input.type,
+      channel: input.channel,
+      status: result.success ? "sent" : "failed",
+      error: result.error,
+      providerMessageId: result.messageId,
+      dedupeKey: input.dedupeKey,
+      recipient: input.email || input.phone || undefined,
+      jobId,
+      primaryActionUrl,
+    });
 
     if (result.success) {
       logger.info("notification_sent", {
         channel: input.channel,
         type: input.type,
         userId: input.userId,
+        dedupeKey: input.dedupeKey,
       });
     }
 
@@ -84,6 +331,22 @@ export async function sendNotification(input: NotificationPayload): Promise<Noti
       type: input.type,
       userId: input.userId ?? null,
       error: error.message,
+      dedupeKey: input.dedupeKey,
+    });
+
+    // Extract context for logging
+    const jobId = (input.data as any)?.jobId as string | undefined;
+    
+    // Log failure
+    await logDeliveryAttempt({
+      userId: input.userId ?? null,
+      type: input.type,
+      channel: input.channel,
+      status: "failed",
+      error: error.message,
+      dedupeKey: input.dedupeKey,
+      recipient: input.email || input.phone || undefined,
+      jobId,
     });
 
     // Record failure for retry
@@ -148,8 +411,31 @@ async function sendEmailNotification(input: NotificationPayload): Promise<Notifi
     return { success: false, error: "Missing email address" };
   }
 
-  const subject = getEmailSubject(input.type);
-  const text = getEmailBody(input.type, input.data);
+    // Use new template system
+    const rendered = renderNotification(input.type, input.data as TemplateData, ["email"]);
+    
+    if (!rendered.email) {
+      logger.warn("email_template_not_available_fallback", { 
+        type: input.type,
+        message: "Falling back to deprecated template helpers - migrate to renderNotification()",
+      });
+      // Fallback to old system for backwards compatibility
+      const subject = getEmailSubject(input.type, input.data as TemplateData);
+      const text = getEmailBody(input.type, input.data);
+    
+    const sgMail = await import("@sendgrid/mail").then((m) => m.default);
+    sgMail.setApiKey(env.SENDGRID_API_KEY);
+
+    const response = await sgMail.send({
+      to: input.email,
+      from: env.SENDGRID_FROM_EMAIL,
+      subject,
+      text,
+    });
+
+    const messageId = response[0]?.headers?.["x-message-id"] || undefined;
+    return { success: true, messageId };
+  }
 
   // Use dynamic import to avoid loading SendGrid if not used
   const sgMail = await import("@sendgrid/mail").then((m) => m.default);
@@ -158,8 +444,8 @@ async function sendEmailNotification(input: NotificationPayload): Promise<Notifi
   const response = await sgMail.send({
     to: input.email,
     from: env.SENDGRID_FROM_EMAIL,
-    subject,
-    text,
+    subject: rendered.email.subject,
+    text: rendered.email.text,
   });
 
   const messageId = response[0]?.headers?.["x-message-id"] || undefined;
@@ -188,7 +474,16 @@ async function sendSmsNotification(input: NotificationPayload): Promise<Notifica
     return { success: false, error: "Missing phone number" };
   }
 
-  const body = getSmsBody(input.type, input.data);
+  // Use new template system
+  const rendered = renderNotification(input.type, input.data as TemplateData, ["sms"]);
+  
+  let body: string;
+  if (rendered.sms) {
+    body = rendered.sms.text;
+  } else {
+    // Fallback to old system for backwards compatibility
+    body = getSmsBody(input.type, input.data);
+  }
 
   // Use dynamic import
   const twilio = await import("twilio").then((m) => m.default);
@@ -224,15 +519,38 @@ async function sendPushNotification(input: NotificationPayload): Promise<Notific
     return { success: false, error: "Missing push target" };
   }
 
-  const title = getPushTitle(input.type);
-  const message = getPushBody(input.type, input.data);
+  // Use new template system
+  const rendered = renderNotification(input.type, input.data as TemplateData, ["push"]);
+  
+  let title: string;
+  let message: string;
+  let url: string | undefined;
+
+  if (rendered.push) {
+    title = rendered.push.title;
+    message = rendered.push.body;
+    url = rendered.push.url;
+  } else {
+    // Fallback to old system for backwards compatibility
+    title = getPushTitle(input.type);
+    message = getPushBody(input.type, input.data);
+  }
 
   const body: Record<string, unknown> = {
     app_id: env.ONESIGNAL_APP_ID,
     headings: { en: title },
     contents: { en: message },
-    data: input.data,
+    data: {
+      ...input.data,
+      // Include deep link URL in data for app to handle
+      deepLink: url,
+    },
   };
+
+  // Add URL to OneSignal payload if supported
+  if (url) {
+    body.url = url;
+  }
 
   if (input.pushToken) {
     body.include_player_ids = [input.pushToken];
@@ -261,6 +579,7 @@ async function sendPushNotification(input: NotificationPayload): Promise<Notific
     type: input.type,
     userId: input.userId,
     notificationId: result.id,
+    url,
   });
 
   return { success: true, messageId: result.id };
@@ -298,6 +617,26 @@ export async function getUserContactInfo(userId: string): Promise<UserContactInf
 // Convenience: Send notification to user by ID
 // ============================================
 
+/**
+ * Generate a dedupe key for a notification
+ * Format: ${type}:${channel}:${userId}:${jobId || ""}:${timestampBucket || ""}
+ */
+function generateDedupeKey(
+  type: NotificationType,
+  channel: NotificationChannel,
+  userId: string,
+  data: Record<string, unknown>
+): string {
+  const jobId = (data.jobId as string) || "";
+  // For reminders, use scheduled_start_at bucket (hour) to prevent duplicates within same hour
+  const scheduledStartAt = data.scheduled_start_at as string | undefined;
+  const timestampBucket = scheduledStartAt
+    ? new Date(scheduledStartAt).toISOString().slice(0, 13) // YYYY-MM-DDTHH
+    : "";
+
+  return `${type}:${channel}:${userId}:${jobId}:${timestampBucket}`;
+}
+
 export async function sendNotificationToUser(
   userId: string,
   type: NotificationType,
@@ -314,6 +653,9 @@ export async function sendNotificationToUser(
   const results: NotificationResult[] = [];
 
   for (const channel of channels) {
+    // Generate dedupe key for idempotency
+    const dedupeKey = generateDedupeKey(type, channel, userId, data);
+
     const result = await sendNotification({
       userId,
       email: contact.email,
@@ -322,6 +664,7 @@ export async function sendNotificationToUser(
       type,
       channel,
       data,
+      dedupeKey,
     });
     results.push(result);
   }

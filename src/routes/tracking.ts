@@ -6,6 +6,8 @@ import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
 import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
+import { requireIdempotency } from "../lib/idempotency";
+import { sendSuccess } from "../lib/response";
 import {
   getJobTrackingState,
   startEnRoute,
@@ -205,7 +207,8 @@ trackingRouter.post(
 
 /**
  * POST /tracking/:jobId/approve
- * Client approves completed job
+ * Client approves completed job (releases escrow)
+ * Supports Idempotency-Key header to prevent double approval
  */
 const approveSchema = z.object({
   rating: z.number().int().min(1).max(5),
@@ -215,6 +218,7 @@ const approveSchema = z.object({
 
 trackingRouter.post(
   "/:jobId/approve",
+  requireIdempotency,
   validateBody(approveSchema),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -229,7 +233,7 @@ trackingRouter.post(
         req.body.tip,
         req.body.feedback
       );
-      res.json({ success: true, status: "completed" });
+      sendSuccess(res, { success: true, status: "completed" });
     } catch (error) {
       const err = error as Error & { statusCode?: number };
       logger.error("approve_failed", { error: err.message, jobId: req.params.jobId });

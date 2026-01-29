@@ -4,6 +4,7 @@
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
+import * as Sentry from "@sentry/node";
 import { env } from "./config/env";
 import { logger } from "./lib/logger";
 import { initRedis, closeRedis } from "./lib/redis";
@@ -15,6 +16,7 @@ import {
   sanitizeBody,
 } from "./lib/security";
 import { requestContextMiddleware, enrichRequestContext } from "./middleware/requestContext";
+import { redactHeaders } from "./lib/logRedaction";
 
 // Import routes
 import healthRouter from "./routes/health";
@@ -60,6 +62,22 @@ import holidaysRouter from "./routes/holidays";
 import notificationsRouter from "./routes/notifications";
 // V4 FEATURE — AI ASSISTANT (communication automation & scheduling)
 import aiRouter from "./routes/ai";
+import userDataRouter from "./routes/userData";
+
+// ============================================
+// Initialize Sentry (Error Tracking) - Must be before Express app
+// ============================================
+if (env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: env.SENTRY_DSN,
+    environment: env.NODE_ENV,
+    // Performance Monitoring
+    tracesSampleRate: env.NODE_ENV === "production" ? 0.1 : 1.0, // 10% in prod, 100% in dev
+  });
+  logger.info("sentry_initialized", { environment: env.NODE_ENV });
+} else {
+  logger.warn("sentry_not_configured", { message: "SENTRY_DSN not set, error tracking disabled" });
+}
 
 // Create Express app
 const app = express();
@@ -93,6 +111,13 @@ app.use(additionalSecurityHeaders);
 
 // Request context for tracing (generates request ID)
 app.use(requestContextMiddleware);
+
+// Store requestId in response locals for error handler
+app.use((req, res, next) => {
+  res.locals.requestId = req.requestId;
+  (res as any).requestId = req.requestId;
+  next();
+});
 
 // CORS configuration
 app.use(
@@ -129,8 +154,16 @@ app.use(sanitizeBody);
 // ============================================
 // Rate Limiting
 // ============================================
-// Use fine-grained endpoint rate limiter (falls back to general limiter)
-app.use(endpointRateLimiter());
+// Use Redis-based rate limiting in production if enabled, otherwise use in-memory
+if (env.USE_REDIS_RATE_LIMITING && env.REDIS_URL) {
+  const { productionGeneralRateLimiter } = require("./lib/rateLimitRedis");
+  app.use(productionGeneralRateLimiter);
+  logger.info("rate_limiting_redis_enabled");
+} else {
+  // Use fine-grained endpoint rate limiter (falls back to general limiter)
+  app.use(endpointRateLimiter());
+  logger.info("rate_limiting_memory_enabled");
+}
 
 // ============================================
 // Authentication
@@ -161,11 +194,33 @@ app.use((req, res, next) => {
       userAgent: req.headers["user-agent"],
       requestId: req.requestId,
       correlationId: req.correlationId,
+      // Headers are redacted automatically by logger
     });
   });
 
   next();
 });
+
+// ============================================
+// API Documentation (Swagger/OpenAPI)
+// ============================================
+if (env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'true') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const swaggerUi = require('swagger-ui-express');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { swaggerSpec } = require('./config/swagger');
+    
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'PureTask API Documentation',
+    }));
+    
+    logger.info('swagger_ui_enabled', { path: '/api-docs' });
+  } catch (error) {
+    logger.warn('swagger_ui_failed', { error: (error as Error).message });
+  }
+}
 
 // ============================================
 // Routes
@@ -211,6 +266,7 @@ app.use("/notifications", notificationsRouter);
 app.use("/alerts", alertsRouter);
 // V4 FEATURE — ENABLED (AI Assistant)
 app.use("/ai", aiRouter);               // AI communication automation & scheduling
+app.use("/user", userDataRouter);       // GDPR compliance: data export, deletion, consent
 app.use(eventsRouter); // Mounts /events and /n8n/events
 
 // ============================================
@@ -226,6 +282,12 @@ app.use((req, res) => {
 });
 
 // ============================================
+// Sentry Integration
+// ============================================
+// Note: Sentry v10+ automatically instruments Express
+// No manual request/tracing handlers needed - Sentry.init() handles it
+
+// ============================================
 // Global Error Handler
 // ============================================
 app.use(
@@ -237,6 +299,22 @@ app.use(
   ) => {
     const statusCode = err.statusCode || 500;
     const code = err.code || "INTERNAL_ERROR";
+
+    // Send to Sentry if configured
+    if (env.SENTRY_DSN && statusCode >= 500) {
+      Sentry.captureException(err, {
+        tags: {
+          path: req.path,
+          method: req.method,
+          statusCode,
+          errorCode: code,
+        },
+        user: req.user ? { id: req.user.id } : undefined,
+        extra: {
+          requestId: req.requestId,
+        },
+      });
+    }
 
     logger.error("unhandled_error", {
       message: err.message,

@@ -270,6 +270,10 @@ export async function updatePassword(
     [userId, newHash]
   );
 
+  // Invalidate all existing tokens for this user
+  const { invalidateUserTokens } = await import("../lib/tokenInvalidation");
+  await invalidateUserTokens(userId, "password_changed");
+
   logger.info("password_updated", { userId });
 }
 
@@ -282,6 +286,11 @@ export async function resetPassword(userId: string, newPassword: string): Promis
     `UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`,
     [userId, newHash]
   );
+
+  // Invalidate all existing tokens for this user
+  const { invalidateUserTokens } = await import("../lib/tokenInvalidation");
+  await invalidateUserTokens(userId, "password_reset");
+
   logger.info("password_reset", { userId });
 }
 

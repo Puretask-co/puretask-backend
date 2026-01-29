@@ -87,7 +87,7 @@ stripeRouter.post("/webhook", async (req: Request, res: Response) => {
     event = stripe.webhooks.constructEvent(
       rawBody,
       sig,
-      env.STRIPE_WEBHOOK_SECRET
+      getStripeWebhookSecret()
     );
   } catch (err) {
     logger.error("stripe_webhook_signature_verification_failed", {

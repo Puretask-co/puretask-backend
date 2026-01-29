@@ -1,0 +1,20 @@
+# Ignore build outputs
+dist/
+build/
+coverage/
+node_modules/
+
+# Ignore generated files
+*.min.js
+*.min.css
+
+# Ignore lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Ignore migrations (SQL formatting may differ)
+DB/migrations/
+
+# Ignore docs that may have specific formatting
+docs/archive/

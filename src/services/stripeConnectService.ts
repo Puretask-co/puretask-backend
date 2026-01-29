@@ -1,15 +1,10 @@
 // src/services/stripeConnectService.ts
 // Stripe Connect onboarding for cleaners
 
-import Stripe from "stripe";
-import { env } from "../config/env";
+import { stripe } from "../integrations/stripe";
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
 import { CleanerProfile } from "../types/db";
-
-const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20",
-});
 
 // ============================================
 // Account Management

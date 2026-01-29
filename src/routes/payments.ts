@@ -8,6 +8,8 @@
 import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
+import { requireIdempotency } from "../lib/idempotency";
+import { sendSuccess } from "../lib/response";
 import { requireAuth } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { query } from "../db/client";
@@ -41,6 +43,7 @@ const buyCreditsSchema = z.object({
 
 paymentsRouter.post(
   "/credits",
+  requireIdempotency,
   validateBody(buyCreditsSchema),
   async (req, res: Response) => {
     try {
@@ -53,7 +56,7 @@ paymentsRouter.post(
         credits,
       });
 
-      res.json({
+      sendSuccess(res, {
         clientSecret: result.clientSecret,
         paymentIntentId: result.stripePaymentIntentId,
         credits: result.credits,

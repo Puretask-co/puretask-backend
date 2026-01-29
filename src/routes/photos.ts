@@ -109,6 +109,7 @@ photosRouter.post(
 const uploadUrlSchema = z.object({
   type: z.enum(["before", "after"]),
   contentType: z.string(),
+  fileSize: z.number().int().positive().max(10 * 1024 * 1024).optional(), // Max 10MB
 });
 
 photosRouter.post(
@@ -117,13 +118,14 @@ photosRouter.post(
   async (req: JWTAuthedRequest, res: Response) => {
     try {
       const { jobId } = req.params;
-      const { type, contentType } = req.body;
+      const { type, contentType, fileSize } = req.body;
 
       const urls = await getUploadUrl({
         jobId,
         cleanerId: req.user!.id,
         type,
         contentType,
+        fileSize,
       });
 
       res.json(urls);

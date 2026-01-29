@@ -1065,6 +1065,25 @@ export async function getPaymentIntentByJobId(
 }
 
 /**
+ * Check if a job has an active payment intent
+ */
+export async function hasActivePaymentIntentForJob(jobId: string): Promise<boolean> {
+  const result = await query<{ status: string }>(
+    `
+      SELECT status
+      FROM payment_intents
+      WHERE job_id = $1
+        AND purpose = 'job_charge'
+    `,
+    [jobId]
+  );
+
+  return result.rows.some((pi) =>
+    ["requires_payment_method", "requires_confirmation", "requires_action", "processing", "succeeded"].includes(pi.status)
+  );
+}
+
+/**
  * Get payment intents for a client
  */
 export async function getPaymentIntentsForClient(

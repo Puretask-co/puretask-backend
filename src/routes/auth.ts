@@ -5,6 +5,8 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { auth, signAuthToken, UserRole } from "../lib/auth";
 import { authRateLimiter } from "../lib/security";
+import { productionAuthRateLimiter } from "../lib/rateLimitRedis";
+import { env } from "../config/env";
 import {
   registerUser,
   loginUser,
@@ -20,7 +22,12 @@ import { logger } from "../lib/logger";
 const authRouter = Router();
 
 // Apply stricter rate limiting to all auth routes
-authRouter.use(authRateLimiter);
+// Use Redis-based limiter in production if enabled
+if (env.USE_REDIS_RATE_LIMITING && env.REDIS_URL) {
+  authRouter.use(productionAuthRateLimiter);
+} else {
+  authRouter.use(authRateLimiter);
+}
 
 // ============================================
 // Validation Schemas
@@ -56,9 +63,54 @@ const updateCleanerProfileSchema = z.object({
 // ============================================
 
 /**
- * POST /auth/register
- * Register a new user (client or cleaner)
- * Returns JWT token and user info
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     description: Register a new client or cleaner account. Returns JWT token and user info.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 8
+ *                 example: securePassword123
+ *               role:
+ *                 type: string
+ *                 enum: [client, cleaner]
+ *                 description: User role (defaults to client if not specified)
+ *     responses:
+ *       201:
+ *         description: Registration successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   description: JWT authentication token
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error or user already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded
  */
 authRouter.post("/register", async (req, res: Response) => {
   try {
@@ -100,6 +152,51 @@ authRouter.post("/register", async (req, res: Response) => {
 /**
  * POST /auth/login
  * Authenticate user and return JWT token
+ */
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: User login
+ *     description: Authenticate user with email and password. Returns JWT token and user info.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: securePassword123
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   description: JWT authentication token
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded
  */
 authRouter.post("/login", async (req, res: Response) => {
   try {
