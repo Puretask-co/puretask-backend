@@ -18,8 +18,26 @@ cleanerEnhancedRouter.use(requireRole("cleaner", "admin"));
 // ============================================
 
 /**
- * GET /cleaner/dashboard/analytics
- * Get performance analytics
+ * @swagger
+ * /cleaner/dashboard/analytics:
+ *   get:
+ *     summary: Get dashboard analytics
+ *     description: Get performance analytics for cleaner dashboard.
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [week, month, year]
+ *           default: month
+ *     responses:
+ *       200:
+ *         description: Analytics data
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/dashboard/analytics", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -126,8 +144,38 @@ cleanerEnhancedRouter.get("/dashboard/analytics", async (req: JWTAuthedRequest, 
 // ============================================
 
 /**
- * POST /cleaner/goals
- * Set goals
+ * @swagger
+ * /cleaner/dashboard/goals:
+ *   post:
+ *     summary: Set cleaner goals
+ *     description: Set goals for earnings, jobs, or rating (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - type
+ *               - target
+ *               - period
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [earnings, jobs, rating]
+ *               target:
+ *                 type: number
+ *               period:
+ *                 type: string
+ *                 enum: [week, month, year]
+ *     responses:
+ *       200:
+ *         description: Goal set successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 const setGoalSchema = z.object({
   type: z.enum(["earnings", "jobs", "rating"]),
@@ -172,8 +220,19 @@ cleanerEnhancedRouter.post(
 );
 
 /**
- * GET /cleaner/goals
- * Get goals
+ * @swagger
+ * /cleaner/dashboard/goals:
+ *   get:
+ *     summary: Get cleaner goals
+ *     description: Get cleaner's goals (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Goals data
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/goals", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -207,8 +266,32 @@ cleanerEnhancedRouter.get("/goals", async (req: JWTAuthedRequest, res: Response)
 // ============================================
 
 /**
- * GET /cleaner/calendar/conflicts
- * Detect scheduling conflicts
+ * @swagger
+ * /cleaner/calendar/conflicts:
+ *   get:
+ *     summary: Get calendar conflicts
+ *     description: Detect scheduling conflicts for cleaner (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: start_date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: end_date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Calendar conflicts
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/calendar/conflicts", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -261,8 +344,29 @@ cleanerEnhancedRouter.get("/calendar/conflicts", async (req: JWTAuthedRequest, r
 });
 
 /**
- * POST /cleaner/calendar/optimize
- * Suggest optimal schedule
+ * @swagger
+ * /cleaner/calendar/optimize:
+ *   post:
+ *     summary: Optimize calendar schedule
+ *     description: Suggest optimal schedule based on earnings history (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Schedule optimization suggestions
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.post("/calendar/optimize", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -316,8 +420,26 @@ cleanerEnhancedRouter.post("/calendar/optimize", async (req: JWTAuthedRequest, r
 // ============================================
 
 /**
- * GET /cleaner/jobs/:id/matching-score
- * Calculate matching score for a job
+ * @swagger
+ * /cleaner/jobs/{id}/matching-score:
+ *   get:
+ *     summary: Get job matching score
+ *     description: Calculate matching score for a job (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Matching score with factors
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/jobs/:id/matching-score", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -415,8 +537,39 @@ cleanerEnhancedRouter.get("/jobs/:id/matching-score", async (req: JWTAuthedReque
 });
 
 /**
- * POST /cleaner/auto-accept-rules
- * Set auto-accept conditions
+ * @swagger
+ * /cleaner/jobs/auto-accept:
+ *   post:
+ *     summary: Set auto-accept rules
+ *     description: Set auto-accept conditions for jobs (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - enabled
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *               conditions:
+ *                 type: object
+ *                 properties:
+ *                   min_matching_score:
+ *                     type: number
+ *                   max_distance_miles:
+ *                     type: number
+ *                   min_credit_amount:
+ *                     type: number
+ *     responses:
+ *       200:
+ *         description: Auto-accept rules saved
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 const autoAcceptSchema = z.object({
   enabled: z.boolean(),
@@ -512,8 +665,44 @@ cleanerEnhancedRouter.post(
 );
 
 /**
- * POST /cleaner/jobs/:id/expenses
- * Track job expenses
+ * @swagger
+ * /cleaner/jobs/{id}/expenses:
+ *   post:
+ *     summary: Track job expenses
+ *     description: Track expenses for a job (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - description
+ *               - amount
+ *             properties:
+ *               description:
+ *                 type: string
+ *               amount:
+ *                 type: number
+ *                 minimum: 0
+ *               category:
+ *                 type: string
+ *                 enum: [materials, travel, other]
+ *     responses:
+ *       200:
+ *         description: Expense tracked successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 const trackExpenseSchema = z.object({
   description: z.string(),
@@ -559,8 +748,26 @@ cleanerEnhancedRouter.post(
 );
 
 /**
- * GET /cleaner/jobs/:id/directions
- * Get directions to job location
+ * @swagger
+ * /cleaner/jobs/{id}/directions:
+ *   get:
+ *     summary: Get job directions
+ *     description: Get directions to job location (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Directions URL and coordinates
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/jobs/:id/directions", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -617,8 +824,24 @@ cleanerEnhancedRouter.get("/jobs/:id/directions", async (req: JWTAuthedRequest, 
 // ============================================
 
 /**
- * GET /cleaner/earnings/tax-report
- * Get tax report
+ * @swagger
+ * /cleaner/earnings/tax-report:
+ *   get:
+ *     summary: Get tax report
+ *     description: Get tax report for cleaner earnings (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: year
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Tax report data
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/earnings/tax-report", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -658,8 +881,26 @@ cleanerEnhancedRouter.get("/earnings/tax-report", async (req: JWTAuthedRequest, 
 });
 
 /**
- * GET /cleaner/earnings/breakdown
- * Get detailed earnings breakdown
+ * @swagger
+ * /cleaner/earnings/breakdown:
+ *   get:
+ *     summary: Get earnings breakdown
+ *     description: Get detailed earnings breakdown by service type and client (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [week, month, year]
+ *           default: month
+ *     responses:
+ *       200:
+ *         description: Earnings breakdown
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/earnings/breakdown", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -732,8 +973,34 @@ cleanerEnhancedRouter.get("/earnings/breakdown", async (req: JWTAuthedRequest, r
 });
 
 /**
- * GET /cleaner/earnings/export
- * Export earnings as CSV
+ * @swagger
+ * /cleaner/earnings/export:
+ *   get:
+ *     summary: Export earnings as CSV
+ *     description: Export earnings data as CSV file (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: start_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: end_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: CSV file download
+ *         content:
+ *           text/csv:
+ *             schema:
+ *               type: string
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/earnings/export", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -794,8 +1061,19 @@ cleanerEnhancedRouter.get("/earnings/export", async (req: JWTAuthedRequest, res:
 // ============================================
 
 /**
- * GET /cleaner/profile/completeness
- * Get profile completeness score
+ * @swagger
+ * /cleaner/profile/completeness:
+ *   get:
+ *     summary: Get profile completeness
+ *     description: Get profile completeness score and missing fields (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile completeness data
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/profile/completeness", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -861,8 +1139,19 @@ cleanerEnhancedRouter.get("/profile/completeness", async (req: JWTAuthedRequest,
 });
 
 /**
- * GET /cleaner/profile/preview
- * Get public profile preview (how clients see it)
+ * @swagger
+ * /cleaner/profile/preview:
+ *   get:
+ *     summary: Get profile preview
+ *     description: Get public profile preview (how clients see it) (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile preview data
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/profile/preview", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -911,8 +1200,31 @@ cleanerEnhancedRouter.get("/profile/preview", async (req: JWTAuthedRequest, res:
 });
 
 /**
- * POST /cleaner/profile/video
- * Upload intro video
+ * @swagger
+ * /cleaner/profile/video:
+ *   post:
+ *     summary: Upload intro video
+ *     description: Upload intro video URL for profile (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - video_url
+ *             properties:
+ *               video_url:
+ *                 type: string
+ *                 format: uri
+ *     responses:
+ *       200:
+ *         description: Video uploaded successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.post("/profile/video", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -947,8 +1259,19 @@ cleanerEnhancedRouter.post("/profile/video", async (req: JWTAuthedRequest, res: 
 // ============================================
 
 /**
- * GET /cleaner/availability/suggestions
- * Get smart availability suggestions
+ * @swagger
+ * /cleaner/availability/suggestions:
+ *   get:
+ *     summary: Get availability suggestions
+ *     description: Get smart availability suggestions based on demand (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Availability suggestions
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/availability/suggestions", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -1020,8 +1343,37 @@ cleanerEnhancedRouter.get("/availability/suggestions", async (req: JWTAuthedRequ
 });
 
 /**
- * POST /cleaner/availability/template
- * Apply availability template
+ * @swagger
+ * /cleaner/availability/template:
+ *   post:
+ *     summary: Apply availability template
+ *     description: Apply availability template (morning, afternoon, evening, etc.) (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - template
+ *             properties:
+ *               template:
+ *                 type: string
+ *                 enum: [morning, afternoon, evening, full_day, weekend_only]
+ *               days:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                   minimum: 0
+ *                   maximum: 6
+ *     responses:
+ *       200:
+ *         description: Template applied successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 const applyTemplateSchema = z.object({
   template: z.enum(["morning", "afternoon", "evening", "full_day", "weekend_only"]),
@@ -1073,8 +1425,19 @@ cleanerEnhancedRouter.post(
 // ============================================
 
 /**
- * GET /cleaner/certifications/recommendations
- * Get certification recommendations for cleaner
+ * @swagger
+ * /cleaner/certifications/recommendations:
+ *   get:
+ *     summary: Get certification recommendations
+ *     description: Get certification recommendations based on cleaner performance (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Certification recommendations
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/certifications/recommendations", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -1137,8 +1500,19 @@ cleanerEnhancedRouter.get("/certifications/recommendations", async (req: JWTAuth
 // ============================================
 
 /**
- * GET /cleaner/leaderboard/personal
- * Get personal leaderboard ranking and insights
+ * @swagger
+ * /cleaner/leaderboard/personal:
+ *   get:
+ *     summary: Get personal leaderboard ranking
+ *     description: Get personal leaderboard ranking and insights (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Leaderboard ranking data
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 cleanerEnhancedRouter.get("/leaderboard/personal", async (req: JWTAuthedRequest, res: Response) => {
   try {

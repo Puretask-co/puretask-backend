@@ -9,6 +9,28 @@ const alertsRouter = Router();
 
 alertsRouter.use(requireAuth);
 
+/**
+ * @swagger
+ * /alerts/smoke:
+ *   post:
+ *     summary: Alert smoke test
+ *     description: Test alert system (Slack/Email) to verify alerting is working.
+ *     tags: [Alerts]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title: { type: 'string', default: 'Alert smoke test' }
+ *               message: { type: 'string', default: 'This is a test alert' }
+ *     responses:
+ *       200:
+ *         description: Alert sent successfully
+ */
 alertsRouter.post("/smoke", async (req: AuthedRequest, res) => {
   try {
     const { title = "Alert smoke test", message = "This is a test alert" } = req.body || {};

@@ -17,8 +17,19 @@ const aiRouter = Router();
 aiRouter.use(requireAuth);
 
 /**
- * GET /ai/settings
- * Get cleaner's AI communication settings
+ * @swagger
+ * /ai/settings:
+ *   get:
+ *     summary: Get AI settings
+ *     description: Get cleaner's AI communication settings.
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: AI settings
+ *       404:
+ *         description: Cleaner profile not found
  */
 aiRouter.get('/settings', async (req: AuthedRequest, res: Response) => {
   try {
@@ -43,8 +54,26 @@ aiRouter.get('/settings', async (req: AuthedRequest, res: Response) => {
 });
 
 /**
- * PUT /ai/settings
- * Update cleaner's AI communication settings
+ * @swagger
+ * /ai/settings:
+ *   put:
+ *     summary: Update AI settings
+ *     description: Update cleaner's AI communication settings.
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               communication_settings: { type: 'object' }
+ *               ai_onboarding_completed: { type: 'boolean' }
+ *     responses:
+ *       200:
+ *         description: Settings updated
  */
 const updateSettingsSchema = z.object({
   communication_settings: z.record(z.any()).optional(),
@@ -93,8 +122,31 @@ aiRouter.put('/settings', validateBody(updateSettingsSchema), async (req: Authed
 });
 
 /**
- * POST /ai/suggest-slots
- * Get AI-suggested booking time slots
+ * @swagger
+ * /ai/suggest-slots:
+ *   post:
+ *     summary: Get AI-suggested time slots
+ *     description: Get AI-suggested booking time slots based on cleaner availability and preferences.
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - client_id
+ *               - cleaner_id
+ *             properties:
+ *               client_id: { type: 'string' }
+ *               cleaner_id: { type: 'string' }
+ *               preferred_date: { type: 'string', format: 'date' }
+ *               duration_hours: { type: 'number' }
+ *     responses:
+ *       200:
+ *         description: Suggested time slots
  */
 const suggestSlotsSchema = z.object({
   client_id: z.string(),

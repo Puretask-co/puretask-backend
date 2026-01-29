@@ -15,10 +15,43 @@ const rescheduleRouter = Router();
 // All routes require auth
 rescheduleRouter.use(requireAuth);
 
-// ============================================
-// POST /reschedules/job/:jobId - Create reschedule request
-// ============================================
-
+/**
+ * @swagger
+ * /reschedules/job/{jobId}:
+ *   post:
+ *     summary: Create reschedule request
+ *     description: Create a reschedule request for a job. The other party must accept or decline.
+ *     tags: [Reschedules]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newStartTime
+ *             properties:
+ *               newStartTime:
+ *                 type: string
+ *                 format: date-time
+ *               reasonCode: { type: 'string' }
+ *               isEmergency: { type: 'boolean' }
+ *     responses:
+ *       201:
+ *         description: Reschedule request created
+ *       400:
+ *         description: Invalid request or max reschedules reached
+ *       403:
+ *         description: Forbidden - not your job
+ */
 rescheduleRouter.post("/job/:jobId", async (req: AuthedRequest, res) => {
   const jobId = Number(req.params.jobId);
   const userId = req.user?.id;
@@ -125,10 +158,42 @@ rescheduleRouter.post("/job/:jobId", async (req: AuthedRequest, res) => {
   }
 });
 
-// ============================================
-// POST /reschedules/:id/accept - Accept reschedule
-// ============================================
-
+/**
+ * @swagger
+ * /reschedules/{id}/accept:
+ *   post:
+ *     summary: Accept reschedule
+ *     description: Accept a reschedule request. The job's start time will be updated.
+ *     tags: [Reschedules]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Reschedule accepted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: 'boolean' }
+ *                 reschedule:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: 'string' }
+ *                     status: { type: 'string' }
+ *                     jobUpdated: { type: 'boolean' }
+ *                     newStartTime: { type: 'string', format: 'date-time' }
+ *       403:
+ *         description: Forbidden - only the receiving party can respond
+ *       404:
+ *         description: Reschedule request not found
+ */
 rescheduleRouter.post("/:id/accept", async (req: AuthedRequest, res) => {
   const rescheduleId = Number(req.params.id);
   const userId = req.user?.id;
@@ -184,10 +249,37 @@ rescheduleRouter.post("/:id/accept", async (req: AuthedRequest, res) => {
   }
 });
 
-// ============================================
-// POST /reschedules/:id/decline - Decline reschedule
-// ============================================
-
+/**
+ * @swagger
+ * /reschedules/{id}/decline:
+ *   post:
+ *     summary: Decline reschedule
+ *     description: Decline a reschedule request. The original booking time remains in effect.
+ *     tags: [Reschedules]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               declineReasonCode: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Reschedule declined
+ *       403:
+ *         description: Forbidden - only the receiving party can respond
+ *       404:
+ *         description: Reschedule request not found
+ */
 rescheduleRouter.post("/:id/decline", async (req: AuthedRequest, res) => {
   const rescheduleId = Number(req.params.id);
   const userId = req.user?.id;
@@ -252,10 +344,27 @@ rescheduleRouter.post("/:id/decline", async (req: AuthedRequest, res) => {
   }
 });
 
-// ============================================
-// GET /reschedules/:id - Get reschedule status
-// ============================================
-
+/**
+ * @swagger
+ * /reschedules/{id}:
+ *   get:
+ *     summary: Get reschedule status
+ *     description: Get details of a reschedule request.
+ *     tags: [Reschedules]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Reschedule details
+ *       404:
+ *         description: Reschedule request not found
+ */
 rescheduleRouter.get("/:id", async (req: AuthedRequest, res) => {
   const rescheduleId = Number(req.params.id);
 
@@ -289,10 +398,35 @@ rescheduleRouter.get("/:id", async (req: AuthedRequest, res) => {
   }
 });
 
-// ============================================
-// GET /reschedules/job/:jobId - Get reschedules for a job
-// ============================================
-
+/**
+ * @swagger
+ * /reschedules/job/{jobId}:
+ *   get:
+ *     summary: Get reschedules for job
+ *     description: Get all pending reschedule requests for a job.
+ *     tags: [Reschedules]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of reschedule requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 jobId: { type: 'string' }
+ *                 reschedules:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ */
 rescheduleRouter.get("/job/:jobId", async (req: AuthedRequest, res) => {
   const jobId = Number(req.params.jobId);
 

@@ -60,8 +60,45 @@ v2Router.use(requireAuth);
 // ============================================
 
 /**
- * POST /v2/properties
- * Create a new property
+ * @swagger
+ * /v2/properties:
+ *   post:
+ *     summary: Create property
+ *     description: Create a new property for a client.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - label
+ *               - address_line1
+ *               - city
+ *             properties:
+ *               label: { type: 'string' }
+ *               address_line1: { type: 'string' }
+ *               address_line2: { type: 'string' }
+ *               city: { type: 'string' }
+ *               state_region: { type: 'string' }
+ *               postal_code: { type: 'string' }
+ *               country_code: { type: 'string', default: 'US' }
+ *               latitude: { type: 'number' }
+ *               longitude: { type: 'number' }
+ *               notes: { type: 'string' }
+ *               bedrooms: { type: 'integer' }
+ *               bathrooms: { type: 'number' }
+ *               square_feet: { type: 'integer' }
+ *               has_pets: { type: 'boolean' }
+ *               has_kids: { type: 'boolean' }
+ *     responses:
+ *       201:
+ *         description: Property created
+ *       403:
+ *         description: Forbidden - clients only
  */
 const createPropertySchema = z.object({
   label: z.string().min(1),
@@ -97,8 +134,19 @@ v2Router.post("/properties", validateBody(createPropertySchema), async (req: Aut
 });
 
 /**
- * GET /v2/properties
- * Get all client properties
+ * @swagger
+ * /v2/properties:
+ *   get:
+ *     summary: Get properties
+ *     description: Get all properties for the current client.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of properties
+ *       403:
+ *         description: Forbidden - clients only
  */
 v2Router.get("/properties", async (req: AuthedRequest, res: Response) => {
   try {
@@ -115,8 +163,25 @@ v2Router.get("/properties", async (req: AuthedRequest, res: Response) => {
 });
 
 /**
- * GET /v2/properties/:id
- * Get property by ID
+ * @swagger
+ * /v2/properties/{id}:
+ *   get:
+ *     summary: Get property by ID
+ *     description: Get property by ID.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Property details
+ *       404:
+ *         description: Property not found
  */
 v2Router.get("/properties/:id", async (req: AuthedRequest, res: Response) => {
   try {
@@ -132,8 +197,23 @@ v2Router.get("/properties/:id", async (req: AuthedRequest, res: Response) => {
 });
 
 /**
- * GET /v2/properties/:id/suggestions
- * Get cleaning suggestions for a property
+ * @swagger
+ * /v2/properties/{id}/suggestions:
+ *   get:
+ *     summary: Get property cleaning suggestions
+ *     description: Get cleaning suggestions for a property.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Cleaning suggestions
  */
 v2Router.get("/properties/:id/suggestions", async (req: AuthedRequest, res: Response) => {
   try {
@@ -146,8 +226,44 @@ v2Router.get("/properties/:id/suggestions", async (req: AuthedRequest, res: Resp
 });
 
 /**
- * PATCH /v2/properties/:id
- * Update property
+ * @swagger
+ * /v2/properties/{id}:
+ *   patch:
+ *     summary: Update property
+ *     description: Update a property.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               label: { type: 'string' }
+ *               address_line1: { type: 'string' }
+ *               address_line2: { type: 'string' }
+ *               city: { type: 'string' }
+ *               state_region: { type: 'string' }
+ *               postal_code: { type: 'string' }
+ *               notes: { type: 'string' }
+ *               bedrooms: { type: 'integer' }
+ *               bathrooms: { type: 'number' }
+ *               square_feet: { type: 'integer' }
+ *               has_pets: { type: 'boolean' }
+ *               has_kids: { type: 'boolean' }
+ *     responses:
+ *       200:
+ *         description: Property updated
+ *       403:
+ *         description: Forbidden - clients only
  */
 v2Router.patch("/properties/:id", async (req: AuthedRequest, res: Response) => {
   try {
@@ -164,8 +280,25 @@ v2Router.patch("/properties/:id", async (req: AuthedRequest, res: Response) => {
 });
 
 /**
- * DELETE /v2/properties/:id
- * Delete property
+ * @swagger
+ * /v2/properties/{id}:
+ *   delete:
+ *     summary: Delete property
+ *     description: Delete a property.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Property deleted
+ *       403:
+ *         description: Forbidden - clients only
  */
 v2Router.delete("/properties/:id", async (req: AuthedRequest, res: Response) => {
   try {
@@ -186,8 +319,26 @@ v2Router.delete("/properties/:id", async (req: AuthedRequest, res: Response) => 
 // ============================================
 
 /**
- * GET /v2/jobs/:id/rebook-data
- * Get data for rebooking a completed job
+ * @swagger
+ * /v2/jobs/{id}/rebook-data:
+ *   get:
+ *     summary: Get rebook data
+ *     description: Get data for rebooking a completed job (one-tap rebook).
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Rebook data
+ *       403:
+ *         description: Forbidden - clients only
  */
 v2Router.get("/jobs/:id/rebook-data", async (req: AuthedRequest, res: Response) => {
   try {
@@ -208,8 +359,30 @@ v2Router.get("/jobs/:id/rebook-data", async (req: AuthedRequest, res: Response) 
 // ============================================
 
 /**
- * POST /v2/teams
- * Create a team
+ * @swagger
+ * /v2/teams:
+ *   post:
+ *     summary: Create team
+ *     description: Create a cleaning team.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name: { type: 'string' }
+ *               description: { type: 'string' }
+ *     responses:
+ *       201:
+ *         description: Team created
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 const createTeamSchema = z.object({
   name: z.string().min(1),
@@ -231,8 +404,19 @@ v2Router.post("/teams", validateBody(createTeamSchema), async (req: AuthedReques
 });
 
 /**
- * GET /v2/teams/my
- * Get my team (as owner)
+ * @swagger
+ * /v2/teams/my:
+ *   get:
+ *     summary: Get my team
+ *     description: Get my team (as owner).
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Team details
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 v2Router.get("/teams/my", async (req: AuthedRequest, res: Response) => {
   try {
@@ -248,8 +432,19 @@ v2Router.get("/teams/my", async (req: AuthedRequest, res: Response) => {
 });
 
 /**
- * GET /v2/teams/memberships
- * Get teams I belong to
+ * @swagger
+ * /v2/teams/memberships:
+ *   get:
+ *     summary: Get team memberships
+ *     description: Get teams I belong to.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of team memberships
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 v2Router.get("/teams/memberships", async (req: AuthedRequest, res: Response) => {
   try {
@@ -273,6 +468,43 @@ const inviteMemberSchema = z.object({
   role: z.enum(["lead", "member"]).optional(),
 });
 
+/**
+ * @swagger
+ * /v2/teams/{id}/invite:
+ *   post:
+ *     summary: Invite team member
+ *     description: Invite a cleaner to join a team.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cleanerId
+ *               - role
+ *             properties:
+ *               cleanerId:
+ *                 type: string
+ *                 format: uuid
+ *               role:
+ *                 type: string
+ *                 enum: [member, admin]
+ *     responses:
+ *       201:
+ *         description: Member invited
+ *       403:
+ *         description: Forbidden
+ */
 v2Router.post("/teams/:id/members", validateBody(inviteMemberSchema), async (req: AuthedRequest, res: Response) => {
   try {
     const member = await inviteTeamMember(
@@ -289,8 +521,25 @@ v2Router.post("/teams/:id/members", validateBody(inviteMemberSchema), async (req
 });
 
 /**
- * POST /v2/teams/:id/accept
- * Accept team invitation
+ * @swagger
+ * /v2/teams/invites/{inviteId}/accept:
+ *   post:
+ *     summary: Accept team invitation
+ *     description: Accept a team invitation.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: inviteId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Invitation accepted
+ *       403:
+ *         description: Forbidden
  */
 v2Router.post("/teams/:id/accept", async (req: AuthedRequest, res: Response) => {
   try {
@@ -303,8 +552,25 @@ v2Router.post("/teams/:id/accept", async (req: AuthedRequest, res: Response) => 
 });
 
 /**
- * POST /v2/teams/:id/decline
- * Decline team invitation
+ * @swagger
+ * /v2/teams/invites/{inviteId}/decline:
+ *   post:
+ *     summary: Decline team invitation
+ *     description: Decline a team invitation.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: inviteId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Invitation declined
+ *       403:
+ *         description: Forbidden
  */
 v2Router.post("/teams/:id/decline", async (req: AuthedRequest, res: Response) => {
   try {
@@ -316,8 +582,31 @@ v2Router.post("/teams/:id/decline", async (req: AuthedRequest, res: Response) =>
 });
 
 /**
- * DELETE /v2/teams/:id/members/:memberId
- * Remove team member
+ * @swagger
+ * /v2/teams/{teamId}/members/{memberId}:
+ *   delete:
+ *     summary: Remove team member
+ *     description: Remove a member from a team.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: memberId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Member removed
+ *       403:
+ *         description: Forbidden
  */
 v2Router.delete("/teams/:id/members/:memberId", async (req: AuthedRequest, res: Response) => {
   try {
@@ -330,8 +619,25 @@ v2Router.delete("/teams/:id/members/:memberId", async (req: AuthedRequest, res: 
 });
 
 /**
- * POST /v2/teams/:id/leave
- * Leave a team
+ * @swagger
+ * /v2/teams/{id}/leave:
+ *   post:
+ *     summary: Leave team
+ *     description: Leave a team.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Left team successfully
+ *       403:
+ *         description: Forbidden
  */
 v2Router.post("/teams/:id/leave", async (req: AuthedRequest, res: Response) => {
   try {
@@ -344,8 +650,23 @@ v2Router.post("/teams/:id/leave", async (req: AuthedRequest, res: Response) => {
 });
 
 /**
- * GET /v2/teams/:id/stats
- * Get team statistics
+ * @swagger
+ * /v2/teams/{id}/stats:
+ *   get:
+ *     summary: Get team statistics
+ *     description: Get statistics for a team.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Team statistics
  */
 v2Router.get("/teams/:id/stats", async (req: AuthedRequest, res: Response) => {
   try {
@@ -361,8 +682,25 @@ v2Router.get("/teams/:id/stats", async (req: AuthedRequest, res: Response) => {
 // ============================================
 
 /**
- * GET /v2/calendar/google/connect
- * Get Google OAuth URL
+ * @swagger
+ * /v2/calendar/google/connect:
+ *   get:
+ *     summary: Get Google Calendar OAuth URL
+ *     description: Get Google OAuth URL for calendar connection.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: OAuth URL
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ *                   format: uri
  */
 v2Router.get("/calendar/google/connect", async (req: AuthedRequest, res: Response) => {
   try {
@@ -374,8 +712,30 @@ v2Router.get("/calendar/google/connect", async (req: AuthedRequest, res: Respons
 });
 
 /**
- * GET /v2/calendar/google/callback
- * Handle Google OAuth callback
+ * @swagger
+ * /v2/calendar/google/callback:
+ *   get:
+ *     summary: Handle Google Calendar OAuth callback
+ *     description: Handle Google OAuth callback and complete calendar connection.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Calendar connected successfully
+ *       400:
+ *         description: Invalid callback parameters
  */
 v2Router.get("/calendar/google/callback", async (req: AuthedRequest, res: Response) => {
   try {
@@ -393,8 +753,25 @@ v2Router.get("/calendar/google/callback", async (req: AuthedRequest, res: Respon
 });
 
 /**
- * GET /v2/calendar/connection
- * Get current calendar connection
+ * @swagger
+ * /v2/calendar/connection:
+ *   get:
+ *     summary: Get calendar connection status
+ *     description: Get current calendar connection status.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Calendar connection status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 connection:
+ *                   type: object
+ *                   nullable: true
  */
 v2Router.get("/calendar/connection", async (req: AuthedRequest, res: Response) => {
   try {
@@ -406,8 +783,17 @@ v2Router.get("/calendar/connection", async (req: AuthedRequest, res: Response) =
 });
 
 /**
- * DELETE /v2/calendar/connection
- * Disconnect calendar
+ * @swagger
+ * /v2/calendar/connection:
+ *   delete:
+ *     summary: Disconnect calendar
+ *     description: Disconnect the user's calendar connection.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Calendar disconnected successfully
  */
 v2Router.delete("/calendar/connection", async (req: AuthedRequest, res: Response) => {
   try {
@@ -419,8 +805,25 @@ v2Router.delete("/calendar/connection", async (req: AuthedRequest, res: Response
 });
 
 /**
- * GET /v2/calendar/ics-url
- * Get ICS feed URL for Apple Calendar
+ * @swagger
+ * /v2/calendar/ics-url:
+ *   get:
+ *     summary: Get ICS feed URL
+ *     description: Get ICS feed URL for Apple Calendar integration.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: ICS feed URL
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ *                   format: uri
  */
 v2Router.get("/calendar/ics-url", async (req: AuthedRequest, res: Response) => {
   try {
@@ -436,8 +839,49 @@ v2Router.get("/calendar/ics-url", async (req: AuthedRequest, res: Response) => {
 // ============================================
 
 /**
- * POST /v2/ai/checklist
- * Generate AI cleaning checklist
+ * @swagger
+ * /v2/ai/checklist:
+ *   post:
+ *     summary: Generate AI cleaning checklist
+ *     description: Generate an AI-powered cleaning checklist based on property details.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - bedrooms
+ *               - bathrooms
+ *               - has_pets
+ *               - has_kids
+ *               - cleaning_type
+ *             properties:
+ *               bedrooms:
+ *                 type: integer
+ *                 minimum: 0
+ *               bathrooms:
+ *                 type: number
+ *                 minimum: 0
+ *               square_feet:
+ *                 type: integer
+ *               has_pets:
+ *                 type: boolean
+ *               has_kids:
+ *                 type: boolean
+ *               cleaning_type:
+ *                 type: string
+ *                 enum: [basic, deep, moveout]
+ *               special_notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Generated checklist
+ *       400:
+ *         description: Invalid input
  */
 const checklistSchema = z.object({
   bedrooms: z.number().int().min(0),
@@ -459,8 +903,25 @@ v2Router.post("/ai/checklist", validateBody(checklistSchema), async (req: Authed
 });
 
 /**
- * POST /v2/ai/dispute-suggestion
- * Generate AI dispute resolution suggestion (admin only)
+ * @swagger
+ * /v2/ai/dispute-suggestion:
+ *   post:
+ *     summary: Generate AI dispute resolution suggestion
+ *     description: Generate AI-powered dispute resolution suggestion (admin only).
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Dispute resolution suggestion
+ *       403:
+ *         description: Forbidden - admin only
  */
 v2Router.post("/ai/dispute-suggestion", async (req: AuthedRequest, res: Response) => {
   try {
@@ -483,6 +944,19 @@ v2Router.post("/ai/dispute-suggestion", async (req: AuthedRequest, res: Response
  * GET /v2/cleaner/goals
  * Get cleaner's goals
  */
+/**
+ * @swagger
+ * /v2/cleaner/goals:
+ *   get:
+ *     summary: Get cleaner goals
+ *     description: Get cleaner's goals and progress.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cleaner goals
+ */
 v2Router.get("/cleaner/goals", async (req: AuthedRequest, res: Response) => {
   try {
     if (req.user?.role !== "cleaner") {
@@ -503,8 +977,17 @@ v2Router.get("/cleaner/goals", async (req: AuthedRequest, res: Response) => {
 });
 
 /**
- * GET /v2/cleaner/route-suggestions
- * Get route optimization suggestions
+ * @swagger
+ * /v2/cleaner/route-suggestions:
+ *   get:
+ *     summary: Get route optimization suggestions
+ *     description: Get AI-powered route optimization suggestions for cleaner's jobs.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Route optimization suggestions
  */
 v2Router.get("/cleaner/route-suggestions", async (req: AuthedRequest, res: Response) => {
   try {
@@ -521,8 +1004,17 @@ v2Router.get("/cleaner/route-suggestions", async (req: AuthedRequest, res: Respo
 });
 
 /**
- * GET /v2/cleaner/reliability-breakdown
- * Get detailed reliability breakdown
+ * @swagger
+ * /v2/cleaner/reliability-breakdown:
+ *   get:
+ *     summary: Get reliability breakdown
+ *     description: Get detailed reliability score breakdown for cleaner.
+ *     tags: [V2]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Reliability breakdown
  */
 v2Router.get("/cleaner/reliability-breakdown", async (req: AuthedRequest, res: Response) => {
   try {

@@ -561,6 +561,17 @@ export async function approveJob(
     }
 
     logger.info("job_approved", { jobId, clientId, rating, tip, cleanerId: updatedJob.cleaner_id });
+
+    // Record metrics
+    const { metrics } = require("../lib/metrics");
+    if (updatedJob.actual_start_at && updatedJob.actual_end_at) {
+      const start = new Date(updatedJob.actual_start_at);
+      const end = new Date(updatedJob.actual_end_at);
+      const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      metrics.jobCompleted(jobId, durationHours);
+    } else {
+      metrics.jobCompleted(jobId, 0);
+    }
   });
 }
 

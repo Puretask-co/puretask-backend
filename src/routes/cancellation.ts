@@ -21,6 +21,56 @@ cancellationRouter.use(requireAuth);
 // POST /cancellations/jobs/:id - Client cancels job
 // ============================================
 
+/**
+ * @swagger
+ * /cancellations/jobs/{jobId}:
+ *   post:
+ *     summary: Cancel job (client)
+ *     description: Client cancels a job. Cancellation fees apply based on time before start.
+ *     tags: [Cancellations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reasonCode: { type: 'string' }
+ *               useGraceIfAvailable: { type: 'boolean' }
+ *               isEmergency: { type: 'boolean' }
+ *               afterRescheduleDeclined: { type: 'boolean' }
+ *     responses:
+ *       200:
+ *         description: Job cancelled
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: 'boolean' }
+ *                 cancellation:
+ *                   type: object
+ *                   properties:
+ *                     jobId: { type: 'string' }
+ *                     type: { type: 'string' }
+ *                     window: { type: 'string' }
+ *                     feePct: { type: 'number' }
+ *                     feeCredits: { type: 'number' }
+ *                     refundCredits: { type: 'number' }
+ *                     graceUsed: { type: 'boolean' }
+ *       400:
+ *         description: Invalid cancellation (locked window, invalid status)
+ *       403:
+ *         description: Forbidden - not your job
+ */
 cancellationRouter.post("/jobs/:jobId", async (req: AuthedRequest, res) => {
   const jobId = Number(req.params.jobId);
   const userId = req.user?.id;
@@ -125,10 +175,38 @@ cancellationRouter.post("/jobs/:jobId", async (req: AuthedRequest, res) => {
   }
 });
 
-// ============================================
-// POST /cancellations/jobs/:id/cleaner - Cleaner cancels job
-// ============================================
-
+/**
+ * @swagger
+ * /cancellations/jobs/{jobId}/cleaner:
+ *   post:
+ *     summary: Cancel job (cleaner)
+ *     description: Cleaner cancels a job. Client receives full refund.
+ *     tags: [Cancellations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reasonCode: { type: 'string' }
+ *               isEmergency: { type: 'boolean' }
+ *     responses:
+ *       200:
+ *         description: Job cancelled
+ *       400:
+ *         description: Invalid cancellation
+ *       403:
+ *         description: Forbidden - cleaners only
+ */
 cancellationRouter.post("/jobs/:jobId/cleaner", async (req: AuthedRequest, res) => {
   const jobId = Number(req.params.jobId);
   const userId = req.user?.id;
@@ -217,10 +295,38 @@ cancellationRouter.post("/jobs/:jobId/cleaner", async (req: AuthedRequest, res) 
   }
 });
 
-// ============================================
-// POST /cancellations/no-shows - Mark client or cleaner no-show
-// ============================================
-
+/**
+ * @swagger
+ * /cancellations/no-shows:
+ *   post:
+ *     summary: Mark no-show
+ *     description: Mark a client or cleaner as no-show for a job.
+ *     tags: [Cancellations]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - jobId
+ *               - noShowType
+ *             properties:
+ *               jobId:
+ *                 type: integer
+ *               noShowType:
+ *                 type: string
+ *                 enum: [client, cleaner]
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: No-show recorded
+ *       403:
+ *         description: Forbidden - insufficient permissions
+ */
 cancellationRouter.post("/no-shows", async (req: AuthedRequest, res) => {
   const userId = req.user?.id;
   const userRole = req.user?.role;
@@ -315,10 +421,43 @@ cancellationRouter.post("/no-shows", async (req: AuthedRequest, res) => {
   }
 });
 
-// ============================================
-// GET /cancellations/jobs/:id/preview - Preview cancellation fees
-// ============================================
-
+/**
+ * @swagger
+ * /cancellations/jobs/{jobId}/preview:
+ *   get:
+ *     summary: Preview cancellation fees
+ *     description: Preview cancellation fees and refund amount before cancelling.
+ *     tags: [Cancellations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Cancellation preview
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 jobId: { type: 'string' }
+ *                 hoursBefore: { type: 'number' }
+ *                 window: { type: 'string' }
+ *                 bucket: { type: 'string' }
+ *                 heldCredits: { type: 'number' }
+ *                 feePct: { type: 'number' }
+ *                 feeCredits: { type: 'number' }
+ *                 refundCredits: { type: 'number' }
+ *                 graceRemaining: { type: 'number' }
+ *                 canUseGrace: { type: 'boolean' }
+ *                 message: { type: 'string' }
+ *       404:
+ *         description: Job not found
+ */
 cancellationRouter.get("/jobs/:jobId/preview", async (req: AuthedRequest, res) => {
   const jobId = Number(req.params.jobId);
   const userId = req.user?.id;

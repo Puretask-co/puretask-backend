@@ -43,8 +43,34 @@ cleanerRouter.use(jwtAuthMiddleware);
 cleanerRouter.use(requireRole("cleaner", "admin"));
 
 /**
- * GET /cleaner/profile
- * Get cleaner profile and stats
+ * @swagger
+ * /cleaner/profile:
+ *   get:
+ *     summary: Get cleaner profile and stats
+ *     description: Get cleaner profile information including rates, bio, and statistics.
+ *     tags: [Cleaners]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cleaner profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 profile:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: 'string', format: 'uuid' }
+ *                     base_rate_cph: { type: 'number' }
+ *                     deep_addon_cph: { type: 'number' }
+ *                     moveout_addon_cph: { type: 'number' }
+ *                     bio: { type: 'string', nullable: true }
+ *                     tier: { type: 'string', enum: ['bronze', 'silver', 'gold', 'platinum'] }
+ *                     reliability_score: { type: 'number' }
+ *       404:
+ *         description: Profile not found
  */
 cleanerRouter.get(
   "/profile",
@@ -72,8 +98,44 @@ cleanerRouter.get(
 );
 
 /**
- * PATCH /cleaner/profile
- * Update cleaner profile
+ * @swagger
+ * /cleaner/profile:
+ *   patch:
+ *     summary: Update cleaner profile
+ *     description: Update cleaner profile information including rates and bio.
+ *     tags: [Cleaners]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               baseRateCph:
+ *                 type: number
+ *                 description: Base rate per hour
+ *               deepAddonCph:
+ *                 type: number
+ *                 description: Deep cleaning addon rate per hour
+ *               moveoutAddonCph:
+ *                 type: number
+ *                 description: Move-out cleaning addon rate per hour
+ *               bio:
+ *                 type: string
+ *                 maxLength: 500
+ *                 description: Cleaner bio
+ *               serviceAreas:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Service area codes
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *       400:
+ *         description: Invalid input
  */
 const updateProfileSchema = z.object({
   baseRateCph: z.number().positive().optional(),
@@ -111,8 +173,31 @@ cleanerRouter.patch(
 );
 
 /**
- * POST /cleaner/stripe/connect
- * Create or get Stripe Connect onboarding link
+ * @swagger
+ * /cleaner/stripe/connect:
+ *   post:
+ *     summary: Create or get Stripe Connect onboarding link
+ *     description: Create or retrieve Stripe Connect account onboarding link for receiving payouts.
+ *     tags: [Cleaners]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Stripe Connect onboarding link
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ *                   format: uri
+ *                   description: Onboarding URL to redirect user to
+ *                 accountId:
+ *                   type: string
+ *                   description: Stripe Connect account ID
+ *       500:
+ *         description: Failed to create Connect account
  */
 cleanerRouter.post(
   "/stripe/connect",
@@ -133,8 +218,35 @@ cleanerRouter.post(
 );
 
 /**
- * GET /cleaner/stripe/status
- * Get Stripe Connect account status
+ * @swagger
+ * /cleaner/stripe/status:
+ *   get:
+ *     summary: Get Stripe Connect account status
+ *     description: Get the status of the Stripe Connect account for receiving payouts.
+ *     tags: [Cleaners]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Stripe Connect account status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 connected:
+ *                   type: boolean
+ *                   description: Whether account is connected
+ *                 status:
+ *                   type: string
+ *                   enum: [pending, active, restricted]
+ *                   description: Account status
+ *                 chargesEnabled:
+ *                   type: boolean
+ *                 payoutsEnabled:
+ *                   type: boolean
+ *       500:
+ *         description: Failed to get status
  */
 cleanerRouter.get(
   "/stripe/status",
@@ -155,8 +267,30 @@ cleanerRouter.get(
 );
 
 /**
- * GET /cleaner/stripe/dashboard
- * Get Stripe Express dashboard link
+ * @swagger
+ * /cleaner/stripe/dashboard:
+ *   get:
+ *     summary: Get Stripe Express dashboard link
+ *     description: Get link to Stripe Express dashboard for managing payouts and account settings.
+ *     tags: [Cleaners]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard link
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ *                   format: uri
+ *                   description: Stripe Express dashboard URL
+ *       404:
+ *         description: No Stripe Connect account found (complete onboarding first)
+ *       500:
+ *         description: Failed to get dashboard link
  */
 cleanerRouter.get(
   "/stripe/dashboard",
@@ -184,8 +318,34 @@ cleanerRouter.get(
 );
 
 /**
- * GET /cleaner/availability
- * Get cleaner availability schedule
+ * @swagger
+ * /cleaner/availability:
+ *   get:
+ *     summary: Get cleaner availability schedule
+ *     description: Get the cleaner's weekly availability schedule.
+ *     tags: [Cleaners]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Availability schedule
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 availability:
+ *                   type: object
+ *                   properties:
+ *                     monday: { type: 'array', items: { type: 'object' } }
+ *                     tuesday: { type: 'array', items: { type: 'object' } }
+ *                     wednesday: { type: 'array', items: { type: 'object' } }
+ *                     thursday: { type: 'array', items: { type: 'object' } }
+ *                     friday: { type: 'array', items: { type: 'object' } }
+ *                     saturday: { type: 'array', items: { type: 'object' } }
+ *                     sunday: { type: 'array', items: { type: 'object' } }
+ *       500:
+ *         description: Failed to get availability
  */
 cleanerRouter.get(
   "/availability",
@@ -206,8 +366,39 @@ cleanerRouter.get(
 );
 
 /**
- * PUT /cleaner/availability
- * Update cleaner availability schedule
+ * @swagger
+ * /cleaner/availability:
+ *   put:
+ *     summary: Update cleaner availability schedule
+ *     description: Update the cleaner's weekly availability schedule.
+ *     tags: [Cleaners]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               monday:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     start: { type: 'string', format: 'time' }
+ *                     end: { type: 'string', format: 'time' }
+ *               tuesday: { type: 'array', items: { type: 'object' } }
+ *               wednesday: { type: 'array', items: { type: 'object' } }
+ *               thursday: { type: 'array', items: { type: 'object' } }
+ *               friday: { type: 'array', items: { type: 'object' } }
+ *               saturday: { type: 'array', items: { type: 'object' } }
+ *               sunday: { type: 'array', items: { type: 'object' } }
+ *     responses:
+ *       200:
+ *         description: Availability updated successfully
+ *       400:
+ *         description: Invalid input
  */
 const availabilitySchema = z.object({
   monday: z.array(z.object({ start: z.string(), end: z.string() })).optional(),

@@ -13,8 +13,17 @@ router.use(jwtAuthMiddleware);
 router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
 
 /**
- * GET /admin/risk/overview
- * Get risk management overview
+ * @swagger
+ * /admin/risk/overview:
+ *   get:
+ *     summary: Get risk overview
+ *     description: Get risk management overview including flagged clients/cleaners, disputes, safety incidents.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Risk overview
  */
 router.get('/overview', async (req: AuthedRequest, res: Response) => {
   try {

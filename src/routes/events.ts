@@ -26,21 +26,38 @@ const eventSchema = z.object({
 // ============================================
 
 /**
- * POST /n8n/events
- * Receive events from n8n workflows
- * Protected by HMAC signature verification
- *
- * Headers required:
- *   x-n8n-signature: HMAC-SHA256 signature of JSON body
- *
- * Body:
- *   {
- *     "jobId": "uuid" (optional),
- *     "actorType": "client" | "cleaner" | "admin" | "system",
- *     "actorId": "uuid" (optional),
- *     "eventType": "string",
- *     "payload": {} (optional)
- *   }
+ * @swagger
+ * /n8n/events:
+ *   post:
+ *     summary: Receive n8n webhook events
+ *     description: Receive events from n8n workflows. Protected by HMAC signature verification.
+ *     tags: [Events]
+ *     parameters:
+ *       - in: header
+ *         name: x-n8n-signature
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: HMAC-SHA256 signature of JSON body
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - eventType
+ *             properties:
+ *               jobId: { type: 'string', format: 'uuid' }
+ *               actorType: { type: 'string', enum: ['client', 'cleaner', 'admin', 'system'] }
+ *               actorId: { type: 'string', format: 'uuid' }
+ *               eventType: { type: 'string' }
+ *               payload: { type: 'object' }
+ *     responses:
+ *       204:
+ *         description: Event received and processed
+ *       400:
+ *         description: Invalid signature or body
  */
 eventsRouter.post(
   "/n8n/events",

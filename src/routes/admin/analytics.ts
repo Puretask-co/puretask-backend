@@ -14,8 +14,24 @@ router.use(jwtAuthMiddleware);
 router.use((req, res, next) => requireAdmin(req as AuthedRequest, res, next));
 
 /**
- * GET /admin/analytics/overview
- * Get comprehensive analytics overview
+ * @swagger
+ * /admin/analytics/overview:
+ *   get:
+ *     summary: Get analytics overview
+ *     description: Get comprehensive analytics overview including revenue, bookings, cleaners.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [7d, 30d, 90d]
+ *           default: 30d
+ *     responses:
+ *       200:
+ *         description: Analytics overview
  */
 router.get('/overview', async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;

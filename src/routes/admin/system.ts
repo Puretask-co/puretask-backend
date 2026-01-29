@@ -13,8 +13,17 @@ router.use(jwtAuthMiddleware);
 router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
 
 /**
- * GET /admin/system/config
- * Get system configuration
+ * @swagger
+ * /admin/system/config:
+ *   get:
+ *     summary: Get system configuration
+ *     description: Get system configuration including feature flags, platform settings, pricing config.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: System configuration
  */
 router.get('/config', async (req: AuthedRequest, res: Response) => {
   try {
@@ -51,8 +60,29 @@ router.get('/config', async (req: AuthedRequest, res: Response) => {
 });
 
 /**
- * PATCH /admin/system/config
- * Update system configuration (super admin only)
+ * @swagger
+ * /admin/system/config:
+ *   patch:
+ *     summary: Update system configuration
+ *     description: Update system configuration (super admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - section
+ *               - updates
+ *             properties:
+ *               section: { type: 'string' }
+ *               updates: { type: 'object' }
+ *     responses:
+ *       200:
+ *         description: Configuration updated
  */
 router.patch('/config', requireSuperAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -86,8 +116,17 @@ router.patch('/config', requireSuperAdmin, async (req: AuthedRequest, res: Respo
 });
 
 /**
- * GET /admin/system/health
- * Get system health status
+ * @swagger
+ * /admin/system/health:
+ *   get:
+ *     summary: Get system health
+ *     description: Get system health status including database, recent errors, active jobs.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: System health status
  */
 router.get('/health', async (req: AuthedRequest, res: Response) => {
   try {

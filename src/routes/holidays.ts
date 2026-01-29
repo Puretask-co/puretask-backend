@@ -15,11 +15,51 @@ const listQuerySchema = z.object({
 });
 
 /**
- * GET /holidays
- * Query options:
- * - ?date=YYYY-MM-DD -> single holiday lookup
- * - ?from=YYYY-MM-DD&to=YYYY-MM-DD -> list range
- * - ?limit=25 -> list upcoming
+ * @swagger
+ * /holidays:
+ *   get:
+ *     summary: Get holidays
+ *     description: Get federal holidays. Can query by single date, date range, or list upcoming.
+ *     tags: [Holidays]
+ *     parameters:
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           pattern: '^\d{4}-\d{2}-\d{2}$'
+ *         description: Single date lookup (YYYY-MM-DD)
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           pattern: '^\d{4}-\d{2}-\d{2}$'
+ *         description: Start date for range
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           pattern: '^\d{4}-\d{2}-\d{2}$'
+ *         description: End date for range
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Limit for upcoming holidays
+ *     responses:
+ *       200:
+ *         description: Holiday(s) data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - type: object
+ *                   properties:
+ *                     holiday: { type: 'object' }
+ *                 - type: object
+ *                   properties:
+ *                     holidays: { type: 'array', items: { type: 'object' } }
+ *       400:
+ *         description: Invalid query parameters
  */
 holidaysRouter.get("/", async (req, res: Response) => {
   try {

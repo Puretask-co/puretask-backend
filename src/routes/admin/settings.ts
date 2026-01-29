@@ -16,8 +16,27 @@ router.use(jwtAuthMiddleware);
 router.use(requireAdmin);
 
 /**
- * GET /admin/settings
- * Get all settings grouped by type
+ * @swagger
+ * /admin/settings:
+ *   get:
+ *     summary: Get admin settings
+ *     description: Get all settings grouped by type.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: include_sensitive
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *     responses:
+ *       200:
+ *         description: Admin settings
  */
 router.get('/', async (req: AuthedRequest, res: Response) => {
   try {

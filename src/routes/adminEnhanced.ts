@@ -18,8 +18,19 @@ adminEnhancedRouter.use(requireRole("admin"));
 // ============================================
 
 /**
- * GET /admin/dashboard/realtime
- * Get real-time metrics
+ * @swagger
+ * /admin/dashboard/realtime:
+ *   get:
+ *     summary: Get real-time metrics
+ *     description: Get real-time dashboard metrics (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Real-time metrics
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/dashboard/realtime", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -50,8 +61,26 @@ adminEnhancedRouter.get("/dashboard/realtime", async (req: JWTAuthedRequest, res
 });
 
 /**
- * GET /admin/dashboard/alerts
- * Get system alerts
+ * @swagger
+ * /admin/dashboard/alerts:
+ *   get:
+ *     summary: Get dashboard alerts
+ *     description: Get system alerts for admin dashboard (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: severity
+ *         schema:
+ *           type: string
+ *           enum: [all, critical, warning, info]
+ *           default: all
+ *     responses:
+ *       200:
+ *         description: System alerts
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/dashboard/alerts", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -134,8 +163,19 @@ adminEnhancedRouter.get("/dashboard/alerts", async (req: JWTAuthedRequest, res: 
 });
 
 /**
- * GET /admin/system/health
- * Get system health status
+ * @swagger
+ * /admin/system/health:
+ *   get:
+ *     summary: Get system health
+ *     description: Get system health status (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: System health data
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/system/health", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -212,8 +252,39 @@ adminEnhancedRouter.get("/system/health", async (req: JWTAuthedRequest, res: Res
 // ============================================
 
 /**
- * POST /admin/jobs/bulk-action
- * Perform bulk actions on jobs
+ * @swagger
+ * /admin/jobs/bulk-action:
+ *   post:
+ *     summary: Bulk job actions
+ *     description: Perform bulk actions on jobs (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - job_ids
+ *               - action
+ *             properties:
+ *               job_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *               action:
+ *                 type: string
+ *                 enum: [cancel, assign, status_update, export]
+ *               params:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Bulk action completed
+ *       403:
+ *         description: Forbidden - admin only
  */
 const bulkActionSchema = z.object({
   job_ids: z.array(z.string().uuid()),
@@ -307,8 +378,19 @@ adminEnhancedRouter.post(
 );
 
 /**
- * GET /admin/jobs/insights
- * Get job insights
+ * @swagger
+ * /admin/jobs/insights:
+ *   get:
+ *     summary: Get job insights
+ *     description: Get job insights and analytics (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Job insights
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/jobs/insights", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -376,8 +458,26 @@ adminEnhancedRouter.get("/jobs/insights", async (req: JWTAuthedRequest, res: Res
 // ============================================
 
 /**
- * POST /admin/disputes/:id/analyze
- * Analyze dispute (AI-assisted)
+ * @swagger
+ * /admin/disputes/{id}/analyze:
+ *   post:
+ *     summary: Analyze dispute
+ *     description: Analyze dispute with AI assistance (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Dispute analysis with suggestions
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.post(
   "/disputes/:id/analyze",
@@ -452,8 +552,19 @@ adminEnhancedRouter.post(
 );
 
 /**
- * GET /admin/disputes/insights
- * Get dispute insights
+ * @swagger
+ * /admin/disputes/insights:
+ *   get:
+ *     summary: Get dispute insights
+ *     description: Get dispute insights and analytics (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dispute insights
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/disputes/insights", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -521,8 +632,26 @@ adminEnhancedRouter.get("/disputes/insights", async (req: JWTAuthedRequest, res:
 // ============================================
 
 /**
- * GET /admin/users/:id/risk-profile
- * Get user risk profile
+ * @swagger
+ * /admin/users/{id}/risk-profile:
+ *   get:
+ *     summary: Get user risk profile
+ *     description: Get user risk profile and flags (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: User risk profile
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/users/:id/risk-profile", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -587,8 +716,42 @@ adminEnhancedRouter.get("/users/:id/risk-profile", async (req: JWTAuthedRequest,
 });
 
 /**
- * POST /admin/users/:id/risk-action
- * Take risk mitigation action
+ * @swagger
+ * /admin/users/{id}/risk-action:
+ *   post:
+ *     summary: Take risk action
+ *     description: Take risk mitigation action on user (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - action
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [suspend, warn, restrict, flag, clear]
+ *               reason:
+ *                 type: string
+ *               duration:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Risk action completed
+ *       403:
+ *         description: Forbidden - admin only
  */
 const riskActionSchema = z.object({
   action: z.enum(["suspend", "warn", "restrict", "flag", "clear"]),
@@ -673,8 +836,47 @@ adminEnhancedRouter.post(
 // ============================================
 
 /**
- * POST /admin/analytics/custom-report
- * Build custom report
+ * @swagger
+ * /admin/analytics/custom-report:
+ *   post:
+ *     summary: Build custom report
+ *     description: Build custom analytics report (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - metrics
+ *               - date_range
+ *             properties:
+ *               name:
+ *                 type: string
+ *               metrics:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               date_range:
+ *                 type: object
+ *                 properties:
+ *                   start:
+ *                     type: string
+ *                     format: date
+ *                   end:
+ *                     type: string
+ *                     format: date
+ *               filters:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Custom report generated
+ *       403:
+ *         description: Forbidden - admin only
  */
 const customReportSchema = z.object({
   name: z.string(),
@@ -748,8 +950,19 @@ adminEnhancedRouter.post(
 );
 
 /**
- * GET /admin/analytics/insights
- * Get AI-powered insights
+ * @swagger
+ * /admin/analytics/insights:
+ *   get:
+ *     summary: Get analytics insights
+ *     description: Get AI-powered analytics insights (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Analytics insights
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/analytics/insights", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -812,8 +1025,25 @@ adminEnhancedRouter.get("/analytics/insights", async (req: JWTAuthedRequest, res
 // ============================================
 
 /**
- * GET /admin/finance/forecast
- * Get revenue forecast
+ * @swagger
+ * /admin/finance/forecast:
+ *   get:
+ *     summary: Get revenue forecast
+ *     description: Get revenue forecast (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: months
+ *         schema:
+ *           type: integer
+ *           default: 3
+ *     responses:
+ *       200:
+ *         description: Revenue forecast
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/finance/forecast", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -867,8 +1097,30 @@ adminEnhancedRouter.get("/finance/forecast", async (req: JWTAuthedRequest, res: 
 });
 
 /**
- * GET /admin/finance/reports
- * Get financial reports
+ * @swagger
+ * /admin/finance/reports:
+ *   get:
+ *     summary: Get financial reports
+ *     description: Get financial reports (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: start_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: end_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Financial reports
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/finance/reports", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -938,8 +1190,19 @@ adminEnhancedRouter.get("/finance/reports", async (req: JWTAuthedRequest, res: R
 // ============================================
 
 /**
- * GET /admin/communication/templates
- * Get message templates
+ * @swagger
+ * /admin/communication/templates:
+ *   get:
+ *     summary: Get communication templates
+ *     description: Get message templates (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Communication templates
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/communication/templates", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -973,8 +1236,44 @@ adminEnhancedRouter.get("/communication/templates", async (req: JWTAuthedRequest
 });
 
 /**
- * POST /admin/communication/send
- * Send message to users
+ * @swagger
+ * /admin/communication/send:
+ *   post:
+ *     summary: Send message to users
+ *     description: Send message to users via email/SMS/push (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - body
+ *               - recipients
+ *               - channel
+ *             properties:
+ *               template_id:
+ *                 type: string
+ *                 format: uuid
+ *               subject:
+ *                 type: string
+ *               body:
+ *                 type: string
+ *               recipients:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               channel:
+ *                 type: string
+ *                 enum: [email, sms, push, all]
+ *     responses:
+ *       200:
+ *         description: Message sent successfully
+ *       403:
+ *         description: Forbidden - admin only
  */
 const sendMessageSchema = z.object({
   template_id: z.string().uuid().optional(),
@@ -1011,8 +1310,19 @@ adminEnhancedRouter.post(
 );
 
 /**
- * GET /admin/communication/analytics
- * Get communication analytics
+ * @swagger
+ * /admin/communication/analytics:
+ *   get:
+ *     summary: Get communication analytics
+ *     description: Get communication analytics (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Communication analytics
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/communication/analytics", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -1046,8 +1356,19 @@ adminEnhancedRouter.get("/communication/analytics", async (req: JWTAuthedRequest
 // ============================================
 
 /**
- * GET /admin/risk/scoring
- * Get risk scoring details
+ * @swagger
+ * /admin/risk/scoring:
+ *   get:
+ *     summary: Get risk scoring
+ *     description: Get risk scoring details (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Risk scoring data
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.get("/risk/scoring", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -1080,8 +1401,37 @@ adminEnhancedRouter.get("/risk/scoring", async (req: JWTAuthedRequest, res: Resp
 });
 
 /**
- * POST /admin/risk/mitigate
- * Mitigate risk
+ * @swagger
+ * /admin/risk/mitigate:
+ *   post:
+ *     summary: Mitigate risk
+ *     description: Mitigate user risk (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - user_id
+ *               - action
+ *             properties:
+ *               user_id:
+ *                 type: string
+ *                 format: uuid
+ *               action:
+ *                 type: string
+ *                 enum: [flag, restrict, suspend, clear]
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Risk mitigated successfully
+ *       403:
+ *         description: Forbidden - admin only
  */
 const mitigateRiskSchema = z.object({
   user_id: z.string(),
@@ -1124,8 +1474,30 @@ adminEnhancedRouter.post(
 // ============================================
 
 /**
- * POST /admin/reports/build
- * Build custom report
+ * @swagger
+ * /admin/reports/build:
+ *   post:
+ *     summary: Build report
+ *     description: Build custom report (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               report_type:
+ *                 type: string
+ *               parameters:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Report built successfully
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminEnhancedRouter.post("/reports/build", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -1143,8 +1515,41 @@ adminEnhancedRouter.post("/reports/build", async (req: JWTAuthedRequest, res: Re
 });
 
 /**
- * POST /admin/reports/schedule
- * Schedule report
+ * @swagger
+ * /admin/reports/schedule:
+ *   post:
+ *     summary: Schedule report
+ *     description: Schedule automated report generation (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - report_id
+ *               - frequency
+ *               - recipients
+ *             properties:
+ *               report_id:
+ *                 type: string
+ *                 format: uuid
+ *               frequency:
+ *                 type: string
+ *                 enum: [daily, weekly, monthly]
+ *               recipients:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: email
+ *     responses:
+ *       200:
+ *         description: Report scheduled successfully
+ *       403:
+ *         description: Forbidden - admin only
  */
 const scheduleReportSchema = z.object({
   report_id: z.string().uuid(),

@@ -250,60 +250,47 @@
 ### 5. Set Up Monitoring
 **Priority:** CRITICAL  
 **Effort:** 1-2 days  
-**Impact:** Production visibility
+**Impact:** Production visibility  
+**Status:** ✅ COMPLETE (Code integration done, external setup pending)
 
 **Implementation Steps:**
 
-1. **Sentry (Error Tracking)**
-   ```bash
-   npm install @sentry/node @sentry/tracing
-   ```
-   
-   ```typescript
-   // src/index.ts
-   import * as Sentry from '@sentry/node';
-   
-   Sentry.init({
-     dsn: process.env.SENTRY_DSN,
-     environment: process.env.NODE_ENV,
-   });
-   
-   app.use(Sentry.Handlers.errorHandler());
-   ```
-   
-   - Create account at sentry.io
-   - Get DSN and add to `.env`: `SENTRY_DSN=https://...`
+1. **Sentry (Error Tracking)** ✅ Integrated
+   - ✅ Installed `@sentry/node`
+   - ✅ Configured in `src/index.ts` with automatic error capture
+   - ✅ Performance monitoring enabled (10% sample rate in production)
+   - ⚠️ **Action Required**: Create account at sentry.io and add `SENTRY_DSN` to `.env`
 
-2. **UptimeRobot (Uptime Monitoring)**
+2. **UptimeRobot (Uptime Monitoring)** ⚠️ Manual Setup Required
    - Create account at uptimerobot.com
    - Add monitor: `GET https://api.puretask.com/health` (every 5 min)
+   - Add monitor: `GET https://api.puretask.com/health/ready` (every 5 min)
    - Configure alerts (email/SMS/Slack)
 
-3. **Basic Metrics** (`src/lib/metrics.ts`)
-   ```typescript
-   import { logger } from './logger';
-
-   export const metrics = {
-     record: (name: string, value: number, tags?: Record<string, string>) => {
-       logger.info('metric', { name, value, tags });
-     },
-     increment: (name: string, tags?: Record<string, string>) => {
-       metrics.record(name, 1, tags);
-     },
-   };
-   ```
+3. **Basic Metrics** ✅ Fully Integrated
+   - ✅ Created `src/lib/metrics.ts` with comprehensive metrics helpers
+   - ✅ Automatic recording for:
+     - API requests (duration, status codes) - `src/index.ts`
+     - Errors (by code and path) - `src/index.ts` error handler
+     - Job creation - `src/services/jobsService.ts`
+     - Job completion - `src/services/jobTrackingService.ts`
+     - Payment processing - `src/services/paymentService.ts`
+     - Payout processing - `src/services/payoutsService.ts`
+   - ✅ Verification script: `npm run monitoring:verify`
 
 **Options:**
 - **Free**: Sentry (error tracking), UptimeRobot (uptime)
 - **Paid**: Datadog, New Relic (full APM)
 
 **How to Know It's Working:**
-- ✅ Errors appear in Sentry dashboard
-- ✅ UptimeRobot shows service is up
+- ✅ Run `npm run monitoring:verify` - should show all checks passing
+- ✅ Errors appear in Sentry dashboard (after DSN configured)
+- ✅ UptimeRobot shows service is up (after setup)
 - ✅ Alerts received when service goes down
-- ✅ Metrics logged for critical operations
+- ✅ Metrics logged for critical operations (check logs for "metric" entries)
 
 **How to Know It's NOT Working:**
+- ❌ Verification script fails
 - ❌ No errors in Sentry (might mean not configured)
 - ❌ UptimeRobot shows false downtime
 - ❌ No alerts received

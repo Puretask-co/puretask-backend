@@ -703,6 +703,11 @@ async function handlePaymentIntentSucceeded(
     [pi.id]
   );
 
+  // Record metrics
+  const { metrics } = require("../lib/metrics");
+  const amountCents = pi.amount;
+  metrics.paymentProcessed(amountCents, true);
+
   // Emit event
   await publishEvent({
     jobId: jobId || undefined,

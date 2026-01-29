@@ -94,8 +94,19 @@ onboardingRouter.patch("/current-step", async (req: JWTAuthedRequest, res: Respo
 });
 
 /**
- * GET /cleaner/onboarding/progress
- * Get onboarding progress
+ * @swagger
+ * /cleaner/onboarding/progress:
+ *   get:
+ *     summary: Get onboarding progress
+ *     description: Get onboarding progress for the current cleaner.
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Onboarding progress
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.get("/progress", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -123,8 +134,33 @@ onboardingRouter.get("/progress", async (req: JWTAuthedRequest, res: Response) =
 });
 
 /**
- * POST /cleaner/onboarding/agreements
- * Step 1: Save terms of service and independent contractor agreements
+ * @swagger
+ * /cleaner/onboarding/step/terms:
+ *   post:
+ *     summary: Step 1 - Save agreements
+ *     description: Save terms of service and independent contractor agreements (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - terms_of_service
+ *               - independent_contractor
+ *             properties:
+ *               terms_of_service:
+ *                 type: boolean
+ *               independent_contractor:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Agreements saved successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.post("/agreements", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -174,8 +210,39 @@ onboardingRouter.post("/agreements", async (req: JWTAuthedRequest, res: Response
 });
 
 /**
- * POST /cleaner/onboarding/basic-info
- * Step 2: Save basic info (name, bio, professional headline)
+ * @swagger
+ * /cleaner/onboarding/step/basic-info:
+ *   post:
+ *     summary: Step 2 - Save basic info
+ *     description: Save basic info (name, bio, professional headline) (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - first_name
+ *               - last_name
+ *               - bio
+ *             properties:
+ *               first_name:
+ *                 type: string
+ *               last_name:
+ *                 type: string
+ *               bio:
+ *                 type: string
+ *                 minLength: 20
+ *               professional_headline:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Basic info saved successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.post("/basic-info", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -224,8 +291,31 @@ onboardingRouter.post("/basic-info", async (req: JWTAuthedRequest, res: Response
 });
 
 /**
- * POST /cleaner/onboarding/phone/send-otp
- * Step 3: Send OTP code to phone number
+ * @swagger
+ * /cleaner/onboarding/step/phone-send-otp:
+ *   post:
+ *     summary: Step 3a - Send phone OTP
+ *     description: Send OTP code to phone number for verification (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone_number
+ *             properties:
+ *               phone_number:
+ *                 type: string
+ *                 pattern: '^\+[1-9]\d{1,14}$'
+ *     responses:
+ *       200:
+ *         description: OTP sent successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.post("/phone/send-otp", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -258,8 +348,35 @@ onboardingRouter.post("/phone/send-otp", async (req: JWTAuthedRequest, res: Resp
 });
 
 /**
- * POST /cleaner/onboarding/phone/verify-otp
- * Step 3: Verify OTP code
+ * @swagger
+ * /cleaner/onboarding/step/phone-verify-otp:
+ *   post:
+ *     summary: Step 3b - Verify phone OTP
+ *     description: Verify OTP code for phone verification (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone_number
+ *               - otp_code
+ *             properties:
+ *               phone_number:
+ *                 type: string
+ *                 pattern: '^\+[1-9]\d{1,14}$'
+ *               otp_code:
+ *                 type: string
+ *                 length: 6
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.post("/phone/verify-otp", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -293,8 +410,31 @@ onboardingRouter.post("/phone/verify-otp", async (req: JWTAuthedRequest, res: Re
 });
 
 /**
- * POST /cleaner/onboarding/face-photo
- * Step 4: Upload face photo
+ * @swagger
+ * /cleaner/onboarding/step/face-photo:
+ *   post:
+ *     summary: Step 4 - Upload face photo
+ *     description: Upload face photo for profile (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Face photo uploaded successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.post("/face-photo", upload.single("file"), async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -341,8 +481,35 @@ onboardingRouter.post("/face-photo", upload.single("file"), async (req: JWTAuthe
 });
 
 /**
- * POST /cleaner/onboarding/id-verification
- * Step 5: Upload ID verification document
+ * @swagger
+ * /cleaner/onboarding/step/id-verification:
+ *   post:
+ *     summary: Step 5 - Upload ID verification
+ *     description: Upload ID verification document (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *               - document_type
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               document_type:
+ *                 type: string
+ *                 enum: [drivers_license, passport, state_id]
+ *     responses:
+ *       200:
+ *         description: ID verification uploaded successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.post("/id-verification", upload.single("file"), async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -401,8 +568,33 @@ onboardingRouter.post("/id-verification", upload.single("file"), async (req: JWT
 });
 
 /**
- * POST /cleaner/onboarding/background-consent
- * Step 6: Save background check consent
+ * @swagger
+ * /cleaner/onboarding/step/background-consent:
+ *   post:
+ *     summary: Step 6 - Save background check consent
+ *     description: Save background check consent (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fcra_consent
+ *               - accuracy_consent
+ *             properties:
+ *               fcra_consent:
+ *                 type: boolean
+ *               accuracy_consent:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Background check consent saved successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.post("/background-consent", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -452,8 +644,39 @@ onboardingRouter.post("/background-consent", async (req: JWTAuthedRequest, res: 
 });
 
 /**
- * POST /cleaner/onboarding/service-areas
- * Step 7: Save service areas (zip codes)
+ * @swagger
+ * /cleaner/onboarding/step/service-areas:
+ *   post:
+ *     summary: Step 7 - Save service areas
+ *     description: Save service areas (zip codes) (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - zip_codes
+ *               - travel_radius_km
+ *             properties:
+ *               zip_codes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   pattern: '^\d{5}$'
+ *                 minItems: 1
+ *               travel_radius_km:
+ *                 type: number
+ *                 minimum: 5
+ *                 maximum: 50
+ *     responses:
+ *       200:
+ *         description: Service areas saved successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.post("/service-areas", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -500,8 +723,49 @@ onboardingRouter.post("/service-areas", async (req: JWTAuthedRequest, res: Respo
 });
 
 /**
- * POST /cleaner/onboarding/availability
- * Step 8: Save availability schedule
+ * @swagger
+ * /cleaner/onboarding/step/availability:
+ *   post:
+ *     summary: Step 8 - Save availability
+ *     description: Save availability schedule (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - blocks
+ *             properties:
+ *               blocks:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - day_of_week
+ *                     - start_time
+ *                     - end_time
+ *                     - is_active
+ *                   properties:
+ *                     day_of_week:
+ *                       type: integer
+ *                       minimum: 0
+ *                       maximum: 6
+ *                     start_time:
+ *                       type: string
+ *                     end_time:
+ *                       type: string
+ *                     is_active:
+ *                       type: boolean
+ *                 minItems: 1
+ *     responses:
+ *       200:
+ *         description: Availability saved successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.post("/availability", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -554,8 +818,37 @@ onboardingRouter.post("/availability", async (req: JWTAuthedRequest, res: Respon
 });
 
 /**
- * POST /cleaner/onboarding/rates
- * Step 9: Save hourly rate and travel radius
+ * @swagger
+ * /cleaner/onboarding/step/rates:
+ *   post:
+ *     summary: Step 9 - Save rates
+ *     description: Save hourly rate and travel radius (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - hourly_rate_credits
+ *               - travel_radius_km
+ *             properties:
+ *               hourly_rate_credits:
+ *                 type: integer
+ *                 minimum: 200
+ *                 maximum: 1000
+ *               travel_radius_km:
+ *                 type: number
+ *                 minimum: 5
+ *                 maximum: 50
+ *     responses:
+ *       200:
+ *         description: Rates saved successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.post("/rates", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -602,8 +895,19 @@ onboardingRouter.post("/rates", async (req: JWTAuthedRequest, res: Response) => 
 });
 
 /**
- * POST /cleaner/onboarding/complete
- * Step 10: Complete onboarding
+ * @swagger
+ * /cleaner/onboarding/complete:
+ *   post:
+ *     summary: Complete onboarding
+ *     description: Complete the onboarding process (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Onboarding completed successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 onboardingRouter.post("/complete", async (req: JWTAuthedRequest, res: Response) => {
   try {

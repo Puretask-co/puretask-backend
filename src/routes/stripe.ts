@@ -17,8 +17,48 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
 });
 
 /**
- * POST /stripe/create-payment-intent
- * Create a Stripe PaymentIntent for a job
+ * @swagger
+ * /stripe/create-payment-intent:
+ *   post:
+ *     summary: Create Stripe PaymentIntent
+ *     description: Create a Stripe PaymentIntent for a job payment.
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - jobId
+ *               - amountCents
+ *             properties:
+ *               jobId:
+ *                 type: string
+ *                 format: uuid
+ *               amountCents:
+ *                 type: integer
+ *                 minimum: 1
+ *               currency:
+ *                 type: string
+ *                 default: usd
+ *               customerId:
+ *                 type: string
+ *                 description: Stripe customer ID
+ *     responses:
+ *       200:
+ *         description: PaymentIntent created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 clientSecret: { type: 'string' }
+ *                 paymentIntentId: { type: 'string' }
+ *       500:
+ *         description: Failed to create PaymentIntent
  */
 const createPaymentIntentSchema = z.object({
   jobId: z.string().uuid(),
@@ -65,10 +105,25 @@ stripeRouter.post(
 );
 
 /**
- * POST /stripe/webhook
- * Handle Stripe webhook events
- * Note: This endpoint requires raw body for signature verification
- * The raw body should be provided by Express middleware in index.ts
+ * @swagger
+ * /stripe/webhook:
+ *   post:
+ *     summary: Stripe webhook handler
+ *     description: |
+ *       Handle Stripe webhook events. Requires raw body for signature verification.
+ *       This endpoint is called by Stripe, not by clients.
+ *     tags: [Payments]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Webhook processed successfully
+ *       400:
+ *         description: Invalid signature or webhook data
  */
 stripeRouter.post("/webhook", async (req: Request, res: Response) => {
   const sig = req.headers["stripe-signature"] as string;

@@ -46,8 +46,35 @@ const declineInvoiceSchema = z.object({
 // ============================================
 
 /**
- * GET /client/invoices
- * List all invoices sent to this client
+ * @swagger
+ * /client/invoices:
+ *   get:
+ *     summary: Get client invoices
+ *     description: List all invoices sent to this client.
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Filter by status
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Limit results
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *         description: Offset for pagination
+ *     responses:
+ *       200:
+ *         description: List of invoices
+ *       403:
+ *         description: Forbidden - clients only
  */
 router.get(
   "/invoices",
@@ -85,8 +112,28 @@ router.get(
 );
 
 /**
- * GET /client/invoices/:invoiceId
- * Get a specific invoice with line items
+ * @swagger
+ * /client/invoices/{invoiceId}:
+ *   get:
+ *     summary: Get invoice by ID
+ *     description: Get a specific invoice with line items.
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Invoice details
+ *       404:
+ *         description: Not found
+ *       403:
+ *         description: Forbidden - clients only
  */
 router.get(
   "/invoices/:invoiceId",
@@ -143,8 +190,38 @@ router.get(
 );
 
 /**
- * POST /client/invoices/:invoiceId/pay
- * Pay an invoice (with credits or card)
+ * @swagger
+ * /client/invoices/{invoiceId}/pay:
+ *   post:
+ *     summary: Pay invoice
+ *     description: Pay an invoice with credits or card.
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - payment_method
+ *             properties:
+ *               payment_method:
+ *                 type: string
+ *                 enum: [credits, card]
+ *     responses:
+ *       200:
+ *         description: Payment initiated or completed
+ *       403:
+ *         description: Forbidden - clients only
  */
 router.post(
   "/invoices/:invoiceId/pay",
@@ -191,8 +268,36 @@ router.post(
 );
 
 /**
- * POST /client/invoices/:invoiceId/decline
- * Decline an invoice
+ * @swagger
+ * /client/invoices/{invoiceId}/decline:
+ *   post:
+ *     summary: Decline invoice
+ *     description: Decline an invoice.
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 maxLength: 1000
+ *     responses:
+ *       200:
+ *         description: Invoice declined
+ *       403:
+ *         description: Forbidden - clients only
  */
 router.post(
   "/invoices/:invoiceId/decline",

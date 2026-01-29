@@ -19,8 +19,42 @@ clientRouter.use(requireRole("client", "admin"));
 // ============================================
 
 /**
- * GET /client/favorites
- * Get all favorite cleaners for the current client
+ * @swagger
+ * /client/favorites:
+ *   get:
+ *     summary: Get all favorite cleaners
+ *     description: Get list of all favorite cleaners for the current client.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of favorite cleaners
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 favorites:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: 'string', format: 'uuid' }
+ *                       cleaner:
+ *                         type: object
+ *                         properties:
+ *                           id: { type: 'string', format: 'uuid' }
+ *                           name: { type: 'string' }
+ *                           email: { type: 'string' }
+ *                           avatar_url: { type: 'string', nullable: true }
+ *                           price_per_hour: { type: 'number' }
+ *                           bio: { type: 'string', nullable: true }
+ *                           rating: { type: 'number' }
+ *                           reviews_count: { type: 'integer' }
+ *                       created_at: { type: 'string', format: 'date-time' }
+ *       401:
+ *         description: Unauthorized
  */
 clientRouter.get("/favorites", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -85,8 +119,34 @@ clientRouter.get("/favorites", async (req: JWTAuthedRequest, res: Response) => {
 });
 
 /**
- * POST /client/favorites
- * Add a cleaner to favorites
+ * @swagger
+ * /client/favorites:
+ *   post:
+ *     summary: Add cleaner to favorites
+ *     description: Add a cleaner to the client's favorites list.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cleaner_id
+ *             properties:
+ *               cleaner_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Cleaner user ID
+ *     responses:
+ *       201:
+ *         description: Cleaner added to favorites
+ *       404:
+ *         description: Cleaner not found
+ *       409:
+ *         description: Already in favorites
  */
 const addFavoriteSchema = z.object({
   cleaner_id: z.string().min(1),
@@ -183,8 +243,38 @@ clientRouter.delete("/favorites/:id", async (req: JWTAuthedRequest, res: Respons
 // ============================================
 
 /**
- * GET /client/addresses
- * Get all addresses for the current client
+ * @swagger
+ * /client/addresses:
+ *   get:
+ *     summary: Get all addresses
+ *     description: Get all saved addresses for the current client.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of addresses
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 addresses:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: 'string', format: 'uuid' }
+ *                       label: { type: 'string', nullable: true }
+ *                       line1: { type: 'string' }
+ *                       line2: { type: 'string', nullable: true }
+ *                       city: { type: 'string' }
+ *                       state: { type: 'string', nullable: true }
+ *                       zip_code: { type: 'string', nullable: true }
+ *                       country: { type: 'string' }
+ *                       latitude: { type: 'number', nullable: true }
+ *                       longitude: { type: 'number', nullable: true }
+ *                       is_default: { type: 'boolean' }
  */
 clientRouter.get("/addresses", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -228,8 +318,37 @@ clientRouter.get("/addresses", async (req: JWTAuthedRequest, res: Response) => {
 });
 
 /**
- * POST /client/addresses
- * Add a new address
+ * @swagger
+ * /client/addresses:
+ *   post:
+ *     summary: Add a new address
+ *     description: Add a new address for the current client.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - line1
+ *               - city
+ *             properties:
+ *               label: { type: 'string' }
+ *               line1: { type: 'string' }
+ *               line2: { type: 'string' }
+ *               city: { type: 'string' }
+ *               state: { type: 'string' }
+ *               postal_code: { type: 'string' }
+ *               country: { type: 'string', default: 'US' }
+ *               latitude: { type: 'number' }
+ *               longitude: { type: 'number' }
+ *               is_default: { type: 'boolean', default: false }
+ *     responses:
+ *       201:
+ *         description: Address created
  */
 const addAddressSchema = z.object({
   label: z.string().optional(),
@@ -290,8 +409,43 @@ clientRouter.post(
 );
 
 /**
- * PATCH /client/addresses/:id
- * Update an address
+ * @swagger
+ * /client/addresses/{id}:
+ *   patch:
+ *     summary: Update an address
+ *     description: Update an existing address.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               label: { type: 'string' }
+ *               line1: { type: 'string' }
+ *               line2: { type: 'string' }
+ *               city: { type: 'string' }
+ *               state: { type: 'string' }
+ *               postal_code: { type: 'string' }
+ *               country: { type: 'string' }
+ *               latitude: { type: 'number' }
+ *               longitude: { type: 'number' }
+ *               is_default: { type: 'boolean' }
+ *     responses:
+ *       200:
+ *         description: Address updated
+ *       404:
+ *         description: Address not found
  */
 const updateAddressSchema = addAddressSchema.partial();
 
@@ -362,8 +516,26 @@ clientRouter.patch(
 );
 
 /**
- * PATCH /client/addresses/:id/default
- * Set an address as default
+ * @swagger
+ * /client/addresses/{id}/default:
+ *   patch:
+ *     summary: Set address as default
+ *     description: Set an address as the default address for the client.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Address set as default
+ *       404:
+ *         description: Address not found
  */
 clientRouter.patch("/addresses/:id/default", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -403,8 +575,26 @@ clientRouter.patch("/addresses/:id/default", async (req: JWTAuthedRequest, res: 
 });
 
 /**
- * DELETE /client/addresses/:id
- * Delete an address
+ * @swagger
+ * /client/addresses/{id}:
+ *   delete:
+ *     summary: Delete an address
+ *     description: Delete an address.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Address deleted
+ *       404:
+ *         description: Address not found
  */
 clientRouter.delete("/addresses/:id", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -439,10 +629,26 @@ clientRouter.delete("/addresses/:id", async (req: JWTAuthedRequest, res: Respons
 // ============================================
 
 /**
- * GET /client/payment-methods
- * Get all payment methods for the current client
- * Note: Payment methods are stored in Stripe, not in our database
- * This endpoint would need to call Stripe API to retrieve payment methods
+ * @swagger
+ * /client/payment-methods:
+ *   get:
+ *     summary: Get payment methods
+ *     description: Get all payment methods for the current client (managed through Stripe).
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of payment methods
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 paymentMethods:
+ *                   type: array
+ *                   items:
+ *                     type: object
  */
 clientRouter.get("/payment-methods", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -487,9 +693,26 @@ clientRouter.get("/payment-methods", async (req: JWTAuthedRequest, res: Response
 });
 
 /**
- * PATCH /client/payment-methods/:id/default
- * Set a payment method as default
- * Note: This would need to call Stripe API to update the default payment method
+ * @swagger
+ * /client/payment-methods/{id}/default:
+ *   patch:
+ *     summary: Set default payment method
+ *     description: Set a payment method as the default for the client.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Stripe payment method ID
+ *     responses:
+ *       200:
+ *         description: Default payment method updated
+ *       404:
+ *         description: Customer not found
  */
 clientRouter.patch(
   "/payment-methods/:id/default",
@@ -543,9 +766,26 @@ clientRouter.patch(
 );
 
 /**
- * DELETE /client/payment-methods/:id
- * Delete a payment method
- * Note: This would need to call Stripe API to detach the payment method
+ * @swagger
+ * /client/payment-methods/{id}:
+ *   delete:
+ *     summary: Delete payment method
+ *     description: Remove a payment method from the client's account.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Stripe payment method ID
+ *     responses:
+ *       200:
+ *         description: Payment method removed
+ *       404:
+ *         description: Customer not found
  */
 clientRouter.delete("/payment-methods/:id", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -593,8 +833,26 @@ clientRouter.delete("/payment-methods/:id", async (req: JWTAuthedRequest, res: R
 // ============================================
 
 /**
- * GET /client/recurring-bookings
- * Get all recurring bookings for the current client
+ * @swagger
+ * /client/recurring-bookings:
+ *   get:
+ *     summary: Get recurring bookings
+ *     description: Get all recurring booking subscriptions for the current client.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of recurring bookings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 recurringBookings:
+ *                   type: array
+ *                   items:
+ *                     type: object
  */
 clientRouter.get("/recurring-bookings", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -658,8 +916,35 @@ clientRouter.get("/recurring-bookings", async (req: JWTAuthedRequest, res: Respo
 });
 
 /**
- * POST /client/recurring-bookings
- * Create a new recurring booking
+ * @swagger
+ * /client/recurring-bookings:
+ *   post:
+ *     summary: Create recurring booking
+ *     description: Create a new recurring booking subscription.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - frequency
+ *               - start_date
+ *               - address
+ *             properties:
+ *               cleaner_id: { type: 'string', format: 'uuid' }
+ *               service_type: { type: 'string', enum: ['standard', 'deep', 'move_in_out', 'airbnb'], default: 'standard' }
+ *               frequency: { type: 'string', enum: ['weekly', 'biweekly', 'monthly'] }
+ *               start_date: { type: 'string', format: 'date' }
+ *               time: { type: 'string' }
+ *               address: { type: 'string' }
+ *               duration_hours: { type: 'number', default: 2 }
+ *     responses:
+ *       201:
+ *         description: Recurring booking created
  */
 const createRecurringBookingSchema = z.object({
   cleaner_id: z.string().optional(),
@@ -737,8 +1022,39 @@ clientRouter.post(
 );
 
 /**
- * PATCH /client/recurring-bookings/:id
- * Update a recurring booking
+ * @swagger
+ * /client/recurring-bookings/{id}:
+ *   patch:
+ *     summary: Update recurring booking
+ *     description: Update an existing recurring booking subscription.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               frequency: { type: 'string', enum: ['weekly', 'biweekly', 'monthly'] }
+ *               start_date: { type: 'string', format: 'date' }
+ *               time: { type: 'string' }
+ *               address: { type: 'string' }
+ *               duration_hours: { type: 'number' }
+ *               status: { type: 'string', enum: ['active', 'paused', 'cancelled'] }
+ *     responses:
+ *       200:
+ *         description: Recurring booking updated
+ *       404:
+ *         description: Recurring booking not found
  */
 const updateRecurringBookingSchema = createRecurringBookingSchema.partial().extend({
   status: z.enum(["active", "paused", "cancelled"]).optional(),
@@ -813,8 +1129,26 @@ clientRouter.patch(
 );
 
 /**
- * DELETE /client/recurring-bookings/:id
- * Delete a recurring booking
+ * @swagger
+ * /client/recurring-bookings/{id}:
+ *   delete:
+ *     summary: Cancel recurring booking
+ *     description: Cancel a recurring booking subscription.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Recurring booking cancelled
+ *       404:
+ *         description: Recurring booking not found
  */
 clientRouter.delete("/recurring-bookings/:id", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -852,8 +1186,33 @@ clientRouter.delete("/recurring-bookings/:id", async (req: JWTAuthedRequest, res
 // ============================================
 
 /**
- * GET /client/reviews/given
- * Get all reviews given by the current client
+ * @swagger
+ * /client/reviews/given:
+ *   get:
+ *     summary: Get reviews given
+ *     description: Get all reviews given by the current client to cleaners.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of reviews given
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reviews:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: 'string', format: 'uuid' }
+ *                       job_id: { type: 'string', format: 'uuid' }
+ *                       rating: { type: 'integer', minimum: 1, maximum: 5 }
+ *                       comment: { type: 'string', nullable: true }
+ *                       cleaner: { type: 'object' }
+ *                       created_at: { type: 'string', format: 'date-time' }
  */
 clientRouter.get("/reviews/given", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -908,8 +1267,44 @@ clientRouter.get("/reviews/given", async (req: JWTAuthedRequest, res: Response) 
 });
 
 /**
- * POST /client/reviews
- * Create a new review
+ * @swagger
+ * /client/reviews:
+ *   post:
+ *     summary: Create review
+ *     description: Create a new review for a cleaner (optionally linked to a job).
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cleaner_id
+ *               - rating
+ *             properties:
+ *               cleaner_id:
+ *                 type: string
+ *               job_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Optional job ID to link review to
+ *               rating:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *               comment:
+ *                 type: string
+ *                 maxLength: 2000
+ *     responses:
+ *       201:
+ *         description: Review created
+ *       400:
+ *         description: Invalid input or duplicate review
+ *       404:
+ *         description: Cleaner or job not found
  */
 const createReviewSchema = z.object({
   cleaner_id: z.string().min(1),

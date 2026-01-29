@@ -21,8 +21,23 @@ const messagesRouter = Router();
 messagesRouter.use(jwtAuthMiddleware);
 
 /**
- * GET /messages/unread
- * Get total unread message count
+ * @swagger
+ * /messages/unread:
+ *   get:
+ *     summary: Get total unread message count
+ *     description: Get total count of unread messages for the current user.
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Unread count
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 unreadCount: { type: 'integer' }
  */
 messagesRouter.get(
   "/unread",
@@ -43,8 +58,29 @@ messagesRouter.get(
 );
 
 /**
- * GET /messages/unread/by-job
- * Get unread count grouped by job
+ * @swagger
+ * /messages/unread/by-job:
+ *   get:
+ *     summary: Get unread count by job
+ *     description: Get unread message count grouped by job.
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Unread counts by job
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 unreadByJob:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       jobId: { type: 'string', format: 'uuid' }
+ *                       count: { type: 'integer' }
  */
 messagesRouter.get(
   "/unread/by-job",
@@ -65,8 +101,33 @@ messagesRouter.get(
 );
 
 /**
- * GET /messages/conversations
- * Get recent conversations
+ * @swagger
+ * /messages/conversations:
+ *   get:
+ *     summary: Get recent conversations
+ *     description: Get list of recent conversations for the current user.
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Maximum number of conversations to return
+ *     responses:
+ *       200:
+ *         description: Recent conversations
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 conversations:
+ *                   type: array
+ *                   items:
+ *                     type: object
  */
 messagesRouter.get(
   "/conversations",
@@ -91,8 +152,36 @@ messagesRouter.get(
 );
 
 /**
- * GET /messages/job/:jobId
- * Get messages for a job
+ * @swagger
+ * /messages/job/{jobId}:
+ *   get:
+ *     summary: Get messages for a job
+ *     description: Get all messages in a job chat conversation.
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *       - in: query
+ *         name: before
+ *         schema:
+ *           type: string
+ *         description: Message ID to paginate before
+ *     responses:
+ *       200:
+ *         description: Job messages
+ *       403:
+ *         description: Forbidden - not part of this job
  */
 messagesRouter.get(
   "/job/:jobId",
@@ -130,8 +219,43 @@ messagesRouter.get(
 );
 
 /**
- * POST /messages/job/:jobId
- * Send a message in a job chat
+ * @swagger
+ * /messages/job/{jobId}:
+ *   post:
+ *     summary: Send a message
+ *     description: Send a message in a job chat conversation.
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - body
+ *             properties:
+ *               body:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 2000
+ *               receiverId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Optional specific receiver ID
+ *     responses:
+ *       201:
+ *         description: Message sent
+ *       403:
+ *         description: Forbidden
  */
 const sendMessageSchema = z.object({
   body: z.string().min(1).max(2000),
@@ -177,8 +301,30 @@ messagesRouter.post(
 );
 
 /**
- * POST /messages/job/:jobId/read
- * Mark messages as read
+ * @swagger
+ * /messages/job/{jobId}/read:
+ *   post:
+ *     summary: Mark messages as read
+ *     description: Mark all messages in a job chat as read for the current user.
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Messages marked as read
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 markedAsRead: { type: 'integer' }
  */
 messagesRouter.post(
   "/job/:jobId/read",

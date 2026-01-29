@@ -11,9 +11,44 @@ const assignmentRouter = Router();
 assignmentRouter.use(requireAuth);
 
 /**
- * GET /assignment/:jobId/wave
- * Query wave-based eligible cleaners (long-wave model)
- * Query params: wave (default 1), limit (default 20)
+ * @swagger
+ * /assignment/{jobId}/wave:
+ *   get:
+ *     summary: Get wave-based eligible cleaners
+ *     description: Query wave-based eligible cleaners for job assignment (long-wave model).
+ *     tags: [Assignment]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: wave
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Eligible cleaners for wave
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 jobId: { type: 'string' }
+ *                 wave: { type: 'integer' }
+ *                 cleaners: { type: 'array', items: { type: 'object' } }
+ *       404:
+ *         description: Job not found
  */
 assignmentRouter.get("/:jobId/wave", async (req: AuthedRequest, res) => {
   try {

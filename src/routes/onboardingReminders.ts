@@ -13,8 +13,30 @@ reminderRouter.use(jwtAuthMiddleware);
 reminderRouter.use(requireRole("admin"));
 
 /**
- * POST /admin/onboarding-reminders/send
- * Manually trigger sending reminders to abandoned cleaners
+ * @swagger
+ * /admin/onboarding-reminders/send:
+ *   post:
+ *     summary: Send onboarding reminders
+ *     description: Manually trigger sending reminders to abandoned cleaners (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hours_threshold:
+ *                 type: integer
+ *                 default: 24
+ *                 description: Hours since last activity to consider abandoned
+ *     responses:
+ *       200:
+ *         description: Reminders sent successfully
+ *       403:
+ *         description: Forbidden - admin only
  */
 reminderRouter.post("/send", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -37,8 +59,26 @@ reminderRouter.post("/send", async (req: JWTAuthedRequest, res: Response) => {
 });
 
 /**
- * GET /admin/onboarding-reminders/abandoned
- * Get list of cleaners with abandoned onboarding
+ * @swagger
+ * /admin/onboarding-reminders/abandoned:
+ *   get:
+ *     summary: Get abandoned onboarding cleaners
+ *     description: Get list of cleaners with abandoned onboarding (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: hours_threshold
+ *         schema:
+ *           type: integer
+ *           default: 24
+ *         description: Hours since last activity to consider abandoned
+ *     responses:
+ *       200:
+ *         description: List of abandoned cleaners
+ *       403:
+ *         description: Forbidden - admin only
  */
 reminderRouter.get("/abandoned", async (req: JWTAuthedRequest, res: Response) => {
   try {

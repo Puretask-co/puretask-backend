@@ -216,6 +216,10 @@ export async function createJob(options: {
     creditAmount,
   });
 
+  // Record metrics
+  const { metrics } = require("../lib/metrics");
+  metrics.jobCreated(job.id);
+
   return job;
 }
 

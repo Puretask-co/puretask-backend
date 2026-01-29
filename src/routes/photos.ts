@@ -21,8 +21,44 @@ const photosRouter = Router();
 photosRouter.use(jwtAuthMiddleware);
 
 /**
- * GET /photos/job/:jobId
- * Get all photos for a job
+ * @swagger
+ * /photos/job/{jobId}:
+ *   get:
+ *     summary: Get job photos
+ *     description: Get all photos for a job, optionally filtered by type (before/after).
+ *     tags: [Photos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [before, after]
+ *         description: Filter by photo type
+ *     responses:
+ *       200:
+ *         description: Job photos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 photos:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 counts:
+ *                   type: object
+ *                   properties:
+ *                     before: { type: 'integer' }
+ *                     after: { type: 'integer' }
  */
 photosRouter.get(
   "/job/:jobId",
@@ -54,8 +90,42 @@ photosRouter.get(
 );
 
 /**
- * POST /photos/job/:jobId
- * Add a photo to a job
+ * @swagger
+ * /photos/job/{jobId}:
+ *   post:
+ *     summary: Add photo to job
+ *     description: Add a before or after photo to a job.
+ *     tags: [Photos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - photoUrl
+ *               - type
+ *             properties:
+ *               photoUrl:
+ *                 type: string
+ *                 format: uri
+ *               type:
+ *                 type: string
+ *                 enum: [before, after]
+ *     responses:
+ *       201:
+ *         description: Photo added
+ *       403:
+ *         description: Forbidden - not assigned to this job
  */
 const addPhotoSchema = z.object({
   photoUrl: z.string().url(),
@@ -103,8 +173,53 @@ photosRouter.post(
 );
 
 /**
- * POST /photos/job/:jobId/upload-url
- * Get a presigned URL for uploading a photo
+ * @swagger
+ * /photos/job/{jobId}/upload-url:
+ *   post:
+ *     summary: Get photo upload URL
+ *     description: Get a presigned URL for uploading a photo directly to storage.
+ *     tags: [Photos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - type
+ *               - contentType
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [before, after]
+ *               contentType:
+ *                 type: string
+ *                 example: image/jpeg
+ *               fileSize:
+ *                 type: integer
+ *                 maximum: 10485760
+ *                 description: File size in bytes (max 10MB)
+ *     responses:
+ *       200:
+ *         description: Upload URL generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 uploadUrl: { type: 'string', format: 'uri' }
+ *                 photoUrl: { type: 'string', format: 'uri' }
+ *       400:
+ *         description: Invalid file type or size
  */
 const uploadUrlSchema = z.object({
   type: z.enum(["before", "after"]),
@@ -150,8 +265,26 @@ photosRouter.post(
 );
 
 /**
- * DELETE /photos/:photoId
- * Delete a photo
+ * @swagger
+ * /photos/{photoId}:
+ *   delete:
+ *     summary: Delete photo
+ *     description: Delete a photo from a job.
+ *     tags: [Photos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: photoId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Photo deleted
+ *       404:
+ *         description: Photo not found or not yours
  */
 photosRouter.delete(
   "/:photoId",

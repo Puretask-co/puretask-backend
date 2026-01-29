@@ -37,9 +37,79 @@ function getRole(req: JWTAuthedRequest): "client" | "cleaner" | "admin" {
 }
 
 /**
- * POST /jobs
- * Create a new job (client)
- * Supports Idempotency-Key header to prevent duplicate bookings
+ * @swagger
+ * /jobs:
+ *   post:
+ *     summary: Create a new job
+ *     description: Create a new cleaning job. Requires client role. Supports Idempotency-Key header to prevent duplicate bookings.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - scheduled_start_at
+ *               - scheduled_end_at
+ *               - address
+ *               - credit_amount
+ *             properties:
+ *               scheduled_start_at:
+ *                 type: string
+ *                 format: date-time
+ *                 description: ISO 8601 datetime for job start
+ *                 example: "2024-02-15T10:00:00Z"
+ *               scheduled_end_at:
+ *                 type: string
+ *                 format: date-time
+ *                 description: ISO 8601 datetime for job end
+ *                 example: "2024-02-15T14:00:00Z"
+ *               address:
+ *                 type: string
+ *                 description: Full address for the cleaning job
+ *                 example: "123 Main St, City, State 12345"
+ *               latitude:
+ *                 type: number
+ *                 description: Latitude coordinate (optional)
+ *                 example: 40.7128
+ *               longitude:
+ *                 type: number
+ *                 description: Longitude coordinate (optional)
+ *                 example: -74.0060
+ *               credit_amount:
+ *                 type: number
+ *                 description: Number of credits to charge for this job
+ *                 example: 50
+ *               client_notes:
+ *                 type: string
+ *                 description: Optional notes from the client
+ *                 example: "Please focus on the kitchen"
+ *     responses:
+ *       201:
+ *         description: Job created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     job:
+ *                       $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *       429:
+ *         description: Rate limit exceeded (duplicate request)
  */
 const createJobSchema = z.object({
   scheduled_start_at: z.string(), // ISO string
@@ -73,11 +143,45 @@ jobsRouter.post(
 );
 
 /**
- * GET /jobs
- * List jobs for the current user:
- * - client -> their jobs
- * - cleaner -> their assigned jobs + available jobs
- * - admin -> use /admin/jobs instead
+ * @swagger
+ * /jobs:
+ *   get:
+ *     summary: List jobs for current user
+ *     description: |
+ *       Returns jobs based on user role:
+ *       - **Client**: Returns all their jobs
+ *       - **Cleaner**: Returns assigned jobs and available jobs
+ *       - **Admin**: Returns jobs (should use /admin/jobs instead)
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of jobs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     jobs:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Job'
+ *                     assigned:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Job'
+ *                       description: Assigned jobs (cleaner role only)
+ *                     available:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Job'
+ *                       description: Available jobs (cleaner role only)
+ *       401:
+ *         description: Unauthorized
  */
 jobsRouter.get(
   "/",
@@ -140,8 +244,47 @@ jobsRouter.get(
 );
 
 /**
- * PATCH /jobs/:jobId
- * Update job details (client only, only when status = 'requested')
+ * @swagger
+ * /jobs/{jobId}:
+ *   patch:
+ *     summary: Update job details
+ *     description: Update job details. Client only, only when status = 'requested'.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               scheduled_start_at:
+ *                 type: string
+ *                 format: date-time
+ *               scheduled_end_at:
+ *                 type: string
+ *                 format: date-time
+ *               address:
+ *                 type: string
+ *               latitude:
+ *                 type: number
+ *               longitude:
+ *                 type: number
+ *               client_notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Job updated successfully
+ *       404:
+ *         description: Job not found or cannot be updated
  */
 const updateJobSchema = z
   .object({
@@ -191,8 +334,26 @@ jobsRouter.patch(
 );
 
 /**
- * DELETE /jobs/:jobId
- * Cancel a job (client only)
+ * @swagger
+ * /jobs/{jobId}:
+ *   delete:
+ *     summary: Cancel a job
+ *     description: Cancel a job. Client only.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Job cancelled successfully
+ *       404:
+ *         description: Job not found or cannot be cancelled
  */
 jobsRouter.delete(
   "/:jobId",
@@ -213,8 +374,47 @@ jobsRouter.delete(
 );
 
 /**
- * GET /jobs/:jobId/events
- * Returns job events history
+ * @swagger
+ * /jobs/{jobId}/events:
+ *   get:
+ *     summary: Get job events history
+ *     description: Get the complete event history for a job, showing all status transitions and actions.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Job ID
+ *     responses:
+ *       200:
+ *         description: Job events history
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id: { type: 'string', format: 'uuid' }
+ *                           job_id: { type: 'string', format: 'uuid' }
+ *                           event_type: { type: 'string' }
+ *                           payload: { type: 'object' }
+ *                           created_at: { type: 'string', format: 'date-time' }
+ *       403:
+ *         description: Forbidden (not your job)
+ *       404:
+ *         description: Job not found
  */
 jobsRouter.get(
   "/:jobId/events",
@@ -226,9 +426,57 @@ jobsRouter.get(
 );
 
 /**
- * POST /jobs/:jobId/transition
- * Apply a status transition to a job
- * Body: { event_type: JobEventType, payload?: {} }
+ * @swagger
+ * /jobs/{jobId}/transition:
+ *   post:
+ *     summary: Apply status transition to job
+ *     description: |
+ *       Apply a status transition to a job by triggering an event.
+ *       Used for job lifecycle management (accept, start, complete, etc.).
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - event_type
+ *             properties:
+ *               event_type:
+ *                 type: string
+ *                 enum:
+ *                   - job_created
+ *                   - job_accepted
+ *                   - cleaner_on_my_way
+ *                   - job_started
+ *                   - job_completed
+ *                   - client_approved
+ *                   - client_disputed
+ *                   - dispute_resolved_refund
+ *                   - dispute_resolved_no_refund
+ *                   - job_cancelled
+ *               payload:
+ *                 type: object
+ *                 description: Optional event payload data
+ *     responses:
+ *       200:
+ *         description: Status transition applied successfully
+ *       400:
+ *         description: Invalid transition or event type
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Job not found
  */
 const transitionJobSchema = z.object({
   event_type: z.enum([
@@ -372,10 +620,38 @@ jobsRouter.post(
 );
 
 /**
- * GET /jobs/:jobId/candidates
- * V1 CORE FEATURE: Get top matched cleaners for client to review and select
- * Returns top 5-10 cleaners ranked by match score (reliability, tier, distance, etc.)
- * Client can then select top 3 to send offers to
+ * @swagger
+ * /jobs/{jobId}/candidates:
+ *   get:
+ *     summary: Get top matched cleaners for job
+ *     description: |
+ *       V1 CORE FEATURE: Get top matched cleaners for client to review and select.
+ *       Returns top 5-10 cleaners ranked by match score (reliability, tier, distance, etc.).
+ *       Client can then select top 3 to send offers to.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 10
+ *         description: Maximum number of candidates to return
+ *     responses:
+ *       200:
+ *         description: List of matched cleaners
+ *       400:
+ *         description: Invalid status (job must be in 'requested' status)
+ *       403:
+ *         description: Forbidden (only clients can view candidates)
  */
 jobsRouter.get(
   "/:jobId/candidates",
@@ -424,10 +700,47 @@ jobsRouter.get(
 );
 
 /**
- * POST /jobs/:jobId/offer
- * V1 CORE FEATURE: Client selects cleaners to send job offers to
- * Body: { cleanerIds: string[] } (up to 3 cleaner IDs)
- * Sends job offers to selected cleaners. First cleaner to accept wins.
+ * @swagger
+ * /jobs/{jobId}/offer:
+ *   post:
+ *     summary: Send job offers to selected cleaners
+ *     description: |
+ *       V1 CORE FEATURE: Client selects cleaners to send job offers to.
+ *       Sends job offers to selected cleaners. First cleaner to accept wins.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cleanerIds
+ *             properties:
+ *               cleanerIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 minItems: 1
+ *                 maxItems: 3
+ *                 description: Up to 3 cleaner IDs to send offers to
+ *     responses:
+ *       200:
+ *         description: Offers sent successfully
+ *       400:
+ *         description: Invalid request or job status
+ *       403:
+ *         description: Forbidden (only clients can send offers)
  */
 jobsRouter.post(
   "/:jobId/offer",

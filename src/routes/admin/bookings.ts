@@ -13,8 +13,66 @@ router.use(jwtAuthMiddleware);
 router.use((req: Request, res: Response, next: NextFunction) => requireAdmin(req as AuthedRequest, res, next));
 
 /**
- * GET /admin/bookings
- * Get paginated list of bookings with filters
+ * @swagger
+ * /admin/bookings:
+ *   get:
+ *     summary: Get bookings (admin)
+ *     description: Get paginated list of bookings with filters.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: cleanerId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: clientId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [date, createdAt, amount, status]
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [ASC, DESC]
+ *     responses:
+ *       200:
+ *         description: List of bookings
  */
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;

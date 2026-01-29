@@ -355,6 +355,12 @@ export async function processPendingPayouts(): Promise<{
         payoutCount: payouts.length,
       });
 
+      // Record metrics
+      const { metrics } = require("../lib/metrics");
+      for (const payout of payouts) {
+        metrics.payoutProcessed(payout.amount_cents, true);
+      }
+
       await publishEvent({
         actorType: "system",
         eventName: "payout_batch_processed",
@@ -386,6 +392,12 @@ export async function processPendingPayouts(): Promise<{
         `,
         [payoutIds]
       );
+
+      // Record metrics for failed payouts
+      const { metrics } = require("../lib/metrics");
+      for (const payout of payouts) {
+        metrics.payoutProcessed(payout.amount_cents, false);
+      }
 
       failed += payouts.length;
     }

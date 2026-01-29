@@ -28,8 +28,19 @@ managerRouter.use(requireAdmin);
 // ============================================
 
 /**
- * GET /manager/overview
- * Get complete dashboard overview with all KPIs
+ * @swagger
+ * /manager/overview:
+ *   get:
+ *     summary: Get manager dashboard overview
+ *     description: Get complete dashboard overview with all KPIs.
+ *     tags: [Manager]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard overview
+ *       401:
+ *         description: Unauthorized - admin only
  */
 managerRouter.get("/overview", async (_req: AuthedRequest, res: Response) => {
   try {
@@ -44,8 +55,17 @@ managerRouter.get("/overview", async (_req: AuthedRequest, res: Response) => {
 });
 
 /**
- * GET /manager/alerts
- * Get active alerts that need attention
+ * @swagger
+ * /manager/alerts:
+ *   get:
+ *     summary: Get active alerts
+ *     description: Get active alerts that need attention.
+ *     tags: [Manager]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of active alerts
  */
 managerRouter.get("/alerts", async (_req: AuthedRequest, res: Response) => {
   try {
@@ -64,8 +84,17 @@ managerRouter.get("/alerts", async (_req: AuthedRequest, res: Response) => {
 // ============================================
 
 /**
- * GET /manager/heatmap
- * Get supply/demand heatmap by hour and day
+ * @swagger
+ * /manager/heatmap:
+ *   get:
+ *     summary: Get supply/demand heatmap
+ *     description: Get supply/demand heatmap by hour and day.
+ *     tags: [Manager]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Supply/demand heatmap
  */
 managerRouter.get("/heatmap", async (_req: AuthedRequest, res: Response) => {
   try {
@@ -84,8 +113,17 @@ managerRouter.get("/heatmap", async (_req: AuthedRequest, res: Response) => {
 // ============================================
 
 /**
- * GET /manager/tiers
- * Get cleaner tier distribution and metrics
+ * @swagger
+ * /manager/tiers:
+ *   get:
+ *     summary: Get tier distribution
+ *     description: Get cleaner tier distribution and metrics.
+ *     tags: [Manager]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Tier distribution
  */
 managerRouter.get("/tiers", async (_req: AuthedRequest, res: Response) => {
   try {
@@ -124,8 +162,17 @@ managerRouter.get("/retention", async (_req: AuthedRequest, res: Response) => {
 // ============================================
 
 /**
- * GET /manager/support-stats
- * Get support ticket statistics
+ * @swagger
+ * /manager/support-stats:
+ *   get:
+ *     summary: Get support stats
+ *     description: Get support ticket statistics.
+ *     tags: [Manager]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Support statistics
  */
 managerRouter.get("/support-stats", async (_req: AuthedRequest, res: Response) => {
   try {
@@ -140,8 +187,17 @@ managerRouter.get("/support-stats", async (_req: AuthedRequest, res: Response) =
 });
 
 /**
- * GET /manager/background-check-stats
- * Get background check statistics
+ * @swagger
+ * /manager/background-check-stats:
+ *   get:
+ *     summary: Get background check stats
+ *     description: Get background check statistics.
+ *     tags: [Manager]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Background check statistics
  */
 managerRouter.get("/background-check-stats", async (_req: AuthedRequest, res: Response) => {
   try {
@@ -156,8 +212,17 @@ managerRouter.get("/background-check-stats", async (_req: AuthedRequest, res: Re
 });
 
 /**
- * GET /manager/full-report
- * Get comprehensive report combining all metrics
+ * @swagger
+ * /manager/full-report:
+ *   get:
+ *     summary: Get full manager report
+ *     description: Get comprehensive manager report combining all metrics.
+ *     tags: [Manager]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Full manager report
  */
 managerRouter.get("/full-report", async (_req: AuthedRequest, res: Response) => {
   try {

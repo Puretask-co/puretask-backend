@@ -1,10 +1,17 @@
 ﻿// src/index.ts
 // Main application entry point
 
+// ============================================
+// CRITICAL: Initialize Sentry FIRST, before ANY other imports
+// This allows Sentry to properly instrument Express, HTTP, and database calls
+// ============================================
+require("./instrument");
+
+// Now safe to import everything else
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/node"; // Import for use in error handler, NOT for init
 import { env } from "./config/env";
 import { logger } from "./lib/logger";
 import { initRedis, closeRedis } from "./lib/redis";
@@ -65,15 +72,10 @@ import aiRouter from "./routes/ai";
 import userDataRouter from "./routes/userData";
 
 // ============================================
-// Initialize Sentry (Error Tracking) - Must be before Express app
+// Sentry is already initialized in instrument.ts (required at top of file)
+// DO NOT call Sentry.init() here - it's already done!
 // ============================================
 if (env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: env.SENTRY_DSN,
-    environment: env.NODE_ENV,
-    // Performance Monitoring
-    tracesSampleRate: env.NODE_ENV === "production" ? 0.1 : 1.0, // 10% in prod, 100% in dev
-  });
   logger.info("sentry_initialized", { environment: env.NODE_ENV });
 } else {
   logger.warn("sentry_not_configured", { message: "SENTRY_DSN not set, error tracking disabled" });
@@ -172,7 +174,7 @@ if (env.USE_REDIS_RATE_LIMITING && env.REDIS_URL) {
 app.use(authMiddlewareAttachUser);
 
 // ============================================
-// Request Logging
+// Request Logging & Metrics
 // ============================================
 app.use((req, res, next) => {
   const start = Date.now();
@@ -184,6 +186,8 @@ app.use((req, res, next) => {
 
   res.on("finish", () => {
     const duration = Date.now() - start;
+    
+    // Log request
     logger.info("http_request", {
       method: req.method,
       path: req.path,
@@ -196,6 +200,18 @@ app.use((req, res, next) => {
       correlationId: req.correlationId,
       // Headers are redacted automatically by logger
     });
+
+    // Record metrics (skip health/status endpoints to reduce noise)
+    if (!req.path.startsWith("/health") && !req.path.startsWith("/status")) {
+      const { metrics } = require("./lib/metrics");
+      metrics.apiRequest(req.method, req.path, res.statusCode, duration);
+      
+      // Record error metrics for 4xx/5xx responses
+      if (res.statusCode >= 400) {
+        const errorCode = res.statusCode >= 500 ? "5xx" : "4xx";
+        metrics.errorOccurred(errorCode, req.path);
+      }
+    }
   });
 
   next();
@@ -282,14 +298,18 @@ app.use((req, res) => {
 });
 
 // ============================================
-// Sentry Integration
+// Sentry Express Error Handler
 // ============================================
-// Note: Sentry v10+ automatically instruments Express
-// No manual request/tracing handlers needed - Sentry.init() handles it
+// Register Sentry's Express error handler AFTER all routes
+// This captures unhandled errors and attaches Sentry event ID to response (res.sentry)
+if (env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 // ============================================
-// Global Error Handler
+// Global Error Handler (runs after Sentry handler)
 // ============================================
+// Note: Sentry already captured the error above, so we just log and respond
 app.use(
   (
     err: Error & { statusCode?: number; code?: string },
@@ -300,21 +320,12 @@ app.use(
     const statusCode = err.statusCode || 500;
     const code = err.code || "INTERNAL_ERROR";
 
-    // Send to Sentry if configured
-    if (env.SENTRY_DSN && statusCode >= 500) {
-      Sentry.captureException(err, {
-        tags: {
-          path: req.path,
-          method: req.method,
-          statusCode,
-          errorCode: code,
-        },
-        user: req.user ? { id: req.user.id } : undefined,
-        extra: {
-          requestId: req.requestId,
-        },
-      });
-    }
+    // Record error metrics
+    const { metrics } = require("./lib/metrics");
+    metrics.errorOccurred(code, req.path);
+
+    // Note: Sentry already captured the error via setupExpressErrorHandler above
+    // We don't need to call Sentry.captureException() again to avoid double-capture
 
     logger.error("unhandled_error", {
       message: err.message,

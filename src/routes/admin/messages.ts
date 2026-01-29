@@ -13,8 +13,52 @@ router.use(jwtAuthMiddleware);
 router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
 
 /**
- * GET /admin/messages/log
- * Get message delivery log
+ * @swagger
+ * /admin/messages/log:
+ *   get:
+ *     summary: Get message delivery log
+ *     description: Get message delivery log with filters.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: messageType
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: cleanerId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: clientId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *     responses:
+ *       200:
+ *         description: Message delivery log
  */
 router.get('/log', async (req: AuthedRequest, res: Response) => {
   try {

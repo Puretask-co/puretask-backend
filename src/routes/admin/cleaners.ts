@@ -13,8 +13,49 @@ router.use(jwtAuthMiddleware);
 router.use((req: Request, res: Response, next: NextFunction) => requireAdmin(req as AuthedRequest, res, next));
 
 /**
- * GET /admin/cleaners
- * Get paginated list of cleaners with filters
+ * @swagger
+ * /admin/cleaners:
+ *   get:
+ *     summary: Get cleaners (admin)
+ *     description: Get paginated list of cleaners with filters.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: tier
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive]
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: minRating
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: verified
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *     responses:
+ *       200:
+ *         description: List of cleaners
  */
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;

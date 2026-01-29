@@ -10,8 +10,44 @@ import { db } from '../lib/db';
 const router = Router();
 
 /**
- * GET /search/global
- * Global search across cleaners, bookings, clients, jobs
+ * @swagger
+ * /search/global:
+ *   get:
+ *     summary: Global search
+ *     description: Search across cleaners, bookings, clients, and jobs.
+ *     tags: [Search]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query (minimum 2 characters)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       type: { type: 'string', enum: ['cleaner', 'booking', 'client'] }
+ *                       id: { type: 'string' }
+ *                       title: { type: 'string' }
+ *                       subtitle: { type: 'string' }
+ *                       url: { type: 'string' }
  */
 router.get('/global', requireAuth, async (req, res) => {
   try {
@@ -98,8 +134,42 @@ router.get('/global', requireAuth, async (req, res) => {
 });
 
 /**
- * GET /search/autocomplete
- * Autocomplete suggestions for search
+ * @swagger
+ * /search/autocomplete:
+ *   get:
+ *     summary: Autocomplete suggestions
+ *     description: Get autocomplete suggestions for search queries (cleaners, services).
+ *     tags: [Search]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query (minimum 2 characters)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 8
+ *     responses:
+ *       200:
+ *         description: Autocomplete suggestions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 suggestions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: 'string' }
+ *                       text: { type: 'string' }
+ *                       type: { type: 'string', enum: ['cleaner', 'service'] }
  */
 router.get('/autocomplete', requireAuth, async (req, res) => {
   try {

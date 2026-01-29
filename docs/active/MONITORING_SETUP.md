@@ -1,21 +1,38 @@
 # Monitoring Setup Guide
 
+**Last Updated**: 2026-01-29  
+**Status**: ✅ Complete - Metrics integrated, verification script available
+
 ## Overview
 This document outlines the monitoring setup for PureTask Backend, including error tracking, metrics collection, and uptime monitoring.
 
 ## Components
 
 ### 1. Sentry (Error Tracking)
-**Status**: ✅ Installed and configured
+**Status**: ✅ Installed and configured with proper "init once" pattern  
+**Integration**: Automatic error capture for 500+ errors, performance monitoring, profiling
+
+**Architecture**:
+- ✅ `src/instrument.ts` - The ONLY place `Sentry.init()` is called
+- ✅ `src/index.ts` - Requires `instrument.ts` FIRST (before any other imports)
+- ✅ Follows Sentry's recommended pattern for Express apps
 
 **Setup**:
 1. Create a Sentry account at https://sentry.io
-2. Create a new project (Node.js/Express)
+2. Create a new project (select **Node.js**, then **Express** framework)
 3. Copy the DSN from the project settings
-4. Add to `.env`:
+4. Add to `.env` (or Railway environment variables):
    ```
    SENTRY_DSN=https://your-dsn@sentry.io/project-id
+   NODE_ENV=production
    ```
+
+**Railway Setup**:
+In Railway → your service → Variables, add:
+- `SENTRY_DSN` = your DSN (the https://… string)
+- `NODE_ENV` = production
+
+**Important**: The `start` script in `package.json` uses `node -r ./dist/instrument.js` to preload Sentry before any other code runs. This ensures Sentry can properly instrument Express, HTTP, and database calls even with TypeScript's import hoisting.
 
 **Features**:
 - Automatic error capture for 500+ errors
@@ -25,8 +42,18 @@ This document outlines the monitoring setup for PureTask Backend, including erro
 
 **Verification**:
 - Check logs for "sentry_initialized" message on startup
-- Trigger a test error and verify it appears in Sentry dashboard
+- Test error capture: `GET /health/debug-sentry` (intentionally triggers an error)
+- In Sentry dashboard, you should see:
+  - Error event "Sentry test error from PureTask"
+  - Logs (if enabled)
+  - Performance traces (if sampling allows)
 - Check that errors include request context (path, method, user ID)
+
+**Test Route**:
+```bash
+# After deployment, test Sentry:
+curl https://your-railway-url/health/debug-sentry
+```
 
 **How to Know It's Working**:
 - ✅ Errors appear in Sentry dashboard
@@ -40,11 +67,19 @@ This document outlines the monitoring setup for PureTask Backend, including erro
 - ❌ Errors don't include context
 
 ### 2. Metrics System
-**Status**: ✅ Basic metrics system created
+**Status**: ✅ Fully integrated and recording
 
 **Location**: `src/lib/metrics.ts`
 
-**Usage**:
+**Automatic Recording**:
+- ✅ API requests (duration, status codes) - recorded in `src/index.ts` request middleware
+- ✅ Errors (by code and path) - recorded in error handler
+- ✅ Job creation - recorded in `src/services/jobsService.ts`
+- ✅ Job completion - recorded in `src/services/jobTrackingService.ts`
+- ✅ Payment processing - recorded in `src/services/paymentService.ts`
+- ✅ Payout processing - recorded in `src/services/payoutsService.ts`
+
+**Manual Usage** (for custom metrics):
 ```typescript
 import { metrics } from "./lib/metrics";
 
@@ -146,9 +181,26 @@ ENABLE_METRICS=true
 }
 ```
 
+## Verification
+
+Run the verification script to check monitoring setup:
+```bash
+npm run monitoring:verify
+```
+
+This will check:
+- ✅ Sentry configuration
+- ✅ Metrics system availability
+- ✅ Database connectivity
+- ✅ Health endpoints
+- ✅ Logging system
+
 ## Monitoring Checklist
 
 ### Initial Setup
+- [x] ✅ Metrics system created and integrated
+- [x] ✅ Metrics recording added to critical operations
+- [x] ✅ Verification script created
 - [ ] Create Sentry account and project
 - [ ] Add SENTRY_DSN to environment variables
 - [ ] Verify Sentry initialization in logs
@@ -156,7 +208,6 @@ ENABLE_METRICS=true
 - [ ] Set up UptimeRobot account
 - [ ] Configure health check monitors
 - [ ] Test alert notifications
-- [ ] Enable metrics collection (optional)
 
 ### Ongoing Monitoring
 - [ ] Review Sentry errors daily

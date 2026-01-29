@@ -40,8 +40,26 @@ function parseTimeRange(query: any): TimeRange {
 // ============================================
 
 /**
- * GET /analytics/dashboard
- * Get comprehensive dashboard metrics
+ * @swagger
+ * /analytics/dashboard:
+ *   get:
+ *     summary: Get dashboard metrics
+ *     description: Get comprehensive dashboard metrics for admin analytics.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *           default: month
+ *     responses:
+ *       200:
+ *         description: Dashboard metrics
+ *       401:
+ *         description: Unauthorized - admin only
  */
 analyticsRouter.get("/dashboard", async (req: AuthedRequest, res: Response) => {
   try {
@@ -61,8 +79,23 @@ analyticsRouter.get("/dashboard", async (req: AuthedRequest, res: Response) => {
 // ============================================
 
 /**
- * GET /analytics/revenue/trend
- * Get revenue over time
+ * @swagger
+ * /analytics/revenue/trend:
+ *   get:
+ *     summary: Get revenue trend
+ *     description: Get revenue trend over time.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *     responses:
+ *       200:
+ *         description: Revenue trend data
  */
 analyticsRouter.get("/revenue/trend", async (req: AuthedRequest, res: Response) => {
   try {
@@ -78,8 +111,29 @@ analyticsRouter.get("/revenue/trend", async (req: AuthedRequest, res: Response) 
 });
 
 /**
- * GET /analytics/revenue/by-period
- * Get revenue breakdown by day/week/month
+ * @swagger
+ * /analytics/revenue/by-period:
+ *   get:
+ *     summary: Get revenue by period
+ *     description: Get revenue breakdown grouped by day, week, or month.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *       - in: query
+ *         name: groupBy
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month]
+ *           default: day
+ *     responses:
+ *       200:
+ *         description: Revenue by period
  */
 analyticsRouter.get("/revenue/by-period", async (req: AuthedRequest, res: Response) => {
   try {
@@ -100,8 +154,23 @@ analyticsRouter.get("/revenue/by-period", async (req: AuthedRequest, res: Respon
 // ============================================
 
 /**
- * GET /analytics/jobs/trend
- * Get job count over time
+ * @swagger
+ * /analytics/jobs/trend:
+ *   get:
+ *     summary: Get job trend
+ *     description: Get job count trend over time.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *     responses:
+ *       200:
+ *         description: Job trend data
  */
 analyticsRouter.get("/jobs/trend", async (req: AuthedRequest, res: Response) => {
   try {
@@ -117,8 +186,23 @@ analyticsRouter.get("/jobs/trend", async (req: AuthedRequest, res: Response) => 
 });
 
 /**
- * GET /analytics/jobs/status
- * Get job status breakdown
+ * @swagger
+ * /analytics/jobs/status:
+ *   get:
+ *     summary: Get job status breakdown
+ *     description: Get breakdown of jobs by status.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *     responses:
+ *       200:
+ *         description: Job status breakdown
  */
 analyticsRouter.get("/jobs/status", async (req: AuthedRequest, res: Response) => {
   try {
@@ -138,8 +222,29 @@ analyticsRouter.get("/jobs/status", async (req: AuthedRequest, res: Response) =>
 // ============================================
 
 /**
- * GET /analytics/users/signups
- * Get user signup trend
+ * @swagger
+ * /analytics/users/signups:
+ *   get:
+ *     summary: Get user signup trend
+ *     description: Get user signup trend over time, optionally filtered by role.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [client, cleaner, all]
+ *           default: all
+ *     responses:
+ *       200:
+ *         description: User signup trend
  */
 analyticsRouter.get("/users/signups", async (req: AuthedRequest, res: Response) => {
   try {
@@ -160,8 +265,29 @@ analyticsRouter.get("/users/signups", async (req: AuthedRequest, res: Response) 
 // ============================================
 
 /**
- * GET /analytics/top/clients
- * Get top clients by spending
+ * @swagger
+ * /analytics/top/clients:
+ *   get:
+ *     summary: Get top clients
+ *     description: Get top clients by spending.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Top clients list
  */
 analyticsRouter.get("/top/clients", async (req: AuthedRequest, res: Response) => {
   try {
@@ -178,8 +304,29 @@ analyticsRouter.get("/top/clients", async (req: AuthedRequest, res: Response) =>
 });
 
 /**
- * GET /analytics/top/cleaners
- * Get top cleaners by earnings
+ * @swagger
+ * /analytics/top/cleaners:
+ *   get:
+ *     summary: Get top cleaners
+ *     description: Get top cleaners by earnings.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Top cleaners list
  */
 analyticsRouter.get("/top/cleaners", async (req: AuthedRequest, res: Response) => {
   try {
@@ -196,8 +343,24 @@ analyticsRouter.get("/top/cleaners", async (req: AuthedRequest, res: Response) =
 });
 
 /**
- * GET /analytics/top/rated-cleaners
- * Get top rated cleaners
+ * @swagger
+ * /analytics/top/rated-cleaners:
+ *   get:
+ *     summary: Get top rated cleaners
+ *     description: Get top rated cleaners by average rating.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Top rated cleaners list
  */
 analyticsRouter.get("/top/rated-cleaners", async (req: AuthedRequest, res: Response) => {
   try {
@@ -217,8 +380,17 @@ analyticsRouter.get("/top/rated-cleaners", async (req: AuthedRequest, res: Respo
 // ============================================
 
 /**
- * GET /analytics/credits/health
- * Get credit economy health metrics
+ * @swagger
+ * /analytics/credits/health:
+ *   get:
+ *     summary: Get credit economy health
+ *     description: Get credit economy health metrics.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Credit economy health metrics
  */
 analyticsRouter.get("/credits/health", async (_req: AuthedRequest, res: Response) => {
   try {
@@ -237,8 +409,23 @@ analyticsRouter.get("/credits/health", async (_req: AuthedRequest, res: Response
 // ============================================
 
 /**
- * GET /analytics/report
- * Generate comprehensive analytics report
+ * @swagger
+ * /analytics/report:
+ *   get:
+ *     summary: Generate full analytics report
+ *     description: Generate comprehensive analytics report with all metrics.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *     responses:
+ *       200:
+ *         description: Full analytics report
  */
 analyticsRouter.get("/report", async (req: AuthedRequest, res: Response) => {
   try {

@@ -24,7 +24,23 @@ scoringRouter.use(requireAuth);
 // ============================================
 
 /**
- * GET /scoring/reliability/:cleanerId - Get cleaner's reliability score
+ * @swagger
+ * /scoring/reliability/{cleanerId}:
+ *   get:
+ *     summary: Get reliability score
+ *     description: Get cleaner's reliability score with metrics breakdown.
+ *     tags: [Scoring]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: cleanerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Reliability score and metrics
  */
 scoringRouter.get("/reliability/:cleanerId", async (req: AuthedRequest, res) => {
   const cleanerId = Number(req.params.cleanerId);
@@ -78,7 +94,25 @@ scoringRouter.get("/reliability/:cleanerId", async (req: AuthedRequest, res) => 
 });
 
 /**
- * POST /scoring/reliability/:cleanerId/recompute - Recompute single cleaner
+ * @swagger
+ * /scoring/reliability/{cleanerId}/recompute:
+ *   post:
+ *     summary: Recompute reliability score
+ *     description: Recompute reliability score for a cleaner (admin only).
+ *     tags: [Scoring]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: cleanerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Recomputed score
+ *       403:
+ *         description: Forbidden - admin only
  */
 scoringRouter.post("/reliability/:cleanerId/recompute", async (req: AuthedRequest, res) => {
   const cleanerId = Number(req.params.cleanerId);
@@ -156,7 +190,23 @@ scoringRouter.post("/reliability/recompute-all", async (req: AuthedRequest, res)
 // ============================================
 
 /**
- * GET /scoring/risk/:clientId - Get client's risk score
+ * @swagger
+ * /scoring/risk/{clientId}:
+ *   get:
+ *     summary: Get client risk score
+ *     description: Get client's risk score with metrics breakdown.
+ *     tags: [Scoring]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: clientId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Risk score and metrics
  */
 scoringRouter.get("/risk/:clientId", async (req: AuthedRequest, res) => {
   const clientId = Number(req.params.clientId);
@@ -188,7 +238,25 @@ scoringRouter.get("/risk/:clientId", async (req: AuthedRequest, res) => {
 });
 
 /**
- * POST /scoring/risk/:clientId/recompute - Recompute single client
+ * @swagger
+ * /scoring/risk/{clientId}/recompute:
+ *   post:
+ *     summary: Recompute client risk score
+ *     description: Recompute risk score for a client (admin only).
+ *     tags: [Scoring]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: clientId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Recomputed risk score
+ *       403:
+ *         description: Forbidden - admin only
  */
 scoringRouter.post("/risk/:clientId/recompute", async (req: AuthedRequest, res) => {
   const clientId = Number(req.params.clientId);
@@ -230,7 +298,19 @@ scoringRouter.post("/risk/:clientId/recompute", async (req: AuthedRequest, res) 
 });
 
 /**
- * POST /scoring/risk/recompute-all - Daily cron: recompute all clients
+ * @swagger
+ * /scoring/risk/recompute-all:
+ *   post:
+ *     summary: Recompute all client risk scores
+ *     description: Recompute risk scores for all clients (admin only, daily cron).
+ *     tags: [Scoring]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Recompute results
+ *       403:
+ *         description: Forbidden - admin only
  */
 scoringRouter.post("/risk/recompute-all", async (req: AuthedRequest, res) => {
   const userRole = req.user?.role;
@@ -266,7 +346,19 @@ scoringRouter.post("/risk/recompute-all", async (req: AuthedRequest, res) => {
 // ============================================
 
 /**
- * POST /scoring/flexibility/evaluate-cleaners - Evaluate cleaner flexibility
+ * @swagger
+ * /scoring/flexibility/evaluate-cleaners:
+ *   post:
+ *     summary: Evaluate cleaner flexibility
+ *     description: Evaluate cleaner flexibility and assign badges (admin only).
+ *     tags: [Scoring]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Evaluation results
+ *       403:
+ *         description: Forbidden - admin only
  */
 scoringRouter.post("/flexibility/evaluate-cleaners", async (req: AuthedRequest, res) => {
   const userRole = req.user?.role;
@@ -294,7 +386,19 @@ scoringRouter.post("/flexibility/evaluate-cleaners", async (req: AuthedRequest, 
 });
 
 /**
- * POST /scoring/flexibility/recompute-clients - Recompute client flex profiles
+ * @swagger
+ * /scoring/flexibility/recompute-clients:
+ *   post:
+ *     summary: Recompute client flexibility profiles
+ *     description: Recompute client flexibility profiles (admin only).
+ *     tags: [Scoring]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Recompute results
+ *       403:
+ *         description: Forbidden - admin only
  */
 scoringRouter.post("/flexibility/recompute-clients", async (req: AuthedRequest, res) => {
   const userRole = req.user?.role;
@@ -324,7 +428,19 @@ scoringRouter.post("/flexibility/recompute-clients", async (req: AuthedRequest, 
 // ============================================
 
 /**
- * POST /scoring/inconvenience/detect-patterns - Run pattern detection
+ * @swagger
+ * /scoring/inconvenience/detect-patterns:
+ *   post:
+ *     summary: Detect inconvenience patterns
+ *     description: Run pattern detection for inconvenience scoring (admin only).
+ *     tags: [Scoring]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Pattern detection results
+ *       403:
+ *         description: Forbidden - admin only
  */
 scoringRouter.post("/inconvenience/detect-patterns", async (req: AuthedRequest, res) => {
   const userRole = req.user?.role;

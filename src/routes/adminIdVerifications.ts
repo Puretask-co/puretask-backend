@@ -14,8 +14,31 @@ adminIdVerificationsRouter.use(jwtAuthMiddleware);
 adminIdVerificationsRouter.use(requireRole("admin"));
 
 /**
- * GET /admin/id-verifications
- * Get all ID verifications with optional filtering
+ * @swagger
+ * /admin/id-verifications:
+ *   get:
+ *     summary: Get ID verifications
+ *     description: Get all ID verifications with optional filtering (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, verified, failed, all]
+ *         description: Filter by status
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by name or document type
+ *     responses:
+ *       200:
+ *         description: List of ID verifications
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminIdVerificationsRouter.get("/", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -75,8 +98,27 @@ adminIdVerificationsRouter.get("/", async (req: JWTAuthedRequest, res: Response)
 });
 
 /**
- * GET /admin/id-verifications/:id
- * Get a specific ID verification
+ * @swagger
+ * /admin/id-verifications/{id}:
+ *   get:
+ *     summary: Get ID verification by ID
+ *     description: Get a specific ID verification (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: ID verification details
+ *       404:
+ *         description: Not found
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminIdVerificationsRouter.get("/:id", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -119,8 +161,61 @@ adminIdVerificationsRouter.get("/:id", async (req: JWTAuthedRequest, res: Respon
 });
 
 /**
- * PATCH /admin/id-verifications/:id/status
- * Update ID verification status (approve/reject)
+ * @swagger
+ * /admin/id-verifications/{id}/approve:
+ *   post:
+ *     summary: Approve ID verification
+ *     description: Approve an ID verification (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Verification approved
+ *       403:
+ *         description: Forbidden - admin only
+ * /admin/id-verifications/{id}/reject:
+ *   post:
+ *     summary: Reject ID verification
+ *     description: Reject an ID verification (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Verification rejected
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminIdVerificationsRouter.patch("/:id/status", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -200,8 +295,27 @@ adminIdVerificationsRouter.patch("/:id/status", async (req: JWTAuthedRequest, re
 });
 
 /**
- * GET /admin/id-verifications/:id/document-url
- * Get signed URL for document (expires in 5 minutes)
+ * @swagger
+ * /admin/id-verifications/{id}/document-url:
+ *   get:
+ *     summary: Get document URL
+ *     description: Get signed URL for ID verification document (expires in 5 minutes, admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Document URL
+ *       404:
+ *         description: Not found
+ *       403:
+ *         description: Forbidden - admin only
  */
 adminIdVerificationsRouter.get("/:id/document-url", async (req: JWTAuthedRequest, res: Response) => {
   try {

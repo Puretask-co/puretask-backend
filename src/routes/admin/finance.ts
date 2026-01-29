@@ -13,8 +13,24 @@ router.use(jwtAuthMiddleware);
 router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
 
 /**
- * GET /admin/finance/overview
- * Get finance center overview
+ * @swagger
+ * /admin/finance/overview:
+ *   get:
+ *     summary: Get finance overview
+ *     description: Get finance center overview including pending payouts, revenue breakdown, recent transactions.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [7d, 30d, 90d]
+ *           default: 30d
+ *     responses:
+ *       200:
+ *         description: Finance overview
  */
 router.get('/overview', async (req: AuthedRequest, res: Response) => {
   try {

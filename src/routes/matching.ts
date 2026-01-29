@@ -12,10 +12,53 @@ const matchingRouter = Router();
 // All routes require auth
 matchingRouter.use(requireAuth);
 
-// ============================================
-// GET /matching/jobs/:id/candidates - Get ranked cleaner candidates
-// ============================================
-
+/**
+ * @swagger
+ * /matching/jobs/{jobId}/candidates:
+ *   get:
+ *     summary: Get ranked cleaner candidates
+ *     description: Get ranked list of cleaner candidates for a job based on matching algorithm.
+ *     tags: [Matching]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Ranked candidates
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 jobId: { type: 'string' }
+ *                 clientRiskBand: { type: 'string' }
+ *                 totalCandidates: { type: 'integer' }
+ *                 candidates:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       rank: { type: 'integer' }
+ *                       cleanerId: { type: 'string' }
+ *                       matchScore: { type: 'number' }
+ *                       tier: { type: 'string' }
+ *                       reliabilityScore: { type: 'number' }
+ *                       distanceKm: { type: 'number' }
+ *                       isRepeatClient: { type: 'boolean' }
+ *                       breakdown: { type: 'object' }
+ *       404:
+ *         description: Job not found
+ */
 matchingRouter.get("/jobs/:jobId/candidates", async (req: AuthedRequest, res) => {
   const jobId = Number(req.params.jobId);
   const maxResults = Number(req.query.limit || 10);
@@ -87,10 +130,29 @@ matchingRouter.get("/jobs/:jobId/candidates", async (req: AuthedRequest, res) =>
   }
 });
 
-// ============================================
-// POST /matching/jobs/:id/auto-assign - Auto-assign best cleaner
-// ============================================
-
+/**
+ * @swagger
+ * /matching/jobs/{jobId}/auto-assign:
+ *   post:
+ *     summary: Auto-assign best cleaner
+ *     description: Automatically assign the best matching cleaner to a job. Admin only.
+ *     tags: [Matching]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Cleaner auto-assigned
+ *       403:
+ *         description: Forbidden - admin only
+ *       404:
+ *         description: Job not found
+ */
 matchingRouter.post("/jobs/:jobId/auto-assign", async (req: AuthedRequest, res) => {
   const jobId = Number(req.params.jobId);
   const userRole = req.user?.role;

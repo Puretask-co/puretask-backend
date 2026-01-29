@@ -82,7 +82,32 @@ export const adminRouter = Router();
 adminRouter.use(requireAuth);
 adminRouter.use(requireAdmin);
 
-// V1: Basic admin KPIs endpoint (simplified for V1)
+/**
+ * @swagger
+ * /admin/kpis:
+ *   get:
+ *     summary: Get admin KPIs
+ *     description: Get key performance indicators for admin dashboard.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Admin KPIs
+ *       401:
+ *         description: Unauthorized - admin only
+ */
 adminRouter.get("/kpis", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
     const { dateFrom, dateTo } = req.query;
@@ -171,8 +196,54 @@ adminRouter.get("/kpis", requireAdmin, async (req: AuthedRequest, res: Response)
 // });
 
 /**
- * GET /admin/jobs
- * List all jobs with filters (admin)
+ * @swagger
+ * /admin/jobs:
+ *   get:
+ *     summary: List all jobs (admin)
+ *     description: List all jobs with filters for admin management.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: clientId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: cleanerId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: List of jobs
+ *       401:
+ *         description: Unauthorized - admin only
  */
 adminRouter.get("/jobs", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -212,9 +283,26 @@ adminRouter.get("/jobs", requireAdmin, async (req: AuthedRequest, res: Response)
 });
 
 /**
- * GET /admin/jobs/:jobId
- * Get full job details with timeline (admin)
- * Returns: job, client, cleaner, events, dispute, payments, payout, photos, credits
+ * @swagger
+ * /admin/jobs/{jobId}:
+ *   get:
+ *     summary: Get job details (admin)
+ *     description: Get full job details with timeline including client, cleaner, events, dispute, payments, payout, photos, credits.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Full job details
+ *       401:
+ *         description: Unauthorized - admin only
  */
 adminRouter.get(
   "/jobs/:jobId",
@@ -241,8 +329,29 @@ adminRouter.get(
 );
 
 /**
- * GET /admin/jobs/:jobId/events
- * Get all events for a job (admin)
+ * @swagger
+ * /admin/jobs/{jobId}/events:
+ *   get:
+ *     summary: Get job events (admin)
+ *     description: Get all events for a job.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *     responses:
+ *       200:
+ *         description: Job events
  */
 adminRouter.get(
   "/jobs/:jobId/events",
@@ -278,8 +387,39 @@ adminRouter.get(
 );
 
 /**
- * POST /admin/jobs/:jobId/override
- * Override job status (admin only)
+ * @swagger
+ * /admin/jobs/{jobId}/override:
+ *   post:
+ *     summary: Override job status
+ *     description: Override job status (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newStatus
+ *               - reason
+ *             properties:
+ *               newStatus:
+ *                 type: string
+ *                 enum: [requested, accepted, on_my_way, in_progress, awaiting_approval, completed, disputed, cancelled]
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Job status overridden
  */
 const overrideJobStatusSchema = z.object({
   newStatus: z.enum([
@@ -325,8 +465,27 @@ adminRouter.post(
 );
 
 /**
- * GET /admin/disputes
- * Get all disputes
+ * @swagger
+ * /admin/disputes:
+ *   get:
+ *     summary: Get all disputes
+ *     description: Get all disputes with optional status filter.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *     responses:
+ *       200:
+ *         description: List of disputes
  */
 adminRouter.get("/disputes", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -356,8 +515,38 @@ adminRouter.get("/disputes", requireAdmin, async (req: AuthedRequest, res: Respo
 });
 
 /**
- * POST /admin/disputes/:disputeId/resolve
- * Resolve a dispute by disputeId
+ * @swagger
+ * /admin/disputes/{disputeId}/resolve:
+ *   post:
+ *     summary: Resolve dispute
+ *     description: Resolve a dispute by disputeId.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: disputeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - resolution
+ *             properties:
+ *               resolution:
+ *                 type: string
+ *                 enum: [resolved_refund, resolved_no_refund]
+ *               admin_notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Dispute resolved
  */
 const resolveDisputeSchema = z.object({
   resolution: z.enum(["resolved_refund", "resolved_no_refund"]),
@@ -477,8 +666,27 @@ adminRouter.post(
 );
 
 /**
- * GET /admin/payouts
- * Get all payouts (admin view)
+ * @swagger
+ * /admin/payouts:
+ *   get:
+ *     summary: Get all payouts
+ *     description: Get all payouts with optional status filter.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *     responses:
+ *       200:
+ *         description: List of payouts
  */
 adminRouter.get("/payouts", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -508,8 +716,27 @@ adminRouter.get("/payouts", requireAdmin, async (req: AuthedRequest, res: Respon
 });
 
 /**
- * GET /admin/job-events
- * Get all job events (admin view)
+ * @swagger
+ * /admin/job-events:
+ *   get:
+ *     summary: Get all job events
+ *     description: Get all job events with optional event type filter.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 200
+ *       - in: query
+ *         name: eventType
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of job events
  */
 adminRouter.get("/job-events", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -548,8 +775,37 @@ adminRouter.get("/job-events", requireAdmin, async (req: AuthedRequest, res: Res
 // ============================================
 
 /**
- * GET /admin/users
- * List all users with filters
+ * @swagger
+ * /admin/users:
+ *   get:
+ *     summary: List all users
+ *     description: List all users with filters.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [client, cleaner, admin]
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: List of users
  */
 adminRouter.get("/users", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -574,8 +830,17 @@ adminRouter.get("/users", requireAdmin, async (req: AuthedRequest, res: Response
 });
 
 /**
- * GET /admin/users/stats
- * Get user statistics
+ * @swagger
+ * /admin/users/stats:
+ *   get:
+ *     summary: Get user statistics
+ *     description: Get user statistics.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User statistics
  */
 adminRouter.get("/users/stats", requireAdmin, async (_req: AuthedRequest, res: Response) => {
   try {
@@ -590,8 +855,26 @@ adminRouter.get("/users/stats", requireAdmin, async (_req: AuthedRequest, res: R
 });
 
 /**
- * GET /admin/users/:userId
- * Get single user details
+ * @swagger
+ * /admin/users/{userId}:
+ *   get:
+ *     summary: Get user details
+ *     description: Get single user details.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: User details
+ *       404:
+ *         description: User not found
  */
 adminRouter.get("/users/:userId", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -615,8 +898,34 @@ adminRouter.get("/users/:userId", requireAdmin, async (req: AuthedRequest, res: 
 });
 
 /**
- * POST /admin/users
- * Create a new user
+ * @swagger
+ * /admin/users:
+ *   post:
+ *     summary: Create user
+ *     description: Create a new user.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - role
+ *             properties:
+ *               email: { type: 'string', format: 'email' }
+ *               password: { type: 'string', minLength: 8 }
+ *               role: { type: 'string', enum: ['client', 'cleaner', 'admin'] }
+ *               phone: { type: 'string' }
+ *               defaultAddress: { type: 'string' }
+ *               hourlyRateCredits: { type: 'integer', minimum: 0 }
+ *     responses:
+ *       201:
+ *         description: User created
  */
 const createUserSchema = z.object({
   email: z.string().email(),
@@ -647,8 +956,37 @@ adminRouter.post(
 );
 
 /**
- * PATCH /admin/users/:userId
- * Update user details
+ * @swagger
+ * /admin/users/{userId}:
+ *   patch:
+ *     summary: Update user
+ *     description: Update user details.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email: { type: 'string', format: 'email' }
+ *               phone: { type: 'string' }
+ *               role: { type: 'string', enum: ['client', 'cleaner', 'admin'] }
+ *               defaultAddress: { type: 'string' }
+ *               hourlyRateCredits: { type: 'integer', minimum: 0 }
+ *               tier: { type: 'string', enum: ['bronze', 'silver', 'gold', 'platinum'] }
+ *     responses:
+ *       200:
+ *         description: User updated
  */
 const updateUserSchema = z.object({
   email: z.string().email().optional(),
@@ -680,8 +1018,29 @@ adminRouter.patch(
 );
 
 /**
- * DELETE /admin/users/:userId
- * Delete user (soft delete by default)
+ * @swagger
+ * /admin/users/{userId}:
+ *   delete:
+ *     summary: Delete user
+ *     description: Delete user (soft delete by default).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: hard
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *     responses:
+ *       200:
+ *         description: User deleted
  */
 adminRouter.delete("/users/:userId", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -700,8 +1059,34 @@ adminRouter.delete("/users/:userId", requireAdmin, async (req: AuthedRequest, re
 });
 
 /**
- * POST /admin/users/:userId/reset-password
- * Reset user password
+ * @swagger
+ * /admin/users/{userId}/reset-password:
+ *   post:
+ *     summary: Reset user password
+ *     description: Reset user password.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPassword
+ *             properties:
+ *               newPassword: { type: 'string', minLength: 8 }
+ *     responses:
+ *       200:
+ *         description: Password reset
  */
 const resetPasswordSchema = z.object({
   newPassword: z.string().min(8),
@@ -729,8 +1114,36 @@ adminRouter.post(
 );
 
 /**
- * POST /admin/users/:userId/adjust-credits
- * Adjust user credits
+ * @swagger
+ * /admin/users/{userId}/adjust-credits:
+ *   post:
+ *     summary: Adjust user credits
+ *     description: Adjust user credits.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *               - reason
+ *             properties:
+ *               amount: { type: 'integer' }
+ *               reason: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Credits adjusted
  */
 const adjustCreditsSchema = z.object({
   amount: z.number().int(),
@@ -763,8 +1176,17 @@ adminRouter.post(
 // ============================================
 
 /**
- * GET /admin/system/health
- * Run comprehensive system health check
+ * @swagger
+ * /admin/system/health:
+ *   get:
+ *     summary: System health check
+ *     description: Run comprehensive system health check.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: System health status
  */
 adminRouter.get("/system/health", requireAdmin, async (_req: AuthedRequest, res: Response) => {
   try {
@@ -779,7 +1201,17 @@ adminRouter.get("/system/health", requireAdmin, async (_req: AuthedRequest, res:
 });
 
 /**
- * GET /admin/fraud/alerts
+ * @swagger
+ * /admin/fraud/alerts:
+ *   get:
+ *     summary: Get fraud alerts
+ *     description: Get open fraud alerts.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of fraud alerts
  */
 adminRouter.get("/fraud/alerts", requireAdmin, async (_req: AuthedRequest, res: Response) => {
   try {
@@ -791,7 +1223,38 @@ adminRouter.get("/fraud/alerts", requireAdmin, async (_req: AuthedRequest, res: 
 });
 
 /**
- * POST /admin/fraud/alerts/:alertId/resolve
+ * @swagger
+ * /admin/fraud/alerts/{alertId}/resolve:
+ *   post:
+ *     summary: Resolve fraud alert
+ *     description: Resolve a fraud alert.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: alertId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - resolution
+ *             properties:
+ *               resolution:
+ *                 type: string
+ *                 enum: [resolved, false_positive]
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Fraud alert resolved
  */
 adminRouter.post("/fraud/alerts/:alertId/resolve", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -808,7 +1271,34 @@ adminRouter.post("/fraud/alerts/:alertId/resolve", requireAdmin, async (req: Aut
 });
 
 /**
- * POST /admin/payouts/:payoutId/reverse
+ * @swagger
+ * /admin/payouts/{payoutId}/reverse:
+ *   post:
+ *     summary: Reverse payout
+ *     description: Reverse a payout.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: payoutId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Payout reversed
  */
 adminRouter.post(
   "/payouts/:payoutId/reverse",
@@ -839,7 +1329,32 @@ adminRouter.post(
 );
 
 /**
- * POST /admin/payouts/:payoutId/hold
+ * @swagger
+ * /admin/payouts/{payoutId}/hold:
+ *   post:
+ *     summary: Hold payout
+ *     description: Hold a payout for dispute.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: payoutId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Payout held
  */
 adminRouter.post(
   "/payouts/:payoutId/hold",
@@ -875,7 +1390,36 @@ adminRouter.post(
 );
 
 /**
- * POST /admin/payouts/hold/:adjustmentId/release
+ * @swagger
+ * /admin/payouts/hold/{adjustmentId}/release:
+ *   post:
+ *     summary: Release payout hold
+ *     description: Release a payout hold.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: adjustmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - resolution
+ *             properties:
+ *               resolution:
+ *                 type: string
+ *                 enum: [refund, release]
+ *     responses:
+ *       200:
+ *         description: Payout hold released
  */
 adminRouter.post(
   "/payouts/hold/:adjustmentId/release",
@@ -907,7 +1451,17 @@ adminRouter.post(
 );
 
 /**
- * GET /admin/payouts/reconciliation/flags
+ * @swagger
+ * /admin/payouts/reconciliation/flags:
+ *   get:
+ *     summary: Get payout reconciliation flags
+ *     description: Get payout reconciliation flags.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of reconciliation flags
  */
 adminRouter.get(
   "/payouts/reconciliation/flags",
@@ -924,7 +1478,37 @@ adminRouter.get(
 );
 
 /**
- * POST /admin/payouts/reconciliation/:payoutId/resolve
+ * @swagger
+ * /admin/payouts/reconciliation/{payoutId}/resolve:
+ *   post:
+ *     summary: Resolve reconciliation flag
+ *     description: Resolve a payout reconciliation flag.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: payoutId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [resolved, ignored]
+ *               note: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Reconciliation flag resolved
  */
 adminRouter.post(
   "/payouts/reconciliation/:payoutId/resolve",
@@ -949,8 +1533,34 @@ adminRouter.post(
 );
 
 /**
- * POST /admin/payouts/:cleanerId/pause
- * Toggle payout pause for a cleaner
+ * @swagger
+ * /admin/payouts/{cleanerId}/pause:
+ *   post:
+ *     summary: Pause cleaner payouts
+ *     description: Toggle payout pause for a cleaner.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: cleanerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paused
+ *             properties:
+ *               paused: { type: 'boolean' }
+ *     responses:
+ *       200:
+ *         description: Payout pause toggled
  */
 adminRouter.post("/payouts/:cleanerId/pause", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -983,8 +1593,34 @@ adminRouter.post("/payouts/:cleanerId/pause", requireAdmin, async (req: AuthedRe
 });
 
 /**
- * POST /admin/refunds/:jobId/approve
- * Approve and execute a refund to client (credit refund)
+ * @swagger
+ * /admin/refunds/{jobId}/approve:
+ *   post:
+ *     summary: Approve refund
+ *     description: Approve and execute a refund to client (credit refund).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason: { type: 'string', minLength: 3 }
+ *     responses:
+ *       200:
+ *         description: Refund approved and processed
  */
 const approveRefundSchema = z.object({
   reason: z.string().min(3),
@@ -1040,8 +1676,37 @@ adminRouter.post(
 );
 
 /**
- * POST /admin/disputes/:disputeId/route
- * Route a dispute to a queue or admin by updating metadata
+ * @swagger
+ * /admin/disputes/{disputeId}/route:
+ *   post:
+ *     summary: Route dispute
+ *     description: Route a dispute to a queue or admin by updating metadata.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: disputeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - routeTo
+ *             properties:
+ *               routeTo:
+ *                 type: string
+ *                 enum: [ops, finance, trust_safety, support]
+ *               note: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Dispute routed
  */
 const DISPUTE_ROUTE_QUEUES = ["ops", "finance", "trust_safety", "support"] as const;
 export const routeDisputeSchema = z.object({
@@ -1079,8 +1744,17 @@ adminRouter.post(
 );
 
 /**
- * GET /admin/system/stuck-jobs
- * Find stuck jobs
+ * @swagger
+ * /admin/system/stuck-jobs:
+ *   get:
+ *     summary: Find stuck jobs
+ *     description: Find jobs that are stuck in active states.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of stuck jobs
  */
 adminRouter.get("/system/stuck-jobs", requireAdmin, async (_req: AuthedRequest, res: Response) => {
   try {
@@ -1095,8 +1769,17 @@ adminRouter.get("/system/stuck-jobs", requireAdmin, async (_req: AuthedRequest, 
 });
 
 /**
- * GET /admin/system/stuck-payouts
- * Find stuck payouts
+ * @swagger
+ * /admin/system/stuck-payouts:
+ *   get:
+ *     summary: Find stuck payouts
+ *     description: Find payouts that are stuck.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of stuck payouts
  */
 adminRouter.get("/system/stuck-payouts", requireAdmin, async (_req: AuthedRequest, res: Response) => {
   try {
@@ -1111,8 +1794,17 @@ adminRouter.get("/system/stuck-payouts", requireAdmin, async (_req: AuthedReques
 });
 
 /**
- * GET /admin/system/ledger-issues
- * Find credit ledger inconsistencies
+ * @swagger
+ * /admin/system/ledger-issues:
+ *   get:
+ *     summary: Find ledger issues
+ *     description: Find credit ledger inconsistencies.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of ledger issues
  */
 adminRouter.get("/system/ledger-issues", requireAdmin, async (_req: AuthedRequest, res: Response) => {
   try {
@@ -1127,8 +1819,34 @@ adminRouter.get("/system/ledger-issues", requireAdmin, async (_req: AuthedReques
 });
 
 /**
- * POST /admin/repair/job/:jobId/force-complete
- * Force complete a stuck job
+ * @swagger
+ * /admin/repair/job/{jobId}/force-complete:
+ *   post:
+ *     summary: Force complete job
+ *     description: Force complete a stuck job.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Job force completed
  */
 const forceCompleteSchema = z.object({
   reason: z.string().min(1),
@@ -1153,8 +1871,35 @@ adminRouter.post(
 );
 
 /**
- * POST /admin/repair/job/:jobId/force-cancel
- * Force cancel a stuck job
+ * @swagger
+ * /admin/repair/job/{jobId}/force-cancel:
+ *   post:
+ *     summary: Force cancel job
+ *     description: Force cancel a stuck job.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason: { type: 'string' }
+ *               refundCredits: { type: 'boolean', default: true }
+ *     responses:
+ *       200:
+ *         description: Job force cancelled
  */
 const forceCancelSchema = z.object({
   reason: z.string().min(1),
@@ -1185,8 +1930,36 @@ adminRouter.post(
 );
 
 /**
- * POST /admin/repair/job/:jobId/reassign
- * Reassign a job to different cleaner
+ * @swagger
+ * /admin/repair/job/{jobId}/reassign:
+ *   post:
+ *     summary: Reassign job
+ *     description: Reassign a job to different cleaner.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newCleanerId
+ *               - reason
+ *             properties:
+ *               newCleanerId: { type: 'string', format: 'uuid' }
+ *               reason: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Job reassigned
  */
 const reassignSchema = z.object({
   newCleanerId: z.string().uuid(),
@@ -1217,8 +1990,24 @@ adminRouter.post(
 );
 
 /**
- * POST /admin/repair/payout/:payoutId/force-process
- * Force process a stuck payout
+ * @swagger
+ * /admin/repair/payout/{payoutId}/force-process:
+ *   post:
+ *     summary: Force process payout
+ *     description: Force process a stuck payout.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: payoutId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Payout force processed
  */
 adminRouter.post(
   "/repair/payout/:payoutId/force-process",
@@ -1238,8 +2027,36 @@ adminRouter.post(
 );
 
 /**
- * POST /admin/repair/credits/:userId/adjust
- * Adjust user credits directly
+ * @swagger
+ * /admin/repair/credits/{userId}/adjust:
+ *   post:
+ *     summary: Adjust credits (repair)
+ *     description: Adjust user credits directly (repair tool).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *               - reason
+ *             properties:
+ *               amount: { type: 'integer' }
+ *               reason: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Credits adjusted
  */
 const repairCreditsSchema = z.object({
   amount: z.number().int(),
@@ -1274,8 +2091,17 @@ adminRouter.post(
 // ============================================
 
 /**
- * GET /admin/fraud-alerts
- * Get open fraud alerts
+ * @swagger
+ * /admin/fraud-alerts:
+ *   get:
+ *     summary: Get fraud alerts
+ *     description: Get open fraud alerts.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of fraud alerts
  */
 adminRouter.get("/fraud-alerts", requireAdmin, async (_req: AuthedRequest, res: Response) => {
   try {
@@ -1290,8 +2116,37 @@ adminRouter.get("/fraud-alerts", requireAdmin, async (_req: AuthedRequest, res: 
 });
 
 /**
- * POST /admin/fraud-alerts/:alertId/resolve
- * Resolve a fraud alert
+ * @swagger
+ * /admin/fraud-alerts/{alertId}/resolve:
+ *   post:
+ *     summary: Resolve fraud alert
+ *     description: Resolve a fraud alert.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: alertId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - resolution
+ *             properties:
+ *               resolution:
+ *                 type: string
+ *                 enum: [resolved, false_positive]
+ *               notes: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Fraud alert resolved
  */
 const resolveFraudSchema = z.object({
   resolution: z.enum(["resolved", "false_positive"]),
@@ -1325,8 +2180,36 @@ adminRouter.post(
 // ============================================
 
 /**
- * GET /admin/invoices
- * List all invoices (admin view)
+ * @swagger
+ * /admin/invoices:
+ *   get:
+ *     summary: List all invoices
+ *     description: List all invoices with filters.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: requiresApproval
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: List of invoices
  */
 adminRouter.get("/invoices", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -1356,8 +2239,28 @@ adminRouter.get("/invoices", requireAdmin, async (req: AuthedRequest, res: Respo
 });
 
 /**
- * GET /admin/invoices/pending-approval
- * Get invoices requiring admin approval
+ * @swagger
+ * /admin/invoices/pending-approval:
+ *   get:
+ *     summary: Get pending approval invoices
+ *     description: Get invoices requiring admin approval.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: List of pending invoices
  */
 adminRouter.get("/invoices/pending-approval", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -1386,8 +2289,26 @@ adminRouter.get("/invoices/pending-approval", requireAdmin, async (req: AuthedRe
 });
 
 /**
- * GET /admin/invoices/:invoiceId
- * Get single invoice with full details
+ * @swagger
+ * /admin/invoices/{invoiceId}:
+ *   get:
+ *     summary: Get invoice details
+ *     description: Get single invoice with full details.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Invoice details
+ *       404:
+ *         description: Invoice not found
  */
 adminRouter.get("/invoices/:invoiceId", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
@@ -1410,8 +2331,32 @@ adminRouter.get("/invoices/:invoiceId", requireAdmin, async (req: AuthedRequest,
 });
 
 /**
- * PATCH /admin/invoices/:invoiceId/approve
- * Approve an invoice pending approval
+ * @swagger
+ * /admin/invoices/{invoiceId}/approve:
+ *   patch:
+ *     summary: Approve invoice
+ *     description: Approve an invoice pending approval.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               autoSend: { type: 'boolean', default: true }
+ *     responses:
+ *       200:
+ *         description: Invoice approved
  */
 const approveInvoiceSchema = z.object({
   autoSend: z.boolean().optional().default(true),
@@ -1455,8 +2400,34 @@ adminRouter.patch(
 );
 
 /**
- * PATCH /admin/invoices/:invoiceId/deny
- * Deny an invoice pending approval
+ * @swagger
+ * /admin/invoices/{invoiceId}/deny:
+ *   patch:
+ *     summary: Deny invoice
+ *     description: Deny an invoice pending approval.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason: { type: 'string', minLength: 3 }
+ *     responses:
+ *       200:
+ *         description: Invoice denied
  */
 const denyInvoiceSchema = z.object({
   reason: z.string().min(3),
@@ -1502,8 +2473,17 @@ adminRouter.patch(
 // ============================================
 
 /**
- * GET /admin/risk/review
- * Get list of users with active risk flags for review
+ * @swagger
+ * /admin/risk/review:
+ *   get:
+ *     summary: Get risk review queue
+ *     description: Get list of users with active risk flags for review.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Risk review queue
  */
 adminRouter.get("/risk/review", requireAdmin, async (_req: AuthedRequest, res: Response) => {
   try {
@@ -1525,8 +2505,30 @@ adminRouter.get("/risk/review", requireAdmin, async (_req: AuthedRequest, res: R
 });
 
 /**
- * GET /admin/risk/:userId
- * Get risk profile for a specific user
+ * @swagger
+ * /admin/risk/{userId}:
+ *   get:
+ *     summary: Get user risk profile
+ *     description: Get risk profile for a specific user.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [client, cleaner]
+ *           default: client
+ *     responses:
+ *       200:
+ *         description: User risk profile
  */
 adminRouter.get("/risk/:userId", requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {

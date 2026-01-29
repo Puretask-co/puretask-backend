@@ -18,8 +18,44 @@ clientEnhancedRouter.use(requireRole("client", "admin"));
 // ============================================
 
 /**
- * POST /client/bookings/draft
- * Save a draft booking
+ * @swagger
+ * /client/bookings/draft:
+ *   post:
+ *     summary: Save draft booking
+ *     description: Save a draft booking for later completion (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               address:
+ *                 type: string
+ *               scheduled_start_at:
+ *                 type: string
+ *                 format: date-time
+ *               scheduled_end_at:
+ *                 type: string
+ *                 format: date-time
+ *               service_type:
+ *                 type: string
+ *               duration_hours:
+ *                 type: number
+ *               add_ons:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Draft saved successfully
+ *       403:
+ *         description: Forbidden - clients only
  */
 const saveDraftSchema = z.object({
   address: z.string().optional(),
@@ -68,6 +104,21 @@ clientEnhancedRouter.post(
  * GET /client/bookings/draft
  * Get saved draft booking
  */
+/**
+ * @swagger
+ * /client/bookings/draft:
+ *   get:
+ *     summary: Get draft booking
+ *     description: Get saved draft booking (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Draft booking data
+ *       403:
+ *         description: Forbidden - clients only
+ */
 clientEnhancedRouter.get("/bookings/draft", async (req: JWTAuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
@@ -100,8 +151,19 @@ clientEnhancedRouter.get("/bookings/draft", async (req: JWTAuthedRequest, res: R
 // ============================================
 
 /**
- * GET /client/dashboard/insights
- * Get personalized insights for client
+ * @swagger
+ * /client/dashboard/insights:
+ *   get:
+ *     summary: Get dashboard insights
+ *     description: Get personalized insights for client dashboard (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard insights
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.get("/dashboard/insights", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -189,8 +251,19 @@ clientEnhancedRouter.get("/dashboard/insights", async (req: JWTAuthedRequest, re
 });
 
 /**
- * GET /client/dashboard/recommendations
- * Get cleaner recommendations
+ * @swagger
+ * /client/dashboard/cleaner-preferences:
+ *   get:
+ *     summary: Get cleaner recommendations
+ *     description: Get cleaner recommendations based on preferences (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cleaner recommendations
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.get(
   "/dashboard/recommendations",
@@ -278,8 +351,33 @@ clientEnhancedRouter.get(
 // ============================================
 
 /**
- * POST /client/search/saved
- * Save search preferences
+ * @swagger
+ * /client/search/saved:
+ *   post:
+ *     summary: Save search preferences
+ *     description: Save search preferences for reuse (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - filters
+ *             properties:
+ *               name:
+ *                 type: string
+ *               filters:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Search saved successfully
+ *       403:
+ *         description: Forbidden - clients only
  */
 const saveSearchSchema = z.object({
   name: z.string().min(1),
@@ -358,8 +456,19 @@ clientEnhancedRouter.get("/search/saved", async (req: JWTAuthedRequest, res: Res
 // ============================================
 
 /**
- * GET /client/favorites/recommendations
- * Get cleaner recommendations based on favorites
+ * @swagger
+ * /client/favorites/recommendations:
+ *   get:
+ *     summary: Get favorite recommendations
+ *     description: Get cleaner recommendations based on favorites (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cleaner recommendations
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.get(
   "/favorites/recommendations",
@@ -413,8 +522,19 @@ clientEnhancedRouter.get(
 );
 
 /**
- * GET /client/favorites/insights
- * Get insights about favorites
+ * @swagger
+ * /client/favorites/insights:
+ *   get:
+ *     summary: Get favorites insights
+ *     description: Get insights about favorite cleaners (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Favorites insights
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.get("/favorites/insights", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -475,8 +595,26 @@ clientEnhancedRouter.get("/favorites/insights", async (req: JWTAuthedRequest, re
 // ============================================
 
 /**
- * POST /client/recurring-bookings/:id/skip
- * Skip the next occurrence of a recurring booking
+ * @swagger
+ * /client/recurring-bookings/{id}/skip:
+ *   post:
+ *     summary: Skip recurring booking
+ *     description: Skip the next occurrence of a recurring booking (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Booking skipped successfully
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.post(
   "/recurring-bookings/:id/skip",
@@ -523,8 +661,26 @@ clientEnhancedRouter.post(
 );
 
 /**
- * GET /client/recurring-bookings/:id/suggestions
- * Get smart scheduling suggestions
+ * @swagger
+ * /client/recurring-bookings/{id}/suggestions:
+ *   get:
+ *     summary: Get scheduling suggestions
+ *     description: Get smart scheduling suggestions for recurring booking (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Scheduling suggestions
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.get(
   "/recurring-bookings/:id/suggestions",
@@ -647,8 +803,19 @@ clientEnhancedRouter.put(
 );
 
 /**
- * GET /client/profile/preferences
- * Get client preferences
+ * @swagger
+ * /client/profile/preferences:
+ *   get:
+ *     summary: Get profile preferences
+ *     description: Get client preferences (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile preferences
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.get("/profile/preferences", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -678,8 +845,31 @@ clientEnhancedRouter.get("/profile/preferences", async (req: JWTAuthedRequest, r
 });
 
 /**
- * POST /client/profile/photo
- * Upload profile photo
+ * @swagger
+ * /client/profile/photo:
+ *   post:
+ *     summary: Upload profile photo
+ *     description: Upload profile photo (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - photo_url
+ *             properties:
+ *               photo_url:
+ *                 type: string
+ *                 format: uri
+ *     responses:
+ *       200:
+ *         description: Photo uploaded successfully
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.post("/profile/photo", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -714,8 +904,40 @@ clientEnhancedRouter.post("/profile/photo", async (req: JWTAuthedRequest, res: R
 // ============================================
 
 /**
- * POST /client/reviews/:id/photos
- * Add photos to a review
+ * @swagger
+ * /client/reviews/{id}/photos:
+ *   post:
+ *     summary: Add photos to review
+ *     description: Add photos to a review (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - photo_urls
+ *             properties:
+ *               photo_urls:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uri
+ *     responses:
+ *       200:
+ *         description: Photos added successfully
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.post(
   "/reviews/:id/photos",
@@ -752,8 +974,19 @@ clientEnhancedRouter.post(
 );
 
 /**
- * GET /client/reviews/insights
- * Get review insights
+ * @swagger
+ * /client/reviews/insights:
+ *   get:
+ *     summary: Get review insights
+ *     description: Get review insights (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Review insights
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.get("/reviews/insights", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -789,8 +1022,26 @@ clientEnhancedRouter.get("/reviews/insights", async (req: JWTAuthedRequest, res:
 // ============================================
 
 /**
- * GET /client/jobs/:id/live-status
- * Get real-time job status
+ * @swagger
+ * /client/jobs/{id}/live-status:
+ *   get:
+ *     summary: Get live job status
+ *     description: Get real-time job status (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Live job status
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.get("/jobs/:id/live-status", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -836,8 +1087,30 @@ clientEnhancedRouter.get("/jobs/:id/live-status", async (req: JWTAuthedRequest, 
 });
 
 /**
- * POST /client/jobs/:id/add-to-calendar
- * Generate iCal file for booking
+ * @swagger
+ * /client/jobs/{id}/add-to-calendar:
+ *   post:
+ *     summary: Generate calendar file
+ *     description: Generate iCal file for booking (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: iCal file download
+ *         content:
+ *           text/calendar:
+ *             schema:
+ *               type: string
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.post(
   "/jobs/:id/add-to-calendar",
@@ -893,8 +1166,26 @@ END:VCALENDAR`;
 );
 
 /**
- * GET /client/jobs/:id/share-link
- * Get shareable link for booking
+ * @swagger
+ * /client/jobs/{id}/share-link:
+ *   get:
+ *     summary: Get shareable link
+ *     description: Get shareable link for booking (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Shareable link
+ *       403:
+ *         description: Forbidden - clients only
  */
 clientEnhancedRouter.get("/jobs/:id/share-link", async (req: JWTAuthedRequest, res: Response) => {
   try {
@@ -932,8 +1223,36 @@ clientEnhancedRouter.get("/jobs/:id/share-link", async (req: JWTAuthedRequest, r
 // ============================================
 
 /**
- * POST /client/credits/auto-refill
- * Setup credit auto-refill configuration
+ * @swagger
+ * /client/credits/auto-refill:
+ *   post:
+ *     summary: Setup auto-refill
+ *     description: Setup credit auto-refill configuration (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - enabled
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *               threshold:
+ *                 type: number
+ *                 minimum: 0
+ *               amount:
+ *                 type: number
+ *                 minimum: 0
+ *     responses:
+ *       200:
+ *         description: Auto-refill configured successfully
+ *       403:
+ *         description: Forbidden - clients only
  */
 const autoRefillSchema = z.object({
   enabled: z.boolean(),
