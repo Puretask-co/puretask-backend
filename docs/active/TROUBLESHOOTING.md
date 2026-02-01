@@ -1,4 +1,10 @@
-# Troubleshooting Guide
+# Troubleshooting
+
+**What it is:** Known issues and fixes (startup, DB, webhooks, performance).  
+**What it does:** Reduces time-to-fix for common problems.  
+**How we use it:** Check when something fails; add new issues as we find them.
+
+---
 
 ## Common Issues and Solutions
 

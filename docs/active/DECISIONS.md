@@ -1,25 +1,24 @@
-# Decisions
+﻿# Decisions
 
 > Canonical record of architectural/product decisions extracted from historical logs.
 > If a decision changes, add a new entry and mark the old one as superseded.
 
 ## Current active decisions (curated)
 
-Hand-curated list (~10–30). Each entry: **Decision** — **Why** — **Tradeoff**.
+Hand-curated list (~10â€“30). Each entry: **Decision** â€” **Why** â€” **Tradeoff**.
 
-- **Neon Postgres for DB** — Why: serverless scaling, branching, managed backups — Tradeoff: vendor dependency
-- **Railway for deploy** — Why: speed, simplicity, GitHub integration — Tradeoff: platform coupling
-- **n8n as event router** — Why: async workflows, retries, visibility — Tradeoff: extra service to run
-- **/health and /health/ready endpoints** — Why: monitoring, deploy checks, load balancer health — Tradeoff: none
-- **Canonical docs only (README, SETUP, ARCHITECTURE, RUNBOOK, DEPLOYMENT, TROUBLESHOOTING, DECISIONS)** — Why: single source of truth, no doc sprawl — Tradeoff: must append, not create new files
-- **Pre-commit guard for new .md** — Why: block new markdown outside docs/active or docs/archive — Tradeoff: must move new docs into approved paths
-- **Idempotency keys on money-adjacent endpoints** — Why: safe retries, no double charge — Tradeoff: client must send key, store responses
-- **Stripe for payments + Connect for payouts** — Why: global payments, compliance — Tradeoff: fees, Stripe dependency
-- **Sentry init once (instrument.js)** — Why: correct tracing, no double-capture — Tradeoff: must preload before app
-- **Layering: routes thin, services own logic** — Why: testability, clear boundaries — Tradeoff: more files, no DB in routes
+- **Neon Postgres for DB** â€” Why: serverless scaling, branching, managed backups â€” Tradeoff: vendor dependency
+- **Railway for deploy** â€” Why: speed, simplicity, GitHub integration â€” Tradeoff: platform coupling
+- **n8n as event router** â€” Why: async workflows, retries, visibility â€” Tradeoff: extra service to run
+- **/health and /health/ready endpoints** â€” Why: monitoring, deploy checks, load balancer health â€” Tradeoff: none
+- **Canonical docs only (README, SETUP, ARCHITECTURE, RUNBOOK, DEPLOYMENT, TROUBLESHOOTING, DECISIONS)** â€” Why: single source of truth, no doc sprawl â€” Tradeoff: must append, not create new files
+- **Pre-commit guard for new .md** â€” Why: block new markdown outside docs/active or docs/archive â€” Tradeoff: must move new docs into approved paths
+- **Idempotency keys on money-adjacent endpoints** â€” Why: safe retries, no double charge â€” Tradeoff: client must send key, store responses
+- **Stripe for payments + Connect for payouts** â€” Why: global payments, compliance â€” Tradeoff: fees, Stripe dependency
+- **Sentry init once (instrument.js)** â€” Why: correct tracing, no double-capture â€” Tradeoff: must preload before app
+- **Layering: routes thin, services own logic** â€” Why: testability, clear boundaries â€” Tradeoff: more files, no DB in routes
 
 ---
-
 ## Extracted from archive (auto)
 
 Raw lines matched from `docs/archive/raw`. For quick reference use the curated list above. Re-run `scripts\generate-decisions.ps1` to refresh.

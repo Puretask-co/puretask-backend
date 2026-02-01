@@ -1,5 +1,11 @@
 # PureTask Backend Architecture
 
+**What it is:** The high-level summary of our backend architecture (layers, rules, structure).  
+**What it does:** Describes how the codebase is organized (routes → services → DB/integrations) and what is allowed or forbidden.  
+**How we use it:** Read this first; use Architecture Principles and Layering Rules when adding or changing code.
+
+---
+
 ## Overview
 
 PureTask Backend is a Node.js/TypeScript API built with Express, PostgreSQL, and various third-party integrations. This document outlines the architectural patterns, layering rules, and design decisions.

@@ -83,28 +83,39 @@ $unique = $found | Sort-Object date, file, text | Select-Object -Unique date, fi
 # Group by date
 $grouped = $unique | Group-Object date | Sort-Object Name
 
-# Write DECISIONS.md
-$md = New-Object System.Collections.Generic.List[string]
-$md.Add("# Decisions")
-$md.Add("")
-$md.Add("> Canonical record of architectural/product decisions extracted from historical logs.")
-$md.Add("> If a decision changes, add a new entry and mark the old one as superseded.")
-$md.Add("")
-
-if ($unique.Count -eq 0) {
-  $md.Add("_No decisions detected yet. Add lines containing ""Decision: …"", ""We chose …"", ""Switched to …"", etc._")
-} else {
-  foreach ($g in $grouped) {
-    $md.Add("## $($g.Name)")
-    $md.Add("")
-    foreach ($item in $g.Group) {
-      $md.Add("- **$($item.text)** _(source: ``$($item.file)``)_")
-    }
-    $md.Add("")
+# Preserve "Current active decisions (curated)" if present; only overwrite from "## Extracted from archive (auto)"
+$curatedBlock = "# Decisions`n`n> Canonical record of architectural/product decisions extracted from historical logs.`n> If a decision changes, add a new entry and mark the old one as superseded.`n`n"
+if (Test-Path $outFile) {
+  $existing = Get-Content -Path $outFile -Raw -ErrorAction SilentlyContinue
+  $marker = "## Extracted from archive (auto)"
+  if ($existing -and $existing.IndexOf($marker) -ge 0) {
+    $curatedBlock = $existing.Substring(0, $existing.IndexOf($marker)).TrimEnd()
   }
 }
 
-$md -join "`n" | Set-Content -Encoding UTF8 -Path $outFile
+# Build only the "Extracted from archive (auto)" section
+$autoLines = New-Object System.Collections.Generic.List[string]
+$autoLines.Add("## Extracted from archive (auto)")
+$autoLines.Add("")
+$autoLines.Add("Raw lines matched from ``docs/archive/raw``. For quick reference use the curated list above. Re-run ``scripts\generate-decisions.ps1`` to refresh.")
+$autoLines.Add("")
+
+if ($unique.Count -eq 0) {
+  $autoLines.Add("_No decisions detected yet. Add lines containing ""Decision: …"", ""We chose …"", ""Switched to …"", etc._")
+} else {
+  foreach ($g in $grouped) {
+    $autoLines.Add("### $($g.Name)")
+    $autoLines.Add("")
+    foreach ($item in $g.Group) {
+      $autoLines.Add("- **$($item.text)** _(source: ``$($item.file)``)_")
+    }
+    $autoLines.Add("")
+  }
+}
+
+$fullContent = $curatedBlock + "`n" + ($autoLines -join "`n")
+$fullContent | Set-Content -Encoding UTF8 -Path $outFile -NoNewline
+$null = [System.IO.File]::AppendAllText($outFile, "`n")
 
 Write-Host "`n✅ Wrote $outFile" -ForegroundColor Green
 Write-Host "Decisions extracted: $($unique.Count)" -ForegroundColor Cyan

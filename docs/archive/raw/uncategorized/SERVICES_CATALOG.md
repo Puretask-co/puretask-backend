@@ -1,0 +1,61 @@
+# SERVICES_CATALOG
+
+List of service modules currently present in `src/services/`. Each file typically exposes domain-specific logic; inspect individual files for function signatures and side effects.
+
+- adminJobsService.ts
+- adminRepairService.ts
+- adminService.ts
+- aiService.ts
+- analyticsService.ts
+- authService.ts
+- availabilityService.ts
+- backgroundCheckService.ts
+- backupService.ts
+- calendarService.ts
+- chargebackProcessor.ts
+- cleanerClientsService.ts
+- cleanerGoalsService.ts
+- cleanerJobsService.ts
+- cleanerOnboardingService.ts
+- creditEconomyService.ts
+- creditsPurchaseService.ts
+- creditsService.ts
+- disputesService.ts
+- invoiceService.ts
+- jobEvents.ts
+- jobMatchingService.ts
+- jobPhotosService.ts
+- jobsService.ts
+- jobTrackingService.ts
+- kpiService.ts
+- managerDashboardService.ts
+- messagesService.ts
+- notifications/
+  - index.ts
+  - jobNotifications.ts
+  - notificationService.ts
+  - preferencesService.ts
+  - providers/
+    - onesignal.ts
+    - sendgrid.ts
+    - twilio.ts
+  - templates.ts
+  - types.ts
+- operationalMetricsService.ts
+- paymentService.ts
+- payoutImprovementsService.ts
+- payoutsService.ts
+- photosService.ts
+- premiumService.ts
+- propertiesService.ts
+- reconciliationService.ts
+- referralService.ts
+- refundProcessor.ts
+- reliabilityService.ts
+- stripeConnectService.ts
+- supportService.ts
+- teamsService.ts
+- userManagementService.ts
+- webhookRetryService.ts
+- weeklySummaryService.ts
+
