@@ -1,0 +1,35 @@
+---
+description: Documentation hygiene (canonical docs only, archive everything else)
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# PureTask Documentation Rules (Must Follow)
+
+## Canonical Docs Only
+- The ONLY "active" documentation lives in:
+  - docs/active/README.md
+  - docs/active/SETUP.md
+  - docs/active/ARCHITECTURE.md
+  - docs/active/RUNBOOK.md
+  - docs/active/DEPLOYMENT.md
+  - docs/active/TROUBLESHOOTING.md
+  - docs/active/DECISIONS.md
+
+## Do NOT create new markdown files
+- Never create new *.md files anywhere except:
+  - docs/active/
+  - docs/archive/
+
+## Where to put new info
+- If it's a setup/run instruction → append to docs/active/SETUP.md
+- If it's how the system fits together → append to docs/active/ARCHITECTURE.md
+- If it's ops/debugging → append to docs/active/RUNBOOK.md
+- If it's deployment/railway/prod → append to docs/active/DEPLOYMENT.md
+- If it's "known issue" troubleshooting → append to docs/active/TROUBLESHOOTING.md
+- If it's a choice we made and why → append to docs/active/DECISIONS.md
+
+## Archive policy
+- Historical notes, experiments, logs, old plans go in docs/archive/raw/
+- Never delete raw history. Only move it to archive.
