@@ -27,6 +27,15 @@
 - [Rollback a deploy](../runbooks/rollback-deploy.md)
 - [Handle a production incident](../runbooks/handle-incident.md)
 
+## Save points (checkpoints)
+
+| Tag / branch | When | Purpose |
+|--------------|------|---------|
+| `docs-governance-checkpoint-2026-01-31` | 2026-01-31 | Pre–Cursor restart; canonical docs, governance, archive moves, .cursorignore fix. |
+| `production-ready-backup` | — | Branch containing the above checkpoint. |
+
+To restore this exact state: `git checkout docs-governance-checkpoint-2026-01-31` or `git checkout production-ready-backup`.
+
 ## Archived history
 
 Raw historical notes live in `docs/archive/raw/` and are not edited.  
