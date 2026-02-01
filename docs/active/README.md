@@ -21,6 +21,8 @@
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Known issues and fixes |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Railway / production deploy and rollback |
 | [DECISIONS.md](./DECISIONS.md) | Architectural and product decisions (from logs) |
+| [FOUNDER_BACKEND_REFERENCE.md](./FOUNDER_BACKEND_REFERENCE.md) | Founder-level deep dive: what each piece is, where/when/how/why we use it, best practices. |
+| [FOUNDER_REFERENCE_CANDIDATES.md](./FOUNDER_REFERENCE_CANDIDATES.md) | List of systems, features, and functions to document in the same style (events, notifications, auth, payments, etc.). |
 
 ## Runbooks (detailed)
 
