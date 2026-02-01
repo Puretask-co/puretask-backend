@@ -51,3 +51,5 @@ desktop.ini
 
 # Documentation that's not actively used
 **/docs/archive/**
+
+**/*DAY_*.md

@@ -12,13 +12,15 @@
 
   Usage:
     pwsh -File scripts/classify-md.ps1
+    pwsh -File scripts/classify-md.ps1 -IncludeArchive   # full inventory including archive (report-only)
     pwsh -File scripts/classify-md.ps1 -Move
     pwsh -File scripts/classify-md.ps1 -Move -WhatIf
 #>
 
 param(
   [switch]$Move,
-  [switch]$WhatIf
+  [switch]$WhatIf,
+  [switch]$IncludeArchive
 )
 
 Set-StrictMode -Version Latest
@@ -93,10 +95,16 @@ function Get-MdCategory {
   return $winner.Key
 }
 
-# --- Gather markdown files
+# --- Gather markdown files (exclude archive unless -IncludeArchive for full report)
 $mdFiles = Get-ChildItem -Path $repoRoot -Recurse -File -Filter "*.md" |
-  Where-Object { $_.FullName -notmatch $ignoreDirRegex } |
-  Where-Object { $_.FullName -notmatch "\\docs\\archive\\raw\\" } # don't reprocess archived
+  Where-Object { $_.FullName -notmatch $ignoreDirRegex }
+if (-not $IncludeArchive) {
+  $archiveSegment = 'docs' + [IO.Path]::DirectorySeparatorChar + 'archive' + [IO.Path]::DirectorySeparatorChar + 'raw'
+  $mdFiles = $mdFiles | Where-Object {
+    $norm = $_.FullName.Replace('/', [IO.Path]::DirectorySeparatorChar)
+    $norm.IndexOf($archiveSegment, [StringComparison]::OrdinalIgnoreCase) -lt 0
+  }
+}
 
 $results = @()
 
@@ -173,6 +181,7 @@ if ($unc.Count -eq 0) {
 $lines -join "`n" | Set-Content -Encoding UTF8 -Path $mdPath
 
 Write-Host "`n=== MD CLASSIFICATION DONE ===" -ForegroundColor Cyan
+if ($IncludeArchive) { Write-Host "(Full inventory including docs/archive/raw; report only, no move)" -ForegroundColor Gray }
 Write-Host "Total scanned: $($results.Count)" -ForegroundColor Green
 foreach ($c in $counts) {
   Write-Host ("{0,-16} {1,6}" -f $c.Name, $c.Count) -ForegroundColor Green
@@ -188,9 +197,9 @@ if ($Move) {
   Write-Host "TIP: Run with -WhatIf first to preview." -ForegroundColor Yellow
 
   foreach ($r in $results) {
-    # Only move non-canonical stuff by default:
-    # - iterative_logs, experiments, uncategorized
-    # Keep reference_docs in place because you'll merge from them.
+    # Skip files already in archive (e.g. when -IncludeArchive was used for report-only)
+    if ($r.rel_path -match '^docs[\\/]archive[\\/]raw[\\/]') { continue }
+    # Only move non-canonical stuff: iterative_logs, experiments, uncategorized
     if ($r.category -in @("iterative_logs", "experiments", "uncategorized")) {
       $src = Join-Path $repoRoot $r.rel_path
       $destDir = Join-Path $archiveRoot $r.category
@@ -216,8 +225,8 @@ if ($Move) {
   }
 
   if (-not $WhatIf) {
-    Write-Host "`n✅ Move complete. Raw history preserved in docs/archive/raw/." -ForegroundColor Green
+    Write-Host "`n[OK] Move complete. Raw history preserved in docs/archive/raw/." -ForegroundColor Green
   } else {
-    Write-Host "`n✅ Preview complete (no files moved)." -ForegroundColor Green
+    Write-Host "`n[OK] Preview complete (no files moved)." -ForegroundColor Green
   }
 }
