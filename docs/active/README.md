@@ -34,6 +34,8 @@
 | `docs-governance-checkpoint-2026-01-31` | 2026-01-31 | Pre–Cursor restart; canonical docs, governance, archive moves, .cursorignore fix. |
 | `production-ready-backup` | — | Branch containing the above checkpoint. |
 
+History was rewritten (2026-01-31) to remove an exposed secret from SECURITY_GUARDRAILS.md; all branches and tags were force-pushed. Scripts: `scripts/rewrite-history-remove-secret.sh`, `scripts/fix-guardrails-secret.ps1`.
+
 To restore this exact state: `git checkout docs-governance-checkpoint-2026-01-31` or `git checkout production-ready-backup`.
 
 ## Archived history
