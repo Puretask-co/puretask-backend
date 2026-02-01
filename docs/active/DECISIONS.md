@@ -1,9 +1,30 @@
-﻿# Decisions
+# Decisions
 
 > Canonical record of architectural/product decisions extracted from historical logs.
 > If a decision changes, add a new entry and mark the old one as superseded.
 
-## undated
+## Current active decisions (curated)
+
+Hand-curated list (~10–30). Each entry: **Decision** — **Why** — **Tradeoff**.
+
+- **Neon Postgres for DB** — Why: serverless scaling, branching, managed backups — Tradeoff: vendor dependency
+- **Railway for deploy** — Why: speed, simplicity, GitHub integration — Tradeoff: platform coupling
+- **n8n as event router** — Why: async workflows, retries, visibility — Tradeoff: extra service to run
+- **/health and /health/ready endpoints** — Why: monitoring, deploy checks, load balancer health — Tradeoff: none
+- **Canonical docs only (README, SETUP, ARCHITECTURE, RUNBOOK, DEPLOYMENT, TROUBLESHOOTING, DECISIONS)** — Why: single source of truth, no doc sprawl — Tradeoff: must append, not create new files
+- **Pre-commit guard for new .md** — Why: block new markdown outside docs/active or docs/archive — Tradeoff: must move new docs into approved paths
+- **Idempotency keys on money-adjacent endpoints** — Why: safe retries, no double charge — Tradeoff: client must send key, store responses
+- **Stripe for payments + Connect for payouts** — Why: global payments, compliance — Tradeoff: fees, Stripe dependency
+- **Sentry init once (instrument.js)** — Why: correct tracing, no double-capture — Tradeoff: must preload before app
+- **Layering: routes thin, services own logic** — Why: testability, clear boundaries — Tradeoff: more files, no DB in routes
+
+---
+
+## Extracted from archive (auto)
+
+Raw lines matched from `docs/archive/raw`. For quick reference use the curated list above. Re-run `scripts\generate-decisions.ps1` to refresh.
+
+### undated
 
 - **| **Old Railway** | 10+ | `_archive/old-railway/` |** _(source: `docs\archive\raw\iterative_logs\COMPLETE_ORGANIZATION_SUMMARY.md`)_
 - **â”‚   â”œâ”€â”€ deployment/    â† Railway, environment, setup** _(source: `docs\archive\raw\iterative_logs\COMPLETE_ORGANIZATION_SUMMARY.md`)_
