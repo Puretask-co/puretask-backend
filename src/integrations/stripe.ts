@@ -10,7 +10,7 @@ import { logger } from "../lib/logger";
  * Initialized once and reused across the application
  */
 export const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-12-18.acacia",
+  apiVersion: "2024-06-20",
   typescript: true,
   maxNetworkRetries: 3,
   timeout: 30000,
@@ -18,7 +18,7 @@ export const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
 
 // Log Stripe initialization (without exposing keys)
 logger.info("stripe_client_initialized", {
-  apiVersion: "2024-12-18.acacia",
+  apiVersion: "2024-06-20",
   hasSecretKey: !!env.STRIPE_SECRET_KEY,
   isTestMode: env.STRIPE_SECRET_KEY?.startsWith("sk_test_"),
 });

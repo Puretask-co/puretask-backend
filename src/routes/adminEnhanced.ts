@@ -5,13 +5,13 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { jwtAuthMiddleware, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { query } from "../db/client";
 
 const adminEnhancedRouter = Router();
 
-adminEnhancedRouter.use(jwtAuthMiddleware);
-adminEnhancedRouter.use(requireRole("admin"));
+adminEnhancedRouter.use(requireAuth);
+adminEnhancedRouter.use(requireAdmin);
 
 // ============================================
 // DASHBOARD ENHANCEMENTS
@@ -32,7 +32,7 @@ adminEnhancedRouter.use(requireRole("admin"));
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/dashboard/realtime", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/dashboard/realtime", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // Get real-time metrics
     const metrics = await query(
@@ -58,7 +58,7 @@ adminEnhancedRouter.get("/dashboard/realtime", async (req: JWTAuthedRequest, res
       error: { code: "GET_METRICS_FAILED", message: "Failed to get real-time metrics" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -82,7 +82,7 @@ adminEnhancedRouter.get("/dashboard/realtime", async (req: JWTAuthedRequest, res
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/dashboard/alerts", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/dashboard/alerts", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { severity = "all" } = req.query;
 
@@ -160,7 +160,7 @@ adminEnhancedRouter.get("/dashboard/alerts", async (req: JWTAuthedRequest, res: 
       error: { code: "GET_ALERTS_FAILED", message: "Failed to get alerts" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -177,7 +177,7 @@ adminEnhancedRouter.get("/dashboard/alerts", async (req: JWTAuthedRequest, res: 
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/system/health", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/system/health", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // Check database connection
     const dbCheck = await query("SELECT NOW() as timestamp", []);
@@ -245,7 +245,7 @@ adminEnhancedRouter.get("/system/health", async (req: JWTAuthedRequest, res: Res
       error: { code: "GET_HEALTH_FAILED", message: "Failed to get system health" },
     });
   }
-});
+}));
 
 // ============================================
 // JOBS ENHANCEMENTS
@@ -295,7 +295,7 @@ const bulkActionSchema = z.object({
 adminEnhancedRouter.post(
   "/jobs/bulk-action",
   validateBody(bulkActionSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { job_ids, action, params } = req.body;
 
@@ -353,11 +353,13 @@ adminEnhancedRouter.post(
 
           res.setHeader("Content-Type", "text/csv");
           res.setHeader("Content-Disposition", "attachment; filename=jobs-export.csv");
-          return res.send(csvHeader + csvRows);
+          res.send(csvHeader + csvRows);
+          return;
         default:
-          return res.status(400).json({
+          res.status(400).json({
             error: { code: "INVALID_ACTION", message: "Invalid action" },
           });
+          return;
       }
 
       res.json({
@@ -374,8 +376,7 @@ adminEnhancedRouter.post(
         error: { code: "BULK_ACTION_FAILED", message: "Failed to perform bulk action" },
       });
     }
-  }
-);
+  }));
 
 /**
  * @swagger
@@ -392,7 +393,7 @@ adminEnhancedRouter.post(
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/jobs/insights", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/jobs/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // Stuck jobs
     const stuckJobs = await query(
@@ -451,7 +452,7 @@ adminEnhancedRouter.get("/jobs/insights", async (req: JWTAuthedRequest, res: Res
       error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
     });
   }
-});
+}));
 
 // ============================================
 // DISPUTES ENHANCEMENTS
@@ -481,7 +482,7 @@ adminEnhancedRouter.get("/jobs/insights", async (req: JWTAuthedRequest, res: Res
  */
 adminEnhancedRouter.post(
   "/disputes/:id/analyze",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { id } = req.params;
 
@@ -501,9 +502,10 @@ adminEnhancedRouter.post(
       );
 
       if (dispute.rows.length === 0) {
-        return res.status(404).json({
+        res.status(404).json({
           error: { code: "DISPUTE_NOT_FOUND", message: "Dispute not found" },
         });
+        return;
       }
 
       const disputeData = dispute.rows[0];
@@ -549,7 +551,7 @@ adminEnhancedRouter.post(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -566,7 +568,7 @@ adminEnhancedRouter.post(
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/disputes/insights", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/disputes/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // Common dispute reasons
     const commonReasons = await query(
@@ -625,7 +627,7 @@ adminEnhancedRouter.get("/disputes/insights", async (req: JWTAuthedRequest, res:
       error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
     });
   }
-});
+}));
 
 // ============================================
 // USERS ENHANCEMENTS
@@ -653,7 +655,7 @@ adminEnhancedRouter.get("/disputes/insights", async (req: JWTAuthedRequest, res:
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/users/:id/risk-profile", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/users/:id/risk-profile", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -713,7 +715,7 @@ adminEnhancedRouter.get("/users/:id/risk-profile", async (req: JWTAuthedRequest,
       error: { code: "GET_RISK_PROFILE_FAILED", message: "Failed to get risk profile" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -762,7 +764,7 @@ const riskActionSchema = z.object({
 adminEnhancedRouter.post(
   "/users/:id/risk-action",
   validateBody(riskActionSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { action, reason, duration } = req.body;
@@ -829,7 +831,7 @@ adminEnhancedRouter.post(
       });
     }
   }
-);
+));
 
 // ============================================
 // ANALYTICS ENHANCEMENTS
@@ -891,7 +893,7 @@ const customReportSchema = z.object({
 adminEnhancedRouter.post(
   "/analytics/custom-report",
   validateBody(customReportSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { name, metrics, date_range, filters } = req.body;
 
@@ -947,7 +949,7 @@ adminEnhancedRouter.post(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -964,7 +966,7 @@ adminEnhancedRouter.post(
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/analytics/insights", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/analytics/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // Revenue trend
     const revenueTrend = await query(
@@ -1018,7 +1020,7 @@ adminEnhancedRouter.get("/analytics/insights", async (req: JWTAuthedRequest, res
       error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
     });
   }
-});
+}));
 
 // ============================================
 // FINANCE ENHANCEMENTS
@@ -1045,7 +1047,7 @@ adminEnhancedRouter.get("/analytics/insights", async (req: JWTAuthedRequest, res
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/finance/forecast", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/finance/forecast", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { months = 3 } = req.query;
 
@@ -1094,7 +1096,7 @@ adminEnhancedRouter.get("/finance/forecast", async (req: JWTAuthedRequest, res: 
       error: { code: "GET_FORECAST_FAILED", message: "Failed to get forecast" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -1122,7 +1124,7 @@ adminEnhancedRouter.get("/finance/forecast", async (req: JWTAuthedRequest, res: 
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/finance/reports", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/finance/reports", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { start_date, end_date } = req.query;
 
@@ -1183,7 +1185,7 @@ adminEnhancedRouter.get("/finance/reports", async (req: JWTAuthedRequest, res: R
       error: { code: "GET_REPORTS_FAILED", message: "Failed to get reports" },
     });
   }
-});
+}));
 
 // ============================================
 // COMMUNICATION ENHANCEMENTS
@@ -1204,7 +1206,7 @@ adminEnhancedRouter.get("/finance/reports", async (req: JWTAuthedRequest, res: R
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/communication/templates", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/communication/templates", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const templates = await query(
       `
@@ -1233,7 +1235,7 @@ adminEnhancedRouter.get("/communication/templates", async (req: JWTAuthedRequest
       error: { code: "GET_TEMPLATES_FAILED", message: "Failed to get templates" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -1286,7 +1288,7 @@ const sendMessageSchema = z.object({
 adminEnhancedRouter.post(
   "/communication/send",
   validateBody(sendMessageSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { template_id, subject, body, recipients, channel } = req.body;
 
@@ -1307,7 +1309,7 @@ adminEnhancedRouter.post(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -1324,7 +1326,7 @@ adminEnhancedRouter.post(
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/communication/analytics", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/communication/analytics", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const analytics = await query(
       `
@@ -1349,7 +1351,7 @@ adminEnhancedRouter.get("/communication/analytics", async (req: JWTAuthedRequest
       error: { code: "GET_ANALYTICS_FAILED", message: "Failed to get analytics" },
     });
   }
-});
+}));
 
 // ============================================
 // RISK ENHANCEMENTS
@@ -1370,7 +1372,7 @@ adminEnhancedRouter.get("/communication/analytics", async (req: JWTAuthedRequest
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/risk/scoring", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/risk/scoring", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const riskScores = await query(
       `
@@ -1398,7 +1400,7 @@ adminEnhancedRouter.get("/risk/scoring", async (req: JWTAuthedRequest, res: Resp
       error: { code: "GET_RISK_SCORING_FAILED", message: "Failed to get risk scoring" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -1442,7 +1444,7 @@ const mitigateRiskSchema = z.object({
 adminEnhancedRouter.post(
   "/risk/mitigate",
   validateBody(mitigateRiskSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { user_id, action, reason } = req.body;
       const adminId = req.user!.id;
@@ -1467,7 +1469,7 @@ adminEnhancedRouter.post(
       });
     }
   }
-);
+));
 
 // ============================================
 // REPORTS ENHANCEMENTS
@@ -1499,7 +1501,7 @@ adminEnhancedRouter.post(
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.post("/reports/build", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.post("/reports/build", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // Similar to analytics/custom-report
     res.json({ success: true, message: "Report building functionality" });
@@ -1512,7 +1514,7 @@ adminEnhancedRouter.post("/reports/build", async (req: JWTAuthedRequest, res: Re
       error: { code: "BUILD_REPORT_FAILED", message: "Failed to build report" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -1560,7 +1562,7 @@ const scheduleReportSchema = z.object({
 adminEnhancedRouter.post(
   "/reports/schedule",
   validateBody(scheduleReportSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { report_id, frequency, recipients } = req.body;
 
@@ -1584,17 +1586,28 @@ adminEnhancedRouter.post(
       });
     }
   }
-);
+));
 
 // ============================================
 // SETTINGS ENHANCEMENTS
 // ============================================
 
 /**
- * GET /admin/settings/feature-flags
- * Get feature flags
+ * @swagger
+ * /admin/settings/feature-flags:
+ *   get:
+ *     summary: Get feature flags
+ *     description: Get system feature flags (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Feature flags object
+ *       403:
+ *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/settings/feature-flags", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/settings/feature-flags", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // Feature flags would be stored in database or config
     const featureFlags = {
@@ -1615,13 +1628,29 @@ adminEnhancedRouter.get("/settings/feature-flags", async (req: JWTAuthedRequest,
       error: { code: "GET_FEATURE_FLAGS_FAILED", message: "Failed to get feature flags" },
     });
   }
-});
+}));
 
 /**
- * GET /admin/settings/audit-log
- * Get settings audit log
+ * @swagger
+ * /admin/settings/audit-log:
+ *   get:
+ *     summary: Get settings audit log
+ *     description: Get settings audit log entries (admin only).
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *         description: Max entries to return
+ *     responses:
+ *       200:
+ *         description: Audit log entries
+ *       403:
+ *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/settings/audit-log", async (req: JWTAuthedRequest, res: Response) => {
+adminEnhancedRouter.get("/settings/audit-log", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { limit = 50 } = req.query;
 
@@ -1654,6 +1683,6 @@ adminEnhancedRouter.get("/settings/audit-log", async (req: JWTAuthedRequest, res
       error: { code: "GET_AUDIT_LOG_FAILED", message: "Failed to get audit log" },
     });
   }
-});
+}));
 
 export default adminEnhancedRouter;

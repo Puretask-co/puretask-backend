@@ -7,6 +7,28 @@ import app from "../../index";
 import { computeN8nSignature } from "../../lib/auth";
 
 describe("Events API - Smoke Tests", () => {
+  describe("POST /n8n/events", () => {
+    it("should reject invalid signature", async () => {
+      const body = { eventType: "test_event" };
+      const response = await request(app)
+        .post("/n8n/events")
+        .set("x-n8n-signature", "invalid")
+        .send(body);
+      expect(response.status).toBe(401);
+      expect(response.body.error?.code).toBe("INVALID_SIGNATURE");
+    });
+
+    it("should accept valid event with correct signature", async () => {
+      const body = { eventType: "n8n_test", payload: { source: "n8n" } };
+      const signature = computeN8nSignature(body);
+      const response = await request(app)
+        .post("/n8n/events")
+        .set("x-n8n-signature", signature)
+        .send(body);
+      expect(response.status).toBe(204);
+    });
+  });
+
   describe("POST /events", () => {
     it("should reject invalid webhook secret", async () => {
       const body = { event_type: "test_event" };

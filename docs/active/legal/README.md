@@ -1,0 +1,16 @@
+# Legal & IC Artifacts
+
+**Purpose:** Single place for TOS, IC safeguards, AB5 analysis, lawyer notes, and in-app copy. Linked from [MASTER_CHECKLIST.md](../MASTER_CHECKLIST.md) § Legal & IC Deliverables.
+
+**Index (create files as you implement):**
+
+| File | Purpose |
+|------|---------|
+| [TOS_CONSOLIDATED.md](./TOS_CONSOLIDATED.md) | Single master TOS for counsel (merge all TOS sections) |
+| [IC_SAFEGUARDS_APPENDIX.md](./IC_SAFEGUARDS_APPENDIX.md) | Full text for TOS appendix + in-app |
+| [AB5_ANALYSIS.md](./AB5_ANALYSIS.md) | California AB5 / ABC Test prong-by-prong memo |
+| [LAWYER_REVIEW_NOTES.md](./LAWYER_REVIEW_NOTES.md) | Rationale per TOS clause (for counsel) |
+| [IN_APP_COPY_CLEANER.md](./IN_APP_COPY_CLEANER.md) | IC-safe bullets for cleaner app |
+| [IN_APP_COPY_CLIENT.md](./IN_APP_COPY_CLIENT.md) | IC-safe bullets for client app |
+
+Create each file when the content is ready; until then, the list in MASTER_CHECKLIST is the source of what was produced.

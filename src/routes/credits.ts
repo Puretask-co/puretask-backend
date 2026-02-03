@@ -6,7 +6,7 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { jwtAuthMiddleware, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import {
   getCreditPackages,
   createCreditCheckoutSession,
@@ -44,8 +44,7 @@ creditsRouter.get("/packages", (req, res: Response) => {
   res.json({ packages });
 });
 
-// All other routes require authentication
-creditsRouter.use(jwtAuthMiddleware);
+creditsRouter.use(requireAuth);
 
 /**
  * @swagger
@@ -76,7 +75,7 @@ creditsRouter.use(jwtAuthMiddleware);
 creditsRouter.get(
   "/balance",
   requireRole("client"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const balance = await getUserBalance(req.user!.id);
       res.json({ balance });
@@ -89,7 +88,7 @@ creditsRouter.get(
         error: { code: "GET_BALANCE_FAILED", message: "Failed to get balance" },
       });
     }
-  }
+  })
 );
 
 /**
@@ -156,7 +155,7 @@ creditsRouter.post(
   "/checkout",
   requireRole("client"),
   validateBody(checkoutSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { packageId, successUrl, cancelUrl } = req.body;
 
@@ -175,16 +174,17 @@ creditsRouter.post(
       });
 
       if ((error as Error).message === "Invalid credit package") {
-        return res.status(400).json({
+        res.status(400).json({
           error: { code: "INVALID_PACKAGE", message: "Invalid credit package" },
         });
+        return;
       }
 
       res.status(500).json({
         error: { code: "CHECKOUT_FAILED", message: "Failed to create checkout" },
       });
     }
-  }
+  })
 );
 
 /**
@@ -227,7 +227,7 @@ creditsRouter.post(
 creditsRouter.get(
   "/history",
   requireRole("client"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { limit = "50" } = req.query;
       const history = await getCreditHistory(
@@ -244,7 +244,7 @@ creditsRouter.get(
         error: { code: "GET_HISTORY_FAILED", message: "Failed to get history" },
       });
     }
-  }
+  })
 );
 
 /**
@@ -288,7 +288,7 @@ creditsRouter.get(
 creditsRouter.get(
   "/purchases",
   requireRole("client"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { limit = "50" } = req.query;
       const purchases = await getPurchaseHistory(
@@ -305,7 +305,7 @@ creditsRouter.get(
         error: { code: "GET_PURCHASES_FAILED", message: "Failed to get purchases" },
       });
     }
-  }
+  })
 );
 
 export default creditsRouter;

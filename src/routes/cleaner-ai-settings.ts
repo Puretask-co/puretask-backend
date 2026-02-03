@@ -7,13 +7,11 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { query, withTransaction } from "../db/client";
-import { jwtAuthMiddleware } from "../middleware/jwtAuth";
-import { AuthedRequest } from "../types/express";
+import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 
 const router = Router();
 
-// Apply authentication to all routes
-router.use(jwtAuthMiddleware);
+router.use(requireAuth);
 
 // ============================================
 // VALIDATION SCHEMAS
@@ -76,7 +74,7 @@ const updatePreferencesSchema = z.object({
 // GET ALL AI SETTINGS
 // ============================================
 
-router.get("/settings", async (req: AuthedRequest, res) => {
+router.get("/settings", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -120,13 +118,13 @@ router.get("/settings", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch settings" },
     });
   }
-});
+}));
 
 // ============================================
 // GET SETTINGS BY CATEGORY
 // ============================================
 
-router.get("/settings/:category", async (req: AuthedRequest, res) => {
+router.get("/settings/:category", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { category } = req.params;
@@ -155,13 +153,13 @@ router.get("/settings/:category", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch settings" },
     });
   }
-});
+}));
 
 // ============================================
 // UPDATE SPECIFIC SETTING
 // ============================================
 
-router.patch("/settings/:settingKey", async (req: AuthedRequest, res) => {
+router.patch("/settings/:settingKey", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { settingKey } = req.params;
@@ -198,9 +196,10 @@ router.patch("/settings/:settingKey", async (req: AuthedRequest, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "NOT_FOUND", message: "Setting not found" },
       });
+      return;
     }
 
     res.json({
@@ -209,30 +208,32 @@ router.patch("/settings/:settingKey", async (req: AuthedRequest, res) => {
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", details: error.errors },
       });
+      return;
     }
     console.error("Error updating setting:", error);
     res.status(500).json({
       error: { code: "INTERNAL_ERROR", message: "Failed to update setting" },
     });
   }
-});
+}));
 
 // ============================================
 // BULK UPDATE SETTINGS
 // ============================================
 
-router.post("/settings/bulk-update", async (req: AuthedRequest, res) => {
+router.post("/settings/bulk-update", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { settings } = req.body;
 
     if (!Array.isArray(settings)) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", message: "Settings must be an array" },
       });
+      return;
     }
 
     await withTransaction(async (client) => {
@@ -265,18 +266,18 @@ router.post("/settings/bulk-update", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to update settings" },
     });
   }
-});
+}));
 
 // ============================================
 // GET ALL TEMPLATES
 // ============================================
 
-router.get("/templates", async (req: AuthedRequest, res) => {
+router.get("/templates", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { type, active } = req.query;
 
-    let query = `
+    let sql = `
       SELECT 
         id,
         template_type as type,
@@ -295,18 +296,18 @@ router.get("/templates", async (req: AuthedRequest, res) => {
     const params: any[] = [cleanerId];
 
     if (type) {
-      query += ` AND template_type = $${params.length + 1}`;
+      sql += ` AND template_type = $${params.length + 1}`;
       params.push(type);
     }
 
     if (active !== undefined) {
-      query += ` AND is_active = $${params.length + 1}`;
+      sql += ` AND is_active = $${params.length + 1}`;
       params.push(active === 'true');
     }
 
-    query += ` ORDER BY template_type, is_default DESC, template_name`;
+    sql += ` ORDER BY template_type, is_default DESC, template_name`;
 
-    const result = await query(query, params);
+    const result = await query(sql, params);
 
     res.json({
       templates: result.rows,
@@ -318,13 +319,13 @@ router.get("/templates", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch templates" },
     });
   }
-});
+}));
 
 // ============================================
 // CREATE TEMPLATE
 // ============================================
 
-router.post("/templates", async (req: AuthedRequest, res) => {
+router.post("/templates", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const validated = createTemplateSchema.parse(req.body);
@@ -358,22 +359,23 @@ router.post("/templates", async (req: AuthedRequest, res) => {
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", details: error.errors },
       });
+      return;
     }
     console.error("Error creating template:", error);
     res.status(500).json({
       error: { code: "INTERNAL_ERROR", message: "Failed to create template" },
     });
   }
-});
+}));
 
 // ============================================
 // UPDATE TEMPLATE
 // ============================================
 
-router.patch("/templates/:templateId", async (req: AuthedRequest, res) => {
+router.patch("/templates/:templateId", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { templateId } = req.params;
@@ -417,9 +419,10 @@ router.patch("/templates/:templateId", async (req: AuthedRequest, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "NOT_FOUND", message: "Template not found" },
       });
+      return;
     }
 
     res.json({
@@ -428,7 +431,7 @@ router.patch("/templates/:templateId", async (req: AuthedRequest, res) => {
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", details: error.errors },
       });
     }
@@ -437,13 +440,13 @@ router.patch("/templates/:templateId", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to update template" },
     });
   }
-});
+}));
 
 // ============================================
 // DELETE TEMPLATE
 // ============================================
 
-router.delete("/templates/:templateId", async (req: AuthedRequest, res) => {
+router.delete("/templates/:templateId", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { templateId } = req.params;
@@ -456,7 +459,7 @@ router.delete("/templates/:templateId", async (req: AuthedRequest, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "NOT_FOUND", message: "Template not found" },
       });
     }
@@ -468,18 +471,18 @@ router.delete("/templates/:templateId", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to delete template" },
     });
   }
-});
+}));
 
 // ============================================
 // GET QUICK RESPONSES
 // ============================================
 
-router.get("/quick-responses", async (req: AuthedRequest, res) => {
+router.get("/quick-responses", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { category } = req.query;
 
-    let query = `
+    let sql = `
       SELECT 
         id,
         response_category as category,
@@ -495,13 +498,13 @@ router.get("/quick-responses", async (req: AuthedRequest, res) => {
     const params: any[] = [cleanerId];
 
     if (category) {
-      query += ` AND response_category = $2`;
+      sql += ` AND response_category = $2`;
       params.push(category);
     }
 
-    query += ` ORDER BY is_favorite DESC, usage_count DESC, created_at DESC`;
+    sql += ` ORDER BY is_favorite DESC, usage_count DESC, created_at DESC`;
 
-    const result = await query(query, params);
+    const result = await query(sql, params);
 
     res.json({
       responses: result.rows,
@@ -513,13 +516,13 @@ router.get("/quick-responses", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch responses" },
     });
   }
-});
+}));
 
 // ============================================
 // CREATE QUICK RESPONSE
 // ============================================
 
-router.post("/quick-responses", async (req: AuthedRequest, res) => {
+router.post("/quick-responses", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const validated = createQuickResponseSchema.parse(req.body);
@@ -548,7 +551,7 @@ router.post("/quick-responses", async (req: AuthedRequest, res) => {
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", details: error.errors },
       });
     }
@@ -557,13 +560,13 @@ router.post("/quick-responses", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to create response" },
     });
   }
-});
+}));
 
 // ============================================
 // UPDATE QUICK RESPONSE
 // ============================================
 
-router.patch("/quick-responses/:responseId", async (req: AuthedRequest, res) => {
+router.patch("/quick-responses/:responseId", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { responseId } = req.params;
@@ -606,9 +609,10 @@ router.patch("/quick-responses/:responseId", async (req: AuthedRequest, res) => 
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "NOT_FOUND", message: "Response not found" },
       });
+      return;
     }
 
     res.json({
@@ -617,7 +621,7 @@ router.patch("/quick-responses/:responseId", async (req: AuthedRequest, res) => 
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", details: error.errors },
       });
     }
@@ -626,13 +630,13 @@ router.patch("/quick-responses/:responseId", async (req: AuthedRequest, res) => 
       error: { code: "INTERNAL_ERROR", message: "Failed to update response" },
     });
   }
-});
+}));
 
 // ============================================
 // DELETE QUICK RESPONSE
 // ============================================
 
-router.delete("/quick-responses/:responseId", async (req: AuthedRequest, res) => {
+router.delete("/quick-responses/:responseId", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { responseId } = req.params;
@@ -645,7 +649,7 @@ router.delete("/quick-responses/:responseId", async (req: AuthedRequest, res) =>
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "NOT_FOUND", message: "Response not found" },
       });
     }
@@ -657,13 +661,13 @@ router.delete("/quick-responses/:responseId", async (req: AuthedRequest, res) =>
       error: { code: "INTERNAL_ERROR", message: "Failed to delete response" },
     });
   }
-});
+}));
 
 // ============================================
 // GET AI PREFERENCES
 // ============================================
 
-router.get("/preferences", async (req: AuthedRequest, res) => {
+router.get("/preferences", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -697,13 +701,14 @@ router.get("/preferences", async (req: AuthedRequest, res) => {
 
     if (result.rows.length === 0) {
       // Create default preferences
-      const newPrefs = await db.query(
+      const newPrefs = await query(
         `INSERT INTO cleaner_ai_preferences (cleaner_id)
          VALUES ($1)
          RETURNING *`,
         [cleanerId]
       );
-      return res.json({ preferences: newPrefs.rows[0] });
+      res.json({ preferences: newPrefs.rows[0] });
+      return;
     }
 
     res.json({ preferences: result.rows[0] });
@@ -713,13 +718,13 @@ router.get("/preferences", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch preferences" },
     });
   }
-});
+}));
 
 // ============================================
 // UPDATE AI PREFERENCES
 // ============================================
 
-router.patch("/preferences", async (req: AuthedRequest, res) => {
+router.patch("/preferences", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const validated = updatePreferencesSchema.parse(req.body);
@@ -761,9 +766,10 @@ router.patch("/preferences", async (req: AuthedRequest, res) => {
     });
 
     if (updates.length === 0) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", message: "No valid fields to update" },
       });
+      return;
     }
 
     updates.push(`updated_at = NOW()`);
@@ -782,27 +788,28 @@ router.patch("/preferences", async (req: AuthedRequest, res) => {
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", details: error.errors },
       });
+      return;
     }
     console.error("Error updating preferences:", error);
     res.status(500).json({
       error: { code: "INTERNAL_ERROR", message: "Failed to update preferences" },
     });
   }
-});
+}));
 
 // ============================================
 // GET AI STATS & INSIGHTS
 // ============================================
 
-router.get("/insights", async (req: AuthedRequest, res) => {
+router.get("/insights", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
     // Get template usage stats
-    const templateStats = await db.query(
+    const templateStats = await query(
       `SELECT 
         template_type,
         COUNT(*) as count,
@@ -814,7 +821,7 @@ router.get("/insights", async (req: AuthedRequest, res) => {
     );
 
     // Get quick response stats
-    const responseStats = await db.query(
+    const responseStats = await query(
       `SELECT 
         response_category,
         COUNT(*) as count,
@@ -827,7 +834,7 @@ router.get("/insights", async (req: AuthedRequest, res) => {
     );
 
     // Get total settings enabled/disabled
-    const settingsStats = await db.query(
+    const settingsStats = await query(
       `SELECT 
         COUNT(*) FILTER (WHERE is_enabled = true) as enabled,
         COUNT(*) FILTER (WHERE is_enabled = false) as disabled
@@ -848,7 +855,7 @@ router.get("/insights", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch insights" },
     });
   }
-});
+}));
 
 export default router;
 

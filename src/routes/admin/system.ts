@@ -1,16 +1,14 @@
 // src/routes/admin/system.ts
 import { Router, Response, NextFunction } from 'express';
-import { AuthedRequest } from '../../types/express';
+import { requireAuth, requireAdmin, requireSuperAdmin, AuthedRequest, authedHandler } from '../../middleware/authCanonical';
 import { query } from '../../db/client';
-import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
-import { requireAdmin, requireSuperAdmin } from '../../middleware/adminAuth';
 import { logger } from '../../lib/logger';
 import { SystemConfig, AdminAuditLogEntry } from '../../types/admin';
 
 const router = Router();
 
-router.use(jwtAuthMiddleware);
-router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
+router.use(requireAuth);
+router.use(requireAdmin);
 
 /**
  * @swagger
@@ -25,7 +23,7 @@ router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, n
  *       200:
  *         description: System configuration
  */
-router.get('/config', async (req: AuthedRequest, res: Response) => {
+router.get('/config', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // In a real system, this would come from a config table
     // For now, return placeholder structure
@@ -57,7 +55,7 @@ router.get('/config', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching system config', { error });
     res.status(500).json({ error: 'Failed to fetch system config' });
   }
-});
+}));
 
 /**
  * @swagger
@@ -84,7 +82,7 @@ router.get('/config', async (req: AuthedRequest, res: Response) => {
  *       200:
  *         description: Configuration updated
  */
-router.patch('/config', requireSuperAdmin, async (req: AuthedRequest, res: Response) => {
+router.patch('/config', requireSuperAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { section, updates } = req.body;
 
@@ -113,7 +111,7 @@ router.patch('/config', requireSuperAdmin, async (req: AuthedRequest, res: Respo
     logger.error('Error updating system config', { error });
     res.status(500).json({ error: 'Failed to update system config' });
   }
-});
+}));
 
 /**
  * @swagger
@@ -128,7 +126,7 @@ router.patch('/config', requireSuperAdmin, async (req: AuthedRequest, res: Respo
  *       200:
  *         description: System health status
  */
-router.get('/health', async (req: AuthedRequest, res: Response) => {
+router.get('/health', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // Check database connection
     const dbCheck = await query('SELECT NOW()');
@@ -156,7 +154,7 @@ router.get('/health', async (req: AuthedRequest, res: Response) => {
           total: process.memoryUsage().heapTotal / 1024 / 1024
         }
       },
-      issues: []
+      issues: [] as string[]
     };
 
     if (errorCount >= 10) {
@@ -171,13 +169,13 @@ router.get('/health', async (req: AuthedRequest, res: Response) => {
       error: 'Failed to check system health' 
     });
   }
-});
+}));
 
 /**
  * GET /admin/system/audit-log
  * Get admin audit log
  */
-router.get('/audit-log', async (req: AuthedRequest, res: Response) => {
+router.get('/audit-log', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const {
       adminId,
@@ -262,13 +260,13 @@ router.get('/audit-log', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching audit log', { error });
     res.status(500).json({ error: 'Failed to fetch audit log' });
   }
-});
+}));
 
 /**
  * GET /admin/system/stats
  * Get overall system statistics
  */
-router.get('/stats', async (req: AuthedRequest, res: Response) => {
+router.get('/stats', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const stats = await query(`
       SELECT 
@@ -288,13 +286,13 @@ router.get('/stats', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching system stats', { error });
     res.status(500).json({ error: 'Failed to fetch system stats' });
   }
-});
+}));
 
 /**
  * GET /admin/system/dashboard
  * Get admin dashboard overview data
  */
-router.get('/dashboard', async (req: AuthedRequest, res: Response) => {
+router.get('/dashboard', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // Get overview stats
     const overviewStats = await query(`
@@ -370,7 +368,7 @@ router.get('/dashboard', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching dashboard data', { error });
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
   }
-});
+}));
 
 export default router;
 

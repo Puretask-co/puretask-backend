@@ -1,16 +1,14 @@
 // src/routes/admin/clients.ts
 import { Router, Response, NextFunction, Request } from 'express';
-import { AuthedRequest } from '../../types/express';
+import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from '../../middleware/authCanonical';
 import { query } from '../../db/client';
-import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
-import { requireAdmin } from '../../middleware/adminAuth';
 import { logger } from '../../lib/logger';
 import { ClientManagementItem } from '../../types/admin';
 
 const router = Router();
 
-router.use(jwtAuthMiddleware);
-router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
+router.use(requireAuth);
+router.use(requireAdmin);
 
 /**
  * @swagger
@@ -53,7 +51,7 @@ router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, n
  *       200:
  *         description: List of clients
  */
-router.get('/', async (req: AuthedRequest, res: Response) => {
+router.get('/', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const {
       status,
@@ -230,13 +228,13 @@ router.get('/', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching admin clients', { error });
     res.status(500).json({ error: 'Failed to fetch clients' });
   }
-});
+}));
 
 /**
  * GET /admin/clients/:id
  * Get detailed client information
  */
-router.get('/:id', async (req: AuthedRequest, res: Response) => {
+router.get('/:id', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -293,7 +291,8 @@ router.get('/:id', async (req: AuthedRequest, res: Response) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Client not found' });
+      res.status(404).json({ error: 'Client not found' });
+      return;
     }
 
     res.json(result.rows[0]);
@@ -301,13 +300,13 @@ router.get('/:id', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching client details', { error, clientId: req.params.id });
     res.status(500).json({ error: 'Failed to fetch client details' });
   }
-});
+}));
 
 /**
  * GET /admin/clients/:id/bookings
  * Get all bookings for a client
  */
-router.get('/:id/bookings', async (req: AuthedRequest, res: Response) => {
+router.get('/:id/bookings', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { limit = '20', offset = '0' } = req.query;
@@ -330,13 +329,13 @@ router.get('/:id/bookings', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching client bookings', { error, clientId: req.params.id });
     res.status(500).json({ error: 'Failed to fetch client bookings' });
   }
-});
+}));
 
 /**
  * GET /admin/clients/stats/summary
  * Get client statistics summary
  */
-router.get('/stats/summary', async (req: AuthedRequest, res: Response) => {
+router.get('/stats/summary', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const stats = await query(`
       SELECT 
@@ -360,19 +359,20 @@ router.get('/stats/summary', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching client stats', { error });
     res.status(500).json({ error: 'Failed to fetch client stats' });
   }
-});
+}));
 
 /**
  * POST /admin/clients/:id/credit
  * Grant or deduct credits for a client
  */
-router.post('/:id/credit', async (req: AuthedRequest, res: Response) => {
+router.post('/:id/credit', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { amount, reason, type } = req.body;
 
     if (!amount || isNaN(parseFloat(amount))) {
-      return res.status(400).json({ error: 'Invalid amount' });
+      res.status(400).json({ error: 'Invalid amount' });
+      return;
     }
 
     const creditAmount = type === 'deduct' ? -Math.abs(parseFloat(amount)) : Math.abs(parseFloat(amount));
@@ -411,7 +411,7 @@ router.post('/:id/credit', async (req: AuthedRequest, res: Response) => {
     logger.error('Error modifying client credits', { error, clientId: req.params.id });
     res.status(500).json({ error: 'Failed to modify credits' });
   }
-});
+}));
 
 export default router;
 

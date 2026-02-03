@@ -127,6 +127,7 @@ eventsRouter.post(
         });
       }
 
+      logger.error("n8n_event_failed", { error: error.message });
       res.status(500).json({
         error: { code: "EVENT_FAILED", message: error.message },
       });

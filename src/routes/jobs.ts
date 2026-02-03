@@ -1,9 +1,9 @@
-﻿// src/routes/jobs.ts
+// src/routes/jobs.ts
 // Job routes matching 001_init.sql schema
 
 import { Router } from "express";
 import { z } from "zod";
-import { jwtAuthMiddleware, type JWTAuthedRequest } from "../middleware/jwtAuth";
+import { requireAuth, type AuthedRequest } from "../middleware/authCanonical";
 import { requireIdempotency } from "../lib/idempotency";
 import { sendSuccess, sendCreated } from "../lib/response";
 import { asyncHandler, sendError } from "../lib/errors";
@@ -28,11 +28,10 @@ import { env } from "../config/env";
 
 const jobsRouter = Router();
 
-// All routes require auth
-jobsRouter.use(jwtAuthMiddleware);
+jobsRouter.use(requireAuth);
 
 // Helpers
-function getRole(req: JWTAuthedRequest): "client" | "cleaner" | "admin" {
+function getRole(req: AuthedRequest): "client" | "cleaner" | "admin" {
   return (req.user?.role ?? "client") as "client" | "cleaner" | "admin";
 }
 
@@ -124,7 +123,7 @@ const createJobSchema = z.object({
 jobsRouter.post(
   "/",
   requireIdempotency,
-  asyncHandler(async (req: JWTAuthedRequest, res) => {
+  asyncHandler(async (req: AuthedRequest, res) => {
     const body = createJobSchema.parse(req.body);
 
     const job = await createJob({
@@ -185,7 +184,7 @@ jobsRouter.post(
  */
 jobsRouter.get(
   "/",
-  asyncHandler(async (req: JWTAuthedRequest, res) => {
+  asyncHandler(async (req: AuthedRequest, res) => {
     const role = getRole(req);
 
     if (role === "client") {
@@ -210,7 +209,7 @@ jobsRouter.get(
  */
 jobsRouter.get(
   "/:jobId",
-  asyncHandler(async (req: JWTAuthedRequest, res) => {
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const job = await getJob(jobId);
 
@@ -306,7 +305,7 @@ const updateJobSchema = z
 
 jobsRouter.patch(
   "/:jobId",
-  asyncHandler(async (req: JWTAuthedRequest, res) => {
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const body = updateJobSchema.parse(req.body);
 
@@ -357,7 +356,7 @@ jobsRouter.patch(
  */
 jobsRouter.delete(
   "/:jobId",
-  asyncHandler(async (req: JWTAuthedRequest, res) => {
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const deleted = await deleteJob(jobId, req.user!.id);
 
@@ -418,7 +417,7 @@ jobsRouter.delete(
  */
 jobsRouter.get(
   "/:jobId/events",
-  asyncHandler(async (req: JWTAuthedRequest, res) => {
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const events = await getEvents(jobId);
     sendSuccess(res, { events });
@@ -496,7 +495,7 @@ const transitionJobSchema = z.object({
 
 jobsRouter.post(
   "/:jobId/transition",
-  asyncHandler(async (req: JWTAuthedRequest, res) => {
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const body = transitionJobSchema.parse(req.body);
 
@@ -525,7 +524,7 @@ jobsRouter.post(
 jobsRouter.post(
   "/:jobId/pay",
   requireIdempotency,
-  asyncHandler(async (req: JWTAuthedRequest, res) => {
+  asyncHandler(async (req: AuthedRequest, res) => {
     try {
       const { jobId } = req.params;
       const clientId = req.user!.id;
@@ -655,7 +654,7 @@ jobsRouter.post(
  */
 jobsRouter.get(
   "/:jobId/candidates",
-  asyncHandler(async (req: JWTAuthedRequest, res) => {
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const clientId = req.user!.id;
     const role = getRole(req);
@@ -744,7 +743,7 @@ jobsRouter.get(
  */
 jobsRouter.post(
   "/:jobId/offer",
-  asyncHandler(async (req: JWTAuthedRequest, res) => {
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const clientId = req.user!.id;
     const role = getRole(req);
@@ -831,7 +830,7 @@ jobsRouter.post(
  */
 jobsRouter.get(
   "/:jobId/pricing",
-  asyncHandler(async (req: JWTAuthedRequest, res) => {
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const clientId = req.user!.id;
 

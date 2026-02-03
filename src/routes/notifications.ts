@@ -2,7 +2,7 @@
 // Notification preferences API routes
 
 import { Router, Response } from "express";
-import { jwtAuthMiddleware, JWTAuthedRequest } from "../middleware/jwtAuth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import { validateBody } from "../lib/validation";
 import { z } from "zod";
 import { logger } from "../lib/logger";
@@ -14,8 +14,7 @@ import { query } from "../db/client";
 
 const notificationsRouter = Router();
 
-// All routes require authentication
-notificationsRouter.use(jwtAuthMiddleware);
+notificationsRouter.use(requireAuth);
 
 /**
  * @swagger
@@ -37,7 +36,7 @@ notificationsRouter.use(jwtAuthMiddleware);
  *                 data: { type: 'array', items: { type: 'object' } }
  *                 unread_count: { type: 'integer' }
  */
-notificationsRouter.get("/", async (_req: JWTAuthedRequest, res: Response) => {
+notificationsRouter.get("/", async (_req: AuthedRequest, res: Response) => {
   res.json({ data: [], unread_count: 0 });
 });
 
@@ -45,7 +44,7 @@ notificationsRouter.get("/", async (_req: JWTAuthedRequest, res: Response) => {
  * GET /notifications/unread-count
  * Return unread count (placeholder)
  */
-notificationsRouter.get("/unread-count", async (_req: JWTAuthedRequest, res: Response) => {
+notificationsRouter.get("/unread-count", async (_req: AuthedRequest, res: Response) => {
   res.json({ count: 0 });
 });
 
@@ -53,7 +52,7 @@ notificationsRouter.get("/unread-count", async (_req: JWTAuthedRequest, res: Res
  * PATCH /notifications/:id/read
  * Mark one notification as read (placeholder)
  */
-notificationsRouter.patch("/:id/read", async (_req: JWTAuthedRequest, res: Response) => {
+notificationsRouter.patch("/:id/read", async (_req: AuthedRequest, res: Response) => {
   res.json({ success: true });
 });
 
@@ -61,7 +60,7 @@ notificationsRouter.patch("/:id/read", async (_req: JWTAuthedRequest, res: Respo
  * POST /notifications/read-all
  * Mark all notifications as read (placeholder)
  */
-notificationsRouter.post("/read-all", async (_req: JWTAuthedRequest, res: Response) => {
+notificationsRouter.post("/read-all", async (_req: AuthedRequest, res: Response) => {
   res.json({ success: true });
 });
 
@@ -69,7 +68,7 @@ notificationsRouter.post("/read-all", async (_req: JWTAuthedRequest, res: Respon
  * DELETE /notifications/:id
  * Delete notification (placeholder)
  */
-notificationsRouter.delete("/:id", async (_req: JWTAuthedRequest, res: Response) => {
+notificationsRouter.delete("/:id", async (_req: AuthedRequest, res: Response) => {
   res.json({ success: true });
 });
 
@@ -88,7 +87,7 @@ notificationsRouter.delete("/:id", async (_req: JWTAuthedRequest, res: Response)
  */
 notificationsRouter.get(
   "/preferences",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const userId = req.user!.id;
       const preferences = await getNotificationPreferences(userId);
@@ -146,7 +145,7 @@ const updatePreferencesSchema = z.object({
 notificationsRouter.put(
   "/preferences",
   validateBody(updatePreferencesSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const userId = req.user!.id;
       const preferences = await updateNotificationPreferences(userId, req.body);
@@ -184,7 +183,7 @@ const registerPushTokenSchema = z.object({
 notificationsRouter.post(
   "/push-token",
   validateBody(registerPushTokenSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const userId = req.user!.id;
       const { token, platform } = req.body;
@@ -228,7 +227,7 @@ notificationsRouter.post(
  */
 notificationsRouter.delete(
   "/push-token",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const userId = req.user!.id;
 
@@ -266,7 +265,7 @@ notificationsRouter.delete(
  */
 notificationsRouter.get(
   "/history",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const userId = req.user!.id;
       const { limit = "50", offset = "0" } = req.query;

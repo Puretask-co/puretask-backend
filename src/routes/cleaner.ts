@@ -5,16 +5,13 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { jwtAuthMiddleware, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import { getCleanerProfile, updateCleanerProfileRates } from "../services/authService";
 import {
   createStripeConnectAccount,
   getStripeConnectStatus,
-  getStripeDashboardLink,
-  updateCleanerProfile,
-  updateCleanerAvailability,
-  getCleanerAvailability,
-  getCleanerProfile,
-} from "../services/cleanerOnboardingService";
+  createStripeDashboardLink as getStripeDashboardLink,
+} from "../services/stripeConnectService";
 import { getCleanerPayouts } from "../services/payoutsService";
 import { getCleanerEarnings } from "../services/earningsService";
 import {
@@ -27,6 +24,8 @@ import {
   getPreferences,
   setPreferences,
   getCleanerSchedule,
+  getWeeklyAvailability as getCleanerAvailability,
+  updateCleanerAvailability,
 } from "../services/availabilityService";
 import {
   getCleanerHolidaySettings,
@@ -38,8 +37,7 @@ import {
 
 const cleanerRouter = Router();
 
-// All routes require authentication as cleaner
-cleanerRouter.use(jwtAuthMiddleware);
+cleanerRouter.use(requireAuth);
 cleanerRouter.use(requireRole("cleaner", "admin"));
 
 /**
@@ -74,14 +72,15 @@ cleanerRouter.use(requireRole("cleaner", "admin"));
  */
 cleanerRouter.get(
   "/profile",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const profile = await getCleanerProfile(req.user!.id);
 
       if (!profile) {
-        return res.status(404).json({
+        res.status(404).json({
           error: { code: "PROFILE_NOT_FOUND", message: "Profile not found" },
         });
+        return;
       }
 
       res.json({ profile });
@@ -94,7 +93,7 @@ cleanerRouter.get(
         error: { code: "GET_PROFILE_FAILED", message: "Failed to get profile" },
       });
     }
-  }
+  })
 );
 
 /**
@@ -148,16 +147,16 @@ const updateProfileSchema = z.object({
 cleanerRouter.patch(
   "/profile",
   validateBody(updateProfileSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
-      const user = await updateCleanerProfile(req.user!.id, req.body);
+      const profile = await updateCleanerProfileRates(req.user!.id, req.body);
 
       res.json({
         profile: {
-          id: user.id,
-          baseRateCph: user.base_rate_cph,
-          deepAddonCph: user.deep_addon_cph,
-          moveoutAddonCph: user.moveout_addon_cph,
+          id: profile.id,
+          baseRateCph: profile.base_rate_cph,
+          deepAddonCph: profile.deep_addon_cph,
+          moveoutAddonCph: profile.moveout_addon_cph,
         },
       });
     } catch (error) {
@@ -169,7 +168,7 @@ cleanerRouter.patch(
         error: { code: "UPDATE_FAILED", message: (error as Error).message },
       });
     }
-  }
+  })
 );
 
 /**
@@ -201,7 +200,7 @@ cleanerRouter.patch(
  */
 cleanerRouter.post(
   "/stripe/connect",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const result = await createStripeConnectAccount(req.user!.id);
       res.json(result);
@@ -214,7 +213,7 @@ cleanerRouter.post(
         error: { code: "CONNECT_FAILED", message: "Failed to create Connect account" },
       });
     }
-  }
+  })
 );
 
 /**
@@ -250,7 +249,7 @@ cleanerRouter.post(
  */
 cleanerRouter.get(
   "/stripe/status",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const status = await getStripeConnectStatus(req.user!.id);
       res.json(status);
@@ -263,7 +262,7 @@ cleanerRouter.get(
         error: { code: "GET_STATUS_FAILED", message: "Failed to get status" },
       });
     }
-  }
+  })
 );
 
 /**
@@ -294,7 +293,7 @@ cleanerRouter.get(
  */
 cleanerRouter.get(
   "/stripe/dashboard",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const url = await getStripeDashboardLink(req.user!.id);
       res.json({ url });
@@ -305,16 +304,17 @@ cleanerRouter.get(
       });
 
       if ((error as Error).message === "No Stripe Connect account found") {
-        return res.status(404).json({
+        res.status(404).json({
           error: { code: "NO_ACCOUNT", message: "Complete onboarding first" },
         });
+        return;
       }
 
       res.status(500).json({
         error: { code: "GET_DASHBOARD_FAILED", message: "Failed to get dashboard link" },
       });
     }
-  }
+  })
 );
 
 /**
@@ -349,7 +349,7 @@ cleanerRouter.get(
  */
 cleanerRouter.get(
   "/availability",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const availability = await getCleanerAvailability(req.user!.id);
       res.json({ availability });
@@ -362,7 +362,7 @@ cleanerRouter.get(
         error: { code: "GET_AVAILABILITY_FAILED", message: "Failed to get availability" },
       });
     }
-  }
+  })
 );
 
 /**
@@ -413,7 +413,7 @@ const availabilitySchema = z.object({
 cleanerRouter.put(
   "/availability",
   validateBody(availabilitySchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       await updateCleanerAvailability(req.user!.id, req.body);
       res.json({ success: true, availability: req.body });
@@ -426,7 +426,7 @@ cleanerRouter.put(
         error: { code: "UPDATE_FAILED", message: (error as Error).message },
       });
     }
-  }
+  })
 );
 
 /**
@@ -435,7 +435,7 @@ cleanerRouter.put(
  */
 cleanerRouter.get(
   "/holiday-settings",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const settings = await getCleanerHolidaySettings(req.user!.id);
       res.json({ settings });
@@ -448,7 +448,7 @@ cleanerRouter.get(
         error: { code: "GET_HOLIDAY_SETTINGS_FAILED", message: "Failed to get holiday settings" },
       });
     }
-  }
+  })
 );
 
 const holidaySettingsSchema = z.object({
@@ -464,7 +464,7 @@ const holidaySettingsSchema = z.object({
 cleanerRouter.put(
   "/holiday-settings",
   validateBody(holidaySettingsSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const settings = await updateCleanerHolidaySettings(req.user!.id, req.body);
       res.json({ settings });
@@ -477,7 +477,7 @@ cleanerRouter.put(
         error: { code: "UPDATE_HOLIDAY_SETTINGS_FAILED", message: (error as Error).message },
       });
     }
-  }
+  })
 );
 
 /**
@@ -486,7 +486,7 @@ cleanerRouter.put(
  */
 cleanerRouter.get(
   "/holiday-overrides",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const from = (req.query.from as string) ?? new Date().toISOString().slice(0, 10);
       const toDate = new Date(from);
@@ -509,7 +509,7 @@ cleanerRouter.get(
         error: { code: "LIST_HOLIDAY_OVERRIDES_FAILED", message: "Failed to list holiday overrides" },
       });
     }
-  }
+  })
 );
 
 const holidayOverrideSchema = z.object({
@@ -528,7 +528,7 @@ const holidayOverrideSchema = z.object({
 cleanerRouter.put(
   "/holiday-overrides/:date",
   validateBody(holidayOverrideSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const holidayDate = req.params.date;
 
@@ -553,7 +553,7 @@ cleanerRouter.put(
         error: { code: (error as any).code ?? "UPDATE_HOLIDAY_OVERRIDE_FAILED", message: (error as Error).message },
       });
     }
-  }
+  })
 );
 
 /**
@@ -562,7 +562,7 @@ cleanerRouter.put(
  */
 cleanerRouter.get(
   "/payouts",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { limit = "50" } = req.query;
       const payouts = await getCleanerPayouts(
@@ -579,7 +579,7 @@ cleanerRouter.get(
         error: { code: "GET_PAYOUTS_FAILED", message: "Failed to get payouts" },
       });
     }
-  }
+  })
 );
 
 // ============================================
@@ -590,7 +590,7 @@ cleanerRouter.get(
  * GET /cleaner/time-off
  * Get time off entries
  */
-cleanerRouter.get("/time-off", async (req: JWTAuthedRequest, res: Response) => {
+cleanerRouter.get("/time-off", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeOff = await getTimeOff(req.user!.id, true);
     res.json({ timeOff });
@@ -600,7 +600,7 @@ cleanerRouter.get("/time-off", async (req: JWTAuthedRequest, res: Response) => {
       error: { code: "GET_TIME_OFF_FAILED", message: "Failed to get time off" },
     });
   }
-});
+}));
 
 /**
  * POST /cleaner/time-off
@@ -618,7 +618,7 @@ const addTimeOffSchema = z.object({
 cleanerRouter.post(
   "/time-off",
   validateBody(addTimeOffSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const timeOff = await addTimeOff({
         cleanerId: req.user!.id,
@@ -631,14 +631,14 @@ cleanerRouter.post(
         error: { code: "ADD_TIME_OFF_FAILED", message: (error as Error).message },
       });
     }
-  }
+  })
 );
 
 /**
  * DELETE /cleaner/time-off/:id
  * Delete time off entry
  */
-cleanerRouter.delete("/time-off/:id", async (req: JWTAuthedRequest, res: Response) => {
+cleanerRouter.delete("/time-off/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     await deleteTimeOff(req.user!.id, req.params.id);
     res.json({ deleted: true });
@@ -648,7 +648,7 @@ cleanerRouter.delete("/time-off/:id", async (req: JWTAuthedRequest, res: Respons
       error: { code: "DELETE_TIME_OFF_FAILED", message: "Failed to delete" },
     });
   }
-});
+}));
 
 // ============================================
 // Service Areas
@@ -658,7 +658,7 @@ cleanerRouter.delete("/time-off/:id", async (req: JWTAuthedRequest, res: Respons
  * GET /cleaner/service-areas
  * Get service areas
  */
-cleanerRouter.get("/service-areas", async (req: JWTAuthedRequest, res: Response) => {
+cleanerRouter.get("/service-areas", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const areas = await getServiceAreas(req.user!.id);
     res.json({ serviceAreas: areas });
@@ -668,7 +668,7 @@ cleanerRouter.get("/service-areas", async (req: JWTAuthedRequest, res: Response)
       error: { code: "GET_AREAS_FAILED", message: "Failed to get areas" },
     });
   }
-});
+}));
 
 /**
  * POST /cleaner/service-areas
@@ -686,7 +686,7 @@ const addServiceAreaSchema = z.object({
 cleanerRouter.post(
   "/service-areas",
   validateBody(addServiceAreaSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const area = await addServiceArea({
         cleanerId: req.user!.id,
@@ -699,14 +699,14 @@ cleanerRouter.post(
         error: { code: "ADD_AREA_FAILED", message: (error as Error).message },
       });
     }
-  }
+  })
 );
 
 /**
  * DELETE /cleaner/service-areas/:id
  * Delete service area
  */
-cleanerRouter.delete("/service-areas/:id", async (req: JWTAuthedRequest, res: Response) => {
+cleanerRouter.delete("/service-areas/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     await deleteServiceArea(req.user!.id, req.params.id);
     res.json({ deleted: true });
@@ -716,7 +716,7 @@ cleanerRouter.delete("/service-areas/:id", async (req: JWTAuthedRequest, res: Re
       error: { code: "DELETE_AREA_FAILED", message: "Failed to delete" },
     });
   }
-});
+}));
 
 // ============================================
 // Preferences
@@ -726,7 +726,7 @@ cleanerRouter.delete("/service-areas/:id", async (req: JWTAuthedRequest, res: Re
  * GET /cleaner/preferences
  * Get cleaner preferences
  */
-cleanerRouter.get("/preferences", async (req: JWTAuthedRequest, res: Response) => {
+cleanerRouter.get("/preferences", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const preferences = await getPreferences(req.user!.id);
     res.json({ preferences });
@@ -736,7 +736,7 @@ cleanerRouter.get("/preferences", async (req: JWTAuthedRequest, res: Response) =
       error: { code: "GET_PREFS_FAILED", message: "Failed to get preferences" },
     });
   }
-});
+}));
 
 /**
  * PUT /cleaner/preferences
@@ -757,7 +757,7 @@ const updatePreferencesSchema = z.object({
 cleanerRouter.put(
   "/preferences",
   validateBody(updatePreferencesSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const preferences = await setPreferences(req.user!.id, req.body);
       res.json({ preferences });
@@ -767,7 +767,7 @@ cleanerRouter.put(
         error: { code: "UPDATE_PREFS_FAILED", message: (error as Error).message },
       });
     }
-  }
+  })
 );
 
 // ============================================
@@ -778,13 +778,14 @@ cleanerRouter.put(
  * GET /cleaner/schedule/:date
  * Get cleaner's schedule for a specific date
  */
-cleanerRouter.get("/schedule/:date", async (req: JWTAuthedRequest, res: Response) => {
+cleanerRouter.get("/schedule/:date", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const date = new Date(req.params.date);
     if (isNaN(date.getTime())) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "INVALID_DATE", message: "Invalid date format" },
       });
+      return;
     }
 
     const schedule = await getCleanerSchedule(req.user!.id, date);
@@ -795,12 +796,12 @@ cleanerRouter.get("/schedule/:date", async (req: JWTAuthedRequest, res: Response
       error: { code: "GET_SCHEDULE_FAILED", message: "Failed to get schedule" },
     });
   }
-});
+}));
 
 // ============================================
 // Reliability Score (V1 CORE FEATURE)
 // ============================================
-cleanerRouter.get("/reliability", requireRole("cleaner"), async (req: JWTAuthedRequest, res: Response) => {
+cleanerRouter.get("/reliability", requireRole("cleaner"), authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { getCleanerReliabilityInfo } = await import("../services/reliabilityService");
     const reliability = await getCleanerReliabilityInfo(req.user!.id);
@@ -811,7 +812,7 @@ cleanerRouter.get("/reliability", requireRole("cleaner"), async (req: JWTAuthedR
       error: { code: "GET_RELIABILITY_FAILED", message: "Failed to get reliability" },
     });
   }
-});
+}));
 
 // ============================================
 // Earnings Dashboard (V3 FEATURE)
@@ -822,7 +823,7 @@ cleanerRouter.get("/reliability", requireRole("cleaner"), async (req: JWTAuthedR
  * V3 FEATURE: Get cleaner earnings dashboard - simple, user-friendly view
  * Shows pending earnings, paid out, and next payout date
  */
-cleanerRouter.get("/earnings", requireRole("cleaner"), async (req: JWTAuthedRequest, res: Response) => {
+cleanerRouter.get("/earnings", requireRole("cleaner"), authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const earnings = await getCleanerEarnings(req.user!.id);
     res.json({ earnings });
@@ -835,7 +836,7 @@ cleanerRouter.get("/earnings", requireRole("cleaner"), async (req: JWTAuthedRequ
       error: { code: "GET_EARNINGS_FAILED", message: "Failed to get earnings" },
     });
   }
-});
+}));
 
 export default cleanerRouter;
 

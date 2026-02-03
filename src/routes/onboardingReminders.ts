@@ -2,15 +2,14 @@
 // Routes for onboarding reminder management
 
 import { Router, Response } from "express";
-import { jwtAuthMiddleware, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireAdmin, AuthedRequest } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { sendOnboardingReminders, getAbandonedOnboardingCleaners } from "../services/onboardingReminderService";
 
 const reminderRouter = Router();
 
-// All routes require admin authentication
-reminderRouter.use(jwtAuthMiddleware);
-reminderRouter.use(requireRole("admin"));
+reminderRouter.use(requireAuth);
+reminderRouter.use(requireAdmin);
 
 /**
  * @swagger
@@ -38,7 +37,7 @@ reminderRouter.use(requireRole("admin"));
  *       403:
  *         description: Forbidden - admin only
  */
-reminderRouter.post("/send", async (req: JWTAuthedRequest, res: Response) => {
+reminderRouter.post("/send", async (req: AuthedRequest, res: Response) => {
   try {
     const hoursThreshold = req.body.hours_threshold || 24;
 
@@ -80,7 +79,7 @@ reminderRouter.post("/send", async (req: JWTAuthedRequest, res: Response) => {
  *       403:
  *         description: Forbidden - admin only
  */
-reminderRouter.get("/abandoned", async (req: JWTAuthedRequest, res: Response) => {
+reminderRouter.get("/abandoned", async (req: AuthedRequest, res: Response) => {
   try {
     const hoursThreshold = req.query.hours_threshold
       ? Number(req.query.hours_threshold)

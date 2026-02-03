@@ -1,16 +1,14 @@
 // src/routes/admin/risk.ts
 import { Router, Response, NextFunction } from 'express';
-import { AuthedRequest } from '../../types/express';
+import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from '../../middleware/authCanonical';
 import { query } from '../../db/client';
-import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
-import { requireAdmin } from '../../middleware/adminAuth';
 import { logger } from '../../lib/logger';
 import { RiskManagementData } from '../../types/admin';
 
 const router = Router();
 
-router.use(jwtAuthMiddleware);
-router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
+router.use(requireAuth);
+router.use(requireAdmin);
 
 /**
  * @swagger
@@ -25,7 +23,7 @@ router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, n
  *       200:
  *         description: Risk overview
  */
-router.get('/overview', async (req: AuthedRequest, res: Response) => {
+router.get('/overview', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // Flagged clients
     const flaggedClientsResult = await query(`
@@ -158,13 +156,13 @@ router.get('/overview', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching risk overview', { error });
     res.status(500).json({ error: 'Failed to fetch risk overview' });
   }
-});
+}));
 
 /**
  * GET /admin/risk/flags
  * Get all risk flags with filters
  */
-router.get('/flags', async (req: AuthedRequest, res: Response) => {
+router.get('/flags', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { userId, severity, active = 'true', page = '1', limit = '50' } = req.query;
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -214,13 +212,13 @@ router.get('/flags', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching risk flags', { error });
     res.status(500).json({ error: 'Failed to fetch risk flags' });
   }
-});
+}));
 
 /**
  * POST /admin/risk/flags
  * Create a new risk flag
  */
-router.post('/flags', async (req: AuthedRequest, res: Response) => {
+router.post('/flags', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { userId, flagType, reason, severity, metadata } = req.body;
 
@@ -258,13 +256,13 @@ router.post('/flags', async (req: AuthedRequest, res: Response) => {
     logger.error('Error creating risk flag', { error });
     res.status(500).json({ error: 'Failed to create risk flag' });
   }
-});
+}));
 
 /**
  * PATCH /admin/risk/flags/:id/resolve
  * Resolve a risk flag
  */
-router.patch('/flags/:id/resolve', async (req: AuthedRequest, res: Response) => {
+router.patch('/flags/:id/resolve', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { resolution } = req.body;
@@ -278,7 +276,8 @@ router.patch('/flags/:id/resolve', async (req: AuthedRequest, res: Response) => 
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Risk flag not found' });
+      res.status(404).json({ error: 'Risk flag not found' });
+      return;
     }
 
     logger.info('Admin resolved risk flag', {
@@ -291,13 +290,13 @@ router.patch('/flags/:id/resolve', async (req: AuthedRequest, res: Response) => 
     logger.error('Error resolving risk flag', { error });
     res.status(500).json({ error: 'Failed to resolve risk flag' });
   }
-});
+}));
 
 /**
  * GET /admin/risk/disputes
  * Get all disputes with filters
  */
-router.get('/disputes', async (req: AuthedRequest, res: Response) => {
+router.get('/disputes', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { status, bookingId, page = '1', limit = '50' } = req.query;
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -342,20 +341,21 @@ router.get('/disputes', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching disputes', { error });
     res.status(500).json({ error: 'Failed to fetch disputes' });
   }
-});
+}));
 
 /**
  * PATCH /admin/risk/disputes/:id/status
  * Update dispute status
  */
-router.patch('/disputes/:id/status', async (req: AuthedRequest, res: Response) => {
+router.patch('/disputes/:id/status', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { status, resolution } = req.body;
 
     const validStatuses = ['open', 'investigating', 'resolved', 'closed'];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+      res.status(400).json({ error: 'Invalid status' });
+      return;
     }
 
     const result = await query(
@@ -367,7 +367,8 @@ router.patch('/disputes/:id/status', async (req: AuthedRequest, res: Response) =
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Dispute not found' });
+      res.status(404).json({ error: 'Dispute not found' });
+      return;
     }
 
     logger.info('Admin updated dispute status', {
@@ -381,13 +382,13 @@ router.patch('/disputes/:id/status', async (req: AuthedRequest, res: Response) =
     logger.error('Error updating dispute status', { error });
     res.status(500).json({ error: 'Failed to update dispute status' });
   }
-});
+}));
 
 /**
  * GET /admin/risk/safety-incidents
  * Get all safety incidents
  */
-router.get('/safety-incidents', async (req: AuthedRequest, res: Response) => {
+router.get('/safety-incidents', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { severity, status, page = '1', limit = '50' } = req.query;
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -437,13 +438,13 @@ router.get('/safety-incidents', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching safety incidents', { error });
     res.status(500).json({ error: 'Failed to fetch safety incidents' });
   }
-});
+}));
 
 /**
  * GET /admin/risk/stats
  * Get risk management statistics
  */
-router.get('/stats', async (req: AuthedRequest, res: Response) => {
+router.get('/stats', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const stats = await query(`
       SELECT 
@@ -459,7 +460,7 @@ router.get('/stats', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching risk stats', { error });
     res.status(500).json({ error: 'Failed to fetch risk stats' });
   }
-});
+}));
 
 export default router;
 

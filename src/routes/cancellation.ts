@@ -3,7 +3,7 @@
 
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
+import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { CancellationServiceV2 } from "../core/cancellationService";
 import { coreDb } from "../core/db";
@@ -71,13 +71,14 @@ cancellationRouter.use(requireAuth);
  *       403:
  *         description: Forbidden - not your job
  */
-cancellationRouter.post("/jobs/:jobId", async (req: AuthedRequest, res) => {
+cancellationRouter.post("/jobs/:jobId", authedHandler(async (req: AuthedRequest, res) => {
   const jobId = Number(req.params.jobId);
   const userId = req.user?.id;
   const userRole = req.user?.role;
 
   if (!userId || userRole !== 'client') {
-    return res.status(401).json({ error: "Unauthorized - only clients can cancel jobs" });
+    res.status(401).json({ error: "Unauthorized - only clients can cancel jobs" });
+    return;
   }
 
   try {
@@ -93,17 +94,20 @@ cancellationRouter.post("/jobs/:jobId", async (req: AuthedRequest, res) => {
     // Get job details
     const job = await getJobDetails(jobId);
     if (!job) {
-      return res.status(404).json({ error: "Job not found" });
+      res.status(404).json({ error: "Job not found" });
+      return;
     }
 
     // Verify client owns this job
     if (job.clientId !== Number(userId)) {
-      return res.status(403).json({ error: "Not authorized to cancel this job" });
+      res.status(403).json({ error: "Not authorized to cancel this job" });
+      return;
     }
 
     // Validate job status
     if (['cancelled', 'completed'].includes(job.status)) {
-      return res.status(400).json({ error: `Cannot cancel job with status: ${job.status}` });
+      res.status(400).json({ error: `Cannot cancel job with status: ${job.status}` });
+      return;
     }
 
     const now = new Date();
@@ -111,16 +115,18 @@ cancellationRouter.post("/jobs/:jobId", async (req: AuthedRequest, res) => {
 
     // Enforce lock window unless marked emergency
     if (!body.isEmergency && hoursBefore < env.CANCELLATION_LOCK_HOURS) {
-      return res.status(400).json({
+      res.status(400).json({
         error: `Cancellation locked within ${env.CANCELLATION_LOCK_HOURS}h of start; contact support or mark emergency.`,
       });
+      return;
     }
 
     // Check if this is a no-show situation (at/after start time)
     if (hoursBefore <= 0) {
-      return res.status(400).json({ 
+      res.status(400).json({ 
         error: "Cancellation not allowed after job start time. Use no-show endpoint if applicable." 
       });
+      return;
     }
 
     // Determine cancellation type
@@ -152,7 +158,7 @@ cancellationRouter.post("/jobs/:jobId", async (req: AuthedRequest, res) => {
       graceUsed: result.feeBreakdown.graceUsed,
     });
 
-    return res.json({
+    res.json({
       success: true,
       cancellation: {
         jobId,
@@ -171,9 +177,9 @@ cancellationRouter.post("/jobs/:jobId", async (req: AuthedRequest, res) => {
       jobId,
       error: (err as Error).message,
     });
-    return res.status(400).json({ error: (err as Error).message });
+    res.status(400).json({ error: (err as Error).message });
   }
-});
+}));
 
 /**
  * @swagger
@@ -207,13 +213,14 @@ cancellationRouter.post("/jobs/:jobId", async (req: AuthedRequest, res) => {
  *       403:
  *         description: Forbidden - cleaners only
  */
-cancellationRouter.post("/jobs/:jobId/cleaner", async (req: AuthedRequest, res) => {
+cancellationRouter.post("/jobs/:jobId/cleaner", authedHandler(async (req: AuthedRequest, res) => {
   const jobId = Number(req.params.jobId);
   const userId = req.user?.id;
   const userRole = req.user?.role;
 
   if (!userId || userRole !== 'cleaner') {
-    return res.status(401).json({ error: "Unauthorized - only cleaners can use this endpoint" });
+    res.status(401).json({ error: "Unauthorized - only cleaners can use this endpoint" });
+    return;
   }
 
   try {
@@ -227,26 +234,30 @@ cancellationRouter.post("/jobs/:jobId/cleaner", async (req: AuthedRequest, res) 
     // Get job details
     const job = await getJobDetails(jobId);
     if (!job) {
-      return res.status(404).json({ error: "Job not found" });
+      res.status(404).json({ error: "Job not found" });
+      return;
     }
 
     // Verify cleaner owns this job
     if (job.cleanerId !== Number(userId)) {
-      return res.status(403).json({ error: "Not authorized to cancel this job" });
+      res.status(403).json({ error: "Not authorized to cancel this job" });
+      return;
     }
 
     // Validate job status
     if (['cancelled', 'completed'].includes(job.status)) {
-      return res.status(400).json({ error: `Cannot cancel job with status: ${job.status}` });
+      res.status(400).json({ error: `Cannot cancel job with status: ${job.status}` });
+      return;
     }
 
     const now = new Date();
     const hoursBefore = computeHoursBeforeStart(job.startTime, now);
 
     if (!body.isEmergency && hoursBefore < env.CANCELLATION_LOCK_HOURS) {
-      return res.status(400).json({
+      res.status(400).json({
         error: `Cancellation locked within ${env.CANCELLATION_LOCK_HOURS}h of start; contact support or mark emergency.`,
       });
+      return;
     }
 
     // Determine cancellation type
@@ -276,7 +287,7 @@ cancellationRouter.post("/jobs/:jobId/cleaner", async (req: AuthedRequest, res) 
       isEmergency: body.isEmergency,
     });
 
-    return res.json({
+    res.json({
       success: true,
       cancellation: {
         jobId,
@@ -291,9 +302,9 @@ cancellationRouter.post("/jobs/:jobId/cleaner", async (req: AuthedRequest, res) 
       jobId,
       error: (err as Error).message,
     });
-    return res.status(400).json({ error: (err as Error).message });
+    res.status(400).json({ error: (err as Error).message });
   }
-});
+}));
 
 /**
  * @swagger
@@ -327,12 +338,13 @@ cancellationRouter.post("/jobs/:jobId/cleaner", async (req: AuthedRequest, res) 
  *       403:
  *         description: Forbidden - insufficient permissions
  */
-cancellationRouter.post("/no-shows", async (req: AuthedRequest, res) => {
+cancellationRouter.post("/no-shows", authedHandler(async (req: AuthedRequest, res) => {
   const userId = req.user?.id;
   const userRole = req.user?.role;
 
   if (!userId) {
-    return res.status(401).json({ error: "Unauthorized" });
+    res.status(401).json({ error: "Unauthorized" });
+    return;
   }
 
   try {
@@ -348,16 +360,19 @@ cancellationRouter.post("/no-shows", async (req: AuthedRequest, res) => {
     // Get job details
     const job = await getJobDetails(jobId);
     if (!job) {
-      return res.status(404).json({ error: "Job not found" });
+      res.status(404).json({ error: "Job not found" });
+      return;
     }
 
     // Validate permissions
     if (noShowType === 'client' && userRole !== 'cleaner' && userRole !== 'admin') {
-      return res.status(403).json({ error: "Only cleaners or admins can mark client no-shows" });
+      res.status(403).json({ error: "Only cleaners or admins can mark client no-shows" });
+      return;
     }
 
     if (noShowType === 'cleaner' && userRole !== 'client' && userRole !== 'admin') {
-      return res.status(403).json({ error: "Only clients or admins can mark cleaner no-shows" });
+      res.status(403).json({ error: "Only clients or admins can mark cleaner no-shows" });
+      return;
     }
 
     const now = new Date();
@@ -390,7 +405,7 @@ cancellationRouter.post("/no-shows", async (req: AuthedRequest, res) => {
     });
 
     if (noShowType === 'client') {
-      return res.json({
+      res.json({
         success: true,
         noShow: {
           jobId,
@@ -401,7 +416,7 @@ cancellationRouter.post("/no-shows", async (req: AuthedRequest, res) => {
         },
       });
     } else {
-      return res.json({
+      res.json({
         success: true,
         noShow: {
           jobId,
@@ -417,9 +432,9 @@ cancellationRouter.post("/no-shows", async (req: AuthedRequest, res) => {
     logger.error("no_show_mark_error", {
       error: (err as Error).message,
     });
-    return res.status(400).json({ error: (err as Error).message });
+    res.status(400).json({ error: (err as Error).message });
   }
-});
+}));
 
 /**
  * @swagger
@@ -458,19 +473,21 @@ cancellationRouter.post("/no-shows", async (req: AuthedRequest, res) => {
  *       404:
  *         description: Job not found
  */
-cancellationRouter.get("/jobs/:jobId/preview", async (req: AuthedRequest, res) => {
+cancellationRouter.get("/jobs/:jobId/preview", authedHandler(async (req: AuthedRequest, res) => {
   const jobId = Number(req.params.jobId);
   const userId = req.user?.id;
 
   if (!userId) {
-    return res.status(401).json({ error: "Unauthorized" });
+    res.status(401).json({ error: "Unauthorized" });
+    return;
   }
 
   try {
     // Get job details
     const job = await getJobDetails(jobId);
     if (!job) {
-      return res.status(404).json({ error: "Job not found" });
+      res.status(404).json({ error: "Job not found" });
+      return;
     }
 
     const now = new Date();
@@ -490,7 +507,7 @@ cancellationRouter.get("/jobs/:jobId/preview", async (req: AuthedRequest, res) =
     const graceRemaining = await coreDb.clients.getGraceRemaining(job.clientId);
     const canUseGrace = graceRemaining > 0 && feePct > 0 && hoursBefore > 0;
 
-    return res.json({
+    res.json({
       jobId,
       hoursBefore: Math.round(hoursBefore * 10) / 10,
       window,
@@ -515,9 +532,9 @@ cancellationRouter.get("/jobs/:jobId/preview", async (req: AuthedRequest, res) =
       jobId,
       error: (err as Error).message,
     });
-    return res.status(500).json({ error: (err as Error).message });
+    res.status(500).json({ error: (err as Error).message });
   }
-});
+}));
 
 // ============================================
 // Helper Functions

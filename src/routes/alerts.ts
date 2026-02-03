@@ -3,7 +3,7 @@
 
 import { Router } from "express";
 import { sendAlert } from "../lib/alerting";
-import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
+import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 
 const alertsRouter = Router();
 
@@ -31,7 +31,7 @@ alertsRouter.use(requireAuth);
  *       200:
  *         description: Alert sent successfully
  */
-alertsRouter.post("/smoke", async (req: AuthedRequest, res) => {
+alertsRouter.post("/smoke", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const { title = "Alert smoke test", message = "This is a test alert" } = req.body || {};
     await sendAlert({
@@ -44,7 +44,7 @@ alertsRouter.post("/smoke", async (req: AuthedRequest, res) => {
   } catch (error) {
     res.status(500).json({ error: { code: "ALERT_SMOKE_FAILED", message: (error as Error).message } });
   }
-});
+}));
 
 export default alertsRouter;
 

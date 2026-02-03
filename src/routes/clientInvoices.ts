@@ -3,7 +3,7 @@
 
 import { Router, Response } from "express";
 import { z } from "zod";
-import { jwtAuthMiddleware as jwtAuth, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import {
   getClientInvoices,
   getInvoiceWithLineItems,
@@ -78,9 +78,9 @@ const declineInvoiceSchema = z.object({
  */
 router.get(
   "/invoices",
-  jwtAuth,
+  requireAuth,
   requireRole("client"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const filters = invoiceListSchema.parse(req.query);
@@ -108,7 +108,7 @@ router.get(
         error: err.message || "Failed to get invoices",
       });
     }
-  }
+  })
 );
 
 /**
@@ -137,9 +137,9 @@ router.get(
  */
 router.get(
   "/invoices/:invoiceId",
-  jwtAuth,
+  requireAuth,
   requireRole("client"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { invoiceId } = req.params;
@@ -147,26 +147,29 @@ router.get(
       const invoice = await getInvoiceWithLineItems(invoiceId);
 
       if (!invoice) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: "Invoice not found",
         });
+        return;
       }
 
       if (invoice.client_id !== clientId) {
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           error: "This invoice is not for you",
         });
+        return;
       }
 
       // Clients should only see sent, paid, declined, cancelled, expired invoices
       const hiddenStatuses: InvoiceStatus[] = ["draft", "pending_approval"];
       if (hiddenStatuses.includes(invoice.status)) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: "Invoice not found",
         });
+        return;
       }
 
       const history = await getInvoiceStatusHistory(invoiceId);
@@ -186,7 +189,7 @@ router.get(
         error: err.message || "Failed to get invoice",
       });
     }
-  }
+  })
 );
 
 /**
@@ -225,9 +228,9 @@ router.get(
  */
 router.post(
   "/invoices/:invoiceId/pay",
-  jwtAuth,
+  requireAuth,
   requireRole("client"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { invoiceId } = req.params;
@@ -264,7 +267,7 @@ router.post(
         error: err.message || "Failed to pay invoice",
       });
     }
-  }
+  })
 );
 
 /**
@@ -301,9 +304,9 @@ router.post(
  */
 router.post(
   "/invoices/:invoiceId/decline",
-  jwtAuth,
+  requireAuth,
   requireRole("client"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { invoiceId } = req.params;
@@ -323,7 +326,7 @@ router.post(
         error: err.message || "Failed to decline invoice",
       });
     }
-  }
+  })
 );
 
 export default router;

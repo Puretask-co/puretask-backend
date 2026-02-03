@@ -1,42 +1,58 @@
-# Runbook
+# PureTask — Operations Runbook
 
-**What it is:** Ops commands, health checks, restart steps, and incident playbooks.
-**What it does:** Lets anyone run common operations and respond to incidents without guessing.
-**How we use it:** Use for daily ops; follow playbooks when something goes wrong.
+**Purpose:** Deploy, rollback, incident response (Section 9).  
+**See also:** [ARCHITECTURE.md](./ARCHITECTURE.md), [CONTRIBUTING.md](./CONTRIBUTING.md), [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md).
 
 ---
 
-## Services
+## 1. Deploy
 
-- **Backend API** â€” Express app (e.g. port 4000 locally; Railway in prod).
-- **Frontend** â€” Separate repo/service; connects to backend API.
-- **n8n** â€” Automation; receives webhooks from backend, sends notifications.
-- **Database** â€” Neon Postgres; connection via `DATABASE_URL`.
+- **Prereqs:** Secrets in Railway (or target); no secrets in repo. Env validated at startup (`src/config/env.ts`).
+- **DB:** Run migrations in order. Fresh DB: `npm run db:migrate` (or `psql $DATABASE_URL -f DB/migrations/000_CONSOLIDATED_SCHEMA.sql`). Existing: apply `001`…`042` and `hardening/*` in order. See [DB/migrations/README.md](../DB/migrations/README.md).
+- **App:** Build `npm run build`; start `npm start`. Workers: run per [package.json](../package.json) scripts (e.g. `worker:scheduler`, `worker:durable-jobs`).
+- **CI:** Push to main/develop runs lint, tests, security scan, migrations check (`.github/workflows/`).
 
-## Common commands
+---
 
-- **Install / build:** `npm install`, `npm run build`
-- **Test:** `npm test`
-- **Migrations:** See `package.json` (e.g. `npm run db:migrate` or `npx knex migrate:latest`)
-- **Lint/format:** `npm run lint`, `npm run format` (if defined)
+## 2. Rollback
 
-## Health checks
+- **App:** Redeploy previous image/commit; restart process.
+- **DB:** Prefer forward-only migrations. For risky changes, use rollback SQL or procedure documented in [PHASE_5_STATUS.md](./00-CRITICAL/PHASE_5_STATUS.md). Test rollback in dev first.
+- **Secrets:** Rotate if exposed; see [PHASE_1_USER_RUNBOOK.md](./00-CRITICAL/PHASE_1_USER_RUNBOOK.md).
 
-- **Backend:** `GET /health` -> 200; `GET /health/ready` -> 200 (DB/readiness).
-- **DB:** Ready check is included in `/health/ready`.
-- **Workers:** If you have background workers, check their status per your worker docs.
+---
 
-## Restart procedures
+## 3. Incident response
 
-- **Local:** Stop the process (Ctrl+C), then `npm run dev` (or `npm start`).
-- **Railway:** Redeploy from Dashboard (Deployments -> Redeploy) or push a commit; optional: restart from service settings.
+- **Secrets exposure:** [SECURITY_INCIDENT_RESPONSE.md](./00-CRITICAL/SECURITY_INCIDENT_RESPONSE.md) and [PHASE_1_USER_RUNBOOK.md](./00-CRITICAL/PHASE_1_USER_RUNBOOK.md) — rotate, invalidate, purge history, verify.
+- **Outage:** Check health endpoint; logs (requestId); DB connectivity; rate limits; Stripe/webhook status.
+- **Payment/webhook issues:** [SECTION_04_STRIPE_WEBHOOKS.md](./sections/SECTION_04_STRIPE_WEBHOOKS.md); idempotency via `webhook_events`; no double-processing.
 
-## Incident playbooks
+### 3.1 Incident runbook (Section 14)
 
-- **Payments stuck / errors after deploy** â€” Consider [rollback](../runbooks/rollback-deploy.md); check Sentry and Stripe dashboard.
-- **Booking state mismatch** â€” Check job state machine and DB; see ARCHITECTURE and state docs.
-- **Notification failures** â€” Check SendGrid/Twilio/n8n status, webhook URLs, and env vars; see TROUBLESHOOTING.
-- **Webhook failures** â€” Verify signature secrets (`STRIPE_WEBHOOK_SECRET`, `N8N_WEBHOOK_SECRET`); check logs and retries.
+| Incident | Steps |
+|----------|-------|
+| **Payment failure spike** | 1. Check Stripe dashboard; 2. Check webhook_events for failed; 3. If needed: set PAYOUTS_ENABLED=false to halt payouts; 4. Investigate; 5. Re-enable when fixed. |
+| **Booking creation blocked** | Check BOOKINGS_ENABLED; set to true if disabled for maintenance. |
+| **Dead-letter jobs** | 1. GET /admin/jobs/dead (admin auth); 2. Review error_message; 3. Retry via POST /admin/jobs/dead/:jobId/retry with X-Audit-Reason; 4. If persistent, fix handler and redeploy. |
+| **Webhook replay / duplicate** | webhook_events enforces idempotency; same event_id returns 200, no reprocess. No action needed. |
+| **Rate limit exhaustion** | Check Redis; increase limits or scale horizontally; verify no abuse. |
+| **DB connection exhaustion** | Check pool size (env); scale DB or reduce connections; restart app. |
 
-Full incident flow: [handle-incident.md](../runbooks/handle-incident.md).
-Rollback: [rollback-deploy.md](../runbooks/rollback-deploy.md).
+### 3.2 Kill switches (env)
+
+- `BOOKINGS_ENABLED=false` — Disable booking creation
+- `PAYOUTS_ENABLED=false` — Disable payouts (default in prod until opt-in)
+- `CREDITS_ENABLED=false` — Disable credit purchases
+- `REFUNDS_ENABLED=false` — Disable refunds
+- `WORKERS_ENABLED=false` — Disable background workers
+
+---
+
+## 4. Contacts and links
+
+- **Checklists:** [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md)
+- **Phase status:** [00-CRITICAL/PHASE_*_STATUS.md](./00-CRITICAL/)
+- **Backup/restore:** [BACKUP_RESTORE.md](./sections/BACKUP_RESTORE.md)
+
+**Last updated:** 2026-01-31

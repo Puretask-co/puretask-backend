@@ -4,6 +4,7 @@
 import { Router, Request, Response } from "express";
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
+import { isN8nWebhookConfigured, isN8nApiConfigured } from "../lib/n8nClient";
 
 const router = Router();
 
@@ -22,6 +23,8 @@ interface StatusSummary {
     pendingPayouts: number;
     openDisputes: number;
     openFraudAlerts: number;
+    n8nWebhookConfigured: boolean;
+    n8nApiConfigured: boolean;
   };
   alerts: string[];
   uptimeSeconds: number;
@@ -66,6 +69,8 @@ const SERVER_START = Date.now();
  *                     pendingPayouts: { type: 'number' }
  *                     openDisputes: { type: 'number' }
  *                     openFraudAlerts: { type: 'number' }
+ *                     n8nWebhookConfigured: { type: 'boolean' }
+ *                     n8nApiConfigured: { type: 'boolean' }
  *                 alerts:
  *                   type: array
  *                   items: { type: 'string' }
@@ -169,6 +174,8 @@ router.get("/summary", async (_req: Request, res: Response) => {
         pendingPayouts,
         openDisputes,
         openFraudAlerts,
+        n8nWebhookConfigured: isN8nWebhookConfigured(),
+        n8nApiConfigured: isN8nApiConfigured(),
       },
       alerts,
       uptimeSeconds: Math.floor((Date.now() - SERVER_START) / 1000),

@@ -3,15 +3,14 @@
 
 import { Router, Response } from "express";
 import { z } from "zod";
-import { jwtAuthMiddleware, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { query } from "../db/client";
 
 const adminIdVerificationsRouter = Router();
 
-// All routes require admin authentication
-adminIdVerificationsRouter.use(jwtAuthMiddleware);
-adminIdVerificationsRouter.use(requireRole("admin"));
+adminIdVerificationsRouter.use(requireAuth);
+adminIdVerificationsRouter.use(requireAdmin);
 
 /**
  * @swagger
@@ -40,7 +39,7 @@ adminIdVerificationsRouter.use(requireRole("admin"));
  *       403:
  *         description: Forbidden - admin only
  */
-adminIdVerificationsRouter.get("/", async (req: JWTAuthedRequest, res: Response) => {
+adminIdVerificationsRouter.get("/", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const statusFilter = req.query.status as string | undefined;
     const search = req.query.search as string | undefined;
@@ -95,7 +94,7 @@ adminIdVerificationsRouter.get("/", async (req: JWTAuthedRequest, res: Response)
       error: { code: "GET_VERIFICATIONS_FAILED", message: "Failed to get ID verifications" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -120,7 +119,7 @@ adminIdVerificationsRouter.get("/", async (req: JWTAuthedRequest, res: Response)
  *       403:
  *         description: Forbidden - admin only
  */
-adminIdVerificationsRouter.get("/:id", async (req: JWTAuthedRequest, res: Response) => {
+adminIdVerificationsRouter.get("/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -141,9 +140,10 @@ adminIdVerificationsRouter.get("/:id", async (req: JWTAuthedRequest, res: Respon
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "NOT_FOUND", message: "ID verification not found" },
       });
+      return;
     }
 
     res.json({
@@ -158,7 +158,7 @@ adminIdVerificationsRouter.get("/:id", async (req: JWTAuthedRequest, res: Respon
       error: { code: "GET_VERIFICATION_FAILED", message: "Failed to get ID verification" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -217,7 +217,7 @@ adminIdVerificationsRouter.get("/:id", async (req: JWTAuthedRequest, res: Respon
  *       403:
  *         description: Forbidden - admin only
  */
-adminIdVerificationsRouter.patch("/:id/status", async (req: JWTAuthedRequest, res: Response) => {
+adminIdVerificationsRouter.patch("/:id/status", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const schema = z.object({
       status: z.enum(["pending", "verified", "failed"]),
@@ -282,9 +282,10 @@ adminIdVerificationsRouter.patch("/:id/status", async (req: JWTAuthedRequest, re
     res.json({ success: true, status: body.status });
   } catch (error: any) {
     if (error.issues) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", message: "Invalid input", details: error.issues },
       });
+      return;
     }
 
     logger.error("update_id_verification_status_failed", { error: error.message });
@@ -292,7 +293,7 @@ adminIdVerificationsRouter.patch("/:id/status", async (req: JWTAuthedRequest, re
       error: { code: "UPDATE_STATUS_FAILED", message: "Failed to update status" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -317,7 +318,7 @@ adminIdVerificationsRouter.patch("/:id/status", async (req: JWTAuthedRequest, re
  *       403:
  *         description: Forbidden - admin only
  */
-adminIdVerificationsRouter.get("/:id/document-url", async (req: JWTAuthedRequest, res: Response) => {
+adminIdVerificationsRouter.get("/:id/document-url", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -327,17 +328,19 @@ adminIdVerificationsRouter.get("/:id/document-url", async (req: JWTAuthedRequest
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "NOT_FOUND", message: "ID verification not found" },
       });
+      return;
     }
 
     const documentUrl = result.rows[0].document_url;
 
     if (!documentUrl) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "NO_DOCUMENT", message: "Document URL not found" },
       });
+      return;
     }
 
     // For now, return the URL directly
@@ -353,6 +356,6 @@ adminIdVerificationsRouter.get("/:id/document-url", async (req: JWTAuthedRequest
       error: { code: "GET_DOCUMENT_URL_FAILED", message: "Failed to get document URL" },
     });
   }
-});
+}));
 
 export default adminIdVerificationsRouter;

@@ -5,6 +5,7 @@ import { Router, Request, Response } from "express";
 import Stripe from "stripe";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
+import { query } from "../db/client";
 import { createPaymentIntent, handleStripeEvent, getPaymentIntentByJobId } from "../services/paymentService";
 import { queueWebhookForRetry } from "../services/webhookRetryService";
 import { requireAuth, requireClient, AuthedRequest } from "../middleware/authCanonical";
@@ -133,14 +134,21 @@ stripeRouter.post("/webhook", async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Missing stripe-signature header" });
   }
 
-  let event: Stripe.Event;
+  // Phase 4: Raw body required — do not JSON.stringify; signature verification fails if body was mutated
+  if (!Buffer.isBuffer(req.body)) {
+    logger.warn("stripe_webhook_raw_body_required");
+    return res.status(400).json({
+      error: {
+        code: "WEBHOOK_RAW_BODY_REQUIRED",
+        message: "Webhook must receive raw body; ensure this route is mounted before JSON parser.",
+      },
+    });
+  }
 
+  let event: Stripe.Event;
   try {
-    // Get raw body - if Express parsed it, we need to reconstruct it
-    // In production, configure Express to skip JSON parsing for this route
-    const rawBody = (req as any).rawBody || Buffer.from(JSON.stringify(req.body));
     event = stripe.webhooks.constructEvent(
-      rawBody,
+      req.body,
       sig,
       getStripeWebhookSecret()
     );
@@ -156,24 +164,49 @@ stripeRouter.post("/webhook", async (req: Request, res: Response) => {
     });
   }
 
+  // Phase 4: Canonical intake — store in webhook_events first; idempotent on (provider, event_id)
+  const inserted = await query<{ id: string }>(
+    `
+      INSERT INTO webhook_events (provider, event_id, event_type, signature_verified, payload_json, processing_status)
+      VALUES ('stripe', $1, $2, true, $3::jsonb, 'pending')
+      ON CONFLICT (provider, event_id) DO NOTHING
+      RETURNING id
+    `,
+    [event.id, event.type, JSON.stringify(event)]
+  );
+  if (!inserted.rows[0]) {
+    logger.info("stripe_webhook_already_received", { eventId: event.id, eventType: event.type });
+    return res.status(200).json({ received: true });
+  }
+
+  const webhookRowId = inserted.rows[0].id;
+
   try {
     await handleStripeEvent(event);
+    await query(
+      `UPDATE webhook_events SET processing_status = 'done', processed_at = NOW(), attempt_count = attempt_count + 1 WHERE id = $1`,
+      [webhookRowId]
+    );
     res.json({ received: true });
   } catch (error) {
+    const errMsg = (error as Error).message;
     logger.error("stripe_webhook_processing_failed", {
-      error: (error as Error).message,
+      error: errMsg,
       eventId: event.id,
       eventType: event.type,
     });
+    await query(
+      `UPDATE webhook_events SET processing_status = 'failed', last_error = $2, attempt_count = attempt_count + 1 WHERE id = $1`,
+      [webhookRowId, errMsg]
+    );
 
-    // Queue failed webhook for retry
     try {
       await queueWebhookForRetry({
         source: "stripe",
         eventId: event.id,
         eventType: event.type,
         payload: event,
-        errorMessage: (error as Error).message,
+        errorMessage: errMsg,
       });
       logger.info("stripe_webhook_queued_for_retry", {
         eventId: event.id,
@@ -186,7 +219,6 @@ stripeRouter.post("/webhook", async (req: Request, res: Response) => {
       });
     }
 
-    // Still return 200 to Stripe to prevent their retries (we handle our own)
     res.status(200).json({ received: true, queued_for_retry: true });
   }
 });

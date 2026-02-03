@@ -4,7 +4,7 @@
 import { Router, Response } from "express";
 import multer from "multer";
 import { z } from "zod";
-import { jwtAuthMiddleware, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { query } from "../db/client";
 import {
@@ -23,8 +23,7 @@ import { sendOTP, verifyOTP } from "../services/phoneVerificationService";
 
 const onboardingRouter = Router();
 
-// All routes require authentication as cleaner
-onboardingRouter.use(jwtAuthMiddleware);
+onboardingRouter.use(requireAuth);
 onboardingRouter.use(requireRole("cleaner", "admin"));
 
 // Configure multer for file uploads
@@ -39,7 +38,7 @@ const upload = multer({
  * PATCH /cleaner/onboarding/current-step
  * Save current onboarding step (for persistence)
  */
-onboardingRouter.patch("/current-step", async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.patch("/current-step", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const schema = z.object({
       step: z.enum([
@@ -64,9 +63,10 @@ onboardingRouter.patch("/current-step", async (req: JWTAuthedRequest, res: Respo
     );
 
     if (profileResult.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "PROFILE_NOT_FOUND", message: "Cleaner profile not found" },
       });
+      return;
     }
 
     const cleanerId = profileResult.rows[0].id;
@@ -81,9 +81,10 @@ onboardingRouter.patch("/current-step", async (req: JWTAuthedRequest, res: Respo
     res.json({ success: true });
   } catch (error: any) {
     if (error.issues) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", message: "Invalid input", details: error.issues },
       });
+      return;
     }
 
     logger.error("save_current_step_failed", { error: error.message });
@@ -91,7 +92,7 @@ onboardingRouter.patch("/current-step", async (req: JWTAuthedRequest, res: Respo
       error: { code: "SAVE_STEP_FAILED", message: "Failed to save current step" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -108,7 +109,7 @@ onboardingRouter.patch("/current-step", async (req: JWTAuthedRequest, res: Respo
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.get("/progress", async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.get("/progress", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const profileResult = await query(
       `SELECT id FROM cleaner_profiles WHERE user_id = $1`,
@@ -116,9 +117,10 @@ onboardingRouter.get("/progress", async (req: JWTAuthedRequest, res: Response) =
     );
 
     if (profileResult.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "PROFILE_NOT_FOUND", message: "Cleaner profile not found" },
       });
+      return;
     }
 
     const cleanerId = profileResult.rows[0].id;
@@ -131,7 +133,7 @@ onboardingRouter.get("/progress", async (req: JWTAuthedRequest, res: Response) =
       error: { code: "GET_PROGRESS_FAILED", message: "Failed to get onboarding progress" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -162,7 +164,7 @@ onboardingRouter.get("/progress", async (req: JWTAuthedRequest, res: Response) =
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.post("/agreements", async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.post("/agreements", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const schema = z.object({
       terms_of_service: z.boolean(),
@@ -189,17 +191,19 @@ onboardingRouter.post("/agreements", async (req: JWTAuthedRequest, res: Response
     const result = await saveAgreements(cleanerId, body, ipAddress, userAgent);
 
     if (!result.success) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "SAVE_AGREEMENTS_FAILED", message: result.error },
       });
+      return;
     }
 
     res.json({ success: true });
   } catch (error: any) {
     if (error.issues) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", message: "Invalid input", details: error.issues },
       });
+      return;
     }
 
     logger.error("save_agreements_failed", { error: error.message });
@@ -207,7 +211,7 @@ onboardingRouter.post("/agreements", async (req: JWTAuthedRequest, res: Response
       error: { code: "SAVE_AGREEMENTS_FAILED", message: "Failed to save agreements" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -244,7 +248,7 @@ onboardingRouter.post("/agreements", async (req: JWTAuthedRequest, res: Response
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.post("/basic-info", async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.post("/basic-info", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const schema = z.object({
       first_name: z.string().min(1),
@@ -288,7 +292,7 @@ onboardingRouter.post("/basic-info", async (req: JWTAuthedRequest, res: Response
       error: { code: "SAVE_BASIC_INFO_FAILED", message: "Failed to save basic info" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -317,7 +321,7 @@ onboardingRouter.post("/basic-info", async (req: JWTAuthedRequest, res: Response
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.post("/phone/send-otp", async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.post("/phone/send-otp", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const schema = z.object({
       phone_number: z.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format"),
@@ -345,7 +349,7 @@ onboardingRouter.post("/phone/send-otp", async (req: JWTAuthedRequest, res: Resp
       error: { code: "SEND_OTP_FAILED", message: "Failed to send OTP" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -378,7 +382,7 @@ onboardingRouter.post("/phone/send-otp", async (req: JWTAuthedRequest, res: Resp
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.post("/phone/verify-otp", async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.post("/phone/verify-otp", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const schema = z.object({
       phone_number: z.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format"),
@@ -407,7 +411,7 @@ onboardingRouter.post("/phone/verify-otp", async (req: JWTAuthedRequest, res: Re
       error: { code: "VERIFY_OTP_FAILED", message: "Failed to verify OTP" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -436,7 +440,7 @@ onboardingRouter.post("/phone/verify-otp", async (req: JWTAuthedRequest, res: Re
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.post("/face-photo", upload.single("file"), async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.post("/face-photo", upload.single("file"), authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -478,7 +482,7 @@ onboardingRouter.post("/face-photo", upload.single("file"), async (req: JWTAuthe
       error: { code: "UPLOAD_FACE_PHOTO_FAILED", message: "Failed to upload face photo" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -511,7 +515,7 @@ onboardingRouter.post("/face-photo", upload.single("file"), async (req: JWTAuthe
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.post("/id-verification", upload.single("file"), async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.post("/id-verification", upload.single("file"), authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -565,7 +569,7 @@ onboardingRouter.post("/id-verification", upload.single("file"), async (req: JWT
       error: { code: "UPLOAD_ID_VERIFICATION_FAILED", message: "Failed to upload ID verification" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -596,7 +600,7 @@ onboardingRouter.post("/id-verification", upload.single("file"), async (req: JWT
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.post("/background-consent", async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.post("/background-consent", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const schema = z.object({
       fcra_consent: z.boolean(),
@@ -641,7 +645,7 @@ onboardingRouter.post("/background-consent", async (req: JWTAuthedRequest, res: 
       error: { code: "SAVE_BACKGROUND_CONSENT_FAILED", message: "Failed to save background check consent" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -678,7 +682,7 @@ onboardingRouter.post("/background-consent", async (req: JWTAuthedRequest, res: 
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.post("/service-areas", async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.post("/service-areas", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const schema = z.object({
       zip_codes: z.array(z.string().regex(/^\d{5}$/, "Invalid zip code format")).min(1),
@@ -720,7 +724,7 @@ onboardingRouter.post("/service-areas", async (req: JWTAuthedRequest, res: Respo
       error: { code: "SAVE_SERVICE_AREAS_FAILED", message: "Failed to save service areas" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -767,7 +771,7 @@ onboardingRouter.post("/service-areas", async (req: JWTAuthedRequest, res: Respo
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.post("/availability", async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.post("/availability", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const schema = z.object({
       blocks: z.array(
@@ -815,7 +819,7 @@ onboardingRouter.post("/availability", async (req: JWTAuthedRequest, res: Respon
       error: { code: "SAVE_AVAILABILITY_FAILED", message: "Failed to save availability" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -850,7 +854,7 @@ onboardingRouter.post("/availability", async (req: JWTAuthedRequest, res: Respon
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.post("/rates", async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.post("/rates", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const schema = z.object({
       hourly_rate_credits: z.number().int().min(200).max(1000),
@@ -892,7 +896,7 @@ onboardingRouter.post("/rates", async (req: JWTAuthedRequest, res: Response) => 
       error: { code: "SAVE_RATES_FAILED", message: "Failed to save rates" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -909,7 +913,7 @@ onboardingRouter.post("/rates", async (req: JWTAuthedRequest, res: Response) => 
  *       403:
  *         description: Forbidden - cleaners only
  */
-onboardingRouter.post("/complete", async (req: JWTAuthedRequest, res: Response) => {
+onboardingRouter.post("/complete", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const profileResult = await query(
       `SELECT id FROM cleaner_profiles WHERE user_id = $1`,
@@ -942,6 +946,6 @@ onboardingRouter.post("/complete", async (req: JWTAuthedRequest, res: Response) 
       error: { code: "COMPLETE_ONBOARDING_FAILED", message: "Failed to complete onboarding" },
     });
   }
-});
+}));
 
 export default onboardingRouter;

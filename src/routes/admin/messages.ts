@@ -1,16 +1,14 @@
 // src/routes/admin/messages.ts
 import { Router, Response, NextFunction } from 'express';
-import { AuthedRequest } from '../../types/express';
+import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from '../../middleware/authCanonical';
 import { query } from '../../db/client';
-import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
-import { requireAdmin } from '../../middleware/adminAuth';
 import { logger } from '../../lib/logger';
 import { MessageLogItem } from '../../types/admin';
 
 const router = Router();
 
-router.use(jwtAuthMiddleware);
-router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
+router.use(requireAuth);
+router.use(requireAdmin);
 
 /**
  * @swagger
@@ -60,7 +58,7 @@ router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, n
  *       200:
  *         description: Message delivery log
  */
-router.get('/log', async (req: AuthedRequest, res: Response) => {
+router.get('/log', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const {
       messageType,
@@ -149,13 +147,13 @@ router.get('/log', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching message log', { error });
     res.status(500).json({ error: 'Failed to fetch message log' });
   }
-});
+}));
 
 /**
  * GET /admin/messages/stats
  * Get message delivery statistics
  */
-router.get('/stats', async (req: AuthedRequest, res: Response) => {
+router.get('/stats', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { period = '30d' } = req.query;
     const daysBack = period === '7d' ? 7 : period === '30d' ? 30 : 90;
@@ -194,13 +192,13 @@ router.get('/stats', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching message stats', { error });
     res.status(500).json({ error: 'Failed to fetch message stats' });
   }
-});
+}));
 
 /**
  * GET /admin/messages/templates
  * Get all message templates
  */
-router.get('/templates', async (req: AuthedRequest, res: Response) => {
+router.get('/templates', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     // This would come from a templates table if we have one
     // For now, return a placeholder structure
@@ -232,7 +230,7 @@ router.get('/templates', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching templates', { error });
     res.status(500).json({ error: 'Failed to fetch templates' });
   }
-});
+}));
 
 export default router;
 

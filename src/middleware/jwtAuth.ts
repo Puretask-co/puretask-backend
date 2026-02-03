@@ -8,9 +8,9 @@ import type { UserRole } from "../types/db";
 
 // For backwards compatibility
 export type TokenPayload = AuthUser & { email?: string | null };
-export const verifyToken = (token: string): TokenPayload => {
-  const decoded = verifyAuthToken(token);
-  return { ...decoded, email: null };
+export const verifyToken = async (token: string): Promise<TokenPayload> => {
+  const decoded = await verifyAuthToken(token);
+  return { ...decoded, email: decoded.email ?? null };
 };
 
 export interface JWTAuthedRequest extends Request {
@@ -28,26 +28,27 @@ export interface JWTAuthedRequest extends Request {
  * NOTE: This middleware is maintained for backwards compatibility.
  * New routes should use requireAuth from src/middleware/authCanonical.ts
  */
-export function jwtAuthMiddleware(
+export async function jwtAuthMiddleware(
   req: JWTAuthedRequest,
   res: Response,
   next: NextFunction
-) {
+): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({
+    res.status(401).json({
       error: {
         code: "UNAUTHENTICATED",
         message: "Missing or invalid authorization header",
       },
     });
+    return;
   }
 
   const token = authHeader.substring(7); // Remove "Bearer "
 
   try {
-    const payload = verifyToken(token);
+    const payload = await verifyToken(token);
     req.user = {
       id: payload.id,
       role: payload.role,
@@ -59,12 +60,13 @@ export function jwtAuthMiddleware(
       error: (error as Error).message,
       ip: req.ip,
     });
-    return res.status(401).json({
+    res.status(401).json({
       error: {
         code: "INVALID_TOKEN",
         message: "Invalid or expired token",
       },
     });
+    return;
   }
 }
 
@@ -76,27 +78,26 @@ export function optionalJwtAuth(
   req: JWTAuthedRequest,
   res: Response,
   next: NextFunction
-) {
+): void {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return next();
+    next();
+    return;
   }
 
   const token = authHeader.substring(7);
 
-  try {
-    const payload = verifyToken(token);
+  void verifyToken(token).then((payload) => {
     req.user = {
       id: payload.id,
       role: payload.role,
       email: payload.email ?? null,
     };
-  } catch {
-    // Ignore invalid tokens for optional auth
-  }
-
-  next();
+    next();
+  }).catch(() => {
+    next();
+  });
 }
 
 /**

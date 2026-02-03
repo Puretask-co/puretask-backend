@@ -5,12 +5,12 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { jwtAuthMiddleware, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { query } from "../db/client";
 
 const cleanerEnhancedRouter = Router();
 
-cleanerEnhancedRouter.use(jwtAuthMiddleware);
+cleanerEnhancedRouter.use(requireAuth);
 cleanerEnhancedRouter.use(requireRole("cleaner", "admin"));
 
 // ============================================
@@ -39,7 +39,7 @@ cleanerEnhancedRouter.use(requireRole("cleaner", "admin"));
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/dashboard/analytics", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/dashboard/analytics", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
     const { period = "month" } = req.query;
@@ -137,7 +137,7 @@ cleanerEnhancedRouter.get("/dashboard/analytics", async (req: JWTAuthedRequest, 
       error: { code: "GET_ANALYTICS_FAILED", message: "Failed to get analytics" },
     });
   }
-});
+}));
 
 // ============================================
 // GOALS
@@ -186,7 +186,7 @@ const setGoalSchema = z.object({
 cleanerEnhancedRouter.post(
   "/goals",
   validateBody(setGoalSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { type, target, period } = req.body;
@@ -216,7 +216,7 @@ cleanerEnhancedRouter.post(
         error: { code: "SET_GOAL_FAILED", message: "Failed to set goal" },
       });
     }
-  }
+  })
 );
 
 /**
@@ -234,7 +234,7 @@ cleanerEnhancedRouter.post(
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/goals", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/goals", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -259,7 +259,7 @@ cleanerEnhancedRouter.get("/goals", async (req: JWTAuthedRequest, res: Response)
       error: { code: "GET_GOALS_FAILED", message: "Failed to get goals" },
     });
   }
-});
+}));
 
 // ============================================
 // CALENDAR ENHANCEMENTS
@@ -293,15 +293,16 @@ cleanerEnhancedRouter.get("/goals", async (req: JWTAuthedRequest, res: Response)
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/calendar/conflicts", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/calendar/conflicts", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
     const { start_date, end_date } = req.query;
 
     if (!start_date || !end_date) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "MISSING_DATES", message: "start_date and end_date required" },
       });
+      return;
     }
 
     // Find overlapping jobs
@@ -341,7 +342,7 @@ cleanerEnhancedRouter.get("/calendar/conflicts", async (req: JWTAuthedRequest, r
       error: { code: "DETECT_CONFLICTS_FAILED", message: "Failed to detect conflicts" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -368,7 +369,7 @@ cleanerEnhancedRouter.get("/calendar/conflicts", async (req: JWTAuthedRequest, r
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.post("/calendar/optimize", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.post("/calendar/optimize", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
     const { date } = req.body;
@@ -413,7 +414,7 @@ cleanerEnhancedRouter.post("/calendar/optimize", async (req: JWTAuthedRequest, r
       error: { code: "OPTIMIZE_FAILED", message: "Failed to optimize schedule" },
     });
   }
-});
+}));
 
 // ============================================
 // JOB MATCHING
@@ -441,7 +442,7 @@ cleanerEnhancedRouter.post("/calendar/optimize", async (req: JWTAuthedRequest, r
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/jobs/:id/matching-score", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/jobs/:id/matching-score", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
     const { id } = req.params;
@@ -453,9 +454,10 @@ cleanerEnhancedRouter.get("/jobs/:id/matching-score", async (req: JWTAuthedReque
     );
 
     if (job.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "JOB_NOT_FOUND", message: "Job not found" },
       });
+      return;
     }
 
     const jobData = job.rows[0];
@@ -477,9 +479,10 @@ cleanerEnhancedRouter.get("/jobs/:id/matching-score", async (req: JWTAuthedReque
     );
 
     if (cleaner.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "CLEANER_NOT_FOUND", message: "Cleaner not found" },
       });
+      return;
     }
 
     const cleanerData = cleaner.rows[0];
@@ -534,11 +537,11 @@ cleanerEnhancedRouter.get("/jobs/:id/matching-score", async (req: JWTAuthedReque
       error: { code: "CALCULATE_SCORE_FAILED", message: "Failed to calculate score" },
     });
   }
-});
+}));
 
 /**
  * @swagger
- * /cleaner/jobs/auto-accept:
+ * /cleaner/auto-accept-rules:
  *   post:
  *     summary: Set auto-accept rules
  *     description: Set auto-accept conditions for jobs (cleaners only).
@@ -584,7 +587,7 @@ const autoAcceptSchema = z.object({
 cleanerEnhancedRouter.post(
   "/auto-accept-rules",
   validateBody(autoAcceptSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { enabled, conditions } = req.body;
@@ -610,7 +613,7 @@ cleanerEnhancedRouter.post(
         error: { code: "SET_AUTO_ACCEPT_FAILED", message: "Failed to set auto-accept rules" },
       });
     }
-  }
+  })
 );
 
 // ============================================
@@ -618,8 +621,37 @@ cleanerEnhancedRouter.post(
 // ============================================
 
 /**
- * POST /cleaner/jobs/:id/track-time
- * Track time spent on job
+ * @swagger
+ * /cleaner/jobs/{id}/track-time:
+ *   post:
+ *     summary: Track job time
+ *     description: Start, stop, pause or resume time tracking for a job (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: Job ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [action]
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [start, stop, pause, resume]
+ *               timestamp: { type: string }
+ *     responses:
+ *       200:
+ *         description: Time tracking updated
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 const trackTimeSchema = z.object({
   action: z.enum(["start", "stop", "pause", "resume"]),
@@ -629,7 +661,7 @@ const trackTimeSchema = z.object({
 cleanerEnhancedRouter.post(
   "/jobs/:id/track-time",
   validateBody(trackTimeSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { id } = req.params;
@@ -661,7 +693,7 @@ cleanerEnhancedRouter.post(
         error: { code: "TRACK_TIME_FAILED", message: "Failed to track time" },
       });
     }
-  }
+  })
 );
 
 /**
@@ -713,7 +745,7 @@ const trackExpenseSchema = z.object({
 cleanerEnhancedRouter.post(
   "/jobs/:id/expenses",
   validateBody(trackExpenseSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { id } = req.params;
@@ -744,7 +776,7 @@ cleanerEnhancedRouter.post(
         error: { code: "TRACK_EXPENSE_FAILED", message: "Failed to track expense" },
       });
     }
-  }
+  })
 );
 
 /**
@@ -769,7 +801,7 @@ cleanerEnhancedRouter.post(
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/jobs/:id/directions", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/jobs/:id/directions", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
     const { id } = req.params;
@@ -790,9 +822,10 @@ cleanerEnhancedRouter.get("/jobs/:id/directions", async (req: JWTAuthedRequest, 
     );
 
     if (job.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "JOB_NOT_FOUND", message: "Job not found" },
       });
+      return;
     }
 
     const jobData = job.rows[0];
@@ -817,7 +850,7 @@ cleanerEnhancedRouter.get("/jobs/:id/directions", async (req: JWTAuthedRequest, 
       error: { code: "GET_DIRECTIONS_FAILED", message: "Failed to get directions" },
     });
   }
-});
+}));
 
 // ============================================
 // EARNINGS ENHANCEMENTS
@@ -843,7 +876,7 @@ cleanerEnhancedRouter.get("/jobs/:id/directions", async (req: JWTAuthedRequest, 
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/earnings/tax-report", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/earnings/tax-report", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
     const { year } = req.query;
@@ -878,7 +911,7 @@ cleanerEnhancedRouter.get("/earnings/tax-report", async (req: JWTAuthedRequest, 
       error: { code: "GET_TAX_REPORT_FAILED", message: "Failed to get tax report" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -902,7 +935,7 @@ cleanerEnhancedRouter.get("/earnings/tax-report", async (req: JWTAuthedRequest, 
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/earnings/breakdown", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/earnings/breakdown", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
     const { period = "month" } = req.query;
@@ -970,7 +1003,7 @@ cleanerEnhancedRouter.get("/earnings/breakdown", async (req: JWTAuthedRequest, r
       error: { code: "GET_BREAKDOWN_FAILED", message: "Failed to get breakdown" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -1002,7 +1035,7 @@ cleanerEnhancedRouter.get("/earnings/breakdown", async (req: JWTAuthedRequest, r
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/earnings/export", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/earnings/export", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
     const { start_date, end_date } = req.query;
@@ -1054,7 +1087,7 @@ cleanerEnhancedRouter.get("/earnings/export", async (req: JWTAuthedRequest, res:
       error: { code: "EXPORT_FAILED", message: "Failed to export earnings" },
     });
   }
-});
+}));
 
 // ============================================
 // PROFILE ENHANCEMENTS
@@ -1075,7 +1108,7 @@ cleanerEnhancedRouter.get("/earnings/export", async (req: JWTAuthedRequest, res:
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/profile/completeness", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/profile/completeness", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -1094,9 +1127,10 @@ cleanerEnhancedRouter.get("/profile/completeness", async (req: JWTAuthedRequest,
     );
 
     if (profile.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "PROFILE_NOT_FOUND", message: "Profile not found" },
       });
+      return;
     }
 
     const p = profile.rows[0];
@@ -1136,7 +1170,7 @@ cleanerEnhancedRouter.get("/profile/completeness", async (req: JWTAuthedRequest,
       error: { code: "GET_COMPLETENESS_FAILED", message: "Failed to get completeness" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -1153,7 +1187,7 @@ cleanerEnhancedRouter.get("/profile/completeness", async (req: JWTAuthedRequest,
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/profile/preview", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/profile/preview", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -1182,9 +1216,10 @@ cleanerEnhancedRouter.get("/profile/preview", async (req: JWTAuthedRequest, res:
     );
 
     if (profile.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "PROFILE_NOT_FOUND", message: "Profile not found" },
       });
+      return;
     }
 
     res.json({ profile: profile.rows[0] });
@@ -1197,7 +1232,7 @@ cleanerEnhancedRouter.get("/profile/preview", async (req: JWTAuthedRequest, res:
       error: { code: "GET_PREVIEW_FAILED", message: "Failed to get preview" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -1226,7 +1261,7 @@ cleanerEnhancedRouter.get("/profile/preview", async (req: JWTAuthedRequest, res:
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.post("/profile/video", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.post("/profile/video", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
     const { video_url } = req.body;
@@ -1252,7 +1287,7 @@ cleanerEnhancedRouter.post("/profile/video", async (req: JWTAuthedRequest, res: 
       error: { code: "UPLOAD_VIDEO_FAILED", message: "Failed to upload video" },
     });
   }
-});
+}));
 
 // ============================================
 // AVAILABILITY ENHANCEMENTS
@@ -1273,7 +1308,7 @@ cleanerEnhancedRouter.post("/profile/video", async (req: JWTAuthedRequest, res: 
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/availability/suggestions", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/availability/suggestions", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -1340,7 +1375,7 @@ cleanerEnhancedRouter.get("/availability/suggestions", async (req: JWTAuthedRequ
       error: { code: "GET_SUGGESTIONS_FAILED", message: "Failed to get suggestions" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -1383,7 +1418,7 @@ const applyTemplateSchema = z.object({
 cleanerEnhancedRouter.post(
   "/availability/template",
   validateBody(applyTemplateSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { template, days } = req.body;
@@ -1417,7 +1452,7 @@ cleanerEnhancedRouter.post(
         error: { code: "APPLY_TEMPLATE_FAILED", message: "Failed to apply template" },
       });
     }
-  }
+  })
 );
 
 // ============================================
@@ -1439,7 +1474,7 @@ cleanerEnhancedRouter.post(
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/certifications/recommendations", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/certifications/recommendations", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -1493,7 +1528,7 @@ cleanerEnhancedRouter.get("/certifications/recommendations", async (req: JWTAuth
       error: { code: "GET_RECOMMENDATIONS_FAILED", message: "Failed to get recommendations" },
     });
   }
-});
+}));
 
 // ============================================
 // LEADERBOARD
@@ -1514,7 +1549,7 @@ cleanerEnhancedRouter.get("/certifications/recommendations", async (req: JWTAuth
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/leaderboard/personal", async (req: JWTAuthedRequest, res: Response) => {
+cleanerEnhancedRouter.get("/leaderboard/personal", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const cleanerId = req.user!.id;
     const { timeframe = "month", category = "earnings" } = req.query;
@@ -1576,6 +1611,6 @@ cleanerEnhancedRouter.get("/leaderboard/personal", async (req: JWTAuthedRequest,
       error: { code: "GET_LEADERBOARD_FAILED", message: "Failed to get leaderboard" },
     });
   }
-});
+}));
 
 export default cleanerEnhancedRouter;

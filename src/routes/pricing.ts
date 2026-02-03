@@ -4,13 +4,12 @@
 
 import { Router, Response } from "express";
 import { logger } from "../lib/logger";
-import { jwtAuthMiddleware, JWTAuthedRequest } from "../middleware/jwtAuth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import { calculateJobPricing, getPricingEstimate, getTierPriceBands } from "../services/pricingService";
 
 const pricingRouter = Router();
 
-// All routes require authentication (but not specific role)
-pricingRouter.use(jwtAuthMiddleware);
+pricingRouter.use(requireAuth);
 
 /**
  * @swagger
@@ -50,7 +49,7 @@ pricingRouter.use(jwtAuthMiddleware);
  */
 pricingRouter.get(
   "/estimate",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       // Parse query parameters manually (query params come as strings)
       const hours = req.query.hours ? Number(req.query.hours) : null;
@@ -137,7 +136,7 @@ pricingRouter.get(
  *       200:
  *         description: Tier price bands
  */
-pricingRouter.get("/tiers", async (_req: JWTAuthedRequest, res: Response) => {
+pricingRouter.get("/tiers", async (_req: AuthedRequest, res: Response) => {
   try {
     const priceBands = getTierPriceBands();
     res.json({

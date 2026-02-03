@@ -1,16 +1,14 @@
 // src/routes/admin/cleaners.ts
 import { Router, Response, NextFunction, Request } from 'express';
-import { AuthedRequest } from '../../types/express';
+import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from '../../middleware/authCanonical';
 import { query } from '../../db/client';
-import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
-import { requireAdmin } from '../../middleware/adminAuth';
 import { logger } from '../../lib/logger';
 import { CleanerManagementItem } from '../../types/admin';
 
 const router = Router();
 
-router.use(jwtAuthMiddleware);
-router.use((req: Request, res: Response, next: NextFunction) => requireAdmin(req as AuthedRequest, res, next));
+router.use(requireAuth);
+router.use(requireAdmin);
 
 /**
  * @swagger
@@ -229,7 +227,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  * GET /admin/cleaners/:id
  * Get detailed cleaner information
  */
-router.get('/:id', async (req: AuthedRequest, res: Response) => {
+router.get('/:id', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -272,7 +270,8 @@ router.get('/:id', async (req: AuthedRequest, res: Response) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Cleaner not found' });
+      res.status(404).json({ error: 'Cleaner not found' });
+      return;
     }
 
     res.json(result.rows[0]);
@@ -280,13 +279,13 @@ router.get('/:id', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching cleaner details', { error, cleanerId: req.params.id });
     res.status(500).json({ error: 'Failed to fetch cleaner details' });
   }
-});
+}));
 
 /**
  * PATCH /admin/cleaners/:id/verified-badge
  * Toggle verified badge for cleaner
  */
-router.patch('/:id/verified-badge', async (req: AuthedRequest, res: Response) => {
+router.patch('/:id/verified-badge', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { verified } = req.body;
@@ -300,7 +299,8 @@ router.patch('/:id/verified-badge', async (req: AuthedRequest, res: Response) =>
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Cleaner not found' });
+      res.status(404).json({ error: 'Cleaner not found' });
+      return;
     }
 
     logger.info('Admin toggled verified badge', {
@@ -314,20 +314,21 @@ router.patch('/:id/verified-badge', async (req: AuthedRequest, res: Response) =>
     logger.error('Error updating verified badge', { error, cleanerId: req.params.id });
     res.status(500).json({ error: 'Failed to update verified badge' });
   }
-});
+}));
 
 /**
  * PATCH /admin/cleaners/:id/tier
  * Update cleaner tier (admin override)
  */
-router.patch('/:id/tier', async (req: AuthedRequest, res: Response) => {
+router.patch('/:id/tier', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { tier, reason } = req.body;
 
     const validTiers = ['Rookie', 'Semi Pro', 'Pro', 'Gold', 'Platinum'];
     if (!validTiers.includes(tier)) {
-      return res.status(400).json({ error: 'Invalid tier' });
+      res.status(400).json({ error: 'Invalid tier' });
+      return;
     }
 
     const result = await query(
@@ -339,7 +340,8 @@ router.patch('/:id/tier', async (req: AuthedRequest, res: Response) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Cleaner not found' });
+      res.status(404).json({ error: 'Cleaner not found' });
+      return;
     }
 
     // Log admin action
@@ -368,13 +370,13 @@ router.patch('/:id/tier', async (req: AuthedRequest, res: Response) => {
     logger.error('Error updating cleaner tier', { error, cleanerId: req.params.id });
     res.status(500).json({ error: 'Failed to update tier' });
   }
-});
+}));
 
 /**
  * GET /admin/cleaners/stats/summary
  * Get cleaner statistics summary
  */
-router.get('/stats/summary', async (req: AuthedRequest, res: Response) => {
+router.get('/stats/summary', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const stats = await query(`
       SELECT 
@@ -396,13 +398,13 @@ router.get('/stats/summary', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching cleaner stats', { error });
     res.status(500).json({ error: 'Failed to fetch cleaner stats' });
   }
-});
+}));
 
 /**
  * POST /admin/cleaners/:id/suspend
  * Suspend a cleaner account
  */
-router.post('/:id/suspend', async (req: AuthedRequest, res: Response) => {
+router.post('/:id/suspend', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { reason, duration } = req.body;
@@ -439,7 +441,7 @@ router.post('/:id/suspend', async (req: AuthedRequest, res: Response) => {
     logger.error('Error suspending cleaner', { error, cleanerId: req.params.id });
     res.status(500).json({ error: 'Failed to suspend cleaner' });
   }
-});
+}));
 
 export default router;
 

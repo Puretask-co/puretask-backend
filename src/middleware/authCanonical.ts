@@ -4,10 +4,14 @@
 // This is the ONLY auth middleware that should be used in routes.
 // All legacy auth mechanisms are deprecated and removed.
 
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, type RequestHandler } from "express";
 import { verifyAuthToken, AuthUser } from "../lib/auth";
 import { logger } from "../lib/logger";
+import { query } from "../db/client";
 import type { UserRole } from "../types/db";
+
+/** Role after auth (includes super_admin when set by requireSuperAdmin). */
+export type AuthedRole = UserRole;
 
 /**
  * Canonical authenticated request interface
@@ -16,8 +20,21 @@ import type { UserRole } from "../types/db";
 export interface AuthedRequest extends Request {
   user: {
     id: string;
-    role: UserRole;
+    role: AuthedRole;
     email?: string | null;
+  };
+}
+
+/**
+ * Wraps a handler that expects AuthedRequest so Express accepts it (Request has optional user).
+ * Use after requireAuth/requireAdmin: router.get(path, requireAuth, authedHandler(async (req, res) => { ... })).
+ * Handler may return void or Response (e.g. return res.json()) - return value is ignored.
+ */
+export function authedHandler(
+  handler: (req: AuthedRequest, res: Response) => void | Promise<void | Response>
+): RequestHandler {
+  return (req, res, next) => {
+    void Promise.resolve(handler(req as AuthedRequest, res)).then(() => next(), next);
   };
 }
 
@@ -31,11 +48,11 @@ export interface AuthedRequest extends Request {
  * router.use(requireAuth);
  * router.get('/profile', (req: AuthedRequest, res) => { ... });
  */
-export function requireAuth(
+export async function requireAuth(
   req: Request,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -56,7 +73,7 @@ export function requireAuth(
   const token = authHeader.substring(7); // Remove "Bearer "
 
   try {
-    const payload = verifyAuthToken(token);
+    const payload = await verifyAuthToken(token);
     // Attach user to request with canonical shape
     (req as AuthedRequest).user = {
       id: payload.id,
@@ -91,11 +108,11 @@ export function requireAuth(
  *   else { /* anonymous user *\/ }
  * });
  */
-export function optionalAuth(
+export async function optionalAuth(
   req: Request,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -105,7 +122,7 @@ export function optionalAuth(
   const token = authHeader.substring(7);
 
   try {
-    const payload = verifyAuthToken(token);
+    const payload = await verifyAuthToken(token);
     (req as AuthedRequest).user = {
       id: payload.id,
       role: payload.role,
@@ -131,7 +148,10 @@ export function optionalAuth(
  * @example
  * router.get('/cleaner/earnings', requireAuth, requireRole('cleaner'), (req: AuthedRequest, res) => { ... });
  */
-export function requireRole(...allowedRoles: UserRole[]) {
+/** Roles that can be required; includes super_admin for admin/super_admin routes. */
+export type RequirableRole = UserRole | "super_admin";
+
+export function requireRole(...allowedRoles: RequirableRole[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const authedReq = req as AuthedRequest;
 
@@ -189,3 +209,56 @@ export const requireCleaner = requireRole("cleaner");
  * requireClient - Convenience wrapper for client-only routes
  */
 export const requireClient = requireRole("client");
+
+/**
+ * requireSuperAdmin - Enforces super_admin role via DB lookup
+ * Use for sensitive operations (system config, settings reset, export/import).
+ * Must be used AFTER requireAuth.
+ */
+export async function requireSuperAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const authedReq = req as AuthedRequest;
+  if (!authedReq.user?.id) {
+    res.status(401).json({
+      error: { code: "UNAUTHENTICATED", message: "Authentication required" },
+    });
+    return;
+  }
+  try {
+    const result = await query<{ role: string }>(
+      "SELECT role FROM users WHERE id = $1",
+      [authedReq.user.id]
+    );
+    if (result.rows.length === 0) {
+      res.status(401).json({
+        error: { code: "USER_NOT_FOUND", message: "User not found" },
+      });
+      return;
+    }
+    const role = result.rows[0].role;
+    if (role !== "super_admin") {
+      logger.warn("auth_failed", {
+        reason: "super_admin_required",
+        userId: authedReq.user.id,
+        path: req.path,
+      });
+      res.status(403).json({
+        error: {
+          code: "SUPER_ADMIN_REQUIRED",
+          message: "Super admin access required",
+        },
+      });
+      return;
+    }
+    authedReq.user.role = "super_admin";
+    next();
+  } catch (error) {
+    logger.error("requireSuperAdmin_error", { error: (error as Error).message });
+    res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Internal server error" },
+    });
+  }
+}

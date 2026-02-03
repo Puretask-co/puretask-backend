@@ -7,17 +7,49 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { query } from "../db/client";
-import { jwtAuthMiddleware } from "../middleware/jwtAuth";
-import { AuthedRequest } from "../types/express";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 
 const router = Router();
-router.use(jwtAuthMiddleware);
+router.use(requireAuth);
 
 // ============================================
 // MESSAGE HISTORY (Logging)
 // ============================================
 
-// Save a sent message to history
+/**
+ * @swagger
+ * /cleaner/messages/log:
+ *   post:
+ *     summary: Log a sent message
+ *     description: Save a sent message to history (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [message_content]
+ *             properties:
+ *               message_content: { type: string }
+ *               recipient_type: { type: string }
+ *               recipient_id: { type: string }
+ *               recipient_name: { type: string }
+ *               template_id: { type: string }
+ *               template_name: { type: string }
+ *               variables_used: { type: object }
+ *               booking_id: { type: string }
+ *               message_type: { type: string }
+ *               channel: { type: string }
+ *               was_ai_generated: { type: boolean }
+ *     responses:
+ *       201:
+ *         description: Message logged
+ *       400:
+ *         description: Validation error
+ */
 router.post("/messages/log", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
@@ -93,7 +125,38 @@ router.post("/messages/log", async (req: AuthedRequest, res) => {
   }
 });
 
-// Get message history
+/**
+ * @swagger
+ * /cleaner/messages/history:
+ *   get:
+ *     summary: Get message history
+ *     description: Get logged messages with optional filters (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *       - in: query
+ *         name: offset
+ *         schema: { type: integer, default: 0 }
+ *       - in: query
+ *         name: message_type
+ *         schema: { type: string }
+ *       - in: query
+ *         name: channel
+ *         schema: { type: string }
+ *       - in: query
+ *         name: start_date
+ *         schema: { type: string }
+ *       - in: query
+ *         name: end_date
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Message history list
+ */
 router.get("/messages/history", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
@@ -228,7 +291,19 @@ router.get("/messages/stats", async (req: AuthedRequest, res) => {
 // SAVED MESSAGES (Drafts/Favorites)
 // ============================================
 
-// Get all saved messages
+/**
+ * @swagger
+ * /cleaner/messages/saved:
+ *   get:
+ *     summary: Get saved messages
+ *     description: Get all saved messages/drafts (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: savedMessages array and count
+ */
 router.get("/messages/saved", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
@@ -311,7 +386,37 @@ router.post("/messages/saved", async (req: AuthedRequest, res) => {
   }
 });
 
-// Update saved message
+/**
+ * @swagger
+ * /cleaner/messages/saved/{id}:
+ *   put:
+ *     summary: Update saved message
+ *     description: Update a saved message by id (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title: { type: string }
+ *               content: { type: string }
+ *               category: { type: string }
+ *               tags: { type: array }
+ *               is_favorite: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Saved message updated
+ *       404:
+ *         description: Not found
+ */
 router.put("/messages/saved/:id", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
@@ -378,7 +483,24 @@ router.delete("/messages/saved/:id", async (req: AuthedRequest, res) => {
   }
 });
 
-// Mark saved message as used
+/**
+ * @swagger
+ * /cleaner/messages/saved/{id}/use:
+ *   post:
+ *     summary: Mark saved message as used
+ *     description: Increment usage count for a saved message (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Usage tracked
+ */
 router.post("/messages/saved/:id/use", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;

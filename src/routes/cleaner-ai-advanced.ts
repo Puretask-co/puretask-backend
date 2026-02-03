@@ -6,18 +6,18 @@
 
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
-import { db } from "../db/client";
-import { jwtAuthMiddleware } from "../middleware/jwtAuth";
-import { AuthedRequest } from "../types/express";
+import { query, withTransaction } from "../db/client";
+import type { PoolClient } from "pg";
+import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 
 const router = Router();
-router.use(jwtAuthMiddleware);
+router.use(requireAuth);
 
 // ============================================
 // EXPORT ALL SETTINGS
 // ============================================
 
-router.get("/export", async (req: AuthedRequest, res) => {
+router.get("/export", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -65,7 +65,7 @@ router.get("/export", async (req: AuthedRequest, res) => {
       error: { code: "EXPORT_ERROR", message: "Failed to export settings" },
     });
   }
-});
+}));
 
 // ============================================
 // IMPORT SETTINGS
@@ -79,12 +79,12 @@ const importSchema = z.object({
   replaceExisting: z.boolean().default(false),
 });
 
-router.post("/import", async (req: AuthedRequest, res) => {
+router.post("/import", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const validated = importSchema.parse(req.body);
 
-    await withTransaction(async (client) => {
+    await withTransaction(async (client: PoolClient) => {
       let imported = { settings: 0, templates: 0, responses: 0, preferences: 0 };
 
       // Import settings
@@ -168,8 +168,6 @@ router.post("/import", async (req: AuthedRequest, res) => {
         imported.preferences = 1;
       }
 
-      await client.query("COMMIT");
-
       res.json({
         message: "Settings imported successfully",
         imported,
@@ -177,16 +175,17 @@ router.post("/import", async (req: AuthedRequest, res) => {
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", details: error.errors },
       });
+      return;
     }
     console.error("Error importing settings:", error);
     res.status(500).json({
       error: { code: "IMPORT_ERROR", message: "Failed to import settings" },
     });
   }
-});
+}));
 
 // ============================================
 // PREVIEW TEMPLATE WITH SAMPLE DATA
@@ -197,7 +196,7 @@ const previewSchema = z.object({
   sampleData: z.record(z.string()),
 });
 
-router.post("/preview-template", async (req: AuthedRequest, res) => {
+router.post("/preview-template", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const validated = previewSchema.parse(req.body);
     
@@ -219,21 +218,22 @@ router.post("/preview-template", async (req: AuthedRequest, res) => {
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", details: error.errors },
       });
+      return;
     }
     res.status(500).json({
       error: { code: "PREVIEW_ERROR", message: "Failed to preview template" },
     });
   }
-});
+}));
 
 // ============================================
 // DUPLICATE TEMPLATE
 // ============================================
 
-router.post("/templates/:templateId/duplicate", async (req: AuthedRequest, res) => {
+router.post("/templates/:templateId/duplicate", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { templateId } = req.params;
@@ -247,9 +247,10 @@ router.post("/templates/:templateId/duplicate", async (req: AuthedRequest, res) 
     );
 
     if (original.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: "NOT_FOUND", message: "Template not found" },
       });
+      return;
     }
 
     const template = original.rows[0];
@@ -280,18 +281,18 @@ router.post("/templates/:templateId/duplicate", async (req: AuthedRequest, res) 
       error: { code: "DUPLICATE_ERROR", message: "Failed to duplicate template" },
     });
   }
-});
+}));
 
 // ============================================
 // RESET TO DEFAULTS
 // ============================================
 
-router.post("/reset-to-defaults", async (req: AuthedRequest, res) => {
+router.post("/reset-to-defaults", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { resetType } = req.body; // 'settings', 'templates', 'responses', 'preferences', 'all'
 
-    await withTransaction(async (client) => {
+    await withTransaction(async (client: PoolClient) => {
       let reset = { settings: 0, templates: 0, responses: 0, preferences: 0 };
 
       if (resetType === 'settings' || resetType === 'all') {
@@ -364,21 +365,22 @@ router.post("/reset-to-defaults", async (req: AuthedRequest, res) => {
       error: { code: "RESET_ERROR", message: "Failed to reset to defaults" },
     });
   }
-});
+}));
 
 // ============================================
 // BATCH ACTIVATE/DEACTIVATE TEMPLATES
 // ============================================
 
-router.post("/templates/batch-toggle", async (req: AuthedRequest, res) => {
+router.post("/templates/batch-toggle", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { templateIds, active } = req.body;
 
     if (!Array.isArray(templateIds) || typeof active !== 'boolean') {
-      return res.status(400).json({
+      res.status(400).json({
         error: { code: "VALIDATION_ERROR", message: "Invalid request format" },
       });
+      return;
     }
 
     const result = await query(
@@ -399,18 +401,18 @@ router.post("/templates/batch-toggle", async (req: AuthedRequest, res) => {
       error: { code: "BATCH_ERROR", message: "Failed to update templates" },
     });
   }
-});
+}));
 
 // ============================================
 // SEARCH TEMPLATES
 // ============================================
 
-router.get("/templates/search", async (req: AuthedRequest, res) => {
+router.get("/templates/search", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { q, type } = req.query;
 
-    let query = `
+    let sql = `
       SELECT 
         id, template_type as type, template_name as name, 
         template_content as content, variables, is_active as active,
@@ -421,18 +423,18 @@ router.get("/templates/search", async (req: AuthedRequest, res) => {
     const params: any[] = [cleanerId];
 
     if (q) {
-      query += ` AND (template_name ILIKE $${params.length + 1} OR template_content ILIKE $${params.length + 1})`;
+      sql += ` AND (template_name ILIKE $${params.length + 1} OR template_content ILIKE $${params.length + 1})`;
       params.push(`%${q}%`);
     }
 
     if (type) {
-      query += ` AND template_type = $${params.length + 1}`;
+      sql += ` AND template_type = $${params.length + 1}`;
       params.push(type);
     }
 
-    query += ` ORDER BY usage_count DESC, template_name`;
+    sql += ` ORDER BY usage_count DESC, template_name`;
 
-    const result = await query(query, params);
+    const result = await query(sql, params);
 
     res.json({
       templates: result.rows,
@@ -445,18 +447,18 @@ router.get("/templates/search", async (req: AuthedRequest, res) => {
       error: { code: "SEARCH_ERROR", message: "Failed to search templates" },
     });
   }
-});
+}));
 
 // ============================================
 // SEARCH QUICK RESPONSES
 // ============================================
 
-router.get("/quick-responses/search", async (req: AuthedRequest, res) => {
+router.get("/quick-responses/search", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { q, category } = req.query;
 
-    let query = `
+    let sql = `
       SELECT 
         id, response_category as category, trigger_keywords as "triggerKeywords",
         response_text as text, is_favorite as favorite, usage_count as "usageCount"
@@ -466,18 +468,18 @@ router.get("/quick-responses/search", async (req: AuthedRequest, res) => {
     const params: any[] = [cleanerId];
 
     if (q) {
-      query += ` AND (response_text ILIKE $${params.length + 1} OR $${params.length + 1} = ANY(trigger_keywords))`;
+      sql += ` AND (response_text ILIKE $${params.length + 1} OR $${params.length + 1} = ANY(trigger_keywords))`;
       params.push(`%${q}%`);
     }
 
     if (category) {
-      query += ` AND response_category = $${params.length + 1}`;
+      sql += ` AND response_category = $${params.length + 1}`;
       params.push(category);
     }
 
-    query += ` ORDER BY is_favorite DESC, usage_count DESC`;
+    sql += ` ORDER BY is_favorite DESC, usage_count DESC`;
 
-    const result = await query(query, params);
+    const result = await query(sql, params);
 
     res.json({
       responses: result.rows,
@@ -490,13 +492,13 @@ router.get("/quick-responses/search", async (req: AuthedRequest, res) => {
       error: { code: "SEARCH_ERROR", message: "Failed to search responses" },
     });
   }
-});
+}));
 
 // ============================================
 // INCREMENT USAGE COUNT
 // ============================================
 
-router.post("/templates/:templateId/use", async (req: AuthedRequest, res) => {
+router.post("/templates/:templateId/use", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { templateId } = req.params;
@@ -515,9 +517,9 @@ router.post("/templates/:templateId/use", async (req: AuthedRequest, res) => {
       error: { code: "USAGE_ERROR", message: "Failed to record usage" },
     });
   }
-});
+}));
 
-router.post("/quick-responses/:responseId/use", async (req: AuthedRequest, res) => {
+router.post("/quick-responses/:responseId/use", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { responseId } = req.params;
@@ -536,7 +538,7 @@ router.post("/quick-responses/:responseId/use", async (req: AuthedRequest, res) 
       error: { code: "USAGE_ERROR", message: "Failed to record usage" },
     });
   }
-});
+}));
 
 export default router;
 

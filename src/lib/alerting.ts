@@ -60,6 +60,13 @@ export const alertTemplates = {
     message: `Fraud alert ${alertId} resolved as ${resolution}`,
     details: { alertId, resolution, adminId },
   }),
+  /** Section 6: Dead-letter jobs alert */
+  deadLetterJobs: (count: number, jobIds: string[], threshold: number) => ({
+    level: "error" as const,
+    title: "Dead-letter jobs detected",
+    message: `${count} durable jobs in dead state (threshold: ${threshold})`,
+    details: { count, jobIds: jobIds.slice(0, 20), threshold },
+  }),
 };
 
 async function sendSlackAlert(payload: Record<string, unknown>): Promise<void> {

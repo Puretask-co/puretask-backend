@@ -1,7 +1,7 @@
 # Route Protection Table
 
-**Last Updated**: 2025-01-15  
-**Status**: In Progress - Migration to Canonical Auth
+**Last Updated**: 2026-01-31  
+**Status**: Complete — All routes use canonical auth (authCanonical)
 
 This table documents ALL routes and their authentication/authorization requirements.
 
@@ -65,35 +65,8 @@ This table documents ALL routes and their authentication/authorization requireme
 
 ## Migration Status
 
-### ✅ Already Using Canonical Auth
-- `/jobs` - uses `jwtAuthMiddleware`
-- `/credits` - uses `jwtAuthMiddleware` + `requireRole`
-- `/cleaner` - uses `jwtAuthMiddleware` + `requireRole`
-- `/client` - uses `jwtAuthMiddleware` + `requireRole`
-- `/admin/*` sub-routes - use `jwtAuthMiddleware`
-- `/cleaner-ai-*` - use `jwtAuthMiddleware`
-- `/message-history` - uses `jwtAuthMiddleware`
-- `/gamification` - uses `jwtAuthMiddleware`
-- `/photos` - uses `jwtAuthMiddleware`
-- `/messages` - uses `jwtAuthMiddleware`
-- `/pricing` - uses `jwtAuthMiddleware`
-
-### 🔄 Needs Migration (Using Legacy authMiddleware)
-- `/ai` - **MIGRATE TO**: `requireAuth`
-- `/admin` (main router) - **MIGRATE TO**: `requireAuth` + `requireAdmin`
-- `/stripe` (non-webhook routes) - **MIGRATE TO**: `requireAuth` + `requireClient`
-- `/v2` - **MIGRATE TO**: `requireAuth`
-- `/tracking` - **MIGRATE TO**: `requireAuth`
-- `/reschedule` - **MIGRATE TO**: `requireAuth`
-- `/scoring` - **MIGRATE TO**: `requireAuth`
-- `/premium` - **MIGRATE TO**: `requireAuth`
-- `/manager` - **MIGRATE TO**: `requireAuth` + `requireAdmin`
-- `/matching` - **MIGRATE TO**: `requireAuth`
-- `/assignment` - **MIGRATE TO**: `requireAuth`
-- `/cancellation` - **MIGRATE TO**: `requireAuth`
-- `/analytics` - **MIGRATE TO**: `requireAuth` + `requireAdmin`
-- `/alerts` - **MIGRATE TO**: `requireAuth`
-- `/search` - **MIGRATE TO**: `requireAuth` (wrong import currently)
+### ✅ All Routes Using Canonical Auth (authCanonical)
+All route files now use `requireAuth`, `requireRole`, `requireAdmin`, `requireClient`, `requireCleaner`, or `requireSuperAdmin` from `src/middleware/authCanonical.ts`. No routes import `jwtAuthMiddleware` or `adminAuth`; `jwtAuth.ts` and `adminAuth.ts` remain only for middleware unit tests.
 
 ### ✅ Webhooks (Correctly Isolated)
 - `/stripe/webhook` - Uses Stripe signature verification (no JWT)
@@ -116,8 +89,8 @@ This table documents ALL routes and their authentication/authorization requireme
 ## Next Steps
 
 1. ✅ Create canonical auth middleware (`authCanonical.ts`)
-2. 🔄 Migrate all routes to canonical auth
-3. 🔄 Remove legacy auth from `jwtAuth.ts` (remove dev fallback)
-4. 🔄 Deprecate `src/middleware/auth.ts` (legacy)
-5. 🔄 Add ESLint rule to prevent legacy auth imports
-6. 🔄 Update route protection table as migration progresses
+2. ✅ Migrate all routes to canonical auth
+3. Optional: Remove or further deprecate `jwtAuth.ts` (kept for unit tests)
+4. ✅ Deprecate `src/middleware/auth.ts` (legacy); CI blocks imports from routes
+5. ✅ CI checks for legacy auth imports (`.github/workflows/security-scan.yml`)
+6. ✅ Auth unit tests: `src/middleware/__tests__/authCanonical.test.ts` (requireAuth 401/next; requireRole 403/next)

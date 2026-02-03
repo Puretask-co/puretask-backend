@@ -17,7 +17,12 @@ function Assert-ProjectDir([string]$Path, [string]$Name) {
 }
 
 Assert-ProjectDir -Path $BackendPath -Name "Backend"
-Assert-ProjectDir -Path $FrontendPath -Name "Frontend"
+
+$frontendOk = (Test-Path $FrontendPath) -and (Test-Path (Join-Path $FrontendPath "package.json"))
+if (-not $frontendOk) {
+  Write-Host "Frontend not found or missing package.json at: $FrontendPath" -ForegroundColor Yellow
+  Write-Host "Starting backend only." -ForegroundColor Yellow
+}
 
 Write-Host "Stopping any existing dev servers on ports $BackendPort and $FrontendPort..."
 & (Join-Path $BackendPath "scripts\dev-stop.ps1") -Ports @($BackendPort, $FrontendPort)
@@ -30,15 +35,19 @@ Start-Process -FilePath "powershell.exe" -WorkingDirectory $BackendPath -Argumen
   "Write-Host 'Backend: npm run dev' -ForegroundColor Cyan; `$env:PORT=$BackendPort; npm run dev"
 )
 
-Write-Host "Starting frontend in a new PowerShell window..."
-Start-Process -FilePath "powershell.exe" -WorkingDirectory $FrontendPath -ArgumentList @(
-  "-NoExit",
-  "-Command",
-  "Write-Host 'Frontend: npm run dev' -ForegroundColor Cyan; npm run dev"
-)
-
-Write-Host ""
-Write-Host "If Tailwind resolution fails again, verify the frontend window shows CWD = $FrontendPath"
-Write-Host "Backend:  http://localhost:$BackendPort/health"
-Write-Host "Frontend: http://localhost:$FrontendPort/"
+if ($frontendOk) {
+  Write-Host "Starting frontend in a new PowerShell window..."
+  Start-Process -FilePath "powershell.exe" -WorkingDirectory $FrontendPath -ArgumentList @(
+    "-NoExit",
+    "-Command",
+    "Write-Host 'Frontend: npm run dev (port $FrontendPort)' -ForegroundColor Cyan; `$env:PORT=$FrontendPort; npm run dev"
+  )
+  Write-Host ""
+  Write-Host "Backend:  http://localhost:$BackendPort/health"
+  Write-Host "Frontend: http://localhost:$FrontendPort/"
+} else {
+  Write-Host ""
+  Write-Host "Backend:  http://localhost:$BackendPort/health"
+  Write-Host "Add package.json to $FrontendPath to start frontend with dev:all"
+}
 

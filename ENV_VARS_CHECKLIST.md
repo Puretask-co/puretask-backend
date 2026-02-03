@@ -1,6 +1,8 @@
 # Environment Variables Checklist
 
-**Quick Reference**: Which environment variables you need for each integration
+**Quick Reference**: Which environment variables you need for each integration.
+
+**Startup validation:** The backend validates required vars at startup in `src/config/env.ts` (`requireEnv()`). If any required variable is missing, the process exits with a clear error. See `docs/active/00-CRITICAL/PHASE_0_1_STATUS.md` for Phase 1 status.
 
 ---
 

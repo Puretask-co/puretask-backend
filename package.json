@@ -1,6 +1,6 @@
 {
   "name": "puretask-backend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "PureTask Backend API - Uber-style cleaning marketplace",
   "private": true,
   "main": "dist/index.js",
@@ -32,6 +32,7 @@
     "test:load": "k6 run tests/load/api-load-test.js",
     "test:load:jobs": "k6 run tests/load/job-lifecycle-test.js",
     "test:performance": "ts-node tests/performance/benchmarks.ts",
+    "db:migrate": "node scripts/run-migration.js DB/migrations/000_CONSOLIDATED_SCHEMA.sql",
     "security:setup-hooks": "powershell -ExecutionPolicy Bypass -File scripts/setup-pre-commit.ps1",
     "worker:auto-cancel": "ts-node src/workers/autoCancelJobs.ts",
     "worker:auto-expire": "ts-node src/workers/autoExpireAwaitingApproval.ts",
@@ -46,7 +47,9 @@
     "worker:weekly-summary": "ts-node src/workers/weeklySummary.ts",
     "worker:onboarding-reminders": "ts-node src/workers/onboardingReminderWorker.ts",
     "worker:lock-recovery": "ts-node src/workers/lockRecovery.ts",
-    "worker:scheduler": "ts-node src/workers/scheduler.ts"
+    "worker:scheduler": "ts-node src/workers/scheduler.ts",
+    "worker:durable-jobs": "ts-node src/workers/runDurableJobWorker.ts",
+    "worker:durable-jobs:loop": "ts-node src/workers/runDurableJobWorker.ts --loop"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.0",

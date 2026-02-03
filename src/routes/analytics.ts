@@ -3,7 +3,7 @@
 // V2 FEATURE — DISABLED FOR NOW
 
 import { Router, Response } from "express";
-import { requireAuth, requireAdmin, AuthedRequest } from "../middleware/authCanonical";
+import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import {
   getDashboardMetrics,
@@ -61,7 +61,7 @@ function parseTimeRange(query: any): TimeRange {
  *       401:
  *         description: Unauthorized - admin only
  */
-analyticsRouter.get("/dashboard", async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/dashboard", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const metrics = await getDashboardMetrics(timeRange);
@@ -72,7 +72,7 @@ analyticsRouter.get("/dashboard", async (req: AuthedRequest, res: Response) => {
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Revenue
@@ -97,7 +97,7 @@ analyticsRouter.get("/dashboard", async (req: AuthedRequest, res: Response) => {
  *       200:
  *         description: Revenue trend data
  */
-analyticsRouter.get("/revenue/trend", async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/revenue/trend", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const trend = await getRevenueTrend(timeRange);
@@ -108,7 +108,7 @@ analyticsRouter.get("/revenue/trend", async (req: AuthedRequest, res: Response) 
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -135,7 +135,7 @@ analyticsRouter.get("/revenue/trend", async (req: AuthedRequest, res: Response) 
  *       200:
  *         description: Revenue by period
  */
-analyticsRouter.get("/revenue/by-period", async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/revenue/by-period", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const groupBy = (req.query.groupBy as "day" | "week" | "month") || "day";
@@ -147,7 +147,7 @@ analyticsRouter.get("/revenue/by-period", async (req: AuthedRequest, res: Respon
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Jobs
@@ -172,7 +172,7 @@ analyticsRouter.get("/revenue/by-period", async (req: AuthedRequest, res: Respon
  *       200:
  *         description: Job trend data
  */
-analyticsRouter.get("/jobs/trend", async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/jobs/trend", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const trend = await getJobTrend(timeRange);
@@ -183,7 +183,7 @@ analyticsRouter.get("/jobs/trend", async (req: AuthedRequest, res: Response) => 
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -204,7 +204,7 @@ analyticsRouter.get("/jobs/trend", async (req: AuthedRequest, res: Response) => 
  *       200:
  *         description: Job status breakdown
  */
-analyticsRouter.get("/jobs/status", async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/jobs/status", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const breakdown = await getJobStatusBreakdown(timeRange);
@@ -215,7 +215,7 @@ analyticsRouter.get("/jobs/status", async (req: AuthedRequest, res: Response) =>
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Users
@@ -246,7 +246,7 @@ analyticsRouter.get("/jobs/status", async (req: AuthedRequest, res: Response) =>
  *       200:
  *         description: User signup trend
  */
-analyticsRouter.get("/users/signups", async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/users/signups", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const role = (req.query.role as "client" | "cleaner" | "all") || "all";
@@ -258,7 +258,7 @@ analyticsRouter.get("/users/signups", async (req: AuthedRequest, res: Response) 
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Leaderboards / Top Performers
@@ -289,7 +289,7 @@ analyticsRouter.get("/users/signups", async (req: AuthedRequest, res: Response) 
  *       200:
  *         description: Top clients list
  */
-analyticsRouter.get("/top/clients", async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/top/clients", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
@@ -301,7 +301,7 @@ analyticsRouter.get("/top/clients", async (req: AuthedRequest, res: Response) =>
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -328,7 +328,7 @@ analyticsRouter.get("/top/clients", async (req: AuthedRequest, res: Response) =>
  *       200:
  *         description: Top cleaners list
  */
-analyticsRouter.get("/top/cleaners", async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/top/cleaners", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
@@ -340,7 +340,7 @@ analyticsRouter.get("/top/cleaners", async (req: AuthedRequest, res: Response) =
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -362,7 +362,7 @@ analyticsRouter.get("/top/cleaners", async (req: AuthedRequest, res: Response) =
  *       200:
  *         description: Top rated cleaners list
  */
-analyticsRouter.get("/top/rated-cleaners", async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/top/rated-cleaners", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
     const topRated = await getTopRatedCleaners(limit);
@@ -373,7 +373,7 @@ analyticsRouter.get("/top/rated-cleaners", async (req: AuthedRequest, res: Respo
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Credit Economy
@@ -392,7 +392,7 @@ analyticsRouter.get("/top/rated-cleaners", async (req: AuthedRequest, res: Respo
  *       200:
  *         description: Credit economy health metrics
  */
-analyticsRouter.get("/credits/health", async (_req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/credits/health", authedHandler(async (_req: AuthedRequest, res: Response) => {
   try {
     const health = await getCreditEconomyHealth();
     res.json({ health });
@@ -402,7 +402,7 @@ analyticsRouter.get("/credits/health", async (_req: AuthedRequest, res: Response
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Full Report
@@ -427,7 +427,7 @@ analyticsRouter.get("/credits/health", async (_req: AuthedRequest, res: Response
  *       200:
  *         description: Full analytics report
  */
-analyticsRouter.get("/report", async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/report", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const report = await generateFullReport(timeRange);
@@ -438,7 +438,7 @@ analyticsRouter.get("/report", async (req: AuthedRequest, res: Response) => {
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 export default analyticsRouter;
 

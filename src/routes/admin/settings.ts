@@ -2,17 +2,15 @@
 // Comprehensive Admin Settings Management
 
 import { Router, Response, NextFunction } from 'express';
-import { AuthedRequest } from '../../types/express';
+import { requireAuth, requireAdmin, requireSuperAdmin, AuthedRequest, authedHandler } from '../../middleware/authCanonical';
 import { query } from '../../db/client';
-import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
-import { requireAdmin, requireSuperAdmin } from '../../middleware/adminAuth';
 import { logger } from '../../lib/logger';
 import { z } from 'zod';
 import { validateBody } from '../../lib/validation';
 
 const router = Router();
 
-router.use(jwtAuthMiddleware);
+router.use(requireAuth);
 router.use(requireAdmin);
 
 /**
@@ -38,7 +36,7 @@ router.use(requireAdmin);
  *       200:
  *         description: Admin settings
  */
-router.get('/', async (req: AuthedRequest, res: Response) => {
+router.get('/', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { type, include_sensitive = 'false' } = req.query;
 
@@ -117,13 +115,13 @@ router.get('/', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching admin settings', { error });
     res.status(500).json({ error: 'Failed to fetch settings' });
   }
-});
+}));
 
 /**
  * GET /admin/settings/categories
  * Get list of all setting categories
  */
-router.get('/categories', async (req: AuthedRequest, res: Response) => {
+router.get('/categories', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const result = await query(`
       SELECT DISTINCT setting_type, COUNT(*) as count
@@ -143,13 +141,13 @@ router.get('/categories', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching setting categories', { error });
     res.status(500).json({ error: 'Failed to fetch categories' });
   }
-});
+}));
 
 /**
  * GET /admin/settings/:key
  * Get specific setting by key
  */
-router.get('/:key', async (req: AuthedRequest, res: Response) => {
+router.get('/:key', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { key } = req.params;
 
@@ -159,7 +157,8 @@ router.get('/:key', async (req: AuthedRequest, res: Response) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Setting not found' });
+      res.status(404).json({ error: 'Setting not found' });
+      return;
     }
 
     const setting = result.rows[0];
@@ -174,7 +173,7 @@ router.get('/:key', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching setting', { error, key: req.params.key });
     res.status(500).json({ error: 'Failed to fetch setting' });
   }
-});
+}));
 
 /**
  * PUT /admin/settings/:key
@@ -185,7 +184,7 @@ const updateSettingSchema = z.object({
   reason: z.string().optional()
 });
 
-router.put('/:key', validateBody(updateSettingSchema), async (req: AuthedRequest, res: Response) => {
+router.put('/:key', validateBody(updateSettingSchema), authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { key } = req.params;
     const { value, reason } = req.body;
@@ -197,16 +196,18 @@ router.put('/:key', validateBody(updateSettingSchema), async (req: AuthedRequest
     );
 
     if (existing.rows.length === 0) {
-      return res.status(404).json({ error: 'Setting not found' });
+      res.status(404).json({ error: 'Setting not found' });
+      return;
     }
 
     const setting = existing.rows[0];
 
     // Sensitive settings can only be updated by super admins
     if (setting.is_sensitive && req.user?.role !== 'super_admin') {
-      return res.status(403).json({
+      res.status(403).json({
         error: 'Super admin access required to modify sensitive settings'
       });
+      return;
     }
 
     // Update setting
@@ -256,7 +257,7 @@ router.put('/:key', validateBody(updateSettingSchema), async (req: AuthedRequest
     logger.error('Error updating setting', { error, key: req.params.key });
     res.status(500).json({ error: 'Failed to update setting' });
   }
-});
+}));
 
 /**
  * POST /admin/settings/bulk-update
@@ -270,7 +271,7 @@ const bulkUpdateSchema = z.object({
   reason: z.string().optional()
 });
 
-router.post('/bulk-update', validateBody(bulkUpdateSchema), async (req: AuthedRequest, res: Response) => {
+router.post('/bulk-update', validateBody(bulkUpdateSchema), authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { settings, reason } = req.body;
 
@@ -342,13 +343,13 @@ router.post('/bulk-update', validateBody(bulkUpdateSchema), async (req: AuthedRe
     logger.error('Error bulk updating settings', { error });
     res.status(500).json({ error: 'Failed to bulk update settings' });
   }
-});
+}));
 
 /**
  * GET /admin/settings/:key/history
  * Get change history for a specific setting
  */
-router.get('/:key/history', async (req: AuthedRequest, res: Response) => {
+router.get('/:key/history', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { key } = req.params;
     const { limit = '50' } = req.query;
@@ -370,13 +371,13 @@ router.get('/:key/history', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching setting history', { error, key: req.params.key });
     res.status(500).json({ error: 'Failed to fetch setting history' });
   }
-});
+}));
 
 /**
  * POST /admin/settings/reset/:key
  * Reset setting to default value
  */
-router.post('/reset/:key', requireSuperAdmin, async (req: AuthedRequest, res: Response) => {
+router.post('/reset/:key', requireSuperAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { key } = req.params;
     const { reason } = req.body;
@@ -391,13 +392,13 @@ router.post('/reset/:key', requireSuperAdmin, async (req: AuthedRequest, res: Re
     logger.error('Error resetting setting', { error, key: req.params.key });
     res.status(500).json({ error: 'Failed to reset setting' });
   }
-});
+}));
 
 /**
  * GET /admin/settings/export
  * Export all settings as JSON
  */
-router.get('/export', requireSuperAdmin, async (req: AuthedRequest, res: Response) => {
+router.get('/export', requireSuperAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const result = await query(`
       SELECT setting_key, setting_value, setting_type, description
@@ -428,18 +429,19 @@ router.get('/export', requireSuperAdmin, async (req: AuthedRequest, res: Respons
     logger.error('Error exporting settings', { error });
     res.status(500).json({ error: 'Failed to export settings' });
   }
-});
+}));
 
 /**
  * POST /admin/settings/import
  * Import settings from JSON (super admin only)
  */
-router.post('/import', requireSuperAdmin, async (req: AuthedRequest, res: Response) => {
+router.post('/import', requireSuperAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { settings, overwrite = false } = req.body;
 
     if (!settings || typeof settings !== 'object') {
-      return res.status(400).json({ error: 'Invalid settings format' });
+      res.status(400).json({ error: 'Invalid settings format' });
+      return;
     }
 
     const results = [];
@@ -479,7 +481,7 @@ router.post('/import', requireSuperAdmin, async (req: AuthedRequest, res: Respon
     logger.error('Error importing settings', { error });
     res.status(500).json({ error: 'Failed to import settings' });
   }
-});
+}));
 
 // Helper function to format category labels
 function formatCategoryLabel(type: string): string {

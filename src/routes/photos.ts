@@ -5,7 +5,7 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { jwtAuthMiddleware, JWTAuthedRequest } from "../middleware/jwtAuth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import {
   addJobPhoto,
   getJobPhotos,
@@ -17,8 +17,7 @@ import {
 
 const photosRouter = Router();
 
-// All routes require authentication
-photosRouter.use(jwtAuthMiddleware);
+photosRouter.use(requireAuth);
 
 /**
  * @swagger
@@ -62,7 +61,7 @@ photosRouter.use(jwtAuthMiddleware);
  */
 photosRouter.get(
   "/job/:jobId",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const { jobId } = req.params;
       const { type } = req.query;
@@ -135,7 +134,7 @@ const addPhotoSchema = z.object({
 photosRouter.post(
   "/job/:jobId",
   validateBody(addPhotoSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const { jobId } = req.params;
       const { photoUrl, type } = req.body;
@@ -230,7 +229,7 @@ const uploadUrlSchema = z.object({
 photosRouter.post(
   "/job/:jobId/upload-url",
   validateBody(uploadUrlSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const { jobId } = req.params;
       const { type, contentType, fileSize } = req.body;
@@ -288,7 +287,7 @@ photosRouter.post(
  */
 photosRouter.delete(
   "/:photoId",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const { photoId } = req.params;
       const deleted = await deleteJobPhoto(photoId, req.user!.id);

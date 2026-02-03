@@ -2,7 +2,7 @@
 // AI Assistant API Routes
 
 import { Router, Response } from 'express';
-import { requireAuth, AuthedRequest } from '../middleware/authCanonical';
+import { requireAuth, AuthedRequest, authedHandler } from '../middleware/authCanonical';
 import { validateBody } from '../lib/validation';
 import { z } from 'zod';
 import { logger } from '../lib/logger';
@@ -31,7 +31,7 @@ aiRouter.use(requireAuth);
  *       404:
  *         description: Cleaner profile not found
  */
-aiRouter.get('/settings', async (req: AuthedRequest, res: Response) => {
+aiRouter.get('/settings', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
 
@@ -43,7 +43,8 @@ aiRouter.get('/settings', async (req: AuthedRequest, res: Response) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Cleaner profile not found' } });
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Cleaner profile not found' } });
+      return;
     }
 
     res.json({ settings: result.rows[0] });
@@ -51,7 +52,7 @@ aiRouter.get('/settings', async (req: AuthedRequest, res: Response) => {
     logger.error('get_ai_settings_failed', { error, userId: req.user?.id });
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: (error as Error).message } });
   }
-});
+}));
 
 /**
  * @swagger
@@ -80,7 +81,7 @@ const updateSettingsSchema = z.object({
   ai_onboarding_completed: z.boolean().optional()
 });
 
-aiRouter.put('/settings', validateBody(updateSettingsSchema), async (req: AuthedRequest, res: Response) => {
+aiRouter.put('/settings', validateBody(updateSettingsSchema), authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { communication_settings, ai_onboarding_completed } = req.body;
@@ -119,7 +120,7 @@ aiRouter.put('/settings', validateBody(updateSettingsSchema), async (req: Authed
     logger.error('update_ai_settings_failed', { error, userId: req.user?.id });
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: (error as Error).message } });
   }
-});
+}));
 
 /**
  * @swagger
@@ -159,7 +160,7 @@ const suggestSlotsSchema = z.object({
   client_preferences: z.record(z.any()).optional()
 });
 
-aiRouter.post('/suggest-slots', validateBody(suggestSlotsSchema), async (req: AuthedRequest, res: Response) => {
+aiRouter.post('/suggest-slots', validateBody(suggestSlotsSchema), authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const result = await AISchedulingService.suggestBookingSlots(req.body);
 
@@ -168,7 +169,7 @@ aiRouter.post('/suggest-slots', validateBody(suggestSlotsSchema), async (req: Au
     logger.error('suggest_slots_failed', { error, body: req.body });
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: (error as Error).message } });
   }
-});
+}));
 
 /**
  * POST /ai/process-client-response
@@ -186,7 +187,7 @@ const clientResponseSchema = z.object({
   }).optional()
 });
 
-aiRouter.post('/process-client-response', validateBody(clientResponseSchema), async (req: AuthedRequest, res: Response) => {
+aiRouter.post('/process-client-response', validateBody(clientResponseSchema), authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { booking_id, response_type, selected_slot } = req.body;
@@ -198,13 +199,15 @@ aiRouter.post('/process-client-response', validateBody(clientResponseSchema), as
     );
 
     if (bookingResult.rows.length === 0) {
-      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Booking not found' } });
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Booking not found' } });
+      return;
     }
 
     const booking = bookingResult.rows[0];
 
     if (booking.client_id !== userId) {
-      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Not authorized' } });
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Not authorized' } });
+      return;
     }
 
     const result = await AISchedulingService.processClientResponse({
@@ -220,7 +223,7 @@ aiRouter.post('/process-client-response', validateBody(clientResponseSchema), as
     logger.error('process_client_response_failed', { error, body: req.body });
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: (error as Error).message } });
   }
-});
+}));
 
 /**
  * POST /ai/send-message
@@ -233,7 +236,7 @@ const sendMessageSchema = z.object({
   custom_data: z.record(z.any()).optional()
 });
 
-aiRouter.post('/send-message', validateBody(sendMessageSchema), async (req: AuthedRequest, res: Response) => {
+aiRouter.post('/send-message', validateBody(sendMessageSchema), authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { client_id, message_type, booking_id, custom_data } = req.body;
@@ -251,13 +254,13 @@ aiRouter.post('/send-message', validateBody(sendMessageSchema), async (req: Auth
     logger.error('send_message_failed', { error, body: req.body });
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: (error as Error).message } });
   }
-});
+}));
 
 /**
  * GET /ai/insights
  * Get AI-powered dashboard insights
  */
-aiRouter.get('/insights', async (req: AuthedRequest, res: Response) => {
+aiRouter.get('/insights', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
 
@@ -315,7 +318,7 @@ aiRouter.get('/insights', async (req: AuthedRequest, res: Response) => {
     logger.error('get_insights_failed', { error, userId: req.user?.id });
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: (error as Error).message } });
   }
-});
+}));
 
 /**
  * POST /ai/generate-response
@@ -327,7 +330,7 @@ const generateResponseSchema = z.object({
   scenario: z.enum(['on_my_way', 'confirm_details', 'running_late', 'job_complete']).optional()
 });
 
-aiRouter.post('/generate-response', validateBody(generateResponseSchema), async (req: AuthedRequest, res: Response) => {
+aiRouter.post('/generate-response', validateBody(generateResponseSchema), authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { client_message, booking_id, scenario } = req.body;
@@ -389,7 +392,7 @@ Return ONLY valid JSON:
     logger.error('generate_response_failed', { error, body: req.body });
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: (error as Error).message } });
   }
-});
+}));
 
 export default aiRouter;
 

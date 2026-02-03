@@ -5,13 +5,12 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { jwtAuthMiddleware, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { query } from "../db/client";
 
 const clientRouter = Router();
 
-// All routes require authentication as client
-clientRouter.use(jwtAuthMiddleware);
+clientRouter.use(requireAuth);
 clientRouter.use(requireRole("client", "admin"));
 
 // ============================================
@@ -56,7 +55,7 @@ clientRouter.use(requireRole("client", "admin"));
  *       401:
  *         description: Unauthorized
  */
-clientRouter.get("/favorites", async (req: JWTAuthedRequest, res: Response) => {
+clientRouter.get("/favorites", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
 
@@ -116,7 +115,7 @@ clientRouter.get("/favorites", async (req: JWTAuthedRequest, res: Response) => {
       error: { code: "GET_FAVORITES_FAILED", message: "Failed to get favorites" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -155,7 +154,7 @@ const addFavoriteSchema = z.object({
 clientRouter.post(
   "/favorites",
   validateBody(addFavoriteSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { cleaner_id } = req.body;
@@ -204,13 +203,13 @@ clientRouter.post(
       });
     }
   }
-);
+));
 
 /**
  * DELETE /client/favorites/:id
  * Remove a favorite
  */
-clientRouter.delete("/favorites/:id", async (req: JWTAuthedRequest, res: Response) => {
+clientRouter.delete("/favorites/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
     const { id } = req.params;
@@ -236,7 +235,7 @@ clientRouter.delete("/favorites/:id", async (req: JWTAuthedRequest, res: Respons
       error: { code: "REMOVE_FAVORITE_FAILED", message: "Failed to remove favorite" },
     });
   }
-});
+}));
 
 // ============================================
 // ADDRESSES
@@ -276,7 +275,7 @@ clientRouter.delete("/favorites/:id", async (req: JWTAuthedRequest, res: Respons
  *                       longitude: { type: 'number', nullable: true }
  *                       is_default: { type: 'boolean' }
  */
-clientRouter.get("/addresses", async (req: JWTAuthedRequest, res: Response) => {
+clientRouter.get("/addresses", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
 
@@ -315,7 +314,7 @@ clientRouter.get("/addresses", async (req: JWTAuthedRequest, res: Response) => {
       error: { code: "GET_ADDRESSES_FAILED", message: "Failed to get addresses" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -366,7 +365,7 @@ const addAddressSchema = z.object({
 clientRouter.post(
   "/addresses",
   validateBody(addAddressSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { label, line1, line2, city, state, postal_code, country, latitude, longitude, is_default } =
@@ -406,7 +405,7 @@ clientRouter.post(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -452,7 +451,7 @@ const updateAddressSchema = addAddressSchema.partial();
 clientRouter.patch(
   "/addresses/:id",
   validateBody(updateAddressSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { id } = req.params;
@@ -513,7 +512,7 @@ clientRouter.patch(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -537,7 +536,7 @@ clientRouter.patch(
  *       404:
  *         description: Address not found
  */
-clientRouter.patch("/addresses/:id/default", async (req: JWTAuthedRequest, res: Response) => {
+clientRouter.patch("/addresses/:id/default", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
     const { id } = req.params;
@@ -572,7 +571,7 @@ clientRouter.patch("/addresses/:id/default", async (req: JWTAuthedRequest, res: 
       error: { code: "SET_DEFAULT_ADDRESS_FAILED", message: "Failed to set default address" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -596,7 +595,7 @@ clientRouter.patch("/addresses/:id/default", async (req: JWTAuthedRequest, res: 
  *       404:
  *         description: Address not found
  */
-clientRouter.delete("/addresses/:id", async (req: JWTAuthedRequest, res: Response) => {
+clientRouter.delete("/addresses/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
     const { id } = req.params;
@@ -622,7 +621,7 @@ clientRouter.delete("/addresses/:id", async (req: JWTAuthedRequest, res: Respons
       error: { code: "DELETE_ADDRESS_FAILED", message: "Failed to delete address" },
     });
   }
-});
+}));
 
 // ============================================
 // PAYMENT METHODS
@@ -650,7 +649,7 @@ clientRouter.delete("/addresses/:id", async (req: JWTAuthedRequest, res: Respons
  *                   items:
  *                     type: object
  */
-clientRouter.get("/payment-methods", async (req: JWTAuthedRequest, res: Response) => {
+clientRouter.get("/payment-methods", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
 
@@ -690,7 +689,7 @@ clientRouter.get("/payment-methods", async (req: JWTAuthedRequest, res: Response
       error: { code: "GET_PAYMENT_METHODS_FAILED", message: "Failed to get payment methods" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -716,7 +715,7 @@ clientRouter.get("/payment-methods", async (req: JWTAuthedRequest, res: Response
  */
 clientRouter.patch(
   "/payment-methods/:id/default",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { id } = req.params; // This is the Stripe payment method ID
@@ -763,7 +762,7 @@ clientRouter.patch(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -787,7 +786,7 @@ clientRouter.patch(
  *       404:
  *         description: Customer not found
  */
-clientRouter.delete("/payment-methods/:id", async (req: JWTAuthedRequest, res: Response) => {
+clientRouter.delete("/payment-methods/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
     const { id } = req.params; // This is the Stripe payment method ID
@@ -826,7 +825,7 @@ clientRouter.delete("/payment-methods/:id", async (req: JWTAuthedRequest, res: R
       error: { code: "DELETE_PAYMENT_METHOD_FAILED", message: "Failed to delete payment method" },
     });
   }
-});
+}));
 
 // ============================================
 // RECURRING BOOKINGS
@@ -854,7 +853,7 @@ clientRouter.delete("/payment-methods/:id", async (req: JWTAuthedRequest, res: R
  *                   items:
  *                     type: object
  */
-clientRouter.get("/recurring-bookings", async (req: JWTAuthedRequest, res: Response) => {
+clientRouter.get("/recurring-bookings", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
 
@@ -913,7 +912,7 @@ clientRouter.get("/recurring-bookings", async (req: JWTAuthedRequest, res: Respo
       },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -959,7 +958,7 @@ const createRecurringBookingSchema = z.object({
 clientRouter.post(
   "/recurring-bookings",
   validateBody(createRecurringBookingSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { cleaner_id, service_type, frequency, start_date, time, address, duration_hours } =
@@ -1019,7 +1018,7 @@ clientRouter.post(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -1063,7 +1062,7 @@ const updateRecurringBookingSchema = createRecurringBookingSchema.partial().exte
 clientRouter.patch(
   "/recurring-bookings/:id",
   validateBody(updateRecurringBookingSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { id } = req.params;
@@ -1126,7 +1125,7 @@ clientRouter.patch(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -1150,7 +1149,7 @@ clientRouter.patch(
  *       404:
  *         description: Recurring booking not found
  */
-clientRouter.delete("/recurring-bookings/:id", async (req: JWTAuthedRequest, res: Response) => {
+clientRouter.delete("/recurring-bookings/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
     const { id } = req.params;
@@ -1179,7 +1178,7 @@ clientRouter.delete("/recurring-bookings/:id", async (req: JWTAuthedRequest, res
       },
     });
   }
-});
+}));
 
 // ============================================
 // REVIEWS
@@ -1214,7 +1213,7 @@ clientRouter.delete("/recurring-bookings/:id", async (req: JWTAuthedRequest, res
  *                       cleaner: { type: 'object' }
  *                       created_at: { type: 'string', format: 'date-time' }
  */
-clientRouter.get("/reviews/given", async (req: JWTAuthedRequest, res: Response) => {
+clientRouter.get("/reviews/given", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
 
@@ -1264,7 +1263,7 @@ clientRouter.get("/reviews/given", async (req: JWTAuthedRequest, res: Response) 
       error: { code: "GET_REVIEWS_FAILED", message: "Failed to get reviews" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -1316,7 +1315,7 @@ const createReviewSchema = z.object({
 clientRouter.post(
   "/reviews",
   validateBody(createReviewSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { cleaner_id, job_id, rating, comment } = req.body;
@@ -1368,7 +1367,7 @@ clientRouter.post(
       });
     }
   }
-);
+));
 
 /**
  * PATCH /client/reviews/:id
@@ -1382,7 +1381,7 @@ const updateReviewSchema = z.object({
 clientRouter.patch(
   "/reviews/:id",
   validateBody(updateReviewSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { id } = req.params;
@@ -1438,13 +1437,13 @@ clientRouter.patch(
       });
     }
   }
-);
+));
 
 /**
  * DELETE /client/reviews/:id
  * Delete a review
  */
-clientRouter.delete("/reviews/:id", async (req: JWTAuthedRequest, res: Response) => {
+clientRouter.delete("/reviews/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
     const { id } = req.params;
@@ -1470,6 +1469,6 @@ clientRouter.delete("/reviews/:id", async (req: JWTAuthedRequest, res: Response)
       error: { code: "DELETE_REVIEW_FAILED", message: "Failed to delete review" },
     });
   }
-});
+}));
 
 export default clientRouter;

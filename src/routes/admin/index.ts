@@ -11,10 +11,14 @@ import riskRouter from './risk';
 import messagesRouter from './messages';
 import systemRouter from './system';
 import settingsRouter from './settings';
+import webhooksRouter from './webhooks';
+import jobsRouter from './jobs';
 
 const adminRouter = Router();
 
 // Mount all admin sub-routes
+adminRouter.use('/webhooks', webhooksRouter);
+adminRouter.use('/jobs', jobsRouter);
 adminRouter.use('/analytics', analyticsRouter);
 adminRouter.use('/bookings', bookingsRouter);
 adminRouter.use('/cleaners', cleanersRouter);

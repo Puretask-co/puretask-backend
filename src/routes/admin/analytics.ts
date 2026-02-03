@@ -1,17 +1,14 @@
 // src/routes/admin/analytics.ts
 import { Router, Response, NextFunction, Request } from 'express';
-import { AuthedRequest } from '../../types/express';
+import { requireAuth, requireAdmin, AuthedRequest } from '../../middleware/authCanonical';
 import { query } from '../../db/client';
-import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
-import { requireAdmin } from '../../middleware/adminAuth';
 import { logger } from '../../lib/logger';
 import { AnalyticsData } from '../../types/admin';
 
 const router = Router();
 
-// Apply authentication middleware to all routes
-router.use(jwtAuthMiddleware);
-router.use((req, res, next) => requireAdmin(req as AuthedRequest, res, next));
+router.use(requireAuth);
+router.use(requireAdmin);
 
 /**
  * @swagger

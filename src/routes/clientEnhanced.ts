@@ -5,12 +5,12 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { jwtAuthMiddleware, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { query } from "../db/client";
 
 const clientEnhancedRouter = Router();
 
-clientEnhancedRouter.use(jwtAuthMiddleware);
+clientEnhancedRouter.use(requireAuth);
 clientEnhancedRouter.use(requireRole("client", "admin"));
 
 // ============================================
@@ -70,7 +70,7 @@ const saveDraftSchema = z.object({
 clientEnhancedRouter.post(
   "/bookings/draft",
   validateBody(saveDraftSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const draft = req.body;
@@ -98,12 +98,8 @@ clientEnhancedRouter.post(
       });
     }
   }
-);
+));
 
-/**
- * GET /client/bookings/draft
- * Get saved draft booking
- */
 /**
  * @swagger
  * /client/bookings/draft:
@@ -119,7 +115,7 @@ clientEnhancedRouter.post(
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/bookings/draft", async (req: JWTAuthedRequest, res: Response) => {
+clientEnhancedRouter.get("/bookings/draft", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
 
@@ -144,7 +140,7 @@ clientEnhancedRouter.get("/bookings/draft", async (req: JWTAuthedRequest, res: R
       error: { code: "GET_DRAFT_FAILED", message: "Failed to get draft" },
     });
   }
-});
+}));
 
 // ============================================
 // DASHBOARD INSIGHTS
@@ -165,7 +161,7 @@ clientEnhancedRouter.get("/bookings/draft", async (req: JWTAuthedRequest, res: R
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/dashboard/insights", async (req: JWTAuthedRequest, res: Response) => {
+clientEnhancedRouter.get("/dashboard/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
 
@@ -248,7 +244,7 @@ clientEnhancedRouter.get("/dashboard/insights", async (req: JWTAuthedRequest, re
       error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -267,7 +263,7 @@ clientEnhancedRouter.get("/dashboard/insights", async (req: JWTAuthedRequest, re
  */
 clientEnhancedRouter.get(
   "/dashboard/recommendations",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
 
@@ -344,7 +340,7 @@ clientEnhancedRouter.get(
       });
     }
   }
-);
+));
 
 // ============================================
 // SAVED SEARCHES
@@ -387,7 +383,7 @@ const saveSearchSchema = z.object({
 clientEnhancedRouter.post(
   "/search/saved",
   validateBody(saveSearchSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { name, filters } = req.body;
@@ -418,13 +414,24 @@ clientEnhancedRouter.post(
       });
     }
   }
-);
+));
 
 /**
- * GET /client/search/saved
- * Get saved searches
+ * @swagger
+ * /client/search/saved:
+ *   get:
+ *     summary: Get saved searches
+ *     description: Get client saved searches (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Saved searches list
+ *       403:
+ *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/search/saved", async (req: JWTAuthedRequest, res: Response) => {
+clientEnhancedRouter.get("/search/saved", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
 
@@ -449,7 +456,7 @@ clientEnhancedRouter.get("/search/saved", async (req: JWTAuthedRequest, res: Res
       error: { code: "GET_SAVED_SEARCHES_FAILED", message: "Failed to get saved searches" },
     });
   }
-});
+}));
 
 // ============================================
 // FAVORITES ENHANCEMENTS
@@ -472,7 +479,7 @@ clientEnhancedRouter.get("/search/saved", async (req: JWTAuthedRequest, res: Res
  */
 clientEnhancedRouter.get(
   "/favorites/recommendations",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
 
@@ -519,7 +526,7 @@ clientEnhancedRouter.get(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -536,7 +543,7 @@ clientEnhancedRouter.get(
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/favorites/insights", async (req: JWTAuthedRequest, res: Response) => {
+clientEnhancedRouter.get("/favorites/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
 
@@ -588,7 +595,7 @@ clientEnhancedRouter.get("/favorites/insights", async (req: JWTAuthedRequest, re
       error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
     });
   }
-});
+}));
 
 // ============================================
 // RECURRING BOOKINGS ENHANCEMENTS
@@ -618,7 +625,7 @@ clientEnhancedRouter.get("/favorites/insights", async (req: JWTAuthedRequest, re
  */
 clientEnhancedRouter.post(
   "/recurring-bookings/:id/skip",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { id } = req.params;
@@ -658,7 +665,7 @@ clientEnhancedRouter.post(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -684,7 +691,7 @@ clientEnhancedRouter.post(
  */
 clientEnhancedRouter.get(
   "/recurring-bookings/:id/suggestions",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { id } = req.params;
@@ -745,15 +752,44 @@ clientEnhancedRouter.get(
       });
     }
   }
-);
+));
 
 // ============================================
 // PROFILE PREFERENCES
 // ============================================
 
 /**
- * PUT /client/profile/preferences
- * Save client preferences
+ * @swagger
+ * /client/profile/preferences:
+ *   put:
+ *     summary: Save profile preferences
+ *     description: Save client preferences (clients only).
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               preferred_cleaning_times: { type: array, items: { type: string } }
+ *               default_service_type: { type: string }
+ *               default_add_ons: { type: array, items: { type: string } }
+ *               auto_fill_booking: { type: boolean }
+ *               preferred_cleaners: { type: array, items: { type: string } }
+ *               property_details:
+ *                 type: object
+ *                 properties:
+ *                   bedrooms: { type: number }
+ *                   bathrooms: { type: number }
+ *                   square_feet: { type: number }
+ *     responses:
+ *       200:
+ *         description: Preferences saved
+ *       403:
+ *         description: Forbidden - clients only
  */
 const savePreferencesSchema = z.object({
   preferred_cleaning_times: z.array(z.string()).optional(),
@@ -773,7 +809,7 @@ const savePreferencesSchema = z.object({
 clientEnhancedRouter.put(
   "/profile/preferences",
   validateBody(savePreferencesSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const preferences = req.body;
@@ -800,7 +836,7 @@ clientEnhancedRouter.put(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -817,7 +853,7 @@ clientEnhancedRouter.put(
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/profile/preferences", async (req: JWTAuthedRequest, res: Response) => {
+clientEnhancedRouter.get("/profile/preferences", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
 
@@ -842,7 +878,7 @@ clientEnhancedRouter.get("/profile/preferences", async (req: JWTAuthedRequest, r
       error: { code: "GET_PREFERENCES_FAILED", message: "Failed to get preferences" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -871,7 +907,7 @@ clientEnhancedRouter.get("/profile/preferences", async (req: JWTAuthedRequest, r
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.post("/profile/photo", async (req: JWTAuthedRequest, res: Response) => {
+clientEnhancedRouter.post("/profile/photo", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
     // Note: File upload would be handled by multer or similar
@@ -897,7 +933,7 @@ clientEnhancedRouter.post("/profile/photo", async (req: JWTAuthedRequest, res: R
       error: { code: "UPLOAD_PHOTO_FAILED", message: "Failed to upload photo" },
     });
   }
-});
+}));
 
 // ============================================
 // REVIEWS ENHANCEMENTS
@@ -941,7 +977,7 @@ clientEnhancedRouter.post("/profile/photo", async (req: JWTAuthedRequest, res: R
  */
 clientEnhancedRouter.post(
   "/reviews/:id/photos",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { id } = req.params;
@@ -971,7 +1007,7 @@ clientEnhancedRouter.post(
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -988,7 +1024,7 @@ clientEnhancedRouter.post(
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/reviews/insights", async (req: JWTAuthedRequest, res: Response) => {
+clientEnhancedRouter.get("/reviews/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
 
@@ -1015,7 +1051,7 @@ clientEnhancedRouter.get("/reviews/insights", async (req: JWTAuthedRequest, res:
       error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
     });
   }
-});
+}));
 
 // ============================================
 // JOB ENHANCEMENTS
@@ -1043,7 +1079,7 @@ clientEnhancedRouter.get("/reviews/insights", async (req: JWTAuthedRequest, res:
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/jobs/:id/live-status", async (req: JWTAuthedRequest, res: Response) => {
+clientEnhancedRouter.get("/jobs/:id/live-status", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
     const { id } = req.params;
@@ -1084,7 +1120,7 @@ clientEnhancedRouter.get("/jobs/:id/live-status", async (req: JWTAuthedRequest, 
       error: { code: "GET_STATUS_FAILED", message: "Failed to get status" },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -1114,7 +1150,7 @@ clientEnhancedRouter.get("/jobs/:id/live-status", async (req: JWTAuthedRequest, 
  */
 clientEnhancedRouter.post(
   "/jobs/:id/add-to-calendar",
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { id } = req.params;
@@ -1163,7 +1199,7 @@ END:VCALENDAR`;
       });
     }
   }
-);
+));
 
 /**
  * @swagger
@@ -1187,7 +1223,7 @@ END:VCALENDAR`;
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/jobs/:id/share-link", async (req: JWTAuthedRequest, res: Response) => {
+clientEnhancedRouter.get("/jobs/:id/share-link", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const clientId = req.user!.id;
     const { id } = req.params;
@@ -1216,7 +1252,7 @@ clientEnhancedRouter.get("/jobs/:id/share-link", async (req: JWTAuthedRequest, r
       error: { code: "GET_SHARE_LINK_FAILED", message: "Failed to get share link" },
     });
   }
-});
+}));
 
 // ============================================
 // CREDIT AUTO-REFILL
@@ -1263,7 +1299,7 @@ const autoRefillSchema = z.object({
 clientEnhancedRouter.post(
   "/credits/auto-refill",
   validateBody(autoRefillSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
       const { enabled, threshold, amount } = req.body;
@@ -1296,6 +1332,6 @@ clientEnhancedRouter.post(
       });
     }
   }
-);
+));
 
 export default clientEnhancedRouter;

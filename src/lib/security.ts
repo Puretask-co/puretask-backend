@@ -213,9 +213,10 @@ export const endpointRateLimits: EndpointRateLimitConfig[] = [
   // Stripe webhooks - high throughput
   { pattern: /^\/stripe\/webhook$/, method: "POST", windowMs: 60 * 1000, max: 200, message: "Webhook rate limit exceeded" },
   
-  // n8n webhooks - moderate
+  // n8n webhooks (inbound) - moderate; both paths used by events router
   { pattern: /^\/n8n\/events$/, method: "POST", windowMs: 60 * 1000, max: 50, message: "n8n webhook rate limit exceeded" },
-  
+  { pattern: /^\/events$/, method: "POST", windowMs: 60 * 1000, max: 50, message: "n8n webhook rate limit exceeded" },
+
   // Read endpoints - relaxed
   { pattern: /^\/jobs$/, method: "GET", windowMs: 60 * 1000, max: 60, message: "Too many list requests" },
   { pattern: /^\/payments\/balance$/, method: "GET", windowMs: 60 * 1000, max: 60, message: "Too many balance requests" },

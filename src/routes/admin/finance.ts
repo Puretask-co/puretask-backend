@@ -1,16 +1,14 @@
 // src/routes/admin/finance.ts
 import { Router, Response, NextFunction } from 'express';
-import { AuthedRequest } from '../../types/express';
+import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from '../../middleware/authCanonical';
 import { query } from '../../db/client';
-import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
-import { requireAdmin } from '../../middleware/adminAuth';
 import { logger } from '../../lib/logger';
 import { FinanceCenterData } from '../../types/admin';
 
 const router = Router();
 
-router.use(jwtAuthMiddleware);
-router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, next));
+router.use(requireAuth);
+router.use(requireAdmin);
 
 /**
  * @swagger
@@ -32,7 +30,7 @@ router.use((req: AuthedRequest, res: Response, next) => requireAdmin(req, res, n
  *       200:
  *         description: Finance overview
  */
-router.get('/overview', async (req: AuthedRequest, res: Response) => {
+router.get('/overview', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { period = '30d' } = req.query;
     const daysBack = period === '7d' ? 7 : period === '30d' ? 30 : 90;
@@ -129,13 +127,13 @@ router.get('/overview', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching finance overview', { error });
     res.status(500).json({ error: 'Failed to fetch finance overview' });
   }
-});
+}));
 
 /**
  * GET /admin/finance/payouts
  * Get all payouts with filters
  */
-router.get('/payouts', async (req: AuthedRequest, res: Response) => {
+router.get('/payouts', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const {
       status,
@@ -196,18 +194,19 @@ router.get('/payouts', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching payouts', { error });
     res.status(500).json({ error: 'Failed to fetch payouts' });
   }
-});
+}));
 
 /**
  * POST /admin/finance/payouts/process
  * Process pending payouts
  */
-router.post('/payouts/process', async (req: AuthedRequest, res: Response) => {
+router.post('/payouts/process', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { payoutIds } = req.body;
 
     if (!Array.isArray(payoutIds) || payoutIds.length === 0) {
-      return res.status(400).json({ error: 'Invalid payout IDs' });
+      res.status(400).json({ error: 'Invalid payout IDs' });
+      return;
     }
 
     // Update payout status
@@ -247,13 +246,13 @@ router.post('/payouts/process', async (req: AuthedRequest, res: Response) => {
     logger.error('Error processing payouts', { error });
     res.status(500).json({ error: 'Failed to process payouts' });
   }
-});
+}));
 
 /**
  * GET /admin/finance/revenue
  * Get detailed revenue report
  */
-router.get('/revenue', async (req: AuthedRequest, res: Response) => {
+router.get('/revenue', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { period = '30d', groupBy = 'day' } = req.query;
     const daysBack = period === '7d' ? 7 : period === '30d' ? 30 : 90;
@@ -283,13 +282,13 @@ router.get('/revenue', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching revenue report', { error });
     res.status(500).json({ error: 'Failed to fetch revenue report' });
   }
-});
+}));
 
 /**
  * GET /admin/finance/transactions
  * Get transaction history
  */
-router.get('/transactions', async (req: AuthedRequest, res: Response) => {
+router.get('/transactions', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const { type, dateFrom, dateTo, page = '1', limit = '100' } = req.query;
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -316,13 +315,13 @@ router.get('/transactions', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching transactions', { error });
     res.status(500).json({ error: 'Failed to fetch transactions' });
   }
-});
+}));
 
 /**
  * GET /admin/finance/stats
  * Get financial statistics
  */
-router.get('/stats', async (req: AuthedRequest, res: Response) => {
+router.get('/stats', authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const stats = await query(`
       SELECT 
@@ -338,7 +337,7 @@ router.get('/stats', async (req: AuthedRequest, res: Response) => {
     logger.error('Error fetching finance stats', { error });
     res.status(500).json({ error: 'Failed to fetch finance stats' });
   }
-});
+}));
 
 export default router;
 

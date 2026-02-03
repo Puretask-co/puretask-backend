@@ -8,7 +8,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { env } from "../config/env";
 
-export type UserRole = "client" | "cleaner" | "admin";
+export type UserRole = "client" | "cleaner" | "admin" | "super_admin";
 
 export interface AuthUser {
   id: string;
@@ -161,7 +161,7 @@ export function authMiddlewareAttachUser(
  * Use this for protected routes
  */
 export function auth(requiredRole?: UserRole) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const token = extractBearerToken(req);
 
     if (!token) {
@@ -172,7 +172,7 @@ export function auth(requiredRole?: UserRole) {
     }
 
     try {
-      const decoded = verifyAuthToken(token);
+      const decoded = await verifyAuthToken(token);
       req.user = decoded;
 
       // Check role if required (admin can access everything)
@@ -195,7 +195,7 @@ export function auth(requiredRole?: UserRole) {
 /**
  * Require admin role
  */
-export function adminOnly(req: Request, res: Response, next: NextFunction): void {
+export async function adminOnly(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = extractBearerToken(req);
 
   if (!token) {
@@ -206,7 +206,7 @@ export function adminOnly(req: Request, res: Response, next: NextFunction): void
   }
 
   try {
-    const decoded = verifyAuthToken(token);
+    const decoded = await verifyAuthToken(token);
     req.user = decoded;
 
     if (decoded.role !== "admin") {

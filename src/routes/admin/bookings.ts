@@ -1,16 +1,14 @@
 // src/routes/admin/bookings.ts
 import { Router, Response, NextFunction, Request } from 'express';
-import { AuthedRequest } from '../../types/express';
+import { requireAuth, requireAdmin, AuthedRequest } from '../../middleware/authCanonical';
 import { query } from '../../db/client';
-import { jwtAuthMiddleware } from '../../middleware/jwtAuth';
-import { requireAdmin } from '../../middleware/adminAuth';
 import { logger } from '../../lib/logger';
 import { BookingConsoleFilters, BookingConsoleItem } from '../../types/admin';
 
 const router = Router();
 
-router.use(jwtAuthMiddleware);
-router.use((req: Request, res: Response, next: NextFunction) => requireAdmin(req as AuthedRequest, res, next));
+router.use(requireAuth);
+router.use(requireAdmin);
 
 /**
  * @swagger

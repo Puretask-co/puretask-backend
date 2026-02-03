@@ -155,7 +155,7 @@ class QueueService {
     const jobIds: number[] = [];
     for (const payload of payloads) {
       const id = await this.enqueue(queueName, payload, options);
-      jobIds.push(id);
+      if (id != null) jobIds.push(id);
     }
     return jobIds;
   }
@@ -429,7 +429,7 @@ export async function enqueue<T>(
   queueName: QueueName,
   payload: T,
   options?: EnqueueOptions
-): Promise<number> {
+): Promise<number | null> {
   return queueService.enqueue(queueName, payload, options);
 }
 
@@ -437,6 +437,6 @@ export async function processQueue(
   queueName: QueueName,
   batchSize?: number
 ): Promise<{ processed: number; succeeded: number; failed: number }> {
-  return queueService.processQueue(queueName, batchSize);
+  return queueService.processQueue(queueName, batchSize ?? 10);
 }
 

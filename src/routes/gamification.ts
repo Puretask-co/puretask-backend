@@ -7,16 +7,28 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { query } from "../db/client";
-import { jwtAuthMiddleware } from "../middleware/jwtAuth";
-import { AuthedRequest } from "../types/express";
+import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 
 const router = Router();
-router.use(jwtAuthMiddleware);
+router.use(requireAuth);
 
 // ============================================
 // ONBOARDING PROGRESS
 // ============================================
 
+/**
+ * @swagger
+ * /cleaner/onboarding/progress:
+ *   get:
+ *     summary: Get onboarding progress
+ *     description: Get cleaner onboarding progress (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: completionPercentage, wizardCompleted, currentStep, etc.
+ */
 router.get("/onboarding/progress", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
@@ -66,10 +78,44 @@ router.get("/onboarding/progress", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch progress" },
     });
   }
-});
+}));
 
-// Update onboarding progress
-router.post("/onboarding/update", async (req: AuthedRequest, res) => {
+/**
+ * @swagger
+ * /cleaner/onboarding/update:
+ *   post:
+ *     summary: Update onboarding progress
+ *     description: Update onboarding step/fields (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               setup_wizard_step: { type: number }
+ *               setup_wizard_completed: { type: boolean }
+ *               profile_photo_uploaded: { type: boolean }
+ *               bio_completed: { type: boolean }
+ *               services_defined: { type: boolean }
+ *               availability_set: { type: boolean }
+ *               pricing_configured: { type: boolean }
+ *               ai_personality_set: { type: boolean }
+ *               templates_customized: { type: boolean }
+ *               quick_responses_added: { type: boolean }
+ *               first_template_used: { type: boolean }
+ *               viewed_insights_dashboard: { type: boolean }
+ *               created_custom_template: { type: boolean }
+ *               marked_favorite_response: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Progress updated
+ *       400:
+ *         description: No valid fields to update
+ */
+router.post("/onboarding/update", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const updates = req.body;
@@ -107,7 +153,7 @@ router.post("/onboarding/update", async (req: AuthedRequest, res) => {
       .map(key => updates[key])
     ];
 
-    await db.query(
+    await query(
       `UPDATE cleaner_onboarding_progress
        SET ${updateFields}, updated_at = NOW()
        WHERE cleaner_id = $1`,
@@ -124,13 +170,26 @@ router.post("/onboarding/update", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to update progress" },
     });
   }
-});
+}));
 
 // ============================================
 // ACHIEVEMENTS
 // ============================================
 
-router.get("/achievements", async (req: AuthedRequest, res) => {
+/**
+ * @swagger
+ * /cleaner/achievements:
+ *   get:
+ *     summary: Get achievements
+ *     description: Get all achievements with earned status and stats (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: achievements (grouped), stats (earnedPoints, totalPoints, etc.)
+ */
+router.get("/achievements", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -189,15 +248,32 @@ router.get("/achievements", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch achievements" },
     });
   }
-});
+}));
 
-// Mark achievement as seen
-router.post("/achievements/:achievementId/mark-seen", async (req: AuthedRequest, res) => {
+/**
+ * @swagger
+ * /cleaner/achievements/{achievementId}/mark-seen:
+ *   post:
+ *     summary: Mark achievement as seen
+ *     description: Mark an achievement as seen (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: achievementId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Achievement marked as seen
+ */
+router.post("/achievements/:achievementId/mark-seen", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { achievementId } = req.params;
 
-    await db.query(
+    await query(
       `UPDATE cleaner_achievements
        SET seen = true
        WHERE cleaner_id = $1 AND achievement_id = $2`,
@@ -211,13 +287,26 @@ router.post("/achievements/:achievementId/mark-seen", async (req: AuthedRequest,
       error: { code: "INTERNAL_ERROR", message: "Failed to mark achievement" },
     });
   }
-});
+}));
 
 // ============================================
 // CERTIFICATIONS
 // ============================================
 
-router.get("/certifications", async (req: AuthedRequest, res) => {
+/**
+ * @swagger
+ * /cleaner/certifications:
+ *   get:
+ *     summary: Get certifications
+ *     description: Get certifications with earned status and progress (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of certifications with progress
+ */
+router.get("/certifications", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -266,9 +355,26 @@ router.get("/certifications", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch certifications" },
     });
   }
-});
+}));
 
-// Claim certification
+/**
+ * @swagger
+ * /cleaner/certifications/{certificationId}/claim:
+ *   post:
+ *     summary: Claim certification
+ *     description: Claim a certification (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: certificationId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Certification claimed
+ */
 router.post("/certifications/:certificationId/claim", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
@@ -313,17 +419,43 @@ router.post("/certifications/:certificationId/claim", async (req: AuthedRequest,
       error: { code: "INTERNAL_ERROR", message: "Failed to claim certification" },
     });
   }
-});
+}));
 
 // ============================================
 // TEMPLATE LIBRARY
 // ============================================
 
-router.get("/template-library", async (req: AuthedRequest, res) => {
+/**
+ * @swagger
+ * /cleaner/template-library:
+ *   get:
+ *     summary: Get template library
+ *     description: List templates with optional category, type, search, sort (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema: { type: string }
+ *       - in: query
+ *         name: type
+ *         schema: { type: string }
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *       - in: query
+ *         name: sort
+ *         schema: { type: string, enum: [rating, popular, recent], default: rating }
+ *     responses:
+ *       200:
+ *         description: templates array and count
+ */
+router.get("/template-library", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const { category, type, search, sort = 'rating' } = req.query;
 
-    let query = `
+    let sql = `
       SELECT 
         id,
         template_type as type,
@@ -349,35 +481,35 @@ router.get("/template-library", async (req: AuthedRequest, res) => {
     let paramIndex = 1;
 
     if (category) {
-      query += ` AND category = $${paramIndex}`;
+      sql += ` AND category = $${paramIndex}`;
       params.push(category);
       paramIndex++;
     }
 
     if (type) {
-      query += ` AND template_type = $${paramIndex}`;
+      sql += ` AND template_type = $${paramIndex}`;
       params.push(type);
       paramIndex++;
     }
 
     if (search) {
-      query += ` AND (template_name ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR $${paramIndex} = ANY(tags))`;
+      sql += ` AND (template_name ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR $${paramIndex} = ANY(tags))`;
       params.push(`%${search}%`);
       paramIndex++;
     }
 
     // Sorting
     if (sort === 'rating') {
-      query += ` ORDER BY is_featured DESC, rating_average DESC, rating_count DESC`;
+      sql += ` ORDER BY is_featured DESC, rating_average DESC, rating_count DESC`;
     } else if (sort === 'popular') {
-      query += ` ORDER BY is_featured DESC, usage_count DESC`;
+      sql += ` ORDER BY is_featured DESC, usage_count DESC`;
     } else if (sort === 'recent') {
-      query += ` ORDER BY is_featured DESC, created_at DESC`;
+      sql += ` ORDER BY is_featured DESC, created_at DESC`;
     }
 
-    query += ` LIMIT 50`;
+    sql += ` LIMIT 50`;
 
-    const result = await query(query, params);
+    const result = await query(sql, params);
 
     res.json({
       templates: result.rows,
@@ -389,10 +521,36 @@ router.get("/template-library", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch templates" },
     });
   }
-});
+}));
 
-// Save template from library
-router.post("/template-library/:templateId/save", async (req: AuthedRequest, res) => {
+/**
+ * @swagger
+ * /cleaner/template-library/{templateId}/save:
+ *   post:
+ *     summary: Save template from library
+ *     description: Save a library template to user's templates (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: templateId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               customizedContent: { type: string }
+ *     responses:
+ *       200:
+ *         description: Template saved
+ *       404:
+ *         description: Template not found
+ */
+router.post("/template-library/:templateId/save", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { templateId } = req.params;
@@ -411,7 +569,7 @@ router.post("/template-library/:templateId/save", async (req: AuthedRequest, res
     }
 
     // Save to user's templates
-    await db.query(
+    await query(
       `INSERT INTO cleaner_saved_library_templates 
         (cleaner_id, library_template_id, customized_content)
        VALUES ($1, $2, $3)
@@ -421,7 +579,7 @@ router.post("/template-library/:templateId/save", async (req: AuthedRequest, res
     );
 
     // Increment usage count
-    await db.query(
+    await query(
       `UPDATE template_library 
        SET usage_count = usage_count + 1 
        WHERE id = $1`,
@@ -435,9 +593,38 @@ router.post("/template-library/:templateId/save", async (req: AuthedRequest, res
       error: { code: "INTERNAL_ERROR", message: "Failed to save template" },
     });
   }
-});
+}));
 
-// Rate template
+/**
+ * @swagger
+ * /cleaner/template-library/{templateId}/rate:
+ *   post:
+ *     summary: Rate template
+ *     description: Submit rating (1-5) and optional review for a template (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: templateId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [rating]
+ *             properties:
+ *               rating: { type: number, minimum: 1, maximum: 5 }
+ *               review: { type: string }
+ *     responses:
+ *       200:
+ *         description: Rating submitted
+ *       400:
+ *         description: Rating must be 1-5
+ */
 router.post("/template-library/:templateId/rate", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
@@ -450,7 +637,7 @@ router.post("/template-library/:templateId/rate", async (req: AuthedRequest, res
       });
     }
 
-    await db.query(
+    await query(
       `INSERT INTO template_library_ratings (template_id, cleaner_id, rating, review)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (template_id, cleaner_id) 
@@ -465,10 +652,22 @@ router.post("/template-library/:templateId/rate", async (req: AuthedRequest, res
       error: { code: "INTERNAL_ERROR", message: "Failed to rate template" },
     });
   }
-});
+}));
 
-// Get saved templates
-router.get("/template-library/saved", async (req: AuthedRequest, res) => {
+/**
+ * @swagger
+ * /cleaner/template-library/saved:
+ *   get:
+ *     summary: Get saved templates
+ *     description: Get templates saved by the cleaner from the library (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: templates array and count
+ */
+router.get("/template-library/saved", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -500,12 +699,25 @@ router.get("/template-library/saved", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch saved templates" },
     });
   }
-});
+}));
 
 // ============================================
 // TOOLTIPS
 // ============================================
 
+/**
+ * @swagger
+ * /cleaner/tooltips:
+ *   get:
+ *     summary: Get tooltips
+ *     description: Get active tooltips not yet dismissed (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: tooltips array and count
+ */
 router.get("/tooltips", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
@@ -539,16 +751,40 @@ router.get("/tooltips", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch tooltips" },
     });
   }
-});
+}));
 
-// Dismiss tooltip
-router.post("/tooltips/:tooltipId/dismiss", async (req: AuthedRequest, res) => {
+/**
+ * @swagger
+ * /cleaner/tooltips/{tooltipId}/dismiss:
+ *   post:
+ *     summary: Dismiss tooltip
+ *     description: Mark a tooltip as dismissed (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: tooltipId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               helpful: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Tooltip dismissed
+ */
+router.post("/tooltips/:tooltipId/dismiss", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
     const { tooltipId } = req.params;
     const { helpful } = req.body;
 
-    await db.query(
+    await query(
       `INSERT INTO cleaner_tooltip_interactions (cleaner_id, tooltip_id, marked_helpful)
        VALUES ($1, $2, $3)
        ON CONFLICT (cleaner_id, tooltip_id) DO UPDATE SET marked_helpful = EXCLUDED.marked_helpful`,
@@ -556,7 +792,7 @@ router.post("/tooltips/:tooltipId/dismiss", async (req: AuthedRequest, res) => {
     );
 
     // Update tooltip dismissed count in onboarding
-    await db.query(
+    await query(
       `UPDATE cleaner_onboarding_progress
        SET tooltip_dismissed_count = tooltip_dismissed_count + 1
        WHERE cleaner_id = $1`,
@@ -570,9 +806,39 @@ router.post("/tooltips/:tooltipId/dismiss", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to dismiss tooltip" },
     });
   }
-});
+}));
 
-// Publish template to marketplace
+/**
+ * @swagger
+ * /cleaner/template-library:
+ *   post:
+ *     summary: Publish template to marketplace
+ *     description: Create and publish a custom template to the library (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [template_name, template_content, category]
+ *             properties:
+ *               template_type: { type: string }
+ *               template_name: { type: string }
+ *               template_content: { type: string }
+ *               variables: { type: array }
+ *               category: { type: string }
+ *               subcategory: { type: string }
+ *               description: { type: string }
+ *               tags: { type: array }
+ *     responses:
+ *       201:
+ *         description: Template published
+ *       400:
+ *         description: Validation error
+ */
 router.post("/template-library", async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
@@ -622,7 +888,7 @@ router.post("/template-library", async (req: AuthedRequest, res) => {
     );
 
     // Update onboarding progress
-    await db.query(
+    await query(
       `UPDATE cleaner_onboarding_progress
        SET created_custom_template = true, templates_customized = templates_customized + 1
        WHERE cleaner_id = $1`,
@@ -642,10 +908,29 @@ router.post("/template-library", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to publish template" },
     });
   }
-});
+}));
 
-// Get single template from library
-router.get("/template-library/:templateId", async (req: AuthedRequest, res) => {
+/**
+ * @swagger
+ * /cleaner/template-library/{templateId}:
+ *   get:
+ *     summary: Get single template
+ *     description: Get one template from the library by id (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: templateId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Template details
+ *       404:
+ *         description: Template not found
+ */
+router.get("/template-library/:templateId", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const { templateId } = req.params;
 
@@ -685,7 +970,7 @@ router.get("/template-library/:templateId", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch template" },
     });
   }
-});
+}));
 
 // ============================================
 // HELPER FUNCTIONS

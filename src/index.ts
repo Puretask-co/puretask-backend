@@ -1,4 +1,4 @@
-﻿// src/index.ts
+// src/index.ts
 // Main application entry point
 
 // ============================================
@@ -141,7 +141,7 @@ app.use(
 // Body Parsing (with special handling for Stripe)
 // ============================================
 app.use((req, res, next) => {
-  if (req.path === "/stripe/webhook") {
+  if (req.path === "/stripe/webhook" || req.path === "/api/v1/stripe/webhook") {
     // Stripe needs raw body for signature verification
     express.raw({ type: "application/json", limit: "500kb" })(req, res, next);
   } else {
@@ -239,60 +239,62 @@ if (env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'true') {
 }
 
 // ============================================
-// Routes
+// Routes (Section 7: /api/v1 prefix for versioning)
 // ============================================
-app.use("/health", healthRouter);
-app.use("/status", statusRouter);  // Operational status dashboard
-app.use("/auth", authRouter); // Basic auth routes (register, login, etc.)
-app.use("/auth", authEnhancedRouter); // Enhanced auth routes (2FA, OAuth, sessions, etc.)
-app.use("/jobs", jobsRouter);
-app.use("/assignment", assignmentRouter);
-app.use("/admin", adminRouter);
-app.use("/admin", adminEnhancedRouter); // Enhanced admin routes (real-time, insights, etc.)
-app.use("/stripe", stripeRouter);
-app.use("/payments", paymentsRouter);
-app.use("/credits", creditsRouter);
-app.use("/messages", messagesRouter);
-// V4 FEATURE — ENABLED (analytics dashboards)
-app.use("/analytics", analyticsRouter);
-app.use("/search", searchRouter); // Search/browse cleaners + global search/autocomplete
-app.use("/cleaner", cleanerRouter);
-app.use("/cleaner/onboarding", cleanerOnboardingRouter); // Enhanced 10-step onboarding
-app.use("/admin/onboarding-reminders", onboardingReminderRouter); // Onboarding reminder management
-app.use("/admin/id-verifications", adminIdVerificationsRouter); // Admin ID verification dashboard
-app.use("/cleaner/ai/advanced", cleanerAIAdvancedRouter); // V4 FEATURE: Advanced AI features
-app.use("/cleaner/ai", cleanerAIRouter); // V4 FEATURE: AI Assistant Settings for Cleaners
-app.use("/cleaner", messageHistoryRouter); // V4 FEATURE: Message History & Saved Messages
-app.use("/cleaner", gamificationRouter); // V4 FEATURE: Gamification & Onboarding
-app.use("/cleaner", cleanerPortalRouter); // Cleaner portal: my clients + invoicing
-app.use("/cleaner", cleanerEnhancedRouter); // Enhanced cleaner routes (analytics, goals, etc.)
-app.use("/client", clientInvoicesRouter); // Client invoice management
-app.use("/client", clientRouter); // Client routes (favorites, addresses, payment methods, recurring bookings, reviews)
-app.use("/client", clientEnhancedRouter); // Enhanced client routes (insights, drafts, etc.)
-app.use("/tracking", trackingRouter);   // Job live tracking
-// V3 FEATURE — ENABLED (subscriptions)
-app.use("/premium", premiumRouter);     // Boosts, subscriptions, referrals
-// V4 FEATURE — ENABLED (manager dashboard)
-app.use("/manager", managerRouter);     // Manager dashboard
-// V2 FEATURE — ENABLED
-app.use("/v2", v2Router);               // V2 features: properties, teams, calendar, AI
-app.use("/pricing", pricingRouter);     // V3 feature: tier-aware pricing
-app.use("/holidays", holidaysRouter);   // Federal holiday source of truth
-app.use("/notifications", notificationsRouter);
-app.use("/alerts", alertsRouter);
-// V4 FEATURE — ENABLED (AI Assistant)
-app.use("/ai", aiRouter);               // AI communication automation & scheduling
-app.use("/user", userDataRouter);       // GDPR compliance: data export, deletion, consent
-app.use(eventsRouter); // Mounts /events and /n8n/events
+const apiRouter = express.Router();
+apiRouter.use("/health", healthRouter);
+apiRouter.use("/status", statusRouter);
+apiRouter.use("/auth", authRouter);
+apiRouter.use("/auth", authEnhancedRouter);
+apiRouter.use("/jobs", jobsRouter);
+apiRouter.use("/assignment", assignmentRouter);
+apiRouter.use("/admin", adminRouter);
+apiRouter.use("/admin", adminEnhancedRouter);
+apiRouter.use("/stripe", stripeRouter);
+apiRouter.use("/payments", paymentsRouter);
+apiRouter.use("/credits", creditsRouter);
+apiRouter.use("/messages", messagesRouter);
+apiRouter.use("/analytics", analyticsRouter);
+apiRouter.use("/search", searchRouter);
+apiRouter.use("/cleaner", cleanerRouter);
+apiRouter.use("/cleaner/onboarding", cleanerOnboardingRouter);
+apiRouter.use("/admin/onboarding-reminders", onboardingReminderRouter);
+apiRouter.use("/admin/id-verifications", adminIdVerificationsRouter);
+apiRouter.use("/cleaner/ai/advanced", cleanerAIAdvancedRouter);
+apiRouter.use("/cleaner/ai", cleanerAIRouter);
+apiRouter.use("/cleaner", messageHistoryRouter);
+apiRouter.use("/cleaner", gamificationRouter);
+apiRouter.use("/cleaner", cleanerPortalRouter);
+apiRouter.use("/cleaner", cleanerEnhancedRouter);
+apiRouter.use("/client", clientInvoicesRouter);
+apiRouter.use("/client", clientRouter);
+apiRouter.use("/client", clientEnhancedRouter);
+apiRouter.use("/tracking", trackingRouter);
+apiRouter.use("/premium", premiumRouter);
+apiRouter.use("/manager", managerRouter);
+apiRouter.use("/v2", v2Router);
+apiRouter.use("/pricing", pricingRouter);
+apiRouter.use("/holidays", holidaysRouter);
+apiRouter.use("/notifications", notificationsRouter);
+apiRouter.use("/alerts", alertsRouter);
+apiRouter.use("/ai", aiRouter);
+apiRouter.use("/user", userDataRouter);
+apiRouter.use(eventsRouter);
+
+// Mount at root (backward compat) and /api/v1 (Section 7)
+app.use("/", apiRouter);
+app.use("/api/v1", apiRouter);
 
 // ============================================
 // 404 Handler
 // ============================================
 app.use((req, res) => {
+  const requestId = (req as any).requestId ?? (res.locals as any)?.requestId;
   res.status(404).json({
     error: {
       code: "NOT_FOUND",
       message: `Route ${req.method} ${req.path} not found`,
+      ...(requestId ? { requestId } : {}),
     },
   });
 });
@@ -341,8 +343,9 @@ app.use(
         ? "Internal server error"
         : err.message;
 
+    const requestId = (req as any).requestId ?? (res.locals as any)?.requestId;
     res.status(statusCode).json({
-      error: { code, message },
+      error: { code, message, ...(requestId ? { requestId } : {}) },
     });
   }
 );

@@ -149,10 +149,35 @@ Use clear, descriptive commit messages:
 - `refactor: consolidate Stripe client to integrations/`
 - `docs: add CONTRIBUTING.md`
 
+## Git Hooks (Phase 3 Guardrails)
+
+Pre-commit hooks are in **`.githooks/`** so they can be versioned.
+
+**Enable once per clone:**
+```bash
+git config core.hooksPath .githooks
+```
+
+**What the pre-commit hook does:**
+- Blocks committing `.env`, `.env.production`, `.env.staging`, `.env.local`
+- Runs `npm run lint` (commit fails if lint fails)
+- Restricts new `.md` files to allowed doc paths (e.g. `docs/active/`, `docs/archive/`)
+
+CI also runs secret scanning (Gitleaks), forbidden-file checks, and legacy-auth import checks. See `.github/workflows/security-scan.yml`.
+
+## Branch Protection (recommended)
+
+In **GitHub repo → Settings → Branches**, add a branch protection rule for `main` (and optionally `develop`):
+- Require a pull request before merging
+- Require status checks to pass (e.g. Lint & Type Check, Backend Tests, Security & Secret Scanning)
+- Do not allow force-push to the protected branch
+
+This ensures no secrets or broken code are merged without review.
+
 ## Security
 
-- **Never commit secrets**: Use `.env` files (gitignored)
-- **Pre-commit hooks**: Secret scanning runs automatically
+- **Never commit secrets**: Use `.env` files (gitignored); secrets only in Railway or your vault
+- **Pre-commit hooks**: Block .env commits and run lint; CI runs full secret scan
 - **Review sensitive changes**: Get approval for security-related PRs
 
 ## Questions?

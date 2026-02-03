@@ -4,7 +4,7 @@
 
 import { Router, Response } from "express";
 import { logger } from "../lib/logger";
-import { requireAuth, requireAdmin, AuthedRequest } from "../middleware/authCanonical";
+import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import {
   getDashboardOverview,
   getSupplyDemandHeatmap,
@@ -42,7 +42,7 @@ managerRouter.use(requireAdmin);
  *       401:
  *         description: Unauthorized - admin only
  */
-managerRouter.get("/overview", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/overview", authedHandler(async (_req: AuthedRequest, res: Response) => {
   try {
     const overview = await getDashboardOverview();
     res.json({ overview });
@@ -52,7 +52,7 @@ managerRouter.get("/overview", async (_req: AuthedRequest, res: Response) => {
       error: { code: "GET_OVERVIEW_FAILED", message: (error as Error).message },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -67,7 +67,7 @@ managerRouter.get("/overview", async (_req: AuthedRequest, res: Response) => {
  *       200:
  *         description: List of active alerts
  */
-managerRouter.get("/alerts", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/alerts", authedHandler(async (_req: AuthedRequest, res: Response) => {
   try {
     const alerts = await getActiveAlerts();
     res.json({ alerts, count: alerts.length });
@@ -77,7 +77,7 @@ managerRouter.get("/alerts", async (_req: AuthedRequest, res: Response) => {
       error: { code: "GET_ALERTS_FAILED", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Supply & Demand
@@ -96,7 +96,7 @@ managerRouter.get("/alerts", async (_req: AuthedRequest, res: Response) => {
  *       200:
  *         description: Supply/demand heatmap
  */
-managerRouter.get("/heatmap", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/heatmap", authedHandler(async (_req: AuthedRequest, res: Response) => {
   try {
     const heatmap = await getSupplyDemandHeatmap();
     res.json({ heatmap });
@@ -106,7 +106,7 @@ managerRouter.get("/heatmap", async (_req: AuthedRequest, res: Response) => {
       error: { code: "GET_HEATMAP_FAILED", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Cleaner Analytics
@@ -125,7 +125,7 @@ managerRouter.get("/heatmap", async (_req: AuthedRequest, res: Response) => {
  *       200:
  *         description: Tier distribution
  */
-managerRouter.get("/tiers", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/tiers", authedHandler(async (_req: AuthedRequest, res: Response) => {
   try {
     const distribution = await getTierDistribution();
     res.json({ distribution });
@@ -135,7 +135,7 @@ managerRouter.get("/tiers", async (_req: AuthedRequest, res: Response) => {
       error: { code: "GET_TIERS_FAILED", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Retention Analytics
@@ -145,7 +145,7 @@ managerRouter.get("/tiers", async (_req: AuthedRequest, res: Response) => {
  * GET /manager/retention
  * Get retention cohort analysis
  */
-managerRouter.get("/retention", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/retention", authedHandler(async (_req: AuthedRequest, res: Response) => {
   try {
     const cohorts = await getRetentionCohorts();
     res.json({ cohorts });
@@ -155,7 +155,7 @@ managerRouter.get("/retention", async (_req: AuthedRequest, res: Response) => {
       error: { code: "GET_RETENTION_FAILED", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Operational Stats
@@ -174,7 +174,7 @@ managerRouter.get("/retention", async (_req: AuthedRequest, res: Response) => {
  *       200:
  *         description: Support statistics
  */
-managerRouter.get("/support-stats", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/support-stats", authedHandler(async (_req: AuthedRequest, res: Response) => {
   try {
     const stats = await getTicketStats();
     res.json({ stats });
@@ -184,7 +184,7 @@ managerRouter.get("/support-stats", async (_req: AuthedRequest, res: Response) =
       error: { code: "GET_SUPPORT_STATS_FAILED", message: (error as Error).message },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -199,7 +199,7 @@ managerRouter.get("/support-stats", async (_req: AuthedRequest, res: Response) =
  *       200:
  *         description: Background check statistics
  */
-managerRouter.get("/background-check-stats", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/background-check-stats", authedHandler(async (_req: AuthedRequest, res: Response) => {
   try {
     const stats = await getBackgroundCheckStats();
     res.json({ stats });
@@ -209,7 +209,7 @@ managerRouter.get("/background-check-stats", async (_req: AuthedRequest, res: Re
       error: { code: "GET_BGCHECK_STATS_FAILED", message: (error as Error).message },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -224,7 +224,7 @@ managerRouter.get("/background-check-stats", async (_req: AuthedRequest, res: Re
  *       200:
  *         description: Full manager report
  */
-managerRouter.get("/full-report", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/full-report", authedHandler(async (_req: AuthedRequest, res: Response) => {
   try {
     const [overview, alerts, heatmap, tiers, retention, supportStats, bgCheckStats] =
       await Promise.all([
@@ -253,7 +253,7 @@ managerRouter.get("/full-report", async (_req: AuthedRequest, res: Response) => 
       error: { code: "GET_REPORT_FAILED", message: (error as Error).message },
     });
   }
-});
+}));
 
 export default managerRouter;
 

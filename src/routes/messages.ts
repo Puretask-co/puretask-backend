@@ -5,7 +5,7 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { jwtAuthMiddleware, JWTAuthedRequest } from "../middleware/jwtAuth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import {
   sendMessage,
   getJobMessages,
@@ -17,8 +17,7 @@ import {
 
 const messagesRouter = Router();
 
-// All routes require authentication
-messagesRouter.use(jwtAuthMiddleware);
+messagesRouter.use(requireAuth);
 
 /**
  * @swagger
@@ -41,7 +40,7 @@ messagesRouter.use(jwtAuthMiddleware);
  */
 messagesRouter.get(
   "/unread",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const count = await getUnreadCount(req.user!.id);
       res.json({ unreadCount: count });
@@ -84,7 +83,7 @@ messagesRouter.get(
  */
 messagesRouter.get(
   "/unread/by-job",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const counts = await getUnreadCountByJob(req.user!.id);
       res.json({ unreadByJob: counts });
@@ -131,7 +130,7 @@ messagesRouter.get(
  */
 messagesRouter.get(
   "/conversations",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const { limit = "20" } = req.query;
       const conversations = await getRecentConversations(
@@ -185,7 +184,7 @@ messagesRouter.get(
  */
 messagesRouter.get(
   "/job/:jobId",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const { jobId } = req.params;
       const { limit = "100", before } = req.query;
@@ -265,7 +264,7 @@ const sendMessageSchema = z.object({
 messagesRouter.post(
   "/job/:jobId",
   validateBody(sendMessageSchema),
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const { jobId } = req.params;
       const { body, receiverId } = req.body;
@@ -328,7 +327,7 @@ messagesRouter.post(
  */
 messagesRouter.post(
   "/job/:jobId/read",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const { jobId } = req.params;
       const count = await markMessagesAsRead(jobId, req.user!.id);

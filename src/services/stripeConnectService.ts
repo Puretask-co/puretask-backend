@@ -69,6 +69,42 @@ export async function ensureCleanerStripeAccount(cleanerId: string): Promise<str
 }
 
 /**
+ * Create Stripe Connect account / onboarding link (for cleaner route)
+ */
+export async function createStripeConnectAccount(cleanerId: string): Promise<{
+  onboarding_url: string;
+  account_id: string;
+}> {
+  const { env } = await import("../config/env");
+  const base = env.FRONTEND_URL || "http://localhost:3001";
+  const accountId = await ensureCleanerStripeAccount(cleanerId);
+  const url = await createStripeOnboardingLink({
+    cleanerId,
+    refreshUrl: `${base}/cleaner/settings/payouts`,
+    returnUrl: `${base}/cleaner/settings/payouts`,
+  });
+  return { onboarding_url: url, account_id: accountId };
+}
+
+/**
+ * Get Stripe Connect status (for cleaner route)
+ */
+export async function getStripeConnectStatus(cleanerId: string): Promise<{
+  connected: boolean;
+  status: string;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+}> {
+  const st = await getCleanerStripeStatus(cleanerId);
+  return {
+    connected: st.hasAccount,
+    status: st.payoutsEnabled ? "active" : "pending",
+    chargesEnabled: st.payoutsEnabled,
+    payoutsEnabled: st.payoutsEnabled,
+  };
+}
+
+/**
  * Create a Stripe Connect onboarding link
  */
 export async function createStripeOnboardingLink(params: {
