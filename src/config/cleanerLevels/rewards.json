@@ -1,0 +1,770 @@
+[
+  {
+    "id": "rwd_visibility_priority_48h",
+    "kind": "visibility_boost",
+    "name": "Priority visibility (48h)",
+    "params": {
+      "multiplier": 1.2,
+      "duration_hours": 48
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_visibility_priority_7d",
+    "kind": "visibility_boost",
+    "name": "Priority visibility (7 days)",
+    "params": {
+      "multiplier": 1.2,
+      "duration_days": 7
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_visibility_priority_14d",
+    "kind": "visibility_boost",
+    "name": "Priority visibility (14 days)",
+    "params": {
+      "multiplier": 1.2,
+      "duration_days": 14
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_visibility_priority_30d",
+    "kind": "visibility_boost",
+    "name": "Priority visibility (30 days)",
+    "params": {
+      "multiplier": 1.2,
+      "duration_days": 30
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_exposure_early_5min_7d",
+    "kind": "exposure_window",
+    "name": "Early customer exposure (5 min)",
+    "params": {
+      "minutes": 5,
+      "duration_days": 7
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_exposure_early_10min_14d",
+    "kind": "exposure_window",
+    "name": "Early customer exposure (10 min)",
+    "params": {
+      "minutes": 10,
+      "duration_days": 14
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_exposure_early_15min_21d",
+    "kind": "exposure_window",
+    "name": "Early customer exposure (15 min)",
+    "params": {
+      "minutes": 15,
+      "duration_days": 21
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_exposure_pre_release_20min_30d",
+    "kind": "exposure_window",
+    "name": "Pre-release exposure (20 min)",
+    "params": {
+      "minutes": 20,
+      "duration_days": 30
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_cash_10_level2",
+    "kind": "cash_bonus",
+    "name": "$10 bonus",
+    "params": {
+      "amount_usd": 10
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_15_level2",
+    "kind": "cash_bonus",
+    "name": "$15 bonus",
+    "params": {
+      "amount_usd": 15
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_20_level3",
+    "kind": "cash_bonus",
+    "name": "$20 bonus",
+    "params": {
+      "amount_usd": 20
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_25_level4",
+    "kind": "cash_bonus",
+    "name": "$25 bonus",
+    "params": {
+      "amount_usd": 25
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_30_level4",
+    "kind": "cash_bonus",
+    "name": "$30 bonus",
+    "params": {
+      "amount_usd": 30
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_50_level5",
+    "kind": "cash_bonus",
+    "name": "$50 bonus",
+    "params": {
+      "amount_usd": 50
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_75_level6",
+    "kind": "cash_bonus",
+    "name": "$75 bonus",
+    "params": {
+      "amount_usd": 75
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_100_level7",
+    "kind": "cash_bonus",
+    "name": "$100 bonus",
+    "params": {
+      "amount_usd": 100
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_150_level8",
+    "kind": "cash_bonus",
+    "name": "$150 bonus",
+    "params": {
+      "amount_usd": 150
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_200_level8",
+    "kind": "cash_bonus",
+    "name": "$200 bonus",
+    "params": {
+      "amount_usd": 200
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_250_level9",
+    "kind": "cash_bonus",
+    "name": "$250 bonus",
+    "params": {
+      "amount_usd": 250
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_300_level9",
+    "kind": "cash_bonus",
+    "name": "$300 bonus",
+    "params": {
+      "amount_usd": 300
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_cash_500_level10",
+    "kind": "cash_bonus",
+    "name": "$500 bonus",
+    "params": {
+      "amount_usd": 500
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_loyalty_bonus_750_level10",
+    "kind": "cash_bonus",
+    "name": "$750 loyalty bonus",
+    "params": {
+      "amount_usd": 750
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "cash"
+  },
+  {
+    "id": "rwd_platform_fee_reduction_2pct_30d",
+    "kind": "fee_discount",
+    "name": "Platform fee −2% (30 days)",
+    "params": {
+      "delta_percent": -2,
+      "duration_days": 30
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_platform_fee_reduction_3pct_30d",
+    "kind": "fee_discount",
+    "name": "Platform fee −3% (30 days)",
+    "params": {
+      "delta_percent": -3,
+      "duration_days": 30
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_platform_fee_reduction_5pct_30d",
+    "kind": "fee_discount",
+    "name": "Platform fee −5% (30 days)",
+    "params": {
+      "delta_percent": -5,
+      "duration_days": 30
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_platform_fee_reduction_7pct_30d",
+    "kind": "fee_discount",
+    "name": "Platform fee −7% (30 days)",
+    "params": {
+      "delta_percent": -7,
+      "duration_days": 30
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_platform_fee_reduction_10pct_30d",
+    "kind": "fee_discount",
+    "name": "Platform fee −10% (30 days)",
+    "params": {
+      "delta_percent": -10,
+      "duration_days": 30
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_ranking_multiplier_1_20",
+    "kind": "ranking_multiplier",
+    "name": "Ranking multiplier ×1.20",
+    "params": {
+      "multiplier": 1.2,
+      "duration_days": 30
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_ranking_multiplier_1_35",
+    "kind": "ranking_multiplier",
+    "name": "Ranking multiplier ×1.35",
+    "params": {
+      "multiplier": 1.35,
+      "duration_days": 60
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_ranking_weight_10pct_14d",
+    "kind": "ranking_weight",
+    "name": "Ranking weight +10% (14 days)",
+    "params": {
+      "delta_percent": 10,
+      "duration_days": 14
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_escrow_buffer_reduction_10pct_7d",
+    "kind": "escrow_buffer",
+    "name": "Reduced escrow buffer (−10%)",
+    "params": {
+      "delta_percent": -10,
+      "duration_days": 7
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_escrow_buffer_reduction_20pct_14d",
+    "kind": "escrow_buffer",
+    "name": "Reduced escrow buffer (−20%)",
+    "params": {
+      "delta_percent": -20,
+      "duration_days": 14
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_escrow_buffer_reduction_max_30d",
+    "kind": "escrow_buffer",
+    "name": "Maximum escrow reduction",
+    "params": {
+      "delta_percent": -25,
+      "duration_days": 30
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_instant_payout_eligible",
+    "kind": "payout_permission",
+    "name": "Instant payout eligible",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_instant_payout_fee_reduced",
+    "kind": "payout_fee",
+    "name": "Instant payout fee reduced",
+    "params": {
+      "delta_percent": -50
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_instant_payout_fee_waived_10_uses",
+    "kind": "payout_fee",
+    "name": "Instant payout fee waived (10 uses)",
+    "params": {
+      "waive_fee": true,
+      "uses": 10
+    },
+    "stacking_rule": "extend_uses",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_badge_verified_results",
+    "kind": "badge",
+    "name": "Verified Results",
+    "params": {
+      "badge_key": "verified_results"
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_profile_highlight_permanent",
+    "kind": "profile_highlight",
+    "name": "Profile highlight (permanent)",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_visibility_baseline_unlocked",
+    "kind": "permission",
+    "name": "Visibility baseline unlocked",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_recurring_clients_eligibility",
+    "kind": "permission",
+    "name": "Recurring client eligibility",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_auto_accept_recurring",
+    "kind": "permission",
+    "name": "Auto-accept recurring jobs",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_featured_48h",
+    "kind": "featured_slot",
+    "name": "Featured cleaner (48h)",
+    "params": {
+      "duration_hours": 48
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_featured_72h",
+    "kind": "featured_slot",
+    "name": "Featured cleaner (72h)",
+    "params": {
+      "duration_hours": 72
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_job_pool_flexible_time",
+    "kind": "job_pool_access",
+    "name": "Flexible-time job pool access",
+    "params": {
+      "pool": "flexible_time"
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_job_pool_weekend_premium",
+    "kind": "job_pool_access",
+    "name": "Weekend premium job pool access",
+    "params": {
+      "pool": "weekend_premium"
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_job_pool_high_value_access",
+    "kind": "job_pool_access",
+    "name": "High-value job pool access",
+    "params": {
+      "pool": "high_value"
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_pricing_caps_increase_level5",
+    "kind": "pricing_cap",
+    "name": "Higher pricing caps (Level 5)",
+    "params": {
+      "tier": "level5_caps"
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_platinum_pricing_unlocked",
+    "kind": "pricing_cap",
+    "name": "Platinum pricing unlocked",
+    "params": {
+      "tier": "platinum"
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_addon_spotlight_14d",
+    "kind": "visibility_boost",
+    "name": "Add-on Spotlight (14 days)",
+    "params": {
+      "multiplier": 1.15,
+      "duration_days": 14,
+      "job_filter": "has_addons"
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash",
+    "applies_when": {
+      "job.has_addons": true
+    }
+  },
+  {
+    "id": "rwd_addon_preferred_30d",
+    "kind": "exposure_window",
+    "name": "Add-on Preferred (30 days)",
+    "params": {
+      "minutes": 10,
+      "duration_days": 30,
+      "job_filter": "has_addons"
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash",
+    "applies_when": {
+      "job.has_addons": true
+    }
+  },
+  {
+    "id": "rwd_premium_addon_access",
+    "kind": "permission",
+    "name": "Premium add-on access",
+    "params": {
+      "enabled": true,
+      "pool": "premium_addon_carousel"
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash",
+    "applies_when": {
+      "job.has_addons": true
+    }
+  },
+  {
+    "id": "rwd_demand_bonus_pool_mornings",
+    "kind": "bonus_pool",
+    "name": "Morning demand bonus pool",
+    "params": {
+      "pool": "mornings"
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_weekend_priority_long_term_90d",
+    "kind": "visibility_boost",
+    "name": "Weekend/Early priority (90 days)",
+    "params": {
+      "multiplier": 1.15,
+      "duration_days": 90,
+      "time_slot": [
+        "weekend",
+        "early_morning"
+      ]
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_dispute_buffer_relaxed_30d",
+    "kind": "policy_adjustment",
+    "name": "Dispute buffer relaxed (30 days)",
+    "params": {
+      "duration_days": 30
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_platform_fee_floor_unlocked",
+    "kind": "permission",
+    "name": "Platform fee floor unlocked",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_featured_search_priority_30d",
+    "kind": "visibility_boost",
+    "name": "Featured search priority (30 days)",
+    "params": {
+      "multiplier": 1.3,
+      "duration_days": 30
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_guaranteed_recurring_pipeline",
+    "kind": "permission",
+    "name": "Guaranteed recurring pipeline",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_manual_job_invites_unlocked",
+    "kind": "permission",
+    "name": "Manual job invites unlocked",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_max_visibility_permanent",
+    "kind": "permission",
+    "name": "Max visibility (permanent)",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_revenue_share_eligible",
+    "kind": "permission",
+    "name": "Revenue share eligible",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_ambassador_status",
+    "kind": "permission",
+    "name": "Ambassador status",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_notifications_faster",
+    "kind": "notification_priority",
+    "name": "Faster job notifications",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_cancellation_penalty_reduction_7d",
+    "kind": "policy_adjustment",
+    "name": "Reduced cancellation penalties (7 days)",
+    "params": {
+      "duration_days": 7
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_priority_over_same_distance_permanent",
+    "kind": "permission",
+    "name": "Priority over same-distance cleaners (permanent)",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_premium_moveout_rates_unlocked",
+    "kind": "permission",
+    "name": "Move-in/out premium rates unlocked",
+    "params": {
+      "enabled": true
+    },
+    "stacking_rule": "no_stack",
+    "enabled": true,
+    "cost_type": "non_cash"
+  },
+  {
+    "id": "rwd_premium_clients_first_access_30d",
+    "kind": "exposure_window",
+    "name": "Premium clients first access (30 days)",
+    "params": {
+      "minutes": 15,
+      "duration_days": 30,
+      "pool": "premium_clients"
+    },
+    "stacking_rule": "extend_duration",
+    "enabled": true,
+    "cost_type": "non_cash"
+  }
+]

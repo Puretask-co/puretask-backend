@@ -31,6 +31,9 @@ import { runNightlyScoreRecompute } from "./reliability/nightlyScoreRecompute";
 import { runCleaningScores } from "./reliability/cleaningScores";
 import { runReliabilityRecalc } from "./reliability/reliabilityRecalc";
 
+// Gamification Workers
+import { runComputeGovernorMetrics } from "./gamification/computeGovernorMetrics";
+
 // Other Workers
 import { runOnboardingReminderWorker } from "./onboardingReminderWorker";
 import { runJobRemindersWorker } from "./v1-core/jobReminders";
@@ -68,6 +71,7 @@ type WorkerName =
   | "backup-daily"
   | "job-reminders"
   | "no-show-detection"
+  | "governor-metrics"
   | "all";
 
 const workers: Record<string, () => Promise<any>> = {
@@ -102,6 +106,7 @@ const workers: Record<string, () => Promise<any>> = {
   "backup-daily": runBackupDaily,
   "job-reminders": runJobRemindersWorker,
   "no-show-detection": runNoShowDetectionWorker,
+  "governor-metrics": runComputeGovernorMetrics,
 };
 
 /**

@@ -13,6 +13,8 @@ import systemRouter from './system';
 import settingsRouter from './settings';
 import webhooksRouter from './webhooks';
 import jobsRouter from './jobs';
+import levelTuningRouter from './levelTuning';
+import gamificationControlRouter from './gamificationControl';
 
 const adminRouter = Router();
 
@@ -28,6 +30,8 @@ adminRouter.use('/risk', riskRouter);
 adminRouter.use('/messages', messagesRouter);
 adminRouter.use('/system', systemRouter);
 adminRouter.use('/settings', settingsRouter);
+adminRouter.use('/level-tuning', levelTuningRouter);
+adminRouter.use('/gamification', gamificationControlRouter);
 
 export default adminRouter;
 

@@ -657,6 +657,11 @@ export async function acceptJobOffer(
 
   logger.info("job_offer_accepted", { jobId, cleanerId });
 
+  // Meaningful action for level system (login streak anti-gaming)
+  import("./cleanerLevelService")
+    .then(({ recordMeaningfulAction }) => recordMeaningfulAction(cleanerId, "job_accepted"))
+    .catch(() => {});
+
   return { success: true, reason: "Job assigned successfully" };
 }
 

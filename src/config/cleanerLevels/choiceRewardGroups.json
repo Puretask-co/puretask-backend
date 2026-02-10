@@ -1,0 +1,8 @@
+{
+  "choice_group_lvl5": {
+    "id": "choice_group_lvl5",
+    "title": "Choose your Level 5 reward",
+    "description": "Pick 1 reward. This is optional and budget-capped by admin.",
+    "options": ["rwd_cash_50_level5", "rwd_visibility_priority_14d", "rwd_platform_fee_reduction_3pct_30d", "rwd_exposure_early_10min_14d"]
+  }
+}

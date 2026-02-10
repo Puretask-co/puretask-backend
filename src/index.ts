@@ -47,6 +47,7 @@ import searchGlobalRouter from "./routes/search"; // Global search and autocompl
 import cleanerAIRouter from "./routes/cleaner-ai-settings"; // V4 FEATURE: AI Assistant Settings for Cleaners
 import cleanerAIAdvancedRouter from "./routes/cleaner-ai-advanced"; // V4 FEATURE: Advanced AI features (export, preview, etc.)
 import gamificationRouter from "./routes/gamification"; // V4 FEATURE: Gamification & Onboarding
+import governorRouter from "./routes/governor"; // Step 18: Marketplace Health Governor (runtime state)
 import messageHistoryRouter from "./routes/message-history"; // V4 FEATURE: Message History & Saved Messages
 import trackingRouter from "./routes/tracking";
 // V3 FEATURE — ENABLED (subscriptions)
@@ -264,6 +265,7 @@ apiRouter.use("/cleaner/ai/advanced", cleanerAIAdvancedRouter);
 apiRouter.use("/cleaner/ai", cleanerAIRouter);
 apiRouter.use("/cleaner", messageHistoryRouter);
 apiRouter.use("/cleaner", gamificationRouter);
+apiRouter.use("/governor", governorRouter);
 apiRouter.use("/cleaner", cleanerPortalRouter);
 apiRouter.use("/cleaner", cleanerEnhancedRouter);
 apiRouter.use("/client", clientInvoicesRouter);

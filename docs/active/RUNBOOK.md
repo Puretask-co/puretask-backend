@@ -8,7 +8,7 @@
 ## 1. Deploy
 
 - **Prereqs:** Secrets in Railway (or target); no secrets in repo. Env validated at startup (`src/config/env.ts`).
-- **DB:** Run migrations in order. Fresh DB: `npm run db:migrate` (or `psql $DATABASE_URL -f DB/migrations/000_CONSOLIDATED_SCHEMA.sql`). Existing: apply `001`…`042` and `hardening/*` in order. See [DB/migrations/README.md](../DB/migrations/README.md).
+- **DB:** Run migrations in order. Fresh DB: `npm run db:migrate` (or `psql $DATABASE_URL -f DB/migrations/000_CONSOLIDATED_SCHEMA.sql`). Existing: apply `001`…`056` and `hardening/*` in order. See [DB/migrations/README.md](../DB/migrations/README.md).
 - **App:** Build `npm run build`; start `npm start`. Workers: run per [package.json](../package.json) scripts (e.g. `worker:scheduler`, `worker:durable-jobs`).
 - **CI:** Push to main/develop runs lint, tests, security scan, migrations check (`.github/workflows/`).
 
@@ -49,10 +49,87 @@
 
 ---
 
-## 4. Contacts and links
+## 4. Gamification support and debug (Step 17)
+
+### 4.1 Progress debug endpoint
+
+`GET /admin/gamification/cleaners/:id/progress-debug?job_id=...&limit=200` (admin auth)
+
+Returns status, recent goals/rewards/achievements, recent events, and diagnostics explaining:
+- **Meaningful login:** Session + action within 15 min
+- **Meaningful message:** Template/char count/client reply
+- **Photos:** Before/after within clock window
+- **On-time:** ±15 min and GPS within 250m
+- **Last decline:** Good-faith vs not
+
+### 4.2 Support macros (copy-paste for agents)
+
+**“Why is my progress paused?”**  
+Progress is paused when a maintenance rule isn’t met. Open the Maintenance tab, fix the listed items (e.g. acceptance rate, disputes, on-time). Progress resumes automatically once back in compliance.
+
+**“Why didn’t my message count?”**  
+Messages count if: (1) you used a Quick Template, (2) the message is 25+ characters, or (3) the client replied within 24 hours. Short replies like “ok” or “hi” don’t count.
+
+**“Why didn’t my login/streak count?”**  
+A login day counts when you take at least one meaningful action within 15 minutes of opening the app (open job request, accept/decline, send message, upload photos, update availability). Opening and closing the app doesn’t count.
+
+**“Why didn’t my photos count?”**  
+Photos must include at least 1 before + 1 after, with timestamps between clock-in and clock-out.
+
+**“Why does my on-time % look wrong?”**  
+You’re on-time if you clock in 15 min before to 15 min after the scheduled start, within 250m of the job. GPS outside 250m at clock-in = not on-time.
+
+**“Cash bonuses are missing”**  
+Cash bonuses can be paused if the region budget cap is reached, cash rewards are disabled, or emergency rewards pause is active. Goal completion still counts; cash returns when budgets reopen.
+
+### 4.3 In-app explainers (cleaner-facing)
+
+- **Progress paused:** Fix the maintenance items below to resume earning rewards.
+- **Meaningful login:** A login day counts when you take one meaningful action within 15 minutes of opening the app.
+- **Meaningful message:** Counts if you use a Quick Template, write 25+ characters, or the client replies.
+- **Photos:** Count when you upload 1 before + 1 after between clock-in and clock-out.
+- **Visibility rewards:** Improve where you appear in the list; never guarantee jobs.
+
+---
+
+## 5. Gamification launch rollout (Step 18–19)
+
+### Phase 0 — Preflight (1–2 days)
+
+- Deploy to staging
+- Seed configs: goals, rewards, seasons, badges JSON
+- Run DB migrations: `056_marketplace_health_governor.sql`
+- Verify: `GET /api/v1/governor/state`, progression, next-best-action, admin progress-debug
+- Run unit + integration tests, k6 smoke: `k6 run tests/load/gamification_smoke.js`
+- Gates: No crashes; next-best-action returns sensible output; no reward double-granting
+
+### Phase 1 — Internal dogfood (3–7 days)
+
+- Enable for internal team + friendly cleaners
+- Observe: Do they understand what counts? Support macros cover questions?
+- Gates: ≥90% support questions covered; no major confusion on photos/on-time/messaging
+
+### Phase 2 — City / cohort pilot (2–4 weeks)
+
+- Limit to one region; set cash caps low
+- Track: leveling velocity, reward burn, median fill time, cancel/dispute rate
+- Gates: Cash burn within tolerance; disputes do not increase; fill time does not worsen
+
+### Phase 3 — Scale within region (2–6 weeks)
+
+- Increase user count; enable seasonal boosts; run governor metrics scheduler hourly
+- Gates: Governor outputs stable; no “rich get richer” runaway
+
+### Phase 4 — Multi-region
+
+- Per-city runbook: seed region config, 1-week pilot, governor enabled, region-local cash caps
+
+---
+
+## 6. Contacts and links
 
 - **Checklists:** [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md)
 - **Phase status:** [00-CRITICAL/PHASE_*_STATUS.md](./00-CRITICAL/)
 - **Backup/restore:** [BACKUP_RESTORE.md](./sections/BACKUP_RESTORE.md)
 
-**Last updated:** 2026-01-31
+**Last updated:** 2026-02-02

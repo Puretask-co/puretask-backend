@@ -60,6 +60,11 @@ export async function addJobPhoto(input: UploadPhotoInput): Promise<JobPhoto> {
     photoId: result.rows[0].id,
   });
 
+  // Meaningful action for level system (login streak anti-gaming)
+  import("./cleanerLevelService")
+    .then(({ recordMeaningfulAction }) => recordMeaningfulAction(cleanerId, "photo_uploaded"))
+    .catch(() => {});
+
   return result.rows[0];
 }
 

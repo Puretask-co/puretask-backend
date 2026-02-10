@@ -1,0 +1,92 @@
+[
+  {
+    "level": 1,
+    "name": "New Cleaner",
+    "requirements": {
+      "core_complete_all": true,
+      "stretch_complete_min": 1,
+      "maintenance_require_all": true
+    }
+  },
+  {
+    "level": 2,
+    "name": "Active",
+    "requirements": {
+      "core_complete_all": true,
+      "stretch_complete_min": 1,
+      "maintenance_require_all": true
+    }
+  },
+  {
+    "level": 3,
+    "name": "Reliable",
+    "requirements": {
+      "core_complete_all": true,
+      "stretch_complete_min": 1,
+      "maintenance_require_all": true
+    }
+  },
+  {
+    "level": 4,
+    "name": "Trusted",
+    "requirements": {
+      "core_complete_all": true,
+      "stretch_complete_min": 1,
+      "maintenance_require_all": true
+    }
+  },
+  {
+    "level": 5,
+    "name": "Professional",
+    "requirements": {
+      "core_complete_all": true,
+      "stretch_complete_min": 1,
+      "maintenance_require_all": true
+    }
+  },
+  {
+    "level": 6,
+    "name": "Elite",
+    "requirements": {
+      "core_complete_all": true,
+      "stretch_complete_min": 1,
+      "maintenance_require_all": true
+    }
+  },
+  {
+    "level": 7,
+    "name": "Community Favorite",
+    "requirements": {
+      "core_complete_all": true,
+      "stretch_complete_min": 1,
+      "maintenance_require_all": true
+    }
+  },
+  {
+    "level": 8,
+    "name": "Master",
+    "requirements": {
+      "core_complete_all": true,
+      "stretch_complete_min": 1,
+      "maintenance_require_all": false
+    }
+  },
+  {
+    "level": 9,
+    "name": "Top Performer",
+    "requirements": {
+      "core_complete_all": true,
+      "stretch_complete_min": 1,
+      "maintenance_require_all": false
+    }
+  },
+  {
+    "level": 10,
+    "name": "Legend",
+    "requirements": {
+      "core_complete_all": true,
+      "stretch_complete_min": 1,
+      "maintenance_require_all": true
+    }
+  }
+]

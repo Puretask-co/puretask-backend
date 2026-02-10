@@ -86,6 +86,13 @@ export async function sendMessage(input: SendMessageInput): Promise<Message> {
     messageId: result.rows[0].id,
   });
 
+  // Meaningful action for level system (login streak anti-gaming)
+  if (senderRole === "cleaner") {
+    import("./cleanerLevelService")
+      .then(({ recordMeaningfulAction }) => recordMeaningfulAction(senderId, "message_sent"))
+      .catch(() => {});
+  }
+
   return result.rows[0];
 }
 

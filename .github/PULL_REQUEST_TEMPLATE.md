@@ -19,6 +19,14 @@
 
 <!-- If this includes DB migrations: run order, backfill, or "none" -->
 
+### If this PR adds or changes DB migrations
+
+- [ ] All FKs to `users(id)` use `TEXT` (canonical schema)
+- [ ] No `BEGIN;` / `COMMIT;` in migration files
+- [ ] Migrations are idempotent (`IF NOT EXISTS`, `ON CONFLICT`)
+- [ ] Dependencies documented (e.g. 055 requires 043, 048, 050)
+- [ ] `npm run db:validate:migrations` passes
+
 ## Checklist
 
 - [ ] Lint and typecheck pass

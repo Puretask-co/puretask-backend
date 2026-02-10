@@ -208,6 +208,15 @@ authRouter.post("/login", async (req, res: Response) => {
       role: user.role as UserRole,
     });
 
+    // Record cleaner login for level gamification streak (async, non-blocking)
+    if (user.role === "cleaner") {
+      import("../services/cleanerLevelService")
+        .then(({ recordCleanerLogin }) => recordCleanerLogin(user.id))
+        .catch((err) =>
+          logger.warn("record_cleaner_login_failed", { userId: user.id, error: (err as Error).message })
+        );
+    }
+
     res.json({
       token,
       user: sanitizeUser(user),

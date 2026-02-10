@@ -603,6 +603,19 @@ export async function applyStatusTransition(options: {
       });
     }
 
+    // 2b) Check level goals (async, non-critical)
+    if (job.cleaner_id) {
+      import("./cleanerLevelService")
+        .then(({ checkAndProcessGoals }) => checkAndProcessGoals(job.cleaner_id!))
+        .catch((err) =>
+          logger.error("level_goals_check_failed", {
+            cleanerId: job.cleaner_id,
+            jobId,
+            error: (err as Error).message,
+          })
+        );
+    }
+
     // 3) Create pending payout record (for weekly Stripe transfer)
     await recordEarningsForCompletedJob(updated);
     logger.info("payout_recorded", {
@@ -630,6 +643,19 @@ export async function applyStatusTransition(options: {
     eventType,
     actorType,
   });
+
+  // Meaningful action for level system (login streak anti-gaming)
+  if (eventType === "job_accepted" && role === "cleaner") {
+    import("./cleanerLevelService")
+      .then(({ recordMeaningfulAction }) => recordMeaningfulAction(requesterId, "job_accepted"))
+      .catch((err) =>
+        logger.warn("record_meaningful_action_failed", {
+          cleanerId: requesterId,
+          actionType: "job_accepted",
+          error: (err as Error).message,
+        })
+      );
+  }
 
   return updated;
 }

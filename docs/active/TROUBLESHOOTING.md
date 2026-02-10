@@ -259,6 +259,38 @@ DEBUG=* npm start
 LOG_LEVEL=debug npm start
 ```
 
+## Neon: Foreign Key Constraint "cannot be implemented" (SQLSTATE 42804)
+
+### Symptoms
+- Migrations 043–056 fail with `ERROR: foreign key constraint "xxx_cleaner_id_fkey" cannot be implemented (SQLSTATE 42804)`
+- Happens when pasting gamification migrations into Neon SQL Editor
+
+### Cause
+The canonical schema uses `users.id TEXT`. Some Neon setups (e.g. Neon Auth, custom init) use `users.id UUID`. Foreign keys require exact type match: `cleaner_id TEXT` cannot reference `users(id)` when `users.id` is UUID.
+
+### Verify Your users.id Type
+Run in Neon SQL Editor:
+```sql
+SELECT data_type FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'id';
+```
+- Result `text` → Use standard migrations; they should work.
+- Result `uuid` → Use the gamification bundle with UUID variants. See `DB/gamification_schema_neon_part1.json` and update `cleaner_id TEXT` → `cleaner_id UUID` (and `created_by`/`updated_by`/`actor_admin_user_id` in 051) in any migration referencing `users(id)`.
+
+### Quick Fix for Neon with users.id UUID
+
+**Option A: Generate UUID bundle (recommended)**
+
+```bash
+node scripts/generate-neon-uuid-bundle.js --output DB/neon/gamification_uuid.sql
+```
+
+Then paste `DB/neon/gamification_uuid.sql` into Neon SQL Editor (run after your base schema). The bundle has all user-ref columns as UUID and no `BEGIN`/`COMMIT`.
+
+**Option B: Manual edits**
+
+When running migrations 043–056 on Neon where `users.id` is UUID, replace all `cleaner_id TEXT` with `cleaner_id UUID` (and `created_by`/`updated_by`/`actor_admin_user_id` in 051). Remove `BEGIN;`/`COMMIT;` to avoid rollback issues.
+
 ## Prevention
 
 ### Regular Maintenance

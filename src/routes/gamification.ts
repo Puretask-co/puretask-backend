@@ -8,13 +8,466 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { query } from "../db/client";
 import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import { requireRole } from "../middleware/jwtAuth";
+import {
+  getLevelProgress,
+  recordCleanerLogin,
+} from "../services/cleanerLevelService";
+import { recordEvent, recordSessionStart } from "../services/eventIngestionService";
+import {
+  getCleanerProgression,
+} from "../services/gamificationProgressionService";
+import {
+  selectChoiceReward,
+  getActiveRewards,
+  getOpenChoiceEligibilities,
+} from "../services/gamificationRewardService";
+import { RewardEffectsService } from "../services/rewardEffectsService";
+import { BadgeService } from "../services/badgeService";
+import { SeasonService } from "../services/seasonService";
+import { NextBestActionService } from "../services/nextBestActionService";
+import {
+  isGamificationEnabled,
+  isGamificationBadgesEnabled,
+  isNextBestActionEnabled,
+} from "../lib/gamificationFeatureFlags";
 
 const router = Router();
+
+/** Helper: gate gamification endpoints when feature flag is disabled */
+async function gateGamification(
+  req: AuthedRequest,
+  res: Response,
+  regionId: string | null,
+  emptyPayload: Record<string, unknown> = {}
+): Promise<boolean> {
+  const enabled = await isGamificationEnabled({ region_id: regionId });
+  if (!enabled) {
+    res.json({ ok: true, gamification_enabled: false, ...emptyPayload });
+    return false;
+  }
+  return true;
+}
 router.use(requireAuth);
 
 // ============================================
-// ONBOARDING PROGRESS
+// CLEANER LEVEL SYSTEM (Gamification)
 // ============================================
+
+/**
+ * @swagger
+ * /cleaner/level/progress:
+ *   get:
+ *     summary: Get level progress
+ *     description: Get cleaner level, goals, completion status, and level-up eligibility.
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Level progress with goals and progress
+ */
+router.get(
+  "/level/progress",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.query.region_id as string) || null;
+    if (!(await gateGamification(req, res, regionId, { level: 1, goals: [], progress: [] }))) return;
+    try {
+      const cleanerId = req.user!.id;
+      const progress = await getLevelProgress(cleanerId);
+      res.json(progress);
+    } catch (error: unknown) {
+      console.error("Error fetching level progress:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch level progress" },
+      });
+    }
+  })
+);
+
+/**
+ * GET /cleaner/level/progression — Engine-based progression (Step 5/6)
+ * Returns level evaluation, goal progress, next best actions from JSON config.
+ */
+router.get(
+  "/level/progression",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const currentLevel = Number(req.query.current_level) || 1;
+
+      const levelRow = await query<{ current_level: number }>(
+        `SELECT current_level FROM cleaner_level_progress WHERE cleaner_id = $1`,
+        [cleanerId]
+      );
+      const level = levelRow.rows[0]?.current_level ?? currentLevel;
+
+      const progression = await getCleanerProgression(cleanerId, level);
+      res.json({ ok: true, ...progression });
+    } catch (error: unknown) {
+      console.error("Error fetching progression:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch progression" },
+      });
+    }
+  })
+);
+
+/**
+ * GET /cleaner/rewards/choices — List open choice eligibilities (Step 8)
+ */
+router.get(
+  "/rewards/choices",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.query.region_id as string) || null;
+    if (!(await gateGamification(req, res, regionId, { choices: [] }))) return;
+    try {
+      const cleanerId = req.user!.id;
+      const choices = await getOpenChoiceEligibilities(cleanerId);
+      res.json({ ok: true, choices });
+    } catch (error: unknown) {
+      console.error("Error fetching choice eligibilities:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch choices" },
+      });
+    }
+  })
+);
+
+/**
+ * POST /cleaner/rewards/select — Select a choice reward
+ * Body: { eligibility_id, reward_id }
+ */
+router.post(
+  "/rewards/select",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { eligibility_id, reward_id } = req.body ?? {};
+      if (!eligibility_id || !reward_id) {
+        res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: "eligibility_id and reward_id required" },
+        });
+        return;
+      }
+
+      const grant = await selectChoiceReward({
+        cleanerId,
+        eligibilityId: eligibility_id,
+        rewardId: reward_id,
+      });
+      res.json({ ok: true, grant });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Failed to select reward";
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: msg } });
+    }
+  })
+);
+
+/**
+ * GET /cleaner/rewards/effects — Get effective reward effects (Step 9)
+ * Query: region_id (optional). Returns visibility multiplier, early exposure, fee discounts, etc.
+ */
+router.get(
+  "/rewards/effects",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.query.region_id as string) || null;
+    if (!(await gateGamification(req, res, regionId))) return;
+    try {
+      const cleanerId = req.user!.id;
+      const service = new RewardEffectsService();
+      const effects = await service.getEffectiveEffects({
+        cleaner_id: cleanerId,
+        region_id: regionId,
+      });
+      res.json({ ok: true, effects });
+    } catch (error: unknown) {
+      console.error("Error fetching reward effects:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch effects" },
+      });
+    }
+  })
+);
+
+/**
+ * GET /cleaner/next-best-actions — Next best actions for fastest path to reward (Step 16)
+ */
+router.get(
+  "/next-best-actions",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.query.region_id as string) ?? null;
+    if (!(await isGamificationEnabled({ region_id: regionId })) || !(await isNextBestActionEnabled({ region_id: regionId }))) {
+      res.json({ ok: true, gamification_enabled: false, actions: [] });
+      return;
+    }
+    try {
+      const cleanerId = req.user!.id;
+      const limit = req.query.limit ? Number(req.query.limit) : 3;
+      const svc = new NextBestActionService();
+      const result = await svc.getNextBestActions({
+        cleaner_id: cleanerId,
+        region_id: regionId,
+        limit,
+      });
+      res.json({ ok: true, ...result });
+    } catch (error: unknown) {
+      console.error("Error fetching next best actions:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch next best actions" },
+      });
+    }
+  })
+);
+
+/**
+ * GET /cleaner/seasons/active — Active seasonal challenges for region
+ */
+router.get(
+  "/seasons/active",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.query.region_id as string) ?? null;
+    if (!(await gateGamification(req, res, regionId, { seasons: [] }))) return;
+    try {
+      const svc = new SeasonService();
+      const seasons = await svc.getActiveSeasons({ region_id: regionId, at: new Date() });
+      res.json({
+        ok: true,
+        seasons: seasons.map((s) => ({
+          id: s.id,
+          name: s.name,
+          description: s.description,
+          starts_at: s.starts_at,
+          ends_at: s.ends_at,
+          ui: s.rule?.ui ?? {},
+        })),
+      });
+    } catch (error: unknown) {
+      console.error("Error fetching active seasons:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch seasons" },
+      });
+    }
+  })
+);
+
+/**
+ * GET /cleaner/badges — Badge catalog (enabled definitions)
+ */
+router.get(
+  "/badges",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.query.region_id as string) || null;
+    if (!(await isGamificationEnabled({ region_id: regionId })) || !(await isGamificationBadgesEnabled({ region_id: regionId }))) {
+      res.json({ ok: true, gamification_enabled: false, badges: [] });
+      return;
+    }
+    try {
+      const svc = new BadgeService();
+      const badges = await svc.getBadgeCatalog();
+      res.json({ ok: true, badges });
+    } catch (error: unknown) {
+      console.error("Error fetching badge catalog:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch badges" },
+      });
+    }
+  })
+);
+
+/**
+ * GET /cleaner/badges/earned — Cleaner's earned badges
+ */
+router.get(
+  "/badges/earned",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.query.region_id as string) || null;
+    if (!(await gateGamification(req, res, regionId, { earned: [] }))) return;
+    try {
+      const cleanerId = req.user!.id;
+      const svc = new BadgeService();
+      const earned = await svc.getCleanerBadges(cleanerId);
+      res.json({ ok: true, earned });
+    } catch (error: unknown) {
+      console.error("Error fetching earned badges:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch earned badges" },
+      });
+    }
+  })
+);
+
+/**
+ * GET /cleaner/badges/feed — Achievement feed (badge, level_up, goal_complete, reward_granted)
+ */
+router.get(
+  "/badges/feed",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const limit = Math.min(Number(req.query.limit ?? 50), 200);
+      const svc = new BadgeService();
+      const feed = await svc.getAchievementFeed(cleanerId, limit);
+      res.json({ ok: true, feed });
+    } catch (error: unknown) {
+      console.error("Error fetching achievement feed:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch feed" },
+      });
+    }
+  })
+);
+
+/**
+ * GET /cleaner/rewards/active — List active rewards
+ */
+router.get(
+  "/rewards/active",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.query.region_id as string) || null;
+    if (!(await gateGamification(req, res, regionId, { rewards: [] }))) return;
+    try {
+      const cleanerId = req.user!.id;
+      const rewards = await getActiveRewards(cleanerId);
+      res.json({ ok: true, rewards });
+    } catch (error: unknown) {
+      console.error("Error fetching active rewards:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch rewards" },
+      });
+    }
+  })
+);
+
+/**
+ * @swagger
+ * /cleaner/level/record-login:
+ *   post:
+ *     summary: Record login for streak
+ *     description: Record cleaner login for daily streak tracking. Call on app open/login.
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Login recorded
+ */
+router.post(
+  "/level/record-login",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      await recordCleanerLogin(cleanerId);
+      res.json({ message: "Login recorded" });
+    } catch (error: unknown) {
+      console.error("Error recording login:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to record login" },
+      });
+    }
+  })
+);
+
+/**
+ * POST /cleaner/events — Record gamification events (session start, meaningful action, etc.)
+ * See docs/active/EVENT_CONTRACT.md
+ */
+const eventSchema = z.object({
+  event_type: z.string(),
+  occurred_at: z.string().datetime().optional(),
+  payload: z.record(z.unknown()).optional(),
+  idempotency_key: z.string().optional(),
+  job_id: z.string().uuid().optional().nullable(),
+  job_request_id: z.string().uuid().optional().nullable(),
+  client_id: z.string().optional().nullable(),
+});
+router.post(
+  "/events",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.body?.region_id as string) || (req.query.region_id as string) || null;
+    if (!(await gateGamification(req, res, regionId))) return;
+    try {
+      const parsed = eventSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", details: parsed.error.flatten() } });
+        return;
+      }
+      const { event_type, occurred_at, payload, idempotency_key, job_id, job_request_id, client_id } = parsed.data;
+      const source = (req.headers["x-event-source"] as string) || "mobile";
+      const validSource = ["mobile", "web"].includes(source) ? (source as "mobile" | "web") : "mobile";
+
+      await recordEvent({
+        event_type,
+        occurred_at: occurred_at ? new Date(occurred_at) : new Date(),
+        source: validSource,
+        cleaner_id: req.user!.id,
+        client_id: client_id ?? null,
+        job_id: job_id ?? null,
+        job_request_id: job_request_id ?? null,
+        payload: payload ?? {},
+        idempotency_key: idempotency_key ?? undefined,
+      });
+      res.json({ ok: true });
+    } catch (error: unknown) {
+      console.error("Error recording event:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to record event" },
+      });
+    }
+  })
+);
+
+/**
+ * POST /cleaner/events/session-start — Record engagement session start
+ */
+const sessionStartSchema = z.object({
+  session_id: z.string().uuid(),
+  timezone: z.string().optional(),
+  device_platform: z.enum(["ios", "android", "web"]).optional(),
+  app_version: z.string().optional(),
+});
+router.post(
+  "/events/session-start",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.body?.region_id as string) || (req.query.region_id as string) || null;
+    if (!(await gateGamification(req, res, regionId))) return;
+    try {
+      const parsed = sessionStartSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: { code: "VALIDATION_ERROR", details: parsed.error.flatten() } });
+        return;
+      }
+      const source = (req.headers["x-event-source"] as string) || "mobile";
+      const validSource = ["mobile", "web"].includes(source) ? (source as "mobile" | "web") : "mobile";
+
+      await recordSessionStart(parsed.data.session_id, req.user!.id, validSource, {
+        timezone: parsed.data.timezone,
+        device_platform: parsed.data.device_platform,
+        app_version: parsed.data.app_version,
+      });
+      res.json({ ok: true });
+    } catch (error: unknown) {
+      console.error("Error recording session start:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to record session" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -78,7 +531,7 @@ router.get("/onboarding/progress", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch progress" },
     });
   }
-}));
+});
 
 /**
  * @swagger
@@ -419,7 +872,7 @@ router.post("/certifications/:certificationId/claim", async (req: AuthedRequest,
       error: { code: "INTERNAL_ERROR", message: "Failed to claim certification" },
     });
   }
-}));
+});
 
 // ============================================
 // TEMPLATE LIBRARY
@@ -652,7 +1105,7 @@ router.post("/template-library/:templateId/rate", async (req: AuthedRequest, res
       error: { code: "INTERNAL_ERROR", message: "Failed to rate template" },
     });
   }
-}));
+});
 
 /**
  * @swagger
@@ -751,7 +1204,7 @@ router.get("/tooltips", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch tooltips" },
     });
   }
-}));
+});
 
 /**
  * @swagger
@@ -908,7 +1361,7 @@ router.post("/template-library", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to publish template" },
     });
   }
-}));
+});
 
 /**
  * @swagger

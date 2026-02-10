@@ -139,6 +139,12 @@ export const WORKER_SCHEDULES: WorkerSchedule[] = [
     description: "Detect and warn about no-shows",
     enabled: true,
   },
+  {
+    workerName: "governor-metrics",
+    cronExpression: "0 * * * *", // Every hour
+    description: "Compute marketplace metrics + governor state per region",
+    enabled: true,
+  },
 ];
 
 // ============================================

@@ -53,6 +53,11 @@ export const env = {
 
   // Operational defaults (optional)
   GPS_CHECKIN_RADIUS_METERS: process.env.GPS_CHECKIN_RADIUS_METERS ? Number(process.env.GPS_CHECKIN_RADIUS_METERS) : 250,
+  ON_TIME_EARLY_MINUTES: process.env.ON_TIME_EARLY_MINUTES ? Number(process.env.ON_TIME_EARLY_MINUTES) : 15,
+  ON_TIME_LATE_MINUTES: process.env.ON_TIME_LATE_MINUTES ? Number(process.env.ON_TIME_LATE_MINUTES) : 15,
+  GOOD_FAITH_SHORT_NOTICE_HOURS: process.env.GOOD_FAITH_SHORT_NOTICE_HOURS
+    ? Number(process.env.GOOD_FAITH_SHORT_NOTICE_HOURS)
+    : 18,
   MIN_PHOTOS_TOTAL: process.env.MIN_PHOTOS_TOTAL ? Number(process.env.MIN_PHOTOS_TOTAL) : 3,
   MIN_BEFORE_PHOTOS: process.env.MIN_BEFORE_PHOTOS ? Number(process.env.MIN_BEFORE_PHOTOS) : 2,
   MIN_AFTER_PHOTOS: process.env.MIN_AFTER_PHOTOS ? Number(process.env.MIN_AFTER_PHOTOS) : 2,

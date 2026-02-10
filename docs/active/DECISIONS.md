@@ -1,4 +1,4 @@
-﻿# Decisions
+# Decisions
 
 > Canonical record of architectural/product decisions extracted from historical logs.
 > If a decision changes, add a new entry and mark the old one as superseded.
@@ -17,6 +17,7 @@ Hand-curated list (~10â€“30). Each entry: **Decision** â€” **Why** â�
 - **Stripe for payments + Connect for payouts** â€” Why: global payments, compliance â€” Tradeoff: fees, Stripe dependency
 - **Sentry init once (instrument.js)** â€” Why: correct tracing, no double-capture â€” Tradeoff: must preload before app
 - **Layering: routes thin, services own logic** â€” Why: testability, clear boundaries â€” Tradeoff: more files, no DB in routes
+- **Cleaner Level System: goals over XP, levels as gates** — Why: behavior control, tangible rewards (cash, visibility, fee reduction), no abstract points — Tradeoff: goal evaluation on each completion/login adds minor latency (async)
 
 ---
 ## Extracted from archive (auto)
