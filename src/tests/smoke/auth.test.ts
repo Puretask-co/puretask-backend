@@ -2,7 +2,7 @@
 // Authentication smoke tests
 
 import request from "supertest";
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, afterAll } from "@jest/globals";
 import app from "../../index";
 import { cleanupTestData } from "../helpers/testUtils";
 

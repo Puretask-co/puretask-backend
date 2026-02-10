@@ -3,6 +3,7 @@
 
 export * from "./types";
 export * from "./templates";
+export { renderNotification, type TemplateData, type RenderedNotification } from "./templates";
 export {
   sendNotification,
   sendNotificationToUser,

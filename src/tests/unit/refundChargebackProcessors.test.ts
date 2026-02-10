@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "@jest/globals";
+import { jest } from "@jest/globals";
 import { processStripeRefund } from "../../services/refundProcessor";
 import { processChargeDispute } from "../../services/chargebackProcessor";
 
@@ -6,21 +7,21 @@ const ledger: Array<{ userId: string; jobId: string | null; deltaCredits: number
 const jobUpdates: Array<{ jobId: string; status: string }> = [];
 const payoutFlags: Array<{ payoutId: string; flag: boolean }> = [];
 
-vi.mock("../../services/creditsService", () => ({
-  addLedgerEntry: vi.fn(async (input) => {
+jest.mock("../../services/creditsService", () => ({
+  addLedgerEntry: jest.fn(async (input: any) => {
     ledger.push(input);
     return input;
   }),
 }));
 
-vi.mock("../../config/env", () => ({
+jest.mock("../../config/env", () => ({
   env: {
     CENTS_PER_CREDIT: 10, // 10 cents per credit
   },
 }));
 
-vi.mock("../../db/client", () => ({
-  query: vi.fn(async (sql: string, params: any[]) => {
+jest.mock("../../db/client", () => ({
+  query: jest.fn(async (sql: string, params: any[]) => {
     if (sql.includes("UPDATE jobs SET status = 'cancelled'")) {
       jobUpdates.push({ jobId: params[0], status: "cancelled" });
       return { rows: [] };

@@ -1,10 +1,13 @@
 import { Pool, PoolClient } from "pg";
 import { env } from "../config/env";
+import { logger } from "../lib/logger";
 
 // Detect test environment
-const isTestEnv = process.env.RUNNING_TESTS === 'true' || 
+const isTestEnv = process.env.RUNNING_TESTS === 'true' ||
                   process.env.NODE_ENV === 'test' ||
                   process.env.VITEST === 'true';
+
+const SLOW_QUERY_MS = parseInt(process.env.SLOW_QUERY_MS || "1000", 10);
 
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
@@ -17,7 +20,18 @@ export const pool = new Pool({
 });
 
 export async function query<T extends Record<string, any> = any>(text: string, params?: any[]): Promise<{ rows: T[]; rowCount: number | null }> {
+  const start = Date.now();
   const res = await pool.query<T>(text, params);
+  const durationMs = Date.now() - start;
+  // Section 9: Slow query log (observability)
+  if (durationMs >= SLOW_QUERY_MS) {
+    logger.warn("slow_query", {
+      durationMs,
+      thresholdMs: SLOW_QUERY_MS,
+      rowCount: res.rowCount,
+      queryPreview: text.substring(0, 100) + (text.length > 100 ? "..." : ""),
+    });
+  }
   return res;
 }
 

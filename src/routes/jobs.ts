@@ -1,9 +1,12 @@
-﻿// src/routes/jobs.ts
+// src/routes/jobs.ts
 // Job routes matching 001_init.sql schema
 
 import { Router } from "express";
 import { z } from "zod";
-import { jwtAuthMiddleware, type JWTAuthedRequest } from "../middleware/jwtAuth";
+import { requireAuth, type AuthedRequest } from "../middleware/authCanonical";
+import { requireIdempotency } from "../lib/idempotency";
+import { sendSuccess, sendCreated } from "../lib/response";
+import { asyncHandler, sendError } from "../lib/errors";
 import {
   createJob,
   getJob,
@@ -17,39 +20,111 @@ import {
   applyStatusTransition,
 } from "../services/jobsService";
 import { findMatchingCleaners, broadcastJobToCleaners } from "../services/jobMatchingService";
-import { createJobPaymentIntent } from "../services/paymentService";
+import { createJobPaymentIntent, hasActivePaymentIntentForJob } from "../services/paymentService";
 import { getUserCreditBalance } from "../services/creditsService";
-import { query } from "../db/client";
+import { getClientStripeCustomerId } from "../services/userManagementService";
 import { logger } from "../lib/logger";
 import { env } from "../config/env";
 
 const jobsRouter = Router();
 
-// All routes require auth
-jobsRouter.use(jwtAuthMiddleware);
+jobsRouter.use(requireAuth);
 
 // Helpers
-function getRole(req: JWTAuthedRequest): "client" | "cleaner" | "admin" {
+function getRole(req: AuthedRequest): "client" | "cleaner" | "admin" {
   return (req.user?.role ?? "client") as "client" | "cleaner" | "admin";
 }
 
 /**
- * POST /jobs
- * Create a new job (client)
+ * @swagger
+ * /jobs:
+ *   post:
+ *     summary: Create a new job
+ *     description: Create a new cleaning job. Requires client role. Supports Idempotency-Key header to prevent duplicate bookings.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - scheduled_start_at
+ *               - scheduled_end_at
+ *               - address
+ *               - credit_amount
+ *             properties:
+ *               scheduled_start_at:
+ *                 type: string
+ *                 format: date-time
+ *                 description: ISO 8601 datetime for job start
+ *                 example: "2024-02-15T10:00:00Z"
+ *               scheduled_end_at:
+ *                 type: string
+ *                 format: date-time
+ *                 description: ISO 8601 datetime for job end
+ *                 example: "2024-02-15T14:00:00Z"
+ *               address:
+ *                 type: string
+ *                 description: Full address for the cleaning job
+ *                 example: "123 Main St, City, State 12345"
+ *               latitude:
+ *                 type: number
+ *                 description: Latitude coordinate (optional)
+ *                 example: 40.7128
+ *               longitude:
+ *                 type: number
+ *                 description: Longitude coordinate (optional)
+ *                 example: -74.0060
+ *               credit_amount:
+ *                 type: number
+ *                 description: Number of credits to charge for this job
+ *                 example: 50
+ *               client_notes:
+ *                 type: string
+ *                 description: Optional notes from the client
+ *                 example: "Please focus on the kitchen"
+ *     responses:
+ *       201:
+ *         description: Job created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     job:
+ *                       $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *       429:
+ *         description: Rate limit exceeded (duplicate request)
  */
-jobsRouter.post("/", async (req: JWTAuthedRequest, res) => {
-  try {
-    const schema = z.object({
-      scheduled_start_at: z.string(), // ISO string
-      scheduled_end_at: z.string(), // ISO string
-      address: z.string().min(1),
-      latitude: z.number().optional(),
-      longitude: z.number().optional(),
-      credit_amount: z.number().positive(),
-      client_notes: z.string().optional(),
-    });
+const createJobSchema = z.object({
+  scheduled_start_at: z.string(), // ISO string
+  scheduled_end_at: z.string(), // ISO string
+  address: z.string().min(1),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  credit_amount: z.number().positive(),
+  client_notes: z.string().optional(),
+});
 
-    const body = schema.parse(req.body);
+jobsRouter.post(
+  "/",
+  requireIdempotency,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const body = createJobSchema.parse(req.body);
 
     const job = await createJob({
       clientId: req.user!.id,
@@ -62,114 +137,177 @@ jobsRouter.post("/", async (req: JWTAuthedRequest, res) => {
       clientNotes: body.client_notes,
     });
 
-    res.status(201).json({ job });
-  } catch (err: unknown) {
-    const error = err as Error;
-    logger.error("POST /jobs failed", { error: error.message });
-    res.status(400).json({
-      error: { code: "BAD_REQUEST", message: error.message ?? "Error" },
-    });
-  }
-});
+    sendCreated(res, { job }, `/jobs/${job.id}`);
+  })
+);
 
 /**
- * GET /jobs
- * List jobs for the current user:
- * - client -> their jobs
- * - cleaner -> their assigned jobs + available jobs
- * - admin -> use /admin/jobs instead
+ * @swagger
+ * /jobs:
+ *   get:
+ *     summary: List jobs for current user
+ *     description: |
+ *       Returns jobs based on user role:
+ *       - **Client**: Returns all their jobs
+ *       - **Cleaner**: Returns assigned jobs and available jobs
+ *       - **Admin**: Returns jobs (should use /admin/jobs instead)
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of jobs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     jobs:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Job'
+ *                     assigned:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Job'
+ *                       description: Assigned jobs (cleaner role only)
+ *                     available:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Job'
+ *                       description: Available jobs (cleaner role only)
+ *       401:
+ *         description: Unauthorized
  */
-jobsRouter.get("/", async (req: JWTAuthedRequest, res) => {
-  try {
+jobsRouter.get(
+  "/",
+  asyncHandler(async (req: AuthedRequest, res) => {
     const role = getRole(req);
 
     if (role === "client") {
       const jobs = await listJobsForClient(req.user!.id);
-      return res.json({ jobs });
+      return sendSuccess(res, { jobs });
     }
 
     if (role === "cleaner") {
       const assigned = await listJobsForCleaner(req.user!.id);
       const available = await listAvailableJobs();
-      return res.json({ assigned, available });
+      return sendSuccess(res, { assigned, available });
     }
 
     // Admin should use /admin/jobs
     const jobs = await listJobsForClient(req.user!.id);
-    return res.json({ jobs });
-  } catch (err: unknown) {
-    const error = err as Error;
-    logger.error("GET /jobs failed", { error: error.message });
-    res.status(500).json({
-      error: { code: "INTERNAL_SERVER_ERROR", message: "Unexpected error" },
-    });
-  }
-});
+    return sendSuccess(res, { jobs });
+  })
+);
 
 /**
  * GET /jobs/:jobId
  */
-jobsRouter.get("/:jobId", async (req: JWTAuthedRequest, res) => {
-  try {
+jobsRouter.get(
+  "/:jobId",
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const job = await getJob(jobId);
 
     if (!job) {
-      return res.status(404).json({
-        error: { code: "NOT_FOUND", message: "Job not found" },
-      });
+      return sendError(res, {
+        code: "NOT_FOUND",
+        message: "Job not found",
+        statusCode: 404,
+      } as any);
     }
 
     // Access control
     const role = getRole(req);
     if (role === "client" && job.client_id !== req.user!.id) {
-      return res.status(403).json({
-        error: { code: "FORBIDDEN", message: "Not your job" },
-      });
+      return sendError(res, {
+        code: "FORBIDDEN",
+        message: "Not your job",
+        statusCode: 403,
+      } as any);
     }
     if (role === "cleaner" && job.cleaner_id !== req.user!.id && job.status !== "requested") {
-      return res.status(403).json({
-        error: { code: "FORBIDDEN", message: "Not your job" },
-      });
+      return sendError(res, {
+        code: "FORBIDDEN",
+        message: "Not your job",
+        statusCode: 403,
+      } as any);
     }
 
-    res.json({ job });
-  } catch (err: unknown) {
-    const error = err as Error;
-    logger.error("GET /jobs/:jobId failed", { error: error.message });
-    res.status(500).json({
-      error: { code: "INTERNAL_SERVER_ERROR", message: "Unexpected error" },
-    });
-  }
-});
+    sendSuccess(res, { job });
+  })
+);
 
 /**
- * PATCH /jobs/:jobId
- * Update job details (client only, only when status = 'requested')
+ * @swagger
+ * /jobs/{jobId}:
+ *   patch:
+ *     summary: Update job details
+ *     description: Update job details. Client only, only when status = 'requested'.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               scheduled_start_at:
+ *                 type: string
+ *                 format: date-time
+ *               scheduled_end_at:
+ *                 type: string
+ *                 format: date-time
+ *               address:
+ *                 type: string
+ *               latitude:
+ *                 type: number
+ *               longitude:
+ *                 type: number
+ *               client_notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Job updated successfully
+ *       404:
+ *         description: Job not found or cannot be updated
  */
-jobsRouter.patch("/:jobId", async (req: JWTAuthedRequest, res) => {
-  try {
+const updateJobSchema = z
+  .object({
+    scheduled_start_at: z.string().optional(),
+    scheduled_end_at: z.string().optional(),
+    address: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    client_notes: z.string().optional(),
+  })
+  .refine(
+    (data) =>
+      data.scheduled_start_at !== undefined ||
+      data.scheduled_end_at !== undefined ||
+      data.address !== undefined ||
+      data.client_notes !== undefined,
+    { message: "At least one field must be provided" }
+  );
+
+jobsRouter.patch(
+  "/:jobId",
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
-
-    const schema = z
-      .object({
-        scheduled_start_at: z.string().optional(),
-        scheduled_end_at: z.string().optional(),
-        address: z.string().optional(),
-        latitude: z.number().optional(),
-        longitude: z.number().optional(),
-        client_notes: z.string().optional(),
-      })
-      .refine(
-        (data) =>
-          data.scheduled_start_at !== undefined ||
-          data.scheduled_end_at !== undefined ||
-          data.address !== undefined ||
-          data.client_notes !== undefined,
-        { message: "At least one field must be provided" }
-      );
-
-    const body = schema.parse(req.body);
+    const body = updateJobSchema.parse(req.body);
 
     const updated = await updateJob({
       jobId,
@@ -183,91 +321,183 @@ jobsRouter.patch("/:jobId", async (req: JWTAuthedRequest, res) => {
     });
 
     if (!updated) {
-      return res.status(404).json({
-        error: { code: "NOT_FOUND", message: "Job not found or cannot be updated" },
-      });
+      return sendError(res, {
+        code: "NOT_FOUND",
+        message: "Job not found or cannot be updated",
+        statusCode: 404,
+      } as any);
     }
 
-    res.json({ job: updated });
-  } catch (err: unknown) {
-    const error = err as Error;
-    logger.error("PATCH /jobs/:jobId failed", { error: error.message });
-    res.status(400).json({
-      error: { code: "BAD_REQUEST", message: error.message ?? "Error" },
-    });
-  }
-});
+    sendSuccess(res, { job: updated });
+  })
+);
 
 /**
- * DELETE /jobs/:jobId
- * Cancel a job (client only)
+ * @swagger
+ * /jobs/{jobId}:
+ *   delete:
+ *     summary: Cancel a job
+ *     description: Cancel a job. Client only.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Job cancelled successfully
+ *       404:
+ *         description: Job not found or cannot be cancelled
  */
-jobsRouter.delete("/:jobId", async (req: JWTAuthedRequest, res) => {
-  try {
+jobsRouter.delete(
+  "/:jobId",
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
-
     const deleted = await deleteJob(jobId, req.user!.id);
 
     if (!deleted) {
-      return res.status(404).json({
-        error: { code: "NOT_FOUND", message: "Job not found or cannot be cancelled" },
-      });
+      return sendError(res, {
+        code: "NOT_FOUND",
+        message: "Job not found or cannot be cancelled",
+        statusCode: 404,
+      } as any);
     }
 
-    res.json({ cancelled: true, job: deleted });
-  } catch (err: unknown) {
-    const error = err as Error;
-    logger.error("DELETE /jobs/:jobId failed", { error: error.message });
-    res.status(400).json({
-      error: { code: "BAD_REQUEST", message: error.message ?? "Error" },
-    });
-  }
-});
+    sendSuccess(res, { cancelled: true, job: deleted });
+  })
+);
 
 /**
- * GET /jobs/:jobId/events
- * Returns job events history
+ * @swagger
+ * /jobs/{jobId}/events:
+ *   get:
+ *     summary: Get job events history
+ *     description: Get the complete event history for a job, showing all status transitions and actions.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Job ID
+ *     responses:
+ *       200:
+ *         description: Job events history
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id: { type: 'string', format: 'uuid' }
+ *                           job_id: { type: 'string', format: 'uuid' }
+ *                           event_type: { type: 'string' }
+ *                           payload: { type: 'object' }
+ *                           created_at: { type: 'string', format: 'date-time' }
+ *       403:
+ *         description: Forbidden (not your job)
+ *       404:
+ *         description: Job not found
  */
-jobsRouter.get("/:jobId/events", async (req: JWTAuthedRequest, res) => {
-  try {
+jobsRouter.get(
+  "/:jobId/events",
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const events = await getEvents(jobId);
-    res.json({ events });
-  } catch (err: unknown) {
-    const error = err as Error;
-    logger.error("GET /jobs/:jobId/events failed", { error: error.message });
-    res.status(500).json({
-      error: { code: "INTERNAL_SERVER_ERROR", message: "Unexpected error" },
-    });
-  }
-});
+    sendSuccess(res, { events });
+  })
+);
 
 /**
- * POST /jobs/:jobId/transition
- * Apply a status transition to a job
- * Body: { event_type: JobEventType, payload?: {} }
+ * @swagger
+ * /jobs/{jobId}/transition:
+ *   post:
+ *     summary: Apply status transition to job
+ *     description: |
+ *       Apply a status transition to a job by triggering an event.
+ *       Used for job lifecycle management (accept, start, complete, etc.).
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - event_type
+ *             properties:
+ *               event_type:
+ *                 type: string
+ *                 enum:
+ *                   - job_created
+ *                   - job_accepted
+ *                   - cleaner_on_my_way
+ *                   - job_started
+ *                   - job_completed
+ *                   - client_approved
+ *                   - client_disputed
+ *                   - dispute_resolved_refund
+ *                   - dispute_resolved_no_refund
+ *                   - job_cancelled
+ *               payload:
+ *                 type: object
+ *                 description: Optional event payload data
+ *     responses:
+ *       200:
+ *         description: Status transition applied successfully
+ *       400:
+ *         description: Invalid transition or event type
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Job not found
  */
-jobsRouter.post("/:jobId/transition", async (req: JWTAuthedRequest, res) => {
-  try {
+const transitionJobSchema = z.object({
+  event_type: z.enum([
+    "job_created",
+    "job_accepted",
+    "cleaner_on_my_way",
+    "job_started",
+    "job_completed",
+    "client_approved",
+    "client_disputed",
+    "dispute_resolved_refund",
+    "dispute_resolved_no_refund",
+    "job_cancelled",
+  ]),
+  payload: z.record(z.unknown()).optional(),
+});
+
+jobsRouter.post(
+  "/:jobId/transition",
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
-
-    const schema = z.object({
-      event_type: z.enum([
-        "job_created",
-        "job_accepted",
-        "cleaner_on_my_way",
-        "job_started",
-        "job_completed",
-        "client_approved",
-        "client_disputed",
-        "dispute_resolved_refund",
-        "dispute_resolved_no_refund",
-        "job_cancelled",
-      ]),
-      payload: z.record(z.unknown()).optional(),
-    });
-
-    const body = schema.parse(req.body);
+    const body = transitionJobSchema.parse(req.body);
 
     const updated = await applyStatusTransition({
       jobId,
@@ -277,28 +507,9 @@ jobsRouter.post("/:jobId/transition", async (req: JWTAuthedRequest, res) => {
       role: getRole(req),
     });
 
-    res.json({ job: updated });
-  } catch (err: unknown) {
-    const error = err as Error;
-    logger.error("POST /jobs/:jobId/transition failed", { error: error.message });
-
-    if (error.message?.includes("FORBIDDEN")) {
-      return res.status(403).json({
-        error: { code: "FORBIDDEN", message: error.message },
-      });
-    }
-
-    if (error.message?.includes("Invalid transition") || error.message?.includes("cannot trigger")) {
-      return res.status(400).json({
-        error: { code: "BAD_TRANSITION", message: error.message },
-      });
-    }
-
-    res.status(400).json({
-      error: { code: "BAD_REQUEST", message: error.message ?? "Error" },
-    });
-  }
-});
+    sendSuccess(res, { job: updated });
+  })
+);
 
 /**
  * POST /jobs/:jobId/pay
@@ -310,133 +521,151 @@ jobsRouter.post("/:jobId/transition", async (req: JWTAuthedRequest, res) => {
  * 
  * Body: { stripeCustomerId?: string }
  */
-jobsRouter.post("/:jobId/pay", async (req: JWTAuthedRequest, res) => {
-  try {
-    const { jobId } = req.params;
-    const clientId = req.user!.id;
+jobsRouter.post(
+  "/:jobId/pay",
+  requireIdempotency,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    try {
+      const { jobId } = req.params;
+      const clientId = req.user!.id;
 
-    // Ensure client role
-    const role = getRole(req);
-    if (role !== "client") {
-      return res.status(403).json({
-        error: { code: "FORBIDDEN", message: "Only clients can pay for jobs" },
-      });
-    }
+      // Ensure client role
+      const role = getRole(req);
+      if (role !== "client") {
+        return res.status(403).json({
+          error: { code: "FORBIDDEN", message: "Only clients can pay for jobs" },
+        });
+      }
 
-    // Get job with ownership check
-    const job = await getJobForClient(jobId, clientId);
+      // Get job with ownership check
+      const job = await getJobForClient(jobId, clientId);
 
-    // Only allow payment for jobs in 'requested' status
-    if (job.status !== "requested") {
-      return res.status(400).json({
-        error: {
-          code: "INVALID_STATUS",
-          message: "Job is not in payable state (expected 'requested')",
-          currentStatus: job.status,
-        },
-      });
-    }
+      // Only allow payment for jobs in 'requested' status
+      if (job.status !== "requested") {
+        return res.status(400).json({
+          error: {
+            code: "INVALID_STATUS",
+            message: "Job is not in payable state (expected 'requested')",
+            currentStatus: job.status,
+          },
+        });
+      }
 
-    // Check if there's already an existing job_charge PI for this job
-    const existingPis = await query<{ status: string }>(
-      `
-        SELECT status
-        FROM payment_intents
-        WHERE job_id = $1
-          AND purpose = 'job_charge'
-      `,
-      [jobId]
-    );
+      // Check if there's already an active payment intent for this job
+      const hasActivePi = await hasActivePaymentIntentForJob(jobId);
 
-    const hasActivePi = existingPis.rows.some((pi) =>
-      ["requires_payment_method", "requires_confirmation", "requires_action", "processing", "succeeded"].includes(pi.status)
-    );
-
-    if (hasActivePi) {
-      return res.status(400).json({
-        error: {
+      if (hasActivePi) {
+        return sendError(res, {
           code: "PAYMENT_EXISTS",
           message: "Payment for this job already exists or has been processed",
+          statusCode: 400,
+        } as any);
+      }
+
+      // Get Stripe customer ID from client profile (optional)
+      const stripeCustomerId = req.body?.stripeCustomerId || (await getClientStripeCustomerId(clientId));
+
+      // Create payment intent with surcharge
+      const result = await createJobPaymentIntent({
+        job,
+        clientId,
+        clientStripeCustomerId: stripeCustomerId ?? undefined,
+      });
+
+      // Calculate pricing breakdown for response
+      const baseAmountCents = job.credit_amount * env.CENTS_PER_CREDIT;
+      const surchargePercent = env.NON_CREDIT_SURCHARGE_PERCENT;
+      const surchargeAmountCents = result.amountCents - baseAmountCents;
+
+      sendSuccess(res, {
+        clientSecret: result.clientSecret,
+        paymentIntentId: result.stripePaymentIntentId,
+        jobId: result.jobId,
+        credits: result.credits,
+        // Pricing breakdown
+        pricing: {
+          baseAmountCents,
+          surchargePercent,
+          surchargeAmountCents,
+          totalAmountCents: result.amountCents,
+          totalAmountFormatted: `$${(result.amountCents / 100).toFixed(2)}`,
         },
+        // Helpful message
+        pricingNote: surchargePercent > 0
+          ? `Includes ${surchargePercent}% convenience fee. Use wallet credits to save $${(surchargeAmountCents / 100).toFixed(2)}!`
+          : undefined,
+      });
+    } catch (err: unknown) {
+      const error = err as Error & { statusCode?: number };
+      logger.error("POST /jobs/:jobId/pay failed", { error: error.message, jobId: req.params.jobId });
+
+      if (error.statusCode === 403) {
+        return res.status(403).json({
+          error: { code: "FORBIDDEN", message: error.message },
+        });
+      }
+
+      if (error.statusCode === 404) {
+        return res.status(404).json({
+          error: { code: "NOT_FOUND", message: error.message },
+        });
+      }
+
+      res.status(error.statusCode || 500).json({
+        error: { code: "PAYMENT_FAILED", message: error.message ?? "Error" },
       });
     }
-
-    // Get Stripe customer ID from client_profiles (optional)
-    const customerResult = await query<{ stripe_customer_id: string | null }>(
-      `SELECT stripe_customer_id FROM client_profiles WHERE user_id = $1`,
-      [clientId]
-    );
-    const stripeCustomerId = req.body?.stripeCustomerId || customerResult.rows[0]?.stripe_customer_id;
-
-    // Create payment intent with surcharge
-    const result = await createJobPaymentIntent({
-      job,
-      clientId,
-      clientStripeCustomerId: stripeCustomerId ?? undefined,
-    });
-
-    // Calculate pricing breakdown for response
-    const baseAmountCents = job.credit_amount * env.CENTS_PER_CREDIT;
-    const surchargePercent = env.NON_CREDIT_SURCHARGE_PERCENT;
-    const surchargeAmountCents = result.amountCents - baseAmountCents;
-
-    res.json({
-      clientSecret: result.clientSecret,
-      paymentIntentId: result.stripePaymentIntentId,
-      jobId: result.jobId,
-      credits: result.credits,
-      // Pricing breakdown
-      pricing: {
-        baseAmountCents,
-        surchargePercent,
-        surchargeAmountCents,
-        totalAmountCents: result.amountCents,
-        totalAmountFormatted: `$${(result.amountCents / 100).toFixed(2)}`,
-      },
-      // Helpful message
-      pricingNote: surchargePercent > 0
-        ? `Includes ${surchargePercent}% convenience fee. Use wallet credits to save $${(surchargeAmountCents / 100).toFixed(2)}!`
-        : undefined,
-    });
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    logger.error("POST /jobs/:jobId/pay failed", { error: error.message, jobId: req.params.jobId });
-
-    if (error.statusCode === 403) {
-      return res.status(403).json({
-        error: { code: "FORBIDDEN", message: error.message },
-      });
-    }
-
-    if (error.statusCode === 404) {
-      return res.status(404).json({
-        error: { code: "NOT_FOUND", message: error.message },
-      });
-    }
-
-    res.status(error.statusCode || 500).json({
-      error: { code: "PAYMENT_FAILED", message: error.message ?? "Error" },
-    });
-  }
-});
+  })
+);
 
 /**
- * GET /jobs/:jobId/candidates
- * V1 CORE FEATURE: Get top matched cleaners for client to review and select
- * Returns top 5-10 cleaners ranked by match score (reliability, tier, distance, etc.)
- * Client can then select top 3 to send offers to
+ * @swagger
+ * /jobs/{jobId}/candidates:
+ *   get:
+ *     summary: Get top matched cleaners for job
+ *     description: |
+ *       V1 CORE FEATURE: Get top matched cleaners for client to review and select.
+ *       Returns top 5-10 cleaners ranked by match score (reliability, tier, distance, etc.).
+ *       Client can then select top 3 to send offers to.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 10
+ *         description: Maximum number of candidates to return
+ *     responses:
+ *       200:
+ *         description: List of matched cleaners
+ *       400:
+ *         description: Invalid status (job must be in 'requested' status)
+ *       403:
+ *         description: Forbidden (only clients can view candidates)
  */
-jobsRouter.get("/:jobId/candidates", async (req: JWTAuthedRequest, res) => {
-  try {
+jobsRouter.get(
+  "/:jobId/candidates",
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const clientId = req.user!.id;
     const role = getRole(req);
 
     // Only clients can view candidates for their jobs
     if (role !== "client") {
-      return res.status(403).json({
-        error: { code: "FORBIDDEN", message: "Only clients can view job candidates" },
-      });
+      return sendError(res, {
+        code: "FORBIDDEN",
+        message: "Only clients can view job candidates",
+        statusCode: 403,
+      } as any);
     }
 
     // Get job with ownership check
@@ -444,13 +673,12 @@ jobsRouter.get("/:jobId/candidates", async (req: JWTAuthedRequest, res) => {
 
     // Only allow viewing candidates for jobs in 'requested' status
     if (job.status !== "requested") {
-      return res.status(400).json({
-        error: {
-          code: "INVALID_STATUS",
-          message: "Candidates can only be viewed for jobs in 'requested' status",
-          currentStatus: job.status,
-        },
-      });
+      return sendError(res, {
+        code: "INVALID_STATUS",
+        message: "Candidates can only be viewed for jobs in 'requested' status",
+        statusCode: 400,
+        details: { currentStatus: job.status },
+      } as any);
     }
 
     // Get top matched cleaners (limit to 10, client will select top 3)
@@ -461,54 +689,72 @@ jobsRouter.get("/:jobId/candidates", async (req: JWTAuthedRequest, res) => {
       autoAssign: false, // V1: Never auto-assign, client must select
     });
 
-    res.json({
+    sendSuccess(res, {
       jobId,
       candidates: matchResult.candidates,
       totalFound: matchResult.candidates.length,
       message: "Select up to 3 cleaners to send job offers to",
     });
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    logger.error("GET /jobs/:jobId/candidates failed", {
-      error: error.message,
-      jobId: req.params.jobId,
-    });
-
-    if (error.statusCode === 403) {
-      return res.status(403).json({
-        error: { code: "FORBIDDEN", message: error.message },
-      });
-    }
-
-    if (error.statusCode === 404) {
-      return res.status(404).json({
-        error: { code: "NOT_FOUND", message: error.message },
-      });
-    }
-
-    res.status(error.statusCode || 500).json({
-      error: { code: "CANDIDATES_FAILED", message: error.message ?? "Error" },
-    });
-  }
-});
+  })
+);
 
 /**
- * POST /jobs/:jobId/offer
- * V1 CORE FEATURE: Client selects cleaners to send job offers to
- * Body: { cleanerIds: string[] } (up to 3 cleaner IDs)
- * Sends job offers to selected cleaners. First cleaner to accept wins.
+ * @swagger
+ * /jobs/{jobId}/offer:
+ *   post:
+ *     summary: Send job offers to selected cleaners
+ *     description: |
+ *       V1 CORE FEATURE: Client selects cleaners to send job offers to.
+ *       Sends job offers to selected cleaners. First cleaner to accept wins.
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cleanerIds
+ *             properties:
+ *               cleanerIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 minItems: 1
+ *                 maxItems: 3
+ *                 description: Up to 3 cleaner IDs to send offers to
+ *     responses:
+ *       200:
+ *         description: Offers sent successfully
+ *       400:
+ *         description: Invalid request or job status
+ *       403:
+ *         description: Forbidden (only clients can send offers)
  */
-jobsRouter.post("/:jobId/offer", async (req: JWTAuthedRequest, res) => {
-  try {
+jobsRouter.post(
+  "/:jobId/offer",
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const clientId = req.user!.id;
     const role = getRole(req);
 
     // Only clients can send offers for their jobs
     if (role !== "client") {
-      return res.status(403).json({
-        error: { code: "FORBIDDEN", message: "Only clients can send job offers" },
-      });
+      return sendError(res, {
+        code: "FORBIDDEN",
+        message: "Only clients can send job offers",
+        statusCode: 403,
+      } as any);
     }
 
     const schema = z.object({
@@ -522,23 +768,21 @@ jobsRouter.post("/:jobId/offer", async (req: JWTAuthedRequest, res) => {
 
     // Only allow sending offers for jobs in 'requested' status
     if (job.status !== "requested") {
-      return res.status(400).json({
-        error: {
-          code: "INVALID_STATUS",
-          message: "Offers can only be sent for jobs in 'requested' status",
-          currentStatus: job.status,
-        },
-      });
+      return sendError(res, {
+        code: "INVALID_STATUS",
+        message: "Offers can only be sent for jobs in 'requested' status",
+        statusCode: 400,
+        details: { currentStatus: job.status },
+      } as any);
     }
 
     // Check if job already has offers or is assigned
     if (job.cleaner_id) {
-      return res.status(400).json({
-        error: {
-          code: "ALREADY_ASSIGNED",
-          message: "Job already has a cleaner assigned",
-        },
-      });
+      return sendError(res, {
+        code: "ALREADY_ASSIGNED",
+        message: "Job already has a cleaner assigned",
+        statusCode: 400,
+      } as any);
     }
 
     // Verify cleaners are valid candidates (optional but recommended)
@@ -552,13 +796,12 @@ jobsRouter.post("/:jobId/offer", async (req: JWTAuthedRequest, res) => {
     const invalidIds = body.cleanerIds.filter((id) => !validCleanerIds.includes(id));
 
     if (invalidIds.length > 0) {
-      return res.status(400).json({
-        error: {
-          code: "INVALID_CLEANERS",
-          message: "Some selected cleaners are not valid candidates for this job",
-          invalidIds,
-        },
-      });
+      return sendError(res, {
+        code: "INVALID_CLEANERS",
+        message: "Some selected cleaners are not valid candidates for this job",
+        statusCode: 400,
+        details: { invalidIds },
+      } as any);
     }
 
     // Send offers to selected cleaners (30 minute expiration)
@@ -571,45 +814,23 @@ jobsRouter.post("/:jobId/offer", async (req: JWTAuthedRequest, res) => {
       count: body.cleanerIds.length,
     });
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       jobId,
       offersSent: body.cleanerIds.length,
       cleanerIds: body.cleanerIds,
       message: `Job offers sent to ${body.cleanerIds.length} cleaner(s). First to accept wins.`,
     });
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    logger.error("POST /jobs/:jobId/offer failed", {
-      error: error.message,
-      jobId: req.params.jobId,
-    });
-
-    if (error.statusCode === 403) {
-      return res.status(403).json({
-        error: { code: "FORBIDDEN", message: error.message },
-      });
-    }
-
-    if (error.statusCode === 404) {
-      return res.status(404).json({
-        error: { code: "NOT_FOUND", message: error.message },
-      });
-    }
-
-    res.status(error.statusCode || 500).json({
-      error: { code: "OFFER_FAILED", message: error.message ?? "Error" },
-    });
-  }
-});
+  })
+);
 
 /**
  * GET /jobs/:jobId/pricing
  * Get pricing breakdown for a job
  * Shows both wallet price and card price (with surcharge)
  */
-jobsRouter.get("/:jobId/pricing", async (req: JWTAuthedRequest, res) => {
-  try {
+jobsRouter.get(
+  "/:jobId/pricing",
+  asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const clientId = req.user!.id;
 
@@ -630,7 +851,7 @@ jobsRouter.get("/:jobId/pricing", async (req: JWTAuthedRequest, res) => {
     const canPayWithWallet = balance >= credits;
     const creditsNeeded = Math.max(0, credits - balance);
 
-    res.json({
+    sendSuccess(res, {
       jobId,
       credits,
       // Wallet payment option
@@ -659,29 +880,7 @@ jobsRouter.get("/:jobId/pricing", async (req: JWTAuthedRequest, res) => {
           : undefined,
       },
     });
-  } catch (err: unknown) {
-    const error = err as Error & { statusCode?: number };
-    logger.error("GET /jobs/:jobId/pricing failed", {
-      error: error.message,
-      jobId: req.params.jobId,
-    });
-
-    if (error.statusCode === 403) {
-      return res.status(403).json({
-        error: { code: "FORBIDDEN", message: error.message },
-      });
-    }
-
-    if (error.statusCode === 404) {
-      return res.status(404).json({
-        error: { code: "NOT_FOUND", message: error.message },
-      });
-    }
-
-    res.status(error.statusCode || 500).json({
-      error: { code: "PRICING_FAILED", message: error.message ?? "Error" },
-    });
-  }
-});
+  })
+);
 
 export default jobsRouter;

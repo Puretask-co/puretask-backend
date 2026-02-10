@@ -1,12 +1,11 @@
 // src/lib/events.ts
 // Centralized event publishing system for PureTask
 // Uses job_events table from 001_init.sql
-// Wires events to notifications and n8n
+// Wires events to notifications and n8n (forward via n8nClient)
 
 import { query } from "../db/client";
 import { logger } from "./logger";
-import { env } from "../config/env";
-import { postJson } from "./httpClient";
+import { forwardEventToN8nWebhook } from "./n8nClient";
 import { JobEvent, ActorType, Job } from "../types/db";
 
 export type JobEventType =
@@ -98,7 +97,14 @@ export async function publishEvent(input: PublishEventInput): Promise<void> {
   // });
 
   // Forward to n8n webhook if configured (non-blocking, errors are logged but don't fail the request)
-  maybeForwardToN8n(jobId, actorType, actorId, eventName, payload).catch((err) => {
+  forwardEventToN8nWebhook({
+    jobId,
+    actorType,
+    actorId,
+    eventName,
+    payload,
+    timestamp: new Date().toISOString(),
+  }).catch((err) => {
     logger.error("n8n_forward_failed_non_blocking", {
       error: (err as Error).message,
       jobId,
@@ -204,36 +210,6 @@ async function maybeSendNotifications(
       jobId,
       eventName,
       error: (err as Error).message,
-    });
-  }
-}
-
-/**
- * Forward event to n8n webhook
- */
-async function maybeForwardToN8n(
-  jobId: string | null,
-  actorType: ActorType | null,
-  actorId: string | null,
-  eventName: string,
-  payload: Record<string, unknown>
-): Promise<void> {
-  if (!env.N8N_WEBHOOK_URL) return;
-
-  try {
-    await postJson(env.N8N_WEBHOOK_URL, {
-      jobId,
-      actorType,
-      actorId,
-      eventName,
-      payload,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (err) {
-    logger.error("n8n_forward_failed", {
-      error: (err as Error).message,
-      jobId,
-      eventName,
     });
   }
 }

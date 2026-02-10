@@ -1,7 +1,7 @@
 // src/tests/smoke/jobs.test.ts
 // Smoke tests for jobs endpoints
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll } from "@jest/globals";
 import request from "supertest";
 import app from "../../index";
 

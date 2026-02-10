@@ -283,6 +283,10 @@ export async function updateUser(
     userFields.push(`role = $${paramIndex++}`);
     userParams.push(input.role);
     
+    // Invalidate tokens on role change (security measure)
+    const { invalidateUserTokens } = await import("../lib/tokenInvalidation");
+    await invalidateUserTokens(userId, "role_changed");
+    
     // Handle role change - create new profile if needed
     if (input.role === "client") {
       await query(
@@ -412,6 +416,10 @@ export async function resetUserPassword(
     [userId, passwordHash]
   );
 
+  // Invalidate all existing tokens for this user
+  const { invalidateUserTokens } = await import("../lib/tokenInvalidation");
+  await invalidateUserTokens(userId, "admin_password_reset");
+
   logger.info("admin_password_reset", { userId, email: user.email });
 }
 
@@ -509,3 +517,13 @@ export async function getUserStats(): Promise<{
   };
 }
 
+/**
+ * Get Stripe customer ID for a client
+ */
+export async function getClientStripeCustomerId(clientId: string): Promise<string | null> {
+  const result = await query<{ stripe_customer_id: string | null }>(
+    `SELECT stripe_customer_id FROM client_profiles WHERE user_id = $1`,
+    [clientId]
+  );
+  return result.rows[0]?.stripe_customer_id ?? null;
+}

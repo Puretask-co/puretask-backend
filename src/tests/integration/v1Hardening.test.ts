@@ -1,7 +1,7 @@
 // src/tests/integration/v1Hardening.test.ts
 // V1 HARDENING: Integration tests for idempotency, guards, and atomic operations
 
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "@jest/globals";
 import { query } from "../../db/client";
 import { env } from "../../config/env";
 import { createJob } from "../../services/jobsService";

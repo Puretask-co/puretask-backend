@@ -2,6 +2,7 @@
 // Centralized JSON logger with request ID tracing for PureTask backend
 
 import { AsyncLocalStorage } from "async_hooks";
+import { redactSensitiveFields, redactHeaders, redactRequestBody } from "./logRedaction";
 
 export type LogLevel = "info" | "warn" | "error" | "debug";
 
@@ -95,6 +96,9 @@ const SERVICE_NAME = process.env.SERVICE_NAME || "puretask-backend";
 function log(level: LogLevel, msg: string, meta?: Record<string, unknown>): void {
   const ctx = requestContext.getStore();
 
+  // Redact sensitive fields from meta before logging
+  const redactedMeta = meta ? redactSensitiveFields(meta) : undefined;
+
   const entry: LogEntry = {
     level,
     msg,
@@ -111,21 +115,21 @@ function log(level: LogLevel, msg: string, meta?: Record<string, unknown>): void
       stripeEventId: ctx.stripeEventId,
       workerName: ctx.workerName,
     }),
-    ...meta,
+    ...redactedMeta,
   };
 
   // Handle Error objects specially
-  if (meta?.error instanceof Error) {
+  if (redactedMeta?.error instanceof Error) {
     entry.error = {
-      message: meta.error.message,
-      stack: meta.error.stack,
-      code: (meta.error as Error & { code?: string }).code,
+      message: redactedMeta.error.message,
+      stack: redactedMeta.error.stack,
+      code: (redactedMeta.error as Error & { code?: string }).code,
     };
     delete entry.error; // Remove the raw error
     entry.error = {
-      message: (meta.error as Error).message,
-      stack: (meta.error as Error).stack,
-      code: (meta.error as Error & { code?: string }).code,
+      message: (redactedMeta.error as Error).message,
+      stack: (redactedMeta.error as Error).stack,
+      code: (redactedMeta.error as Error & { code?: string }).code,
     };
   }
 

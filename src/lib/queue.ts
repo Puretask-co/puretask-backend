@@ -12,7 +12,7 @@ export interface QueueJob<T = unknown> {
   id: number;
   queue_name: string;
   payload: T;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: "pending" | "processing" | "completed" | "failed" | "dead";
   priority: number;
   attempts: number;
   max_attempts: number;
@@ -20,6 +20,11 @@ export interface QueueJob<T = unknown> {
   started_at: string | null;
   completed_at: string | null;
   error_message: string | null;
+  idempotency_key: string | null;
+  locked_by: string | null;
+  locked_at: string | null;
+  dead_letter_reason: string | null;
+  dead_letter_at: string | null;
   created_at: string;
 }
 
@@ -27,6 +32,7 @@ export interface EnqueueOptions {
   priority?: number;
   scheduledAt?: Date;
   maxAttempts?: number;
+  idempotencyKey?: string; // Prevents duplicate job enqueueing
 }
 
 export type JobHandler<T> = (payload: T) => Promise<void>;
@@ -63,33 +69,79 @@ class QueueService {
   }
 
   /**
-   * Enqueue a job
+   * Enqueue a job with optional idempotency key
    */
   async enqueue<T>(
     queueName: QueueName,
     payload: T,
     options: EnqueueOptions = {}
-  ): Promise<number> {
-    const { priority = 0, scheduledAt, maxAttempts = 3 } = options;
+  ): Promise<number | null> {
+    const { priority = 0, scheduledAt, maxAttempts = 3, idempotencyKey } = options;
 
-    const result = await query<{ id: number }>(
-      `
-        INSERT INTO job_queue (queue_name, payload, priority, scheduled_at, max_attempts)
-        VALUES ($1, $2::jsonb, $3, $4, $5)
-        RETURNING id
-      `,
-      [
-        queueName,
-        JSON.stringify(payload),
-        priority,
-        scheduledAt?.toISOString() ?? new Date().toISOString(),
-        maxAttempts,
-      ]
-    );
+    // If idempotency key provided, check for existing job
+    if (idempotencyKey) {
+      const existing = await query<{ id: number }>(
+        `
+          SELECT id FROM job_queue
+          WHERE queue_name = $1 AND idempotency_key = $2
+          LIMIT 1
+        `,
+        [queueName, idempotencyKey]
+      );
 
-    const jobId = result.rows[0].id;
-    logger.debug("job_enqueued", { queueName, jobId, priority });
-    return jobId;
+      if (existing.rows.length > 0) {
+        logger.debug("job_already_enqueued", {
+          queueName,
+          jobId: existing.rows[0].id,
+          idempotencyKey,
+        });
+        return existing.rows[0].id; // Return existing job ID
+      }
+    }
+
+    try {
+      const result = await query<{ id: number }>(
+        `
+          INSERT INTO job_queue (queue_name, payload, priority, scheduled_at, max_attempts, idempotency_key)
+          VALUES ($1, $2::jsonb, $3, $4, $5, $6)
+          RETURNING id
+        `,
+        [
+          queueName,
+          JSON.stringify(payload),
+          priority,
+          scheduledAt?.toISOString() ?? new Date().toISOString(),
+          maxAttempts,
+          idempotencyKey || null,
+        ]
+      );
+
+      const jobId = result.rows[0].id;
+      logger.debug("job_enqueued", { queueName, jobId, priority, idempotencyKey });
+      return jobId;
+    } catch (error: any) {
+      // Handle unique constraint violation (idempotency key conflict)
+      if (error.code === "23505" && idempotencyKey) {
+        // Race condition: another process enqueued with same key
+        const existing = await query<{ id: number }>(
+          `
+            SELECT id FROM job_queue
+            WHERE queue_name = $1 AND idempotency_key = $2
+            LIMIT 1
+          `,
+          [queueName, idempotencyKey]
+        );
+        if (existing.rows.length > 0) {
+          logger.debug("job_already_enqueued_race", {
+            queueName,
+            jobId: existing.rows[0].id,
+            idempotencyKey,
+          });
+          return existing.rows[0].id;
+        }
+      }
+      throw error;
+    }
   }
 
   /**
@@ -103,7 +155,7 @@ class QueueService {
     const jobIds: number[] = [];
     for (const payload of payloads) {
       const id = await this.enqueue(queueName, payload, options);
-      jobIds.push(id);
+      if (id != null) jobIds.push(id);
     }
     return jobIds;
   }
@@ -121,11 +173,17 @@ class QueueService {
       return { processed: 0, succeeded: 0, failed: 0 };
     }
 
-    // Fetch and lock pending jobs
+    // Fetch and lock pending jobs (with lock tracking)
+    const workerId = `worker-${process.pid}-${Date.now()}`;
     const jobs = await query<QueueJob>(
       `
         UPDATE job_queue
-        SET status = 'processing', started_at = NOW(), attempts = attempts + 1
+        SET 
+          status = 'processing',
+          started_at = NOW(),
+          attempts = attempts + 1,
+          locked_by = $3,
+          locked_at = NOW()
         WHERE id IN (
           SELECT id FROM job_queue
           WHERE queue_name = $1
@@ -138,7 +196,7 @@ class QueueService {
         )
         RETURNING *
       `,
-      [queueName, batchSize]
+      [queueName, batchSize, workerId]
     );
 
     let succeeded = 0;
@@ -149,7 +207,15 @@ class QueueService {
         await handler(job.payload);
         
         await query(
-          `UPDATE job_queue SET status = 'completed', completed_at = NOW() WHERE id = $1`,
+          `
+            UPDATE job_queue 
+            SET 
+              status = 'completed',
+              completed_at = NOW(),
+              locked_by = NULL,
+              locked_at = NULL
+            WHERE id = $1
+          `,
           [job.id]
         );
         succeeded++;
@@ -157,21 +223,28 @@ class QueueService {
         logger.debug("job_completed", { queueName, jobId: job.id });
       } catch (err) {
         const shouldRetry = job.attempts < job.max_attempts;
+        const isDeadLetter = !shouldRetry;
         
         await query(
           `
             UPDATE job_queue 
-            SET status = $2, 
-                error_message = $3,
-                scheduled_at = CASE WHEN $4 THEN NOW() + INTERVAL '5 minutes' * $5 ELSE scheduled_at END
+            SET 
+              status = $2,
+              error_message = $3,
+              scheduled_at = CASE WHEN $4 THEN NOW() + INTERVAL '5 minutes' * $5 ELSE scheduled_at END,
+              locked_by = NULL,
+              locked_at = NULL,
+              dead_letter_reason = CASE WHEN $6 THEN 'Max attempts exceeded' ELSE NULL END,
+              dead_letter_at = CASE WHEN $6 THEN NOW() ELSE NULL END
             WHERE id = $1
           `,
           [
             job.id,
-            shouldRetry ? "pending" : "failed",
+            isDeadLetter ? "dead" : shouldRetry ? "pending" : "failed",
             (err as Error).message,
             shouldRetry,
             job.attempts, // Exponential backoff
+            isDeadLetter,
           ]
         );
         failed++;
@@ -181,11 +254,84 @@ class QueueService {
           jobId: job.id,
           error: (err as Error).message,
           willRetry: shouldRetry,
+          isDeadLetter,
         });
       }
     }
 
     return { processed: jobs.rows.length, succeeded, failed };
+  }
+
+  /**
+   * Recover expired locks (jobs stuck in processing due to crashed workers)
+   */
+  async recoverExpiredLocks(
+    lockTimeoutMinutes: number = 30
+  ): Promise<number> {
+    const result = await query<{ count: string }>(
+      `
+        SELECT recover_expired_job_locks($1)::text as count
+      `,
+      [lockTimeoutMinutes]
+    );
+
+    const recovered = Number(result.rows[0]?.count || 0);
+    if (recovered > 0) {
+      logger.warn("expired_locks_recovered", {
+        count: recovered,
+        lockTimeoutMinutes,
+      });
+    }
+    return recovered;
+  }
+
+  /**
+   * Get dead-letter queue jobs
+   */
+  async getDeadLetterJobs(queueName?: QueueName): Promise<QueueJob[]> {
+    const whereClause = queueName
+      ? "WHERE queue_name = $1 AND status = 'dead'"
+      : "WHERE status = 'dead'";
+    const params = queueName ? [queueName] : [];
+
+    const result = await query<QueueJob>(
+      `
+        SELECT * FROM job_queue
+        ${whereClause}
+        ORDER BY dead_letter_at DESC
+        LIMIT 100
+      `,
+      params
+    );
+
+    return result.rows;
+  }
+
+  /**
+   * Retry a dead-letter job (admin action)
+   */
+  async retryDeadLetterJob(jobId: number): Promise<boolean> {
+    const result = await query<{ id: number }>(
+      `
+        UPDATE job_queue
+        SET 
+          status = 'pending',
+          attempts = 0,
+          error_message = NULL,
+          dead_letter_reason = NULL,
+          dead_letter_at = NULL,
+          scheduled_at = NOW()
+        WHERE id = $1 AND status = 'dead'
+        RETURNING id
+      `,
+      [jobId]
+    );
+
+    if (result.rows.length > 0) {
+      logger.info("dead_letter_job_retried", { jobId });
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -196,6 +342,7 @@ class QueueService {
     processing: number;
     completed: number;
     failed: number;
+    dead: number;
   }> {
     const whereClause = queueName ? "WHERE queue_name = $1" : "";
     const params = queueName ? [queueName] : [];
@@ -205,13 +352,15 @@ class QueueService {
       processing: string;
       completed: string;
       failed: string;
+      dead: string;
     }>(
       `
         SELECT
           COUNT(*) FILTER (WHERE status = 'pending')::text as pending,
           COUNT(*) FILTER (WHERE status = 'processing')::text as processing,
           COUNT(*) FILTER (WHERE status = 'completed' AND completed_at > NOW() - INTERVAL '24 hours')::text as completed,
-          COUNT(*) FILTER (WHERE status = 'failed')::text as failed
+          COUNT(*) FILTER (WHERE status = 'failed')::text as failed,
+          COUNT(*) FILTER (WHERE status = 'dead')::text as dead
         FROM job_queue
         ${whereClause}
       `,
@@ -224,6 +373,7 @@ class QueueService {
       processing: Number(row?.processing || 0),
       completed: Number(row?.completed || 0),
       failed: Number(row?.failed || 0),
+      dead: Number(row?.dead || 0),
     };
   }
 
@@ -279,7 +429,7 @@ export async function enqueue<T>(
   queueName: QueueName,
   payload: T,
   options?: EnqueueOptions
-): Promise<number> {
+): Promise<number | null> {
   return queueService.enqueue(queueName, payload, options);
 }
 
@@ -287,6 +437,6 @@ export async function processQueue(
   queueName: QueueName,
   batchSize?: number
 ): Promise<{ processed: number; succeeded: number; failed: number }> {
-  return queueService.processQueue(queueName, batchSize);
+  return queueService.processQueue(queueName, batchSize ?? 10);
 }
 

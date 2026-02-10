@@ -3,15 +3,27 @@ import { env } from "../config/env";
 import { logger } from "../lib/logger";
 
 /**
- * DEPRECATED: Legacy auth middleware using x-user-id/x-user-role headers
+ * ⚠️ DEPRECATED - DO NOT USE IN NEW CODE ⚠️
+ * 
+ * Legacy auth middleware using x-user-id/x-user-role headers
+ * 
+ * This middleware is DEPRECATED and will be removed in a future version.
  * 
  * ⚠️ SECURITY WARNING: This auth method is DISABLED in production
- * Use jwtAuthMiddleware from src/middleware/jwtAuth.ts instead
  * 
- * This is only available in development/test for backwards compatibility
- * with existing tests and development workflows.
+ * MIGRATION GUIDE:
+ * - Replace `import { authMiddleware } from '../middleware/auth'` 
+ * - With `import { requireAuth } from '../middleware/authCanonical'`
+ * - Replace `router.use(authMiddleware)` with `router.use(requireAuth)`
  * 
- * For production, use proper JWT Bearer token authentication.
+ * For role-based routes, use:
+ * - `requireAuth` + `requireRole('admin')` or `requireAdmin`
+ * - `requireAuth` + `requireRole('client')` or `requireClient`
+ * - `requireAuth` + `requireRole('cleaner')` or `requireCleaner`
+ * 
+ * See src/middleware/authCanonical.ts for the canonical auth implementation.
+ * 
+ * @deprecated Use requireAuth from src/middleware/authCanonical.ts instead
  */
 export interface AuthedRequest extends Request {
   user?: {
@@ -20,7 +32,18 @@ export interface AuthedRequest extends Request {
   };
 }
 
+/**
+ * @deprecated Use requireAuth from src/middleware/authCanonical.ts instead
+ */
 export function authMiddleware(req: AuthedRequest, res: Response, next: NextFunction) {
+  // Log deprecation warning
+  logger.error("legacy_auth_deprecated", {
+    reason: "authMiddleware is deprecated",
+    message: "Use requireAuth from src/middleware/authCanonical.ts instead",
+    path: req.path,
+    stack: new Error().stack,
+  });
+
   // Block legacy auth in production
   if (env.NODE_ENV === "production") {
     logger.error("legacy_auth_blocked", {

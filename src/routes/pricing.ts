@@ -4,22 +4,52 @@
 
 import { Router, Response } from "express";
 import { logger } from "../lib/logger";
-import { jwtAuthMiddleware, JWTAuthedRequest } from "../middleware/jwtAuth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import { calculateJobPricing, getPricingEstimate, getTierPriceBands } from "../services/pricingService";
 
 const pricingRouter = Router();
 
-// All routes require authentication (but not specific role)
-pricingRouter.use(jwtAuthMiddleware);
+pricingRouter.use(requireAuth);
 
 /**
- * GET /pricing/estimate
- * Get pricing estimate for a job before booking
- * Query params: hours, tier (optional), baseRate (optional), cleaningType (optional)
+ * @swagger
+ * /pricing/estimate:
+ *   get:
+ *     summary: Get pricing estimate
+ *     description: Get pricing estimate for a job before booking. Can return specific tier pricing or range across all tiers.
+ *     tags: [Pricing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: hours
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: Number of hours
+ *       - in: query
+ *         name: tier
+ *         schema:
+ *           type: string
+ *           enum: [bronze, silver, gold, platinum]
+ *       - in: query
+ *         name: baseRate
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: cleaningType
+ *         schema:
+ *           type: string
+ *           enum: [basic, deep, moveout]
+ *     responses:
+ *       200:
+ *         description: Pricing estimate
+ *       400:
+ *         description: Invalid parameters
  */
 pricingRouter.get(
   "/estimate",
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       // Parse query parameters manually (query params come as strings)
       const hours = req.query.hours ? Number(req.query.hours) : null;
@@ -94,10 +124,19 @@ pricingRouter.get(
 );
 
 /**
- * GET /pricing/tiers
- * Get tier price bands for display/configuration
+ * @swagger
+ * /pricing/tiers:
+ *   get:
+ *     summary: Get tier price bands
+ *     description: Get tier price bands for display and configuration.
+ *     tags: [Pricing]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Tier price bands
  */
-pricingRouter.get("/tiers", async (_req: JWTAuthedRequest, res: Response) => {
+pricingRouter.get("/tiers", async (_req: AuthedRequest, res: Response) => {
   try {
     const priceBands = getTierPriceBands();
     res.json({

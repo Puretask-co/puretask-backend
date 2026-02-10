@@ -1,0 +1,79 @@
+[
+  {
+    "id": "season_spring_refresh",
+    "name": "Spring Refresh",
+    "description": "Deep cleans get a progress boost during spring cleaning season.",
+    "starts_at": "2026-03-01T00:00:00Z",
+    "ends_at": "2026-04-30T23:59:59Z",
+    "is_enabled": true,
+    "regions": null,
+    "rule": {
+      "multipliers": [
+        { "metric_key": "jobs.completed.count", "multiplier": 1.5 },
+        { "metric_key": "jobs.photos.approved.count", "multiplier": 1.2 }
+      ],
+      "ui": { "banner_copy": "Spring Refresh: Deep cleans count 1.5× toward progress" }
+    }
+  },
+  {
+    "id": "season_moveout_rush",
+    "name": "Move-Out Rush",
+    "description": "Move-in/move-out jobs count extra toward specialty progress.",
+    "starts_at": "2026-05-01T00:00:00Z",
+    "ends_at": "2026-09-30T23:59:59Z",
+    "is_enabled": true,
+    "regions": null,
+    "rule": {
+      "multipliers": [
+        { "metric_key": "jobs.completed.count", "multiplier": 2.0 },
+        { "metric_key": "jobs.addons.completed.count", "multiplier": 1.25 }
+      ],
+      "ui": { "banner_copy": "Move-Out Rush: Move-out jobs count 2×" }
+    }
+  },
+  {
+    "id": "season_holiday_prep",
+    "name": "Holiday Prep",
+    "description": "Weekend jobs get a boost during hosting season.",
+    "starts_at": "2026-11-01T00:00:00Z",
+    "ends_at": "2026-11-30T23:59:59Z",
+    "is_enabled": true,
+    "regions": null,
+    "rule": {
+      "multipliers": [
+        { "metric_key": "jobs.completed.count", "multiplier": 2.0 }
+      ],
+      "ui": { "banner_copy": "Holiday Prep: Weekend jobs count 2×" }
+    }
+  },
+  {
+    "id": "season_end_of_year_excellence",
+    "name": "End-of-Year Excellence",
+    "description": "On-time behavior is celebrated at the end of the year.",
+    "starts_at": "2026-12-01T00:00:00Z",
+    "ends_at": "2026-12-31T23:59:59Z",
+    "is_enabled": true,
+    "regions": null,
+    "rule": {
+      "multipliers": [
+        { "metric_key": "jobs.on_time.count", "multiplier": 1.25 }
+      ],
+      "ui": { "banner_copy": "End-of-Year Excellence: On-time progress boosted" }
+    }
+  },
+  {
+    "id": "season_weekend_warrior_month",
+    "name": "Weekend Warrior Month",
+    "description": "A fun challenge: weekend jobs count double.",
+    "starts_at": "2026-02-01T00:00:00Z",
+    "ends_at": "2026-02-28T23:59:59Z",
+    "is_enabled": true,
+    "regions": null,
+    "rule": {
+      "multipliers": [
+        { "metric_key": "jobs.completed.count", "multiplier": 2.0 }
+      ],
+      "ui": { "banner_copy": "Weekend Warrior: Weekend jobs count 2× this month" }
+    }
+  }
+]

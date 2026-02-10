@@ -3,6 +3,10 @@
 
 // V1 Core Workers
 import { runAutoCancelWorker } from "./v1-core/autoCancelJobs";
+import { runAutoExpireWorker } from "./v1-core/autoExpireAwaitingApproval";
+import { runPayoutWeeklyWorker } from "./v1-core/payoutWeekly";
+import { retryFailedNotifications } from "./v1-core/retryFailedNotifications";
+import { runWebhookRetryWorker } from "./v1-core/webhookRetry";
 import { runPayoutsWorker } from "./_deprecated/processPayouts";
 import { runKPISnapshotWorker } from "./_deprecated/kpiSnapshot";
 import { runRetryFailedEventsWorker } from "./_deprecated/retryFailedEvents";
@@ -10,6 +14,9 @@ import { runRetryFailedEventsWorker } from "./_deprecated/retryFailedEvents";
 // V2 Operations Workers
 import { runPhotoRetentionCleanup } from "./v2-operations/photoRetentionCleanup";
 import { runCreditEconomyMaintenance } from "./v2-operations/creditEconomyMaintenance";
+import { runPayoutRetry } from "./v2-operations/payoutRetry";
+import { main as runPayoutReconciliation } from "./v2-operations/payoutReconciliation";
+import { main as runBackupDaily } from "./v2-operations/backupDaily";
 
 // V3 Automation Workers
 import { runSubscriptionJobs } from "./v3-automation/subscriptionJobs";
@@ -24,6 +31,14 @@ import { runNightlyScoreRecompute } from "./reliability/nightlyScoreRecompute";
 import { runCleaningScores } from "./reliability/cleaningScores";
 import { runReliabilityRecalc } from "./reliability/reliabilityRecalc";
 
+// Gamification Workers
+import { runComputeGovernorMetrics } from "./gamification/computeGovernorMetrics";
+
+// Other Workers
+import { runOnboardingReminderWorker } from "./onboardingReminderWorker";
+import { runJobRemindersWorker } from "./v1-core/jobReminders";
+import { runNoShowDetectionWorker } from "./v1-core/noShowDetection";
+
 // Deprecated Workers (kept for backward compatibility)
 import { runGoalChecker } from "./_deprecated/goalChecker";
 import { runStuckJobDetection } from "./_deprecated/stuckJobDetection";
@@ -32,9 +47,13 @@ import { env } from "../config/env";
 
 type WorkerName =
   | "auto-cancel"
+  | "auto-expire"
   | "payouts"
+  | "payout-weekly"
   | "kpi-snapshot"
   | "retry-events"
+  | "retry-notifications"
+  | "webhook-retry"
   | "photo-cleanup"
   | "nightly-scores"
   | "cleaning-scores"
@@ -46,13 +65,30 @@ type WorkerName =
   | "stuck-detection"
   | "subscription-jobs"
   | "weekly-summary"
+  | "onboarding-reminders"
+  | "payout-retry"
+  | "payout-reconciliation"
+  | "backup-daily"
+  | "job-reminders"
+  | "no-show-detection"
+  | "governor-metrics"
   | "all";
 
 const workers: Record<string, () => Promise<any>> = {
   "auto-cancel": runAutoCancelWorker,
+  "auto-expire": async () => {
+    const { runAutoExpireWorker } = await import("./v1-core/autoExpireAwaitingApproval");
+    return runAutoExpireWorker();
+  },
   "payouts": runPayoutsWorker,
+  "payout-weekly": runPayoutWeeklyWorker,
   "kpi-snapshot": runKPISnapshotWorker,
   "retry-events": runRetryFailedEventsWorker,
+  "retry-notifications": async () => {
+    const { retryFailedNotifications } = await import("./v1-core/retryFailedNotifications");
+    return retryFailedNotifications();
+  },
+  "webhook-retry": runWebhookRetryWorker,
   "photo-cleanup": runPhotoRetentionCleanup, // Per Photo Proof policy: 90-day retention
   "nightly-scores": runNightlyScoreRecompute, // Client risk + Cleaner reliability + Flexibility scores
   "cleaning-scores": runCleaningScores,
@@ -64,6 +100,13 @@ const workers: Record<string, () => Promise<any>> = {
   "stuck-detection": runStuckJobDetection,
   "subscription-jobs": runSubscriptionJobs,
   "weekly-summary": runWeeklySummary,
+  "onboarding-reminders": runOnboardingReminderWorker,
+  "payout-retry": runPayoutRetry,
+  "payout-reconciliation": runPayoutReconciliation,
+  "backup-daily": runBackupDaily,
+  "job-reminders": runJobRemindersWorker,
+  "no-show-detection": runNoShowDetectionWorker,
+  "governor-metrics": runComputeGovernorMetrics,
 };
 
 /**

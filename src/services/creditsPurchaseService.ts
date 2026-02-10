@@ -2,16 +2,12 @@
 // Credits purchase flow with Stripe
 // Matches 001_init.sql + 002_supplementary.sql schema
 
-import Stripe from "stripe";
+import { stripe } from "../integrations/stripe";
 import { query } from "../db/client";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import { purchaseCredits, getUserBalance } from "./creditsService";
 import { notifyCreditsLow } from "./notifications";
-
-const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20",
-});
 
 // Credit packages
 export const CREDIT_PACKAGES = [

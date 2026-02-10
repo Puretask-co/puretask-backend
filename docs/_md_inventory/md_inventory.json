@@ -1,0 +1,4378 @@
+﻿[
+    {
+        "category":  "reference_docs",
+        "name":  "ENV_VARS_CHECKLIST.md",
+        "rel_path":  "ENV_VARS_CHECKLIST.md",
+        "dir":  "",
+        "size_kb":  3.54,
+        "modified":  "2026-01-22T19:38:22"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "IMPLEMENTATION_GUIDE.md",
+        "rel_path":  "IMPLEMENTATION_GUIDE.md",
+        "dir":  "",
+        "size_kb":  0,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "NEXT_5_MOVES.md",
+        "rel_path":  "NEXT_5_MOVES.md",
+        "dir":  "",
+        "size_kb":  5.72,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "NEXT_5_STRATEGIC_MOVES.md",
+        "rel_path":  "NEXT_5_STRATEGIC_MOVES.md",
+        "dir":  "",
+        "size_kb":  14.31,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README.md",
+        "rel_path":  "README.md",
+        "dir":  "",
+        "size_kb":  4.93,
+        "modified":  "2026-01-28T03:46:25"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SERVER_STARTUP_GUIDE.md",
+        "rel_path":  "SERVER_STARTUP_GUIDE.md",
+        "dir":  "",
+        "size_kb":  2.66,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "TEST_ACCOUNTS_REFERENCE.md",
+        "rel_path":  "TEST_ACCOUNTS_REFERENCE.md",
+        "dir":  "",
+        "size_kb":  9.81,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README.md",
+        "rel_path":  ".githooks\\README.md",
+        "dir":  ".githooks",
+        "size_kb":  0.29,
+        "modified":  "2026-01-31T20:23:55"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "copilot-instructions.md",
+        "rel_path":  ".github\\copilot-instructions.md",
+        "dir":  ".github",
+        "size_kb":  4.25,
+        "modified":  "2025-12-21T02:29:21"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README.md",
+        "rel_path":  "DB\\migrations\\README.md",
+        "dir":  "DB\\migrations",
+        "size_kb":  4.27,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README_CONSOLIDATED_SCHEMAS.md",
+        "rel_path":  "DB\\migrations\\README_CONSOLIDATED_SCHEMAS.md",
+        "dir":  "DB\\migrations",
+        "size_kb":  5.22,
+        "modified":  "2026-01-06T13:46:14"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ADMIN_DASHBOARD_FRONTEND.md",
+        "rel_path":  "docs\\ADMIN_DASHBOARD_FRONTEND.md",
+        "dir":  "docs",
+        "size_kb":  11.83,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ADMIN_PORTAL_SETUP.md",
+        "rel_path":  "docs\\ADMIN_PORTAL_SETUP.md",
+        "dir":  "docs",
+        "size_kb":  9.88,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ADVANCED_AUTH_GUIDE.md",
+        "rel_path":  "docs\\ADVANCED_AUTH_GUIDE.md",
+        "dir":  "docs",
+        "size_kb":  15.4,
+        "modified":  "2025-12-27T15:55:53"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "AI_ASSISTANT_INTEGRATION_GUIDE.md",
+        "rel_path":  "docs\\AI_ASSISTANT_INTEGRATION_GUIDE.md",
+        "dir":  "docs",
+        "size_kb":  16.71,
+        "modified":  "2026-01-09T11:07:40"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ALL_VERSIONS_STATUS.md",
+        "rel_path":  "docs\\ALL_VERSIONS_STATUS.md",
+        "dir":  "docs",
+        "size_kb":  10.59,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DETAILED_IMPLEMENTATION_STEPS.md",
+        "rel_path":  "docs\\DETAILED_IMPLEMENTATION_STEPS.md",
+        "dir":  "docs",
+        "size_kb":  0.99,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "IMPLEMENTATION_GUIDE.md",
+        "rel_path":  "docs\\IMPLEMENTATION_GUIDE.md",
+        "dir":  "docs",
+        "size_kb":  0.21,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "JWT_AUTHENTICATION_GUIDE.md",
+        "rel_path":  "docs\\JWT_AUTHENTICATION_GUIDE.md",
+        "dir":  "docs",
+        "size_kb":  14.2,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "JWT_QUICK_REFERENCE.md",
+        "rel_path":  "docs\\JWT_QUICK_REFERENCE.md",
+        "dir":  "docs",
+        "size_kb":  3.11,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "N8N_API_CLIENT.md",
+        "rel_path":  "docs\\N8N_API_CLIENT.md",
+        "dir":  "docs",
+        "size_kb":  8.34,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "N8N_COMPLETE_CONFIG.md",
+        "rel_path":  "docs\\N8N_COMPLETE_CONFIG.md",
+        "dir":  "docs",
+        "size_kb":  11.55,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "N8N_ENV_CONFIG.md",
+        "rel_path":  "docs\\N8N_ENV_CONFIG.md",
+        "dir":  "docs",
+        "size_kb":  0.73,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "N8N_MCP_INTEGRATION.md",
+        "rel_path":  "docs\\N8N_MCP_INTEGRATION.md",
+        "dir":  "docs",
+        "size_kb":  8.17,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "N8N_WEBHOOK_SECRET.md",
+        "rel_path":  "docs\\N8N_WEBHOOK_SECRET.md",
+        "dir":  "docs",
+        "size_kb":  9.62,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PRODUCTION_READINESS.md",
+        "rel_path":  "docs\\PRODUCTION_READINESS.md",
+        "dir":  "docs",
+        "size_kb":  10.76,
+        "modified":  "2025-12-28T16:35:02"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README.md",
+        "rel_path":  "docs\\README.md",
+        "dir":  "docs",
+        "size_kb":  6.27,
+        "modified":  "2026-01-11T12:31:59"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "STRIPE_TESTING.md",
+        "rel_path":  "docs\\STRIPE_TESTING.md",
+        "dir":  "docs",
+        "size_kb":  5.56,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V1_COMPLETE_SUMMARY.md",
+        "rel_path":  "docs\\V1_COMPLETE_SUMMARY.md",
+        "dir":  "docs",
+        "size_kb":  3.93,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V1_COMPLETION_SUMMARY.md",
+        "rel_path":  "docs\\V1_COMPLETION_SUMMARY.md",
+        "dir":  "docs",
+        "size_kb":  6.32,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V1_ENABLED_FEATURES.md",
+        "rel_path":  "docs\\V1_ENABLED_FEATURES.md",
+        "dir":  "docs",
+        "size_kb":  7.1,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V2_EXECUTION_COMPLETE.md",
+        "rel_path":  "docs\\V2_EXECUTION_COMPLETE.md",
+        "dir":  "docs",
+        "size_kb":  5.95,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V2_EXECUTION_PLAN.md",
+        "rel_path":  "docs\\V2_EXECUTION_PLAN.md",
+        "dir":  "docs",
+        "size_kb":  6.67,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V2_FEATURES_DETAILED_BREAKDOWN.md",
+        "rel_path":  "docs\\V2_FEATURES_DETAILED_BREAKDOWN.md",
+        "dir":  "docs",
+        "size_kb":  27.13,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "V3_COMPLETE_OVERVIEW.md",
+        "rel_path":  "docs\\V3_COMPLETE_OVERVIEW.md",
+        "dir":  "docs",
+        "size_kb":  17.84,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V3_COMPLETE_SUMMARY.md",
+        "rel_path":  "docs\\V3_COMPLETE_SUMMARY.md",
+        "dir":  "docs",
+        "size_kb":  4.4,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V3_DEPLOYMENT_COMPLETE.md",
+        "rel_path":  "docs\\V3_DEPLOYMENT_COMPLETE.md",
+        "dir":  "docs",
+        "size_kb":  3.92,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V3_DEPLOYMENT_VERIFICATION.md",
+        "rel_path":  "docs\\V3_DEPLOYMENT_VERIFICATION.md",
+        "dir":  "docs",
+        "size_kb":  7.73,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V3_EXECUTION_PLAN.md",
+        "rel_path":  "docs\\V3_EXECUTION_PLAN.md",
+        "dir":  "docs",
+        "size_kb":  5.47,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V3_FEATURES_DETAILED_BREAKDOWN.md",
+        "rel_path":  "docs\\V3_FEATURES_DETAILED_BREAKDOWN.md",
+        "dir":  "docs",
+        "size_kb":  20.28,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "V3_FINAL_STATUS.md",
+        "rel_path":  "docs\\V3_FINAL_STATUS.md",
+        "dir":  "docs",
+        "size_kb":  3.25,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "V3_IMPLEMENTATION_COMPLETE.md",
+        "rel_path":  "docs\\V3_IMPLEMENTATION_COMPLETE.md",
+        "dir":  "docs",
+        "size_kb":  6.34,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V3_NEXT_STEPS.md",
+        "rel_path":  "docs\\V3_NEXT_STEPS.md",
+        "dir":  "docs",
+        "size_kb":  6.55,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V3_NEXT_STEPS_COMPLETE.md",
+        "rel_path":  "docs\\V3_NEXT_STEPS_COMPLETE.md",
+        "dir":  "docs",
+        "size_kb":  4.21,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V4_CAPABILITIES_COMPLETE.md",
+        "rel_path":  "docs\\V4_CAPABILITIES_COMPLETE.md",
+        "dir":  "docs",
+        "size_kb":  14.26,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V4_DEPLOYMENT_COMPLETE.md",
+        "rel_path":  "docs\\V4_DEPLOYMENT_COMPLETE.md",
+        "dir":  "docs",
+        "size_kb":  5.9,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V4_DEPLOYMENT_VERIFICATION.md",
+        "rel_path":  "docs\\V4_DEPLOYMENT_VERIFICATION.md",
+        "dir":  "docs",
+        "size_kb":  6.9,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "V4_IMPLEMENTATION_COMPLETE.md",
+        "rel_path":  "docs\\V4_IMPLEMENTATION_COMPLETE.md",
+        "dir":  "docs",
+        "size_kb":  5.25,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V4_IMPLEMENTATION_PLAN.md",
+        "rel_path":  "docs\\V4_IMPLEMENTATION_PLAN.md",
+        "dir":  "docs",
+        "size_kb":  4.34,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "VERSION_FEATURE_BREAKDOWN.md",
+        "rel_path":  "docs\\VERSION_FEATURE_BREAKDOWN.md",
+        "dir":  "docs",
+        "size_kb":  24.19,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "API_DOCUMENTATION.md",
+        "rel_path":  "docs\\active\\API_DOCUMENTATION.md",
+        "dir":  "docs\\active",
+        "size_kb":  5.76,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "API_DOCUMENTATION_FINAL_STATUS.md",
+        "rel_path":  "docs\\active\\API_DOCUMENTATION_FINAL_STATUS.md",
+        "dir":  "docs\\active",
+        "size_kb":  5.74,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "API_DOCUMENTATION_STATUS.md",
+        "rel_path":  "docs\\active\\API_DOCUMENTATION_STATUS.md",
+        "dir":  "docs\\active",
+        "size_kb":  5.15,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ARCHITECTURE.md",
+        "rel_path":  "docs\\active\\ARCHITECTURE.md",
+        "dir":  "docs\\active",
+        "size_kb":  8.29,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "AUTH_MIGRATION_STATUS.md",
+        "rel_path":  "docs\\active\\AUTH_MIGRATION_STATUS.md",
+        "dir":  "docs\\active",
+        "size_kb":  3.27,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "BACKEND_TIMEOUT_ISSUE.md",
+        "rel_path":  "docs\\active\\BACKEND_TIMEOUT_ISSUE.md",
+        "dir":  "docs\\active",
+        "size_kb":  2.07,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "BACKUP_RESTORE_PROCEDURE.md",
+        "rel_path":  "docs\\active\\BACKUP_RESTORE_PROCEDURE.md",
+        "dir":  "docs\\active",
+        "size_kb":  5.11,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "BACKUP_SETUP.md",
+        "rel_path":  "docs\\active\\BACKUP_SETUP.md",
+        "dir":  "docs\\active",
+        "size_kb":  0.36,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CI_CD_SETUP.md",
+        "rel_path":  "docs\\active\\CI_CD_SETUP.md",
+        "dir":  "docs\\active",
+        "size_kb":  5.73,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "COMPREHENSIVE_GAP_ANALYSIS.md",
+        "rel_path":  "docs\\active\\COMPREHENSIVE_GAP_ANALYSIS.md",
+        "dir":  "docs\\active",
+        "size_kb":  12.55,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CONTRIBUTING.md",
+        "rel_path":  "docs\\active\\CONTRIBUTING.md",
+        "dir":  "docs\\active",
+        "size_kb":  4.72,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "CRON_JOBS_AND_NOTIFICATIONS.md",
+        "rel_path":  "docs\\active\\CRON_JOBS_AND_NOTIFICATIONS.md",
+        "dir":  "docs\\active",
+        "size_kb":  14.95,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DATABASE_RECOVERY.md",
+        "rel_path":  "docs\\active\\DATABASE_RECOVERY.md",
+        "dir":  "docs\\active",
+        "size_kb":  4.81,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DECISIONS.md",
+        "rel_path":  "docs\\active\\DECISIONS.md",
+        "dir":  "docs\\active",
+        "size_kb":  25.2,
+        "modified":  "2026-01-31T20:30:23"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DEPLOYMENT.md",
+        "rel_path":  "docs\\active\\DEPLOYMENT.md",
+        "dir":  "docs\\active",
+        "size_kb":  2.03,
+        "modified":  "2026-01-31T20:02:15"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DOCUMENTATION_INDEX.md",
+        "rel_path":  "docs\\active\\DOCUMENTATION_INDEX.md",
+        "dir":  "docs\\active",
+        "size_kb":  10.93,
+        "modified":  "2026-01-31T18:25:26"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FRONTEND_AUTH_FIX.md",
+        "rel_path":  "docs\\active\\FRONTEND_AUTH_FIX.md",
+        "dir":  "docs\\active",
+        "size_kb":  0,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "GAP_COMPLETION_ROADMAP.md",
+        "rel_path":  "docs\\active\\GAP_COMPLETION_ROADMAP.md",
+        "dir":  "docs\\active",
+        "size_kb":  17.33,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "GDPR_COMPLIANCE.md",
+        "rel_path":  "docs\\active\\GDPR_COMPLIANCE.md",
+        "dir":  "docs\\active",
+        "size_kb":  7.02,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MONITORING_SETUP.md",
+        "rel_path":  "docs\\active\\MONITORING_SETUP.md",
+        "dir":  "docs\\active",
+        "size_kb":  7.47,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "NOTIFICATION_DEDUPE_STRATEGY.md",
+        "rel_path":  "docs\\active\\NOTIFICATION_DEDUPE_STRATEGY.md",
+        "dir":  "docs\\active",
+        "size_kb":  5.93,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "NOTIFICATION_MATURITY_UPGRADES.md",
+        "rel_path":  "docs\\active\\NOTIFICATION_MATURITY_UPGRADES.md",
+        "dir":  "docs\\active",
+        "size_kb":  6.49,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "NOTIFICATION_SENDER_ANALYSIS.md",
+        "rel_path":  "docs\\active\\NOTIFICATION_SENDER_ANALYSIS.md",
+        "dir":  "docs\\active",
+        "size_kb":  9.47,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "experiments",
+        "name":  "NOTIFICATION_TEMPLATES_OUTLINE.md",
+        "rel_path":  "docs\\active\\NOTIFICATION_TEMPLATES_OUTLINE.md",
+        "dir":  "docs\\active",
+        "size_kb":  6.25,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PERFORMANCE_TESTING.md",
+        "rel_path":  "docs\\active\\PERFORMANCE_TESTING.md",
+        "dir":  "docs\\active",
+        "size_kb":  6.24,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PRODUCTION_READINESS_ROADMAP.md",
+        "rel_path":  "docs\\active\\PRODUCTION_READINESS_ROADMAP.md",
+        "dir":  "docs\\active",
+        "size_kb":  26.87,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PRODUCTION_READINESS_SUMMARY.md",
+        "rel_path":  "docs\\active\\PRODUCTION_READINESS_SUMMARY.md",
+        "dir":  "docs\\active",
+        "size_kb":  8.59,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RATE_LIMITING.md",
+        "rel_path":  "docs\\active\\RATE_LIMITING.md",
+        "dir":  "docs\\active",
+        "size_kb":  5.65,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README.md",
+        "rel_path":  "docs\\active\\README.md",
+        "dir":  "docs\\active",
+        "size_kb":  1.24,
+        "modified":  "2026-01-31T20:24:15"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ROUTE_PROTECTION_TABLE.md",
+        "rel_path":  "docs\\active\\ROUTE_PROTECTION_TABLE.md",
+        "dir":  "docs\\active",
+        "size_kb":  7,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RUNBOOK.md",
+        "rel_path":  "docs\\active\\RUNBOOK.md",
+        "dir":  "docs\\active",
+        "size_kb":  1.97,
+        "modified":  "2026-01-31T20:02:29"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SECTION_7_NEEDS_ASSESSMENT.md",
+        "rel_path":  "docs\\active\\SECTION_7_NEEDS_ASSESSMENT.md",
+        "dir":  "docs\\active",
+        "size_kb":  3.53,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "SECTION_8_SECURITY_ASSESSMENT.md",
+        "rel_path":  "docs\\active\\SECTION_8_SECURITY_ASSESSMENT.md",
+        "dir":  "docs\\active",
+        "size_kb":  8.23,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "SECTION_9_MAINTAINABILITY_ASSESSMENT.md",
+        "rel_path":  "docs\\active\\SECTION_9_MAINTAINABILITY_ASSESSMENT.md",
+        "dir":  "docs\\active",
+        "size_kb":  7.48,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "SECURITY_AUDIT.md",
+        "rel_path":  "docs\\active\\SECURITY_AUDIT.md",
+        "dir":  "docs\\active",
+        "size_kb":  7.09,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SECURITY_GUARDRAILS.md",
+        "rel_path":  "docs\\active\\SECURITY_GUARDRAILS.md",
+        "dir":  "docs\\active",
+        "size_kb":  6.6,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SECURITY_INCIDENT_RESPONSE.md",
+        "rel_path":  "docs\\active\\SECURITY_INCIDENT_RESPONSE.md",
+        "dir":  "docs\\active",
+        "size_kb":  2.77,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SERVER_STARTUP_ANALYSIS.md",
+        "rel_path":  "docs\\active\\SERVER_STARTUP_ANALYSIS.md",
+        "dir":  "docs\\active",
+        "size_kb":  7.64,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SERVER_STARTUP_ISSUES_ANALYSIS.md",
+        "rel_path":  "docs\\active\\SERVER_STARTUP_ISSUES_ANALYSIS.md",
+        "dir":  "docs\\active",
+        "size_kb":  4.55,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SERVER_STARTUP_STATUS.md",
+        "rel_path":  "docs\\active\\SERVER_STARTUP_STATUS.md",
+        "dir":  "docs\\active",
+        "size_kb":  4.04,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SETUP.md",
+        "rel_path":  "docs\\active\\SETUP.md",
+        "dir":  "docs\\active",
+        "size_kb":  2.05,
+        "modified":  "2026-01-31T20:02:13"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "TROUBLESHOOTING.md",
+        "rel_path":  "docs\\active\\TROUBLESHOOTING.md",
+        "dir":  "docs\\active",
+        "size_kb":  5.15,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "WORKER_HARDENING.md",
+        "rel_path":  "docs\\active\\WORKER_HARDENING.md",
+        "dir":  "docs\\active",
+        "size_kb":  5.84,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ERROR_RECOVERY_CIRCUIT_BREAKERS.md",
+        "rel_path":  "docs\\active\\00-CRITICAL\\ERROR_RECOVERY_CIRCUIT_BREAKERS.md",
+        "dir":  "docs\\active\\00-CRITICAL",
+        "size_kb":  19.64,
+        "modified":  "2026-01-31T18:21:54"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MONITORING_SETUP.md",
+        "rel_path":  "docs\\active\\00-CRITICAL\\MONITORING_SETUP.md",
+        "dir":  "docs\\active\\00-CRITICAL",
+        "size_kb":  17.35,
+        "modified":  "2026-01-31T18:21:15"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PRODUCTION_READINESS_ROADMAP.md",
+        "rel_path":  "docs\\active\\00-CRITICAL\\PRODUCTION_READINESS_ROADMAP.md",
+        "dir":  "docs\\active\\00-CRITICAL",
+        "size_kb":  30.56,
+        "modified":  "2026-01-31T18:22:14"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SECURITY_AUDIT_SUMMARY.md",
+        "rel_path":  "docs\\active\\00-CRITICAL\\SECURITY_AUDIT_SUMMARY.md",
+        "dir":  "docs\\active\\00-CRITICAL",
+        "size_kb":  12.35,
+        "modified":  "2026-01-31T18:22:28"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SECURITY_GUARDRAILS.md",
+        "rel_path":  "docs\\active\\00-CRITICAL\\SECURITY_GUARDRAILS.md",
+        "dir":  "docs\\active\\00-CRITICAL",
+        "size_kb":  15.09,
+        "modified":  "2026-01-31T18:23:07"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SECURITY_INCIDENT_RESPONSE.md",
+        "rel_path":  "docs\\active\\00-CRITICAL\\SECURITY_INCIDENT_RESPONSE.md",
+        "dir":  "docs\\active\\00-CRITICAL",
+        "size_kb":  7.37,
+        "modified":  "2026-01-31T18:23:40"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "BACKUP_RESTORE_PROCEDURE.md",
+        "rel_path":  "docs\\active\\01-HIGH\\BACKUP_RESTORE_PROCEDURE.md",
+        "dir":  "docs\\active\\01-HIGH",
+        "size_kb":  10.47,
+        "modified":  "2026-01-31T18:24:07"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "BACKUP_SETUP.md",
+        "rel_path":  "docs\\active\\01-HIGH\\BACKUP_SETUP.md",
+        "dir":  "docs\\active\\01-HIGH",
+        "size_kb":  3.48,
+        "modified":  "2026-01-31T18:24:42"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CI_CD_SETUP.md",
+        "rel_path":  "docs\\active\\01-HIGH\\CI_CD_SETUP.md",
+        "dir":  "docs\\active\\01-HIGH",
+        "size_kb":  11.14,
+        "modified":  "2026-01-31T18:24:23"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DATABASE_RECOVERY.md",
+        "rel_path":  "docs\\active\\01-HIGH\\DATABASE_RECOVERY.md",
+        "dir":  "docs\\active\\01-HIGH",
+        "size_kb":  9.62,
+        "modified":  "2026-01-31T18:25:00"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "GDPR_COMPLIANCE.md",
+        "rel_path":  "docs\\active\\01-HIGH\\GDPR_COMPLIANCE.md",
+        "dir":  "docs\\active\\01-HIGH",
+        "size_kb":  10.55,
+        "modified":  "2026-01-31T18:25:00"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RATE_LIMITING.md",
+        "rel_path":  "docs\\active\\01-HIGH\\RATE_LIMITING.md",
+        "dir":  "docs\\active\\01-HIGH",
+        "size_kb":  8.87,
+        "modified":  "2026-01-31T18:25:09"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ADDRESS_REMAINING_GAPS.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\ADDRESS_REMAINING_GAPS.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  37.72,
+        "modified":  "2026-01-31T18:29:36"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "API_DOCUMENTATION.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\API_DOCUMENTATION.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  15.6,
+        "modified":  "2026-01-31T18:32:58"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "API_EXACT_ENDPOINTS.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\API_EXACT_ENDPOINTS.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  9.21,
+        "modified":  "2026-01-31T18:33:10"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "API_SPEC_COMPARISON.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\API_SPEC_COMPARISON.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  9.91,
+        "modified":  "2026-01-31T18:34:47"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ARCHITECTURE.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\ARCHITECTURE.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  20.49,
+        "modified":  "2026-01-31T18:29:27"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "COMPREHENSIVE_GAP_ANALYSIS.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\COMPREHENSIVE_GAP_ANALYSIS.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  80.34,
+        "modified":  "2026-01-31T18:38:23"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CRON_JOBS_AND_NOTIFICATIONS.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\CRON_JOBS_AND_NOTIFICATIONS.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  22.55,
+        "modified":  "2026-01-31T18:40:29"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "GAP_COMPLETION_ROADMAP.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\GAP_COMPLETION_ROADMAP.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  20.47,
+        "modified":  "2026-01-31T18:37:51"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "N8N_EVENT_ROUTER.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\N8N_EVENT_ROUTER.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  7.49,
+        "modified":  "2026-01-31T18:35:06"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "NOTIFICATION_DEDUPE_STRATEGY.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\NOTIFICATION_DEDUPE_STRATEGY.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  10.21,
+        "modified":  "2026-01-31T18:35:33"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "NOTIFICATION_MATURITY_UPGRADES.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\NOTIFICATION_MATURITY_UPGRADES.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  9.88,
+        "modified":  "2026-01-31T18:35:54"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "NOTIFICATION_SENDER_ANALYSIS.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\NOTIFICATION_SENDER_ANALYSIS.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  12.86,
+        "modified":  "2026-01-31T18:36:18"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "NOTIFICATION_TEMPLATES_OUTLINE.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\NOTIFICATION_TEMPLATES_OUTLINE.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  9.55,
+        "modified":  "2026-01-31T18:36:35"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PERFORMANCE_TESTING.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\PERFORMANCE_TESTING.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  9.24,
+        "modified":  "2026-01-31T18:15:17"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "REMAINING_ISSUES_STEPS.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\REMAINING_ISSUES_STEPS.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  20.88,
+        "modified":  "2026-01-31T18:30:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "WORKER_HARDENING.md",
+        "rel_path":  "docs\\active\\02-MEDIUM\\WORKER_HARDENING.md",
+        "dir":  "docs\\active\\02-MEDIUM",
+        "size_kb":  7.64,
+        "modified":  "2026-01-31T18:15:17"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CLEANUP_SUMMARY.md",
+        "rel_path":  "docs\\active\\03-LOW\\CLEANUP_SUMMARY.md",
+        "dir":  "docs\\active\\03-LOW",
+        "size_kb":  8.82,
+        "modified":  "2026-01-31T18:39:12"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CONTRIBUTING.md",
+        "rel_path":  "docs\\active\\03-LOW\\CONTRIBUTING.md",
+        "dir":  "docs\\active\\03-LOW",
+        "size_kb":  8.78,
+        "modified":  "2026-01-31T18:39:27"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README.md",
+        "rel_path":  "docs\\active\\03-LOW\\README.md",
+        "dir":  "docs\\active\\03-LOW",
+        "size_kb":  3.37,
+        "modified":  "2026-01-31T18:30:21"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SERVER_STARTUP_ANALYSIS.md",
+        "rel_path":  "docs\\active\\03-LOW\\SERVER_STARTUP_ANALYSIS.md",
+        "dir":  "docs\\active\\03-LOW",
+        "size_kb":  11.12,
+        "modified":  "2026-01-31T18:30:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ADMIN_QUICK_START.md",
+        "rel_path":  "docs\\admin\\ADMIN_QUICK_START.md",
+        "dir":  "docs\\admin",
+        "size_kb":  7.57,
+        "modified":  "2026-01-09T12:05:46"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ADMIN_SETTINGS_SUITE_COMPLETE.md",
+        "rel_path":  "docs\\admin\\ADMIN_SETTINGS_SUITE_COMPLETE.md",
+        "dir":  "docs\\admin",
+        "size_kb":  12.82,
+        "modified":  "2026-01-09T12:28:15"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ADMIN_SYSTEM_COMPLETE.md",
+        "rel_path":  "docs\\admin\\ADMIN_SYSTEM_COMPLETE.md",
+        "dir":  "docs\\admin",
+        "size_kb":  13.17,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ADMIN_USER_CREATED.md",
+        "rel_path":  "docs\\admin\\ADMIN_USER_CREATED.md",
+        "dir":  "docs\\admin",
+        "size_kb":  9.58,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "GAMIFICATION_SYSTEM_COMPLETE.md",
+        "rel_path":  "docs\\admin\\GAMIFICATION_SYSTEM_COMPLETE.md",
+        "dir":  "docs\\admin",
+        "size_kb":  14.33,
+        "modified":  "2026-01-09T16:07:53"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ONBOARDING_CHECKLIST_FOR_STAFF.md",
+        "rel_path":  "docs\\admin\\ONBOARDING_CHECKLIST_FOR_STAFF.md",
+        "dir":  "docs\\admin",
+        "size_kb":  13.88,
+        "modified":  "2026-01-09T15:55:12"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "AI_ASSISTANT_BEST_PRACTICES.md",
+        "rel_path":  "docs\\ai-assistant\\AI_ASSISTANT_BEST_PRACTICES.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  22.01,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "AI_ASSISTANT_COMPLETE_GUIDE.md",
+        "rel_path":  "docs\\ai-assistant\\AI_ASSISTANT_COMPLETE_GUIDE.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  46.72,
+        "modified":  "2026-01-11T13:37:07"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "AI_ASSISTANT_COMPLETE_MIGRATION_SUMMARY.md",
+        "rel_path":  "docs\\ai-assistant\\AI_ASSISTANT_COMPLETE_MIGRATION_SUMMARY.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  10.57,
+        "modified":  "2026-01-09T16:57:05"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "AI_ASSISTANT_LIVE_AND_WORKING.md",
+        "rel_path":  "docs\\ai-assistant\\AI_ASSISTANT_LIVE_AND_WORKING.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  10.37,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "AI_ASSISTANT_READY_TO_USE.md",
+        "rel_path":  "docs\\ai-assistant\\AI_ASSISTANT_READY_TO_USE.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  7.78,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "AI_ASSISTANT_SETUP_STATUS.md",
+        "rel_path":  "docs\\ai-assistant\\AI_ASSISTANT_SETUP_STATUS.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  5.69,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "AI_ASSISTANT_VERIFICATION_REPORT.md",
+        "rel_path":  "docs\\ai-assistant\\AI_ASSISTANT_VERIFICATION_REPORT.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  12.47,
+        "modified":  "2026-01-09T11:23:01"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "AI_MIGRATION_CHECKLIST.md",
+        "rel_path":  "docs\\ai-assistant\\AI_MIGRATION_CHECKLIST.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  11.54,
+        "modified":  "2026-01-24T06:05:54"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CLEANER_AI_SETTINGS_COMPLETE.md",
+        "rel_path":  "docs\\ai-assistant\\CLEANER_AI_SETTINGS_COMPLETE.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  26.02,
+        "modified":  "2026-01-09T12:40:57"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CLEANER_AI_SUITE_SUMMARY.md",
+        "rel_path":  "docs\\ai-assistant\\CLEANER_AI_SUITE_SUMMARY.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  12.3,
+        "modified":  "2026-01-09T12:40:57"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "test-cleaner-ai-api.md",
+        "rel_path":  "docs\\ai-assistant\\test-cleaner-ai-api.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  12.23,
+        "modified":  "2026-01-09T12:40:57"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "TEST_AI_ASSISTANT_PAGE.md",
+        "rel_path":  "docs\\ai-assistant\\TEST_AI_ASSISTANT_PAGE.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  9.76,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "TEST_AI_QUICK_START.md",
+        "rel_path":  "docs\\ai-assistant\\TEST_AI_QUICK_START.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  6.02,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "USER_GUIDE_CLEANER_AI_ASSISTANT.md",
+        "rel_path":  "docs\\ai-assistant\\USER_GUIDE_CLEANER_AI_ASSISTANT.md",
+        "dir":  "docs\\ai-assistant",
+        "size_kb":  24.57,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "ALL_ENDPOINTS_COMPLETE.md",
+        "rel_path":  "docs\\architecture\\ALL_ENDPOINTS_COMPLETE.md",
+        "dir":  "docs\\architecture",
+        "size_kb":  7.21,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_API_ENDPOINTS.md",
+        "rel_path":  "docs\\architecture\\COMPLETE_API_ENDPOINTS.md",
+        "dir":  "docs\\architecture",
+        "size_kb":  9.69,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_FRONTEND_COMPONENTS_GUIDE.md",
+        "rel_path":  "docs\\architecture\\COMPLETE_FRONTEND_COMPONENTS_GUIDE.md",
+        "dir":  "docs\\architecture",
+        "size_kb":  17.8,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DOCUMENTATION_ORGANIZATION_PLAN.md",
+        "rel_path":  "docs\\architecture\\DOCUMENTATION_ORGANIZATION_PLAN.md",
+        "dir":  "docs\\architecture",
+        "size_kb":  9.5,
+        "modified":  "2025-12-27T00:18:18"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENDPOINT_AUDIT.md",
+        "rel_path":  "docs\\architecture\\ENDPOINT_AUDIT.md",
+        "dir":  "docs\\architecture",
+        "size_kb":  2.46,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ENV_EXAMPLE.md",
+        "rel_path":  "docs\\architecture\\ENV_EXAMPLE.md",
+        "dir":  "docs\\architecture",
+        "size_kb":  3.21,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "FRONTEND_REALITY_CHECK.md",
+        "rel_path":  "docs\\architecture\\FRONTEND_REALITY_CHECK.md",
+        "dir":  "docs\\architecture",
+        "size_kb":  10.55,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "experiments",
+        "name":  "TEMPLATES_EXPLAINED_COMPLETE_GUIDE.md",
+        "rel_path":  "docs\\architecture\\TEMPLATES_EXPLAINED_COMPLETE_GUIDE.md",
+        "dir":  "docs\\architecture",
+        "size_kb":  9.81,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "experiments",
+        "name":  "TEMPLATES_QUICK_ANSWER.md",
+        "rel_path":  "docs\\architecture\\TEMPLATES_QUICK_ANSWER.md",
+        "dir":  "docs\\architecture",
+        "size_kb":  2,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "7_DAY_PROGRESSIVE_PLAN.md",
+        "rel_path":  "docs\\archive\\7_DAY_PROGRESSIVE_PLAN.md",
+        "dir":  "docs\\archive",
+        "size_kb":  9.53,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ADMIN_ACCOUNT_SETUP.md",
+        "rel_path":  "docs\\archive\\ADMIN_ACCOUNT_SETUP.md",
+        "dir":  "docs\\archive",
+        "size_kb":  5.53,
+        "modified":  "2026-01-11T14:34:16"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "ADMIN_SYSTEM_COMPLETE.md",
+        "rel_path":  "docs\\archive\\ADMIN_SYSTEM_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  10.93,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "AGENT_RUNBOOK_COMPLETION_REPORT.md",
+        "rel_path":  "docs\\archive\\AGENT_RUNBOOK_COMPLETION_REPORT.md",
+        "dir":  "docs\\archive",
+        "size_kb":  8.37,
+        "modified":  "2025-12-21T07:16:18"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "ALL_RECOMMENDATIONS_COMPLETE.md",
+        "rel_path":  "docs\\archive\\ALL_RECOMMENDATIONS_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  1.65,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "ALL_TODOS_COMPLETE.md",
+        "rel_path":  "docs\\archive\\ALL_TODOS_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.73,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "API_ENDPOINTS_SUMMARY.md",
+        "rel_path":  "docs\\archive\\API_ENDPOINTS_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.59,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "APPLY_COMPONENTS_TO_PAGES.md",
+        "rel_path":  "docs\\archive\\APPLY_COMPONENTS_TO_PAGES.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.12,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "AUDIT_FIXES.md",
+        "rel_path":  "docs\\archive\\AUDIT_FIXES.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.08,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "AUDIT_RESULTS_SUMMARY.md",
+        "rel_path":  "docs\\archive\\AUDIT_RESULTS_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.45,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "AUTOMATED_SETUP_SCRIPT.md",
+        "rel_path":  "docs\\archive\\AUTOMATED_SETUP_SCRIPT.md",
+        "dir":  "docs\\archive",
+        "size_kb":  9.64,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "BACKEND_ANALYSIS_REPORT.md",
+        "rel_path":  "docs\\archive\\BACKEND_ANALYSIS_REPORT.md",
+        "dir":  "docs\\archive",
+        "size_kb":  5.7,
+        "modified":  "2026-01-22T19:31:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "BACK_BUTTON_ADDED.md",
+        "rel_path":  "docs\\archive\\BACK_BUTTON_ADDED.md",
+        "dir":  "docs\\archive",
+        "size_kb":  7.94,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "BATCH_APPLY_COMPONENTS.md",
+        "rel_path":  "docs\\archive\\BATCH_APPLY_COMPONENTS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  1.49,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "BUILD_COMPLETE_SUMMARY.md",
+        "rel_path":  "docs\\archive\\BUILD_COMPLETE_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  7.68,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "BUILD_PROGRESS.md",
+        "rel_path":  "docs\\archive\\BUILD_PROGRESS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.32,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "CLEANER_FLOW_ANALYSIS.md",
+        "rel_path":  "docs\\archive\\CLEANER_FLOW_ANALYSIS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  5.09,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CLEANER_ONBOARDING_ENHANCED_OUTLINE.md",
+        "rel_path":  "docs\\archive\\CLEANER_ONBOARDING_ENHANCED_OUTLINE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  19.27,
+        "modified":  "2026-01-23T10:20:34"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "CLEANER_PAGES_COMPLETE.md",
+        "rel_path":  "docs\\archive\\CLEANER_PAGES_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.58,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_ALL_MISSING_ITEMS_PLAN.md",
+        "rel_path":  "docs\\archive\\COMPLETE_ALL_MISSING_ITEMS_PLAN.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.51,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_BUILD_PLAN.md",
+        "rel_path":  "docs\\archive\\COMPLETE_BUILD_PLAN.md",
+        "dir":  "docs\\archive",
+        "size_kb":  29.61,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_EXECUTION_REPORT.md",
+        "rel_path":  "docs\\archive\\COMPLETE_EXECUTION_REPORT.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.84,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_IMPLEMENTATION_REPORT.md",
+        "rel_path":  "docs\\archive\\COMPLETE_IMPLEMENTATION_REPORT.md",
+        "dir":  "docs\\archive",
+        "size_kb":  5.96,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_IMPLEMENTATION_STATUS.md",
+        "rel_path":  "docs\\archive\\COMPLETE_IMPLEMENTATION_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.71,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_IMPLEMENTATION_SUMMARY.md",
+        "rel_path":  "docs\\archive\\COMPLETE_IMPLEMENTATION_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  21.49,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_MISSING_ITEMS_PLAN.md",
+        "rel_path":  "docs\\archive\\COMPLETE_MISSING_ITEMS_PLAN.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.71,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_ROLLOUT_PLAN_V1.md",
+        "rel_path":  "docs\\archive\\COMPLETE_ROLLOUT_PLAN_V1.md",
+        "dir":  "docs\\archive",
+        "size_kb":  86.25,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_ROLLOUT_PLAN_V2.md",
+        "rel_path":  "docs\\archive\\COMPLETE_ROLLOUT_PLAN_V2.md",
+        "dir":  "docs\\archive",
+        "size_kb":  31.32,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_ROLLOUT_PLAN_V3_V4_FULL.md",
+        "rel_path":  "docs\\archive\\COMPLETE_ROLLOUT_PLAN_V3_V4_FULL.md",
+        "dir":  "docs\\archive",
+        "size_kb":  26.74,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_TESTING_GUIDES_SUMMARY.md",
+        "rel_path":  "docs\\archive\\COMPLETE_TESTING_GUIDES_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  10.39,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_TODOS_SUMMARY.md",
+        "rel_path":  "docs\\archive\\COMPLETE_TODOS_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.48,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_V1_SETUP_SCRIPT.md",
+        "rel_path":  "docs\\archive\\COMPLETE_V1_SETUP_SCRIPT.md",
+        "dir":  "docs\\archive",
+        "size_kb":  12.24,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPREHENSIVE_FRONTEND_FIX_STATUS.md",
+        "rel_path":  "docs\\archive\\COMPREHENSIVE_FRONTEND_FIX_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  7.76,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "CURRENT_PROGRESS_SUMMARY.md",
+        "rel_path":  "docs\\archive\\CURRENT_PROGRESS_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.51,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "DAY_1_SCRIPT.md",
+        "rel_path":  "docs\\archive\\DAY_1_SCRIPT.md",
+        "dir":  "docs\\archive",
+        "size_kb":  29.33,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DEVELOPER_ONBOARDING.md",
+        "rel_path":  "docs\\archive\\DEVELOPER_ONBOARDING.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.48,
+        "modified":  "2026-01-23T17:19:58"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DOCUMENTATION_INDEX.md",
+        "rel_path":  "docs\\archive\\DOCUMENTATION_INDEX.md",
+        "dir":  "docs\\archive",
+        "size_kb":  7.05,
+        "modified":  "2026-01-11T12:31:59"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "ENDPOINT_CONNECTION_STATUS.md",
+        "rel_path":  "docs\\archive\\ENDPOINT_CONNECTION_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  1.45,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENDPOINT_VERIFICATION_REPORT.md",
+        "rel_path":  "docs\\archive\\ENDPOINT_VERIFICATION_REPORT.md",
+        "dir":  "docs\\archive",
+        "size_kb":  13.96,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINES_WORKERS_AUTOMATION_REPORT.md",
+        "rel_path":  "docs\\archive\\ENGINES_WORKERS_AUTOMATION_REPORT.md",
+        "dir":  "docs\\archive",
+        "size_kb":  16.31,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "FILE_LOCATIONS.md",
+        "rel_path":  "docs\\archive\\FILE_LOCATIONS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.17,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FINAL_COMPLETION_SUMMARY.md",
+        "rel_path":  "docs\\archive\\FINAL_COMPLETION_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.1,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FINAL_COMPREHENSIVE_STATUS.md",
+        "rel_path":  "docs\\archive\\FINAL_COMPREHENSIVE_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.58,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FINAL_FRONTEND_FIX_SUMMARY.md",
+        "rel_path":  "docs\\archive\\FINAL_FRONTEND_FIX_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  5.16,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FINAL_IMPLEMENTATION_STATUS.md",
+        "rel_path":  "docs\\archive\\FINAL_IMPLEMENTATION_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.77,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FINAL_IMPLEMENTATION_SUMMARY.md",
+        "rel_path":  "docs\\archive\\FINAL_IMPLEMENTATION_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.26,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FINAL_IMPROVEMENTS_COMPLETE.md",
+        "rel_path":  "docs\\archive\\FINAL_IMPROVEMENTS_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  7.44,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "FRONTEND_BUILD_REQUIREMENTS.md",
+        "rel_path":  "docs\\archive\\FRONTEND_BUILD_REQUIREMENTS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  22.64,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FRONTEND_COMPLETE_IMPLEMENTATION_STATUS.md",
+        "rel_path":  "docs\\archive\\FRONTEND_COMPLETE_IMPLEMENTATION_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.95,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FRONTEND_COMPLETE_OUTLINE.md",
+        "rel_path":  "docs\\archive\\FRONTEND_COMPLETE_OUTLINE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  20.69,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "FRONTEND_COMPLETION_PLAN.md",
+        "rel_path":  "docs\\archive\\FRONTEND_COMPLETION_PLAN.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.55,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "FRONTEND_COMPLETION_SUMMARY.md",
+        "rel_path":  "docs\\archive\\FRONTEND_COMPLETION_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.6,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "FRONTEND_ENHANCEMENTS_SUMMARY.md",
+        "rel_path":  "docs\\archive\\FRONTEND_ENHANCEMENTS_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.03,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FRONTEND_FIX_COMPLETE_STATUS.md",
+        "rel_path":  "docs\\archive\\FRONTEND_FIX_COMPLETE_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.83,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FRONTEND_FIX_IMPLEMENTATION_PLAN.md",
+        "rel_path":  "docs\\archive\\FRONTEND_FIX_IMPLEMENTATION_PLAN.md",
+        "dir":  "docs\\archive",
+        "size_kb":  7.38,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FRONTEND_FIX_PROGRESS.md",
+        "rel_path":  "docs\\archive\\FRONTEND_FIX_PROGRESS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.82,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "FRONTEND_MISSING_ITEMS_ANALYSIS.md",
+        "rel_path":  "docs\\archive\\FRONTEND_MISSING_ITEMS_ANALYSIS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  9.85,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "GAPS_IMPLEMENTATION_FINAL_STATUS.md",
+        "rel_path":  "docs\\archive\\GAPS_IMPLEMENTATION_FINAL_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  5.75,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "GAPS_IMPLEMENTATION_PLAN.md",
+        "rel_path":  "docs\\archive\\GAPS_IMPLEMENTATION_PLAN.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.81,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "GAPS_IMPLEMENTATION_PROGRESS.md",
+        "rel_path":  "docs\\archive\\GAPS_IMPLEMENTATION_PROGRESS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  5.77,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "GAPS_IMPLEMENTATION_SUMMARY.md",
+        "rel_path":  "docs\\archive\\GAPS_IMPLEMENTATION_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.25,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "IMPLEMENTATION_COMPLETE_SUMMARY.md",
+        "rel_path":  "docs\\archive\\IMPLEMENTATION_COMPLETE_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  5.67,
+        "modified":  "2026-01-23T17:19:58"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "IMPLEMENTATION_PROGRESS.md",
+        "rel_path":  "docs\\archive\\IMPLEMENTATION_PROGRESS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.57,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "IMPROVEMENTS_IMPLEMENTATION_STATUS.md",
+        "rel_path":  "docs\\archive\\IMPROVEMENTS_IMPLEMENTATION_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.17,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "LIVE_STATUS_AND_GATES_ACCURATE.md",
+        "rel_path":  "docs\\archive\\LIVE_STATUS_AND_GATES_ACCURATE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  12.82,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "MANSION_OPTIMIZED.md",
+        "rel_path":  "docs\\archive\\MANSION_OPTIMIZED.md",
+        "dir":  "docs\\archive",
+        "size_kb":  19.86,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MASTER_PLAN_LOCKED.md",
+        "rel_path":  "docs\\archive\\MASTER_PLAN_LOCKED.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.01,
+        "modified":  "2026-01-23T21:22:18"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "MASTER_PLAN_PROGRESS.md",
+        "rel_path":  "docs\\archive\\MASTER_PLAN_PROGRESS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.67,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "MASTER_ROLLOUT_PLAN.md",
+        "rel_path":  "docs\\archive\\MASTER_ROLLOUT_PLAN.md",
+        "dir":  "docs\\archive",
+        "size_kb":  14.46,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "MESSAGE_HISTORY_COMPLETE.md",
+        "rel_path":  "docs\\archive\\MESSAGE_HISTORY_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  10.59,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MESSAGE_SAVING_SUMMARY.md",
+        "rel_path":  "docs\\archive\\MESSAGE_SAVING_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  7.16,
+        "modified":  "2026-01-09T18:30:56"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MOBILE_FRIENDLY_CONFIG.md",
+        "rel_path":  "docs\\archive\\MOBILE_FRIENDLY_CONFIG.md",
+        "dir":  "docs\\archive",
+        "size_kb":  10.35,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "MOBILE_IMPLEMENTATION_CHECKLIST.md",
+        "rel_path":  "docs\\archive\\MOBILE_IMPLEMENTATION_CHECKLIST.md",
+        "dir":  "docs\\archive",
+        "size_kb":  1.46,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "MOBILE_PHASES_COMPLETE.md",
+        "rel_path":  "docs\\archive\\MOBILE_PHASES_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.32,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "MOBILE_PHASE_1_2_SUMMARY.md",
+        "rel_path":  "docs\\archive\\MOBILE_PHASE_1_2_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.15,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "MOBILE_PHASE_1_COMPLETE.md",
+        "rel_path":  "docs\\archive\\MOBILE_PHASE_1_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.62,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "MOBILE_PHASE_2_PROGRESS.md",
+        "rel_path":  "docs\\archive\\MOBILE_PHASE_2_PROGRESS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  1.92,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "MOVE_1_DETAILED_PLAN.md",
+        "rel_path":  "docs\\archive\\MOVE_1_DETAILED_PLAN.md",
+        "dir":  "docs\\archive",
+        "size_kb":  21.99,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MOVE_1_FAILURES.md",
+        "rel_path":  "docs\\archive\\MOVE_1_FAILURES.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.39,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "MOVE_1_FINAL_STATUS.md",
+        "rel_path":  "docs\\archive\\MOVE_1_FINAL_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.84,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "MOVE_1_PROGRESS.md",
+        "rel_path":  "docs\\archive\\MOVE_1_PROGRESS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.08,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "MOVE_1_PROGRESS_UPDATE.md",
+        "rel_path":  "docs\\archive\\MOVE_1_PROGRESS_UPDATE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.88,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "NAVIGATION_FOOTER_COMPLETE.md",
+        "rel_path":  "docs\\archive\\NAVIGATION_FOOTER_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  8.06,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "NEXT_STEPS_RECOMMENDATIONS.md",
+        "rel_path":  "docs\\archive\\NEXT_STEPS_RECOMMENDATIONS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.28,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "NON_CRITICAL_PAGES_OUTLINE.md",
+        "rel_path":  "docs\\archive\\NON_CRITICAL_PAGES_OUTLINE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  9.61,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ONBOARDING_ENHANCEMENTS_COMPLETE.md",
+        "rel_path":  "docs\\archive\\ONBOARDING_ENHANCEMENTS_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  8.16,
+        "modified":  "2026-01-23T10:17:20"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ONBOARDING_ENHANCEMENTS_VERIFICATION.md",
+        "rel_path":  "docs\\archive\\ONBOARDING_ENHANCEMENTS_VERIFICATION.md",
+        "dir":  "docs\\archive",
+        "size_kb":  7.25,
+        "modified":  "2026-01-23T10:24:37"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "ONBOARDING_FINAL_SUMMARY.md",
+        "rel_path":  "docs\\archive\\ONBOARDING_FINAL_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  1.55,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "ONBOARDING_IMPLEMENTATION_COMPLETE.md",
+        "rel_path":  "docs\\archive\\ONBOARDING_IMPLEMENTATION_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.53,
+        "modified":  "2026-01-23T08:53:07"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "ONBOARDING_IMPLEMENTATION_PROGRESS.md",
+        "rel_path":  "docs\\archive\\ONBOARDING_IMPLEMENTATION_PROGRESS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.37,
+        "modified":  "2026-01-23T08:29:50"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ORGANIZATION_COMPLETE.md",
+        "rel_path":  "docs\\archive\\ORGANIZATION_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  10,
+        "modified":  "2026-01-11T12:31:59"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "PHASE_4_5_COMPLETE_SUMMARY.md",
+        "rel_path":  "docs\\archive\\PHASE_4_5_COMPLETE_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.42,
+        "modified":  "2026-01-23T03:57:54"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "PROGRESS_UPDATE.md",
+        "rel_path":  "docs\\archive\\PROGRESS_UPDATE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.37,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PROJECT_GAPS_ANALYSIS.md",
+        "rel_path":  "docs\\archive\\PROJECT_GAPS_ANALYSIS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  8.53,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "PURETASK_COMPLETE_TESTING_MASTER_GUIDE.md",
+        "rel_path":  "docs\\archive\\PURETASK_COMPLETE_TESTING_MASTER_GUIDE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  15.94,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PURETASK_CURRENT_STAGE.md",
+        "rel_path":  "docs\\archive\\PURETASK_CURRENT_STAGE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.52,
+        "modified":  "2026-01-22T22:47:27"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PURETASK_IMPROVEMENTS_ANALYSIS.md",
+        "rel_path":  "docs\\archive\\PURETASK_IMPROVEMENTS_ANALYSIS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  32.27,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_BUILD_FIX.md",
+        "rel_path":  "docs\\archive\\RAILWAY_BUILD_FIX.md",
+        "dir":  "docs\\archive",
+        "size_kb":  1.74,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_DEPLOYMENT_FIX.md",
+        "rel_path":  "docs\\archive\\RAILWAY_DEPLOYMENT_FIX.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.2,
+        "modified":  "2026-01-24T02:48:38"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_ENV_VARS_VERIFICATION.md",
+        "rel_path":  "docs\\archive\\RAILWAY_ENV_VARS_VERIFICATION.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.18,
+        "modified":  "2026-01-22T19:50:42"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_QUICK_FIX.md",
+        "rel_path":  "docs\\archive\\RAILWAY_QUICK_FIX.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.29,
+        "modified":  "2026-01-24T02:53:13"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_SETUP_GUIDE.md",
+        "rel_path":  "docs\\archive\\RAILWAY_SETUP_GUIDE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.17,
+        "modified":  "2026-01-24T02:51:05"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README_TESTING.md",
+        "rel_path":  "docs\\archive\\README_TESTING.md",
+        "dir":  "docs\\archive",
+        "size_kb":  0.83,
+        "modified":  "2026-01-23T17:19:58"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "REMAINING_TODOS_GUIDE.md",
+        "rel_path":  "docs\\archive\\REMAINING_TODOS_GUIDE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  9.44,
+        "modified":  "2026-01-10T22:03:22"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "SAVE_EVERYTHING_QUICK_GUIDE.md",
+        "rel_path":  "docs\\archive\\SAVE_EVERYTHING_QUICK_GUIDE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  8.06,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SERVER_STARTED.md",
+        "rel_path":  "docs\\archive\\SERVER_STARTED.md",
+        "dir":  "docs\\archive",
+        "size_kb":  1.76,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SERVER_STARTUP_GUIDE.md",
+        "rel_path":  "docs\\archive\\SERVER_STARTUP_GUIDE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.66,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SERVER_STATUS.md",
+        "rel_path":  "docs\\archive\\SERVER_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  1.94,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SOFT_LAUNCH_30_DAY_PLAN.md",
+        "rel_path":  "docs\\archive\\SOFT_LAUNCH_30_DAY_PLAN.md",
+        "dir":  "docs\\archive",
+        "size_kb":  20.85,
+        "modified":  "2026-01-23T20:37:11"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "SOFT_LAUNCH_CHECKLIST.md",
+        "rel_path":  "docs\\archive\\SOFT_LAUNCH_CHECKLIST.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.86,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "SOFT_LAUNCH_DAILY_TRACKER.md",
+        "rel_path":  "docs\\archive\\SOFT_LAUNCH_DAILY_TRACKER.md",
+        "dir":  "docs\\archive",
+        "size_kb":  7.05,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "START_HERE_GUIDES_INDEX.md",
+        "rel_path":  "docs\\archive\\START_HERE_GUIDES_INDEX.md",
+        "dir":  "docs\\archive",
+        "size_kb":  11.66,
+        "modified":  "2026-01-11T12:37:32"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "STYLING_FIXES_APPLIED.md",
+        "rel_path":  "docs\\archive\\STYLING_FIXES_APPLIED.md",
+        "dir":  "docs\\archive",
+        "size_kb":  3.95,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TERMINAL_STATUS_REPORT.md",
+        "rel_path":  "docs\\archive\\TERMINAL_STATUS_REPORT.md",
+        "dir":  "docs\\archive",
+        "size_kb":  1.87,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "TESTING_CAMPAIGNS.md",
+        "rel_path":  "docs\\archive\\TESTING_CAMPAIGNS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  8.88,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TESTING_COMPLETE_GUIDE.md",
+        "rel_path":  "docs\\archive\\TESTING_COMPLETE_GUIDE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  12.02,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TESTING_COMPLETE_IMPLEMENTATION.md",
+        "rel_path":  "docs\\archive\\TESTING_COMPLETE_IMPLEMENTATION.md",
+        "dir":  "docs\\archive",
+        "size_kb":  8.59,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TESTING_COMPLETE_SUMMARY.md",
+        "rel_path":  "docs\\archive\\TESTING_COMPLETE_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  8.93,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "TESTING_EXPLANATIONS.md",
+        "rel_path":  "docs\\archive\\TESTING_EXPLANATIONS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  17.63,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TESTING_FINAL_STATUS.md",
+        "rel_path":  "docs\\archive\\TESTING_FINAL_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  7.07,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TESTING_IMPLEMENTATION_COMPLETE.md",
+        "rel_path":  "docs\\archive\\TESTING_IMPLEMENTATION_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  9.02,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TESTING_IMPLEMENTATION_STATUS.md",
+        "rel_path":  "docs\\archive\\TESTING_IMPLEMENTATION_STATUS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.66,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "TESTING_QUICK_REFERENCE.md",
+        "rel_path":  "docs\\archive\\TESTING_QUICK_REFERENCE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.21,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TESTING_REMAINING_TESTS_COMPLETE.md",
+        "rel_path":  "docs\\archive\\TESTING_REMAINING_TESTS_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  6.18,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TESTING_STRATEGY_COMPLETE.md",
+        "rel_path":  "docs\\archive\\TESTING_STRATEGY_COMPLETE.md",
+        "dir":  "docs\\archive",
+        "size_kb":  36.76,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "TESTING_STRATEGY_GAPS_ANALYSIS.md",
+        "rel_path":  "docs\\archive\\TESTING_STRATEGY_GAPS_ANALYSIS.md",
+        "dir":  "docs\\archive",
+        "size_kb":  19.61,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "TESTING_STRATEGY_SUMMARY.md",
+        "rel_path":  "docs\\archive\\TESTING_STRATEGY_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.66,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "TESTING_VERIFICATION_REPORT.md",
+        "rel_path":  "docs\\archive\\TESTING_VERIFICATION_REPORT.md",
+        "dir":  "docs\\archive",
+        "size_kb":  4.49,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TEST_FIXES_APPLIED.md",
+        "rel_path":  "docs\\archive\\TEST_FIXES_APPLIED.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.41,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "THE_COMPLETE_MANSION.md",
+        "rel_path":  "docs\\archive\\THE_COMPLETE_MANSION.md",
+        "dir":  "docs\\archive",
+        "size_kb":  42.12,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TYPESCRIPT_FIXES_SUMMARY.md",
+        "rel_path":  "docs\\archive\\TYPESCRIPT_FIXES_SUMMARY.md",
+        "dir":  "docs\\archive",
+        "size_kb":  2.13,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_ADMIN_OPS.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_ADMIN_OPS.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  3.51,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_ANALYTICS_KPIS.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_ANALYTICS_KPIS.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  3.59,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_BOOKING.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_BOOKING.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  5.81,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_CREDITS_PAYMENTS.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_CREDITS_PAYMENTS.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  4.99,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_DISPUTES.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_DISPUTES.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  4.02,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_MATCHING.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_MATCHING.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  4.27,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_MESSAGING_NOTIFICATIONS.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_MESSAGING_NOTIFICATIONS.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  3.8,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_PAYOUTS.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_PAYOUTS.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  4.33,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_PRICING.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_PRICING.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  4.35,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_RELIABILITY_TIERS.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_RELIABILITY_TIERS.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  4.23,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_RISK_FRAUD.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_RISK_FRAUD.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  3.8,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ENGINE_SUBSCRIPTIONS.md",
+        "rel_path":  "docs\\blueprint\\ENGINE_SUBSCRIPTIONS.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  4.17,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PURETASK_AUTOMATION_WORKER_MODEL.md",
+        "rel_path":  "docs\\blueprint\\PURETASK_AUTOMATION_WORKER_MODEL.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  4.01,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PURETASK_DATA_MODEL.md",
+        "rel_path":  "docs\\blueprint\\PURETASK_DATA_MODEL.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  5.12,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "PURETASK_FINAL_BLUEPRINT_OVERVIEW.md",
+        "rel_path":  "docs\\blueprint\\PURETASK_FINAL_BLUEPRINT_OVERVIEW.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  6.29,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PURETASK_JOURNEYS.md",
+        "rel_path":  "docs\\blueprint\\PURETASK_JOURNEYS.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  4.33,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PURETASK_MARKETPLACE_ECONOMICS.md",
+        "rel_path":  "docs\\blueprint\\PURETASK_MARKETPLACE_ECONOMICS.md",
+        "dir":  "docs\\blueprint",
+        "size_kb":  3.77,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ADDITIONAL_TABLES_NEEDED.md",
+        "rel_path":  "docs\\database\\ADDITIONAL_TABLES_NEEDED.md",
+        "dir":  "docs\\database",
+        "size_kb":  2.7,
+        "modified":  "2026-01-09T19:00:43"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_NEON_SETUP.md",
+        "rel_path":  "docs\\database\\COMPLETE_NEON_SETUP.md",
+        "dir":  "docs\\database",
+        "size_kb":  6.59,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MIGRATIONS.md",
+        "rel_path":  "docs\\database\\MIGRATIONS.md",
+        "dir":  "docs\\database",
+        "size_kb":  0.83,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MIGRATION_WALKTHROUGH.md",
+        "rel_path":  "docs\\database\\MIGRATION_WALKTHROUGH.md",
+        "dir":  "docs\\database",
+        "size_kb":  7.68,
+        "modified":  "2026-01-09T19:30:17"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "N8N_IMPORT_INSTRUCTIONS.md",
+        "rel_path":  "docs\\database\\N8N_IMPORT_INSTRUCTIONS.md",
+        "dir":  "docs\\database",
+        "size_kb":  3.93,
+        "modified":  "2025-12-21T08:00:05"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "NEON_DATABASE_SETUP.md",
+        "rel_path":  "docs\\database\\NEON_DATABASE_SETUP.md",
+        "dir":  "docs\\database",
+        "size_kb":  6.17,
+        "modified":  "2026-01-09T18:53:29"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "NEON_FIX_INSTRUCTIONS.md",
+        "rel_path":  "docs\\database\\NEON_FIX_INSTRUCTIONS.md",
+        "dir":  "docs\\database",
+        "size_kb":  3.15,
+        "modified":  "2026-01-09T18:56:50"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "STEP_1_APPLY_INDEXES_GUIDE.md",
+        "rel_path":  "docs\\database\\STEP_1_APPLY_INDEXES_GUIDE.md",
+        "dir":  "docs\\database",
+        "size_kb":  7,
+        "modified":  "2026-01-11T11:45:08"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "BACKUP_COMPLETE_GITHUB.md",
+        "rel_path":  "docs\\deployment\\BACKUP_COMPLETE_GITHUB.md",
+        "dir":  "docs\\deployment",
+        "size_kb":  6.16,
+        "modified":  "2026-01-11T11:45:08"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DEPLOYMENT_PREPARATION_GUIDE.md",
+        "rel_path":  "docs\\deployment\\DEPLOYMENT_PREPARATION_GUIDE.md",
+        "dir":  "docs\\deployment",
+        "size_kb":  9.28,
+        "modified":  "2026-01-10T22:06:09"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DEPLOY_TO_RAILWAY.md",
+        "rel_path":  "docs\\deployment\\DEPLOY_TO_RAILWAY.md",
+        "dir":  "docs\\deployment",
+        "size_kb":  11.65,
+        "modified":  "2025-12-26T11:52:40"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "GITHUB_PUSH_SUMMARY.md",
+        "rel_path":  "docs\\deployment\\GITHUB_PUSH_SUMMARY.md",
+        "dir":  "docs\\deployment",
+        "size_kb":  2.13,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "GITHUB_SAVE_COMPLETE.md",
+        "rel_path":  "docs\\deployment\\GITHUB_SAVE_COMPLETE.md",
+        "dir":  "docs\\deployment",
+        "size_kb":  1.94,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "LAUNCH_READINESS_CHECKLIST.md",
+        "rel_path":  "docs\\deployment\\LAUNCH_READINESS_CHECKLIST.md",
+        "dir":  "docs\\deployment",
+        "size_kb":  0.52,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PATH_TO_LAUNCH.md",
+        "rel_path":  "docs\\deployment\\PATH_TO_LAUNCH.md",
+        "dir":  "docs\\deployment",
+        "size_kb":  0.52,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PUSH_FRONTEND_TO_GITHUB_GUIDE.md",
+        "rel_path":  "docs\\deployment\\PUSH_FRONTEND_TO_GITHUB_GUIDE.md",
+        "dir":  "docs\\deployment",
+        "size_kb":  6.39,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_DEPLOYMENT_ANALYSIS.md",
+        "rel_path":  "docs\\deployment\\RAILWAY_DEPLOYMENT_ANALYSIS.md",
+        "dir":  "docs\\deployment",
+        "size_kb":  8.33,
+        "modified":  "2025-12-26T09:58:00"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_DEPLOYMENT_FIX.md",
+        "rel_path":  "docs\\deployment\\RAILWAY_DEPLOYMENT_FIX.md",
+        "dir":  "docs\\deployment",
+        "size_kb":  5.86,
+        "modified":  "2025-12-27T16:16:01"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_SETUP_CHECKLIST.md",
+        "rel_path":  "docs\\deployment\\RAILWAY_SETUP_CHECKLIST.md",
+        "dir":  "docs\\deployment",
+        "size_kb":  7.49,
+        "modified":  "2025-12-26T10:49:08"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "ADMIN_USER_COMPLETE_GUIDE.md",
+        "rel_path":  "docs\\guides\\ADMIN_USER_COMPLETE_GUIDE.md",
+        "dir":  "docs\\guides",
+        "size_kb":  21.73,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "API.md",
+        "rel_path":  "docs\\guides\\API.md",
+        "dir":  "docs\\guides",
+        "size_kb":  8.12,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "BEGINNER_GUIDE_DAY_1.md",
+        "rel_path":  "docs\\guides\\BEGINNER_GUIDE_DAY_1.md",
+        "dir":  "docs\\guides",
+        "size_kb":  28.97,
+        "modified":  "2026-01-10T01:32:57"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "CLEANER_USER_COMPLETE_GUIDE.md",
+        "rel_path":  "docs\\guides\\CLEANER_USER_COMPLETE_GUIDE.md",
+        "dir":  "docs\\guides",
+        "size_kb":  30.85,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "CLIENT_USER_COMPLETE_GUIDE.md",
+        "rel_path":  "docs\\guides\\CLIENT_USER_COMPLETE_GUIDE.md",
+        "dir":  "docs\\guides",
+        "size_kb":  27.09,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CODEBASE_NAVIGATION_GUIDE.md",
+        "rel_path":  "docs\\guides\\CODEBASE_NAVIGATION_GUIDE.md",
+        "dir":  "docs\\guides",
+        "size_kb":  31.74,
+        "modified":  "2026-01-11T12:16:34"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "COMMANDS.md",
+        "rel_path":  "docs\\guides\\COMMANDS.md",
+        "dir":  "docs\\guides",
+        "size_kb":  18.55,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_PLATFORM_ANALYSIS.md",
+        "rel_path":  "docs\\guides\\COMPLETE_PLATFORM_ANALYSIS.md",
+        "dir":  "docs\\guides",
+        "size_kb":  31.67,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_UNDERSTANDING_SUMMARY.md",
+        "rel_path":  "docs\\guides\\COMPLETE_UNDERSTANDING_SUMMARY.md",
+        "dir":  "docs\\guides",
+        "size_kb":  19.01,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CONNECTING_FRONTEND_BACKEND.md",
+        "rel_path":  "docs\\guides\\CONNECTING_FRONTEND_BACKEND.md",
+        "dir":  "docs\\guides",
+        "size_kb":  12.87,
+        "modified":  "2026-01-11T11:56:07"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "CREATE_TEST_ACCOUNTS_GUIDE.md",
+        "rel_path":  "docs\\guides\\CREATE_TEST_ACCOUNTS_GUIDE.md",
+        "dir":  "docs\\guides",
+        "size_kb":  12.69,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DEBUG_SETUP_GUIDE.md",
+        "rel_path":  "docs\\guides\\DEBUG_SETUP_GUIDE.md",
+        "dir":  "docs\\guides",
+        "size_kb":  8.71,
+        "modified":  "2025-12-24T10:49:06"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "MAKING_CHANGES_GUIDE.md",
+        "rel_path":  "docs\\guides\\MAKING_CHANGES_GUIDE.md",
+        "dir":  "docs\\guides",
+        "size_kb":  23.96,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "MASTER_TESTING_GUIDE.md",
+        "rel_path":  "docs\\guides\\MASTER_TESTING_GUIDE.md",
+        "dir":  "docs\\guides",
+        "size_kb":  14.42,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PURETASK_ARCHITECTURE_EXPLAINED.md",
+        "rel_path":  "docs\\guides\\PURETASK_ARCHITECTURE_EXPLAINED.md",
+        "dir":  "docs\\guides",
+        "size_kb":  36.11,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "QUICK_6_HOUR_OVERVIEW.md",
+        "rel_path":  "docs\\guides\\QUICK_6_HOUR_OVERVIEW.md",
+        "dir":  "docs\\guides",
+        "size_kb":  4,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "QUICK_REFERENCE_CARD.md",
+        "rel_path":  "docs\\guides\\QUICK_REFERENCE_CARD.md",
+        "dir":  "docs\\guides",
+        "size_kb":  7.22,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "QUICK_START_GUIDE.md",
+        "rel_path":  "docs\\guides\\QUICK_START_GUIDE.md",
+        "dir":  "docs\\guides",
+        "size_kb":  3.16,
+        "modified":  "2026-01-10T21:44:20"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "QUICK_START_TROUBLESHOOTING.md",
+        "rel_path":  "docs\\guides\\QUICK_START_TROUBLESHOOTING.md",
+        "dir":  "docs\\guides",
+        "size_kb":  1.63,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "START_HERE_DAY_1.md",
+        "rel_path":  "docs\\guides\\START_HERE_DAY_1.md",
+        "dir":  "docs\\guides",
+        "size_kb":  15.66,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "experiments",
+        "name":  "TEMPLATE_WORKFLOW_VISUAL.md",
+        "rel_path":  "docs\\guides\\TEMPLATE_WORKFLOW_VISUAL.md",
+        "dir":  "docs\\guides",
+        "size_kb":  12.89,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "WHAT_YOU_ACTUALLY_NEED.md",
+        "rel_path":  "docs\\guides\\WHAT_YOU_ACTUALLY_NEED.md",
+        "dir":  "docs\\guides",
+        "size_kb":  13.16,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "handle-incident.md",
+        "rel_path":  "docs\\runbooks\\handle-incident.md",
+        "dir":  "docs\\runbooks",
+        "size_kb":  2.6,
+        "modified":  "2026-01-31T17:42:57"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "restore-from-backup.md",
+        "rel_path":  "docs\\runbooks\\restore-from-backup.md",
+        "dir":  "docs\\runbooks",
+        "size_kb":  2.19,
+        "modified":  "2026-01-31T17:42:49"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "rollback-deploy.md",
+        "rel_path":  "docs\\runbooks\\rollback-deploy.md",
+        "dir":  "docs\\runbooks",
+        "size_kb":  2.32,
+        "modified":  "2026-01-31T17:43:03"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README.md",
+        "rel_path":  "docs\\specs\\README.md",
+        "dir":  "docs\\specs",
+        "size_kb":  1.63,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ADMIN_DISPUTE_RESOLUTION.md",
+        "rel_path":  "docs\\specs\\admin\\ADMIN_DISPUTE_RESOLUTION.md",
+        "dir":  "docs\\specs\\admin",
+        "size_kb":  0.86,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ADMIN_EARNINGS_ADJUSTMENT.md",
+        "rel_path":  "docs\\specs\\admin\\ADMIN_EARNINGS_ADJUSTMENT.md",
+        "dir":  "docs\\specs\\admin",
+        "size_kb":  0.55,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ADMIN_JOB_OVERRIDE_TOOLS.md",
+        "rel_path":  "docs\\specs\\admin\\ADMIN_JOB_OVERRIDE_TOOLS.md",
+        "dir":  "docs\\specs\\admin",
+        "size_kb":  0.88,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ADMIN_MONITORING_LOGGING.md",
+        "rel_path":  "docs\\specs\\admin\\ADMIN_MONITORING_LOGGING.md",
+        "dir":  "docs\\specs\\admin",
+        "size_kb":  0.76,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ADMIN_REFUND_CONTROLS.md",
+        "rel_path":  "docs\\specs\\admin\\ADMIN_REFUND_CONTROLS.md",
+        "dir":  "docs\\specs\\admin",
+        "size_kb":  0.74,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ADMIN_RISK_FRAUD_CONTROLS.md",
+        "rel_path":  "docs\\specs\\admin\\ADMIN_RISK_FRAUD_CONTROLS.md",
+        "dir":  "docs\\specs\\admin",
+        "size_kb":  0.64,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ADMIN_WALLET_CONTROLS.md",
+        "rel_path":  "docs\\specs\\admin\\ADMIN_WALLET_CONTROLS.md",
+        "dir":  "docs\\specs\\admin",
+        "size_kb":  0.72,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "REFUND_CHARGEBACK_SOP.md",
+        "rel_path":  "docs\\specs\\admin\\REFUND_CHARGEBACK_SOP.md",
+        "dir":  "docs\\specs\\admin",
+        "size_kb":  2.37,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "API_ENDPOINTS.md",
+        "rel_path":  "docs\\specs\\infra\\API_ENDPOINTS.md",
+        "dir":  "docs\\specs\\infra",
+        "size_kb":  3.14,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ASSIGNMENT_ENGINE.md",
+        "rel_path":  "docs\\specs\\infra\\ASSIGNMENT_ENGINE.md",
+        "dir":  "docs\\specs\\infra",
+        "size_kb":  2.19,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DB_SCHEMA_MIGRATION.md",
+        "rel_path":  "docs\\specs\\infra\\DB_SCHEMA_MIGRATION.md",
+        "dir":  "docs\\specs\\infra",
+        "size_kb":  1.62,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MONITORING_ALERTING.md",
+        "rel_path":  "docs\\specs\\infra\\MONITORING_ALERTING.md",
+        "dir":  "docs\\specs\\infra",
+        "size_kb":  1.44,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "N8N_ORCHESTRATION.md",
+        "rel_path":  "docs\\specs\\infra\\N8N_ORCHESTRATION.md",
+        "dir":  "docs\\specs\\infra",
+        "size_kb":  1.3,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PAYOUT_PROCESSOR.md",
+        "rel_path":  "docs\\specs\\infra\\PAYOUT_PROCESSOR.md",
+        "dir":  "docs\\specs\\infra",
+        "size_kb":  1.34,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "REFUND_PROCESSOR.md",
+        "rel_path":  "docs\\specs\\infra\\REFUND_PROCESSOR.md",
+        "dir":  "docs\\specs\\infra",
+        "size_kb":  1.19,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "STATE_SYNC.md",
+        "rel_path":  "docs\\specs\\infra\\STATE_SYNC.md",
+        "dir":  "docs\\specs\\infra",
+        "size_kb":  1.73,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "STRIPE_WEBHOOK_ROUTER.md",
+        "rel_path":  "docs\\specs\\infra\\STRIPE_WEBHOOK_ROUTER.md",
+        "dir":  "docs\\specs\\infra",
+        "size_kb":  1.38,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "BOOKING_SYSTEM.md",
+        "rel_path":  "docs\\specs\\job\\BOOKING_SYSTEM.md",
+        "dir":  "docs\\specs\\job",
+        "size_kb":  3.2,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "CANCELLATION_RULES.md",
+        "rel_path":  "docs\\specs\\job\\CANCELLATION_RULES.md",
+        "dir":  "docs\\specs\\job",
+        "size_kb":  2.32,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "CLEANER_WORKFLOW.md",
+        "rel_path":  "docs\\specs\\job\\CLEANER_WORKFLOW.md",
+        "dir":  "docs\\specs\\job",
+        "size_kb":  2.47,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "JOB_REASSIGNMENT.md",
+        "rel_path":  "docs\\specs\\job\\JOB_REASSIGNMENT.md",
+        "dir":  "docs\\specs\\job",
+        "size_kb":  2.88,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "JOB_STATUS_MACHINE.md",
+        "rel_path":  "docs\\specs\\job\\JOB_STATUS_MACHINE.md",
+        "dir":  "docs\\specs\\job",
+        "size_kb":  3.42,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "NO_SHOW_DETECTION.md",
+        "rel_path":  "docs\\specs\\job\\NO_SHOW_DETECTION.md",
+        "dir":  "docs\\specs\\job",
+        "size_kb":  1.67,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PHOTO_VERIFICATION.md",
+        "rel_path":  "docs\\specs\\job\\PHOTO_VERIFICATION.md",
+        "dir":  "docs\\specs\\job",
+        "size_kb":  2.08,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PRICING_CREDIT_CALC.md",
+        "rel_path":  "docs\\specs\\job\\PRICING_CREDIT_CALC.md",
+        "dir":  "docs\\specs\\job",
+        "size_kb":  2.56,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "DB_CONSTRAINTS_VALIDATION.md",
+        "rel_path":  "docs\\specs\\micro\\DB_CONSTRAINTS_VALIDATION.md",
+        "dir":  "docs\\specs\\micro",
+        "size_kb":  1.88,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "EARNINGS_MATH.md",
+        "rel_path":  "docs\\specs\\micro\\EARNINGS_MATH.md",
+        "dir":  "docs\\specs\\micro",
+        "size_kb":  1.02,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "LEDGER_ENTRY_RULES.md",
+        "rel_path":  "docs\\specs\\micro\\LEDGER_ENTRY_RULES.md",
+        "dir":  "docs\\specs\\micro",
+        "size_kb":  1.21,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "RELIABILITY_SCORE.md",
+        "rel_path":  "docs\\specs\\micro\\RELIABILITY_SCORE.md",
+        "dir":  "docs\\specs\\micro",
+        "size_kb":  0.95,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "STRIPE_EVENT_HANDLING.md",
+        "rel_path":  "docs\\specs\\micro\\STRIPE_EVENT_HANDLING.md",
+        "dir":  "docs\\specs\\micro",
+        "size_kb":  1.4,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "STRIPE_IDEMPOTENCY.md",
+        "rel_path":  "docs\\specs\\micro\\STRIPE_IDEMPOTENCY.md",
+        "dir":  "docs\\specs\\micro",
+        "size_kb":  0.97,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "WALLET_MATH.md",
+        "rel_path":  "docs\\specs\\micro\\WALLET_MATH.md",
+        "dir":  "docs\\specs\\micro",
+        "size_kb":  0.94,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ACCOUNT_SETTINGS_UX.md",
+        "rel_path":  "docs\\specs\\ui\\ACCOUNT_SETTINGS_UX.md",
+        "dir":  "docs\\specs\\ui",
+        "size_kb":  0.81,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "CLEANER_APP_UX.md",
+        "rel_path":  "docs\\specs\\ui\\CLEANER_APP_UX.md",
+        "dir":  "docs\\specs\\ui",
+        "size_kb":  1.07,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "CLEANER_PORTAL_CLIENTS_INVOICING.md",
+        "rel_path":  "docs\\specs\\ui\\CLEANER_PORTAL_CLIENTS_INVOICING.md",
+        "dir":  "docs\\specs\\ui",
+        "size_kb":  8.4,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "CLIENT_BOOKING_UX.md",
+        "rel_path":  "docs\\specs\\ui\\CLIENT_BOOKING_UX.md",
+        "dir":  "docs\\specs\\ui",
+        "size_kb":  1.1,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "CLIENT_POST_JOB_UX.md",
+        "rel_path":  "docs\\specs\\ui\\CLIENT_POST_JOB_UX.md",
+        "dir":  "docs\\specs\\ui",
+        "size_kb":  0.97,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "DISPUTE_UX.md",
+        "rel_path":  "docs\\specs\\ui\\DISPUTE_UX.md",
+        "dir":  "docs\\specs\\ui",
+        "size_kb":  1,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PAYMENT_FAILURE_UX.md",
+        "rel_path":  "docs\\specs\\ui\\PAYMENT_FAILURE_UX.md",
+        "dir":  "docs\\specs\\ui",
+        "size_kb":  0.68,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PAYOUT_FAILURE_UX.md",
+        "rel_path":  "docs\\specs\\ui\\PAYOUT_FAILURE_UX.md",
+        "dir":  "docs\\specs\\ui",
+        "size_kb":  0.74,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "ALL_TASKS_COMPLETE.md",
+        "rel_path":  "docs\\status-reports\\ALL_TASKS_COMPLETE.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  1.76,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ALL_TODOS_COMPLETE.md",
+        "rel_path":  "docs\\status-reports\\ALL_TODOS_COMPLETE.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  10.59,
+        "modified":  "2026-01-10T22:03:22"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_ORGANIZATION_SUMMARY.md",
+        "rel_path":  "docs\\status-reports\\COMPLETE_ORGANIZATION_SUMMARY.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  7.18,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "COMPLETION_SUMMARY.md",
+        "rel_path":  "docs\\status-reports\\COMPLETION_SUMMARY.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  6.24,
+        "modified":  "2025-12-21T07:21:08"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "COMPREHENSIVE_6_HOUR_SUMMARY.md",
+        "rel_path":  "docs\\status-reports\\COMPREHENSIVE_6_HOUR_SUMMARY.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  17.07,
+        "modified":  "2025-12-21T08:05:32"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "EXECUTION_COMPLETE.md",
+        "rel_path":  "docs\\status-reports\\EXECUTION_COMPLETE.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  2.33,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FINAL_EXECUTION_STATUS.md",
+        "rel_path":  "docs\\status-reports\\FINAL_EXECUTION_STATUS.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  5.52,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FINAL_PRE_LAUNCH_SUMMARY.md",
+        "rel_path":  "docs\\status-reports\\FINAL_PRE_LAUNCH_SUMMARY.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  7.31,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "FINAL_STATUS_REPORT.md",
+        "rel_path":  "docs\\status-reports\\FINAL_STATUS_REPORT.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  3.75,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "MASTER_STATUS.md",
+        "rel_path":  "docs\\status-reports\\MASTER_STATUS.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  11.58,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "PRE_LAUNCH_COMPLETE_SUMMARY.md",
+        "rel_path":  "docs\\status-reports\\PRE_LAUNCH_COMPLETE_SUMMARY.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  13.97,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "PRE_LAUNCH_OPTIMIZATION_PROGRESS.md",
+        "rel_path":  "docs\\status-reports\\PRE_LAUNCH_OPTIMIZATION_PROGRESS.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  7.17,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PROJECT_COMPLETION_CERTIFICATE_FINAL.md",
+        "rel_path":  "docs\\status-reports\\PROJECT_COMPLETION_CERTIFICATE_FINAL.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  8.81,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SESSION_COMPLETE_SUMMARY.md",
+        "rel_path":  "docs\\status-reports\\SESSION_COMPLETE_SUMMARY.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  16.99,
+        "modified":  "2026-01-09T16:57:05"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "TASK_COMPLETION_SUMMARY.md",
+        "rel_path":  "docs\\status-reports\\TASK_COMPLETION_SUMMARY.md",
+        "dir":  "docs\\status-reports",
+        "size_kb":  2.56,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "BUTTONS_FIXED_DEMO_MODE.md",
+        "rel_path":  "docs\\testing\\BUTTONS_FIXED_DEMO_MODE.md",
+        "dir":  "docs\\testing",
+        "size_kb":  3.85,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CONNECTION_TEST_RESULTS.md",
+        "rel_path":  "docs\\testing\\CONNECTION_TEST_RESULTS.md",
+        "dir":  "docs\\testing",
+        "size_kb":  7.76,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PERFORMANCE_OPTIMIZATION_GUIDE.md",
+        "rel_path":  "docs\\testing\\PERFORMANCE_OPTIMIZATION_GUIDE.md",
+        "dir":  "docs\\testing",
+        "size_kb":  15.51,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "QUICK_FIX_TEST_PAGE_STYLES.md",
+        "rel_path":  "docs\\testing\\QUICK_FIX_TEST_PAGE_STYLES.md",
+        "dir":  "docs\\testing",
+        "size_kb":  4.24,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SECURITY_AUDIT_COMPLETE.md",
+        "rel_path":  "docs\\testing\\SECURITY_AUDIT_COMPLETE.md",
+        "dir":  "docs\\testing",
+        "size_kb":  13.61,
+        "modified":  "2026-01-10T21:18:06"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "SECURITY_AUDIT_QUICK_START.md",
+        "rel_path":  "docs\\testing\\SECURITY_AUDIT_QUICK_START.md",
+        "dir":  "docs\\testing",
+        "size_kb":  1.46,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SECURITY_AUDIT_REPORT.md",
+        "rel_path":  "docs\\testing\\SECURITY_AUDIT_REPORT.md",
+        "dir":  "docs\\testing",
+        "size_kb":  15.3,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SETUP_COMPLETE_TEST_PAGE.md",
+        "rel_path":  "docs\\testing\\SETUP_COMPLETE_TEST_PAGE.md",
+        "dir":  "docs\\testing",
+        "size_kb":  5.06,
+        "modified":  "2026-01-09T18:07:22"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TAILWIND_FIX_APPLIED.md",
+        "rel_path":  "docs\\testing\\TAILWIND_FIX_APPLIED.md",
+        "dir":  "docs\\testing",
+        "size_kb":  1.91,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "TEST_PAGE_IMPROVEMENTS.md",
+        "rel_path":  "docs\\testing\\TEST_PAGE_IMPROVEMENTS.md",
+        "dir":  "docs\\testing",
+        "size_kb":  6.17,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "UI_TESTING_CHECKLIST.md",
+        "rel_path":  "docs\\testing\\UI_TESTING_CHECKLIST.md",
+        "dir":  "docs\\testing",
+        "size_kb":  14.25,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "VERIFICATION_CHECKLIST.md",
+        "rel_path":  "docs\\testing\\VERIFICATION_CHECKLIST.md",
+        "dir":  "docs\\testing",
+        "size_kb":  10.77,
+        "modified":  "2025-12-26T05:05:19"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MASTER_CHECKLIST.md",
+        "rel_path":  "docs\\versions\\MASTER_CHECKLIST.md",
+        "dir":  "docs\\versions",
+        "size_kb":  22.15,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V1_PLAN.md",
+        "rel_path":  "docs\\versions\\V1_PLAN.md",
+        "dir":  "docs\\versions",
+        "size_kb":  9.09,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V2_PLAN.md",
+        "rel_path":  "docs\\versions\\V2_PLAN.md",
+        "dir":  "docs\\versions",
+        "size_kb":  7.2,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V3_PLAN.md",
+        "rel_path":  "docs\\versions\\V3_PLAN.md",
+        "dir":  "docs\\versions",
+        "size_kb":  8.76,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V4_PLAN.md",
+        "rel_path":  "docs\\versions\\V4_PLAN.md",
+        "dir":  "docs\\versions",
+        "size_kb":  6.68,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V5_PLAN.md",
+        "rel_path":  "docs\\versions\\V5_PLAN.md",
+        "dir":  "docs\\versions",
+        "size_kb":  7.29,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "API_REFERENCE.md",
+        "rel_path":  "docs\\_active\\architecture\\API_REFERENCE.md",
+        "dir":  "docs\\_active\\architecture",
+        "size_kb":  15.72,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "architecture-what-lives-where.md",
+        "rel_path":  "docs\\_active\\architecture\\architecture-what-lives-where.md",
+        "dir":  "docs\\_active\\architecture",
+        "size_kb":  11.03,
+        "modified":  "2025-12-21T04:16:40"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ARCHITECTURE.md",
+        "rel_path":  "docs\\_active\\architecture\\ARCHITECTURE.md",
+        "dir":  "docs\\_active\\architecture",
+        "size_kb":  0.1,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ARCHITECTURE_SUMMARY.md",
+        "rel_path":  "docs\\_active\\architecture\\ARCHITECTURE_SUMMARY.md",
+        "dir":  "docs\\_active\\architecture",
+        "size_kb":  3.84,
+        "modified":  "2025-12-21T04:16:24"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CAPABILITIES.md",
+        "rel_path":  "docs\\_active\\architecture\\CAPABILITIES.md",
+        "dir":  "docs\\_active\\architecture",
+        "size_kb":  14.71,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "EVENT_SYSTEM_SPEC.md",
+        "rel_path":  "docs\\_active\\architecture\\EVENT_SYSTEM_SPEC.md",
+        "dir":  "docs\\_active\\architecture",
+        "size_kb":  8.8,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PURETASK_MASTER_GUIDE.md",
+        "rel_path":  "docs\\_active\\architecture\\PURETASK_MASTER_GUIDE.md",
+        "dir":  "docs\\_active\\architecture",
+        "size_kb":  55.79,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ROUTES_CATALOG.md",
+        "rel_path":  "docs\\_active\\architecture\\ROUTES_CATALOG.md",
+        "dir":  "docs\\_active\\architecture",
+        "size_kb":  0.52,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "SERVICES_CATALOG.md",
+        "rel_path":  "docs\\_active\\architecture\\SERVICES_CATALOG.md",
+        "dir":  "docs\\_active\\architecture",
+        "size_kb":  1.46,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DATABASE_SETUP.md",
+        "rel_path":  "docs\\_active\\deployment\\DATABASE_SETUP.md",
+        "dir":  "docs\\_active\\deployment",
+        "size_kb":  2.58,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ENV_TEMPLATE.md",
+        "rel_path":  "docs\\_active\\deployment\\ENV_TEMPLATE.md",
+        "dir":  "docs\\_active\\deployment",
+        "size_kb":  4.02,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "NEON_SETUP_GUIDE.md",
+        "rel_path":  "docs\\_active\\deployment\\NEON_SETUP_GUIDE.md",
+        "dir":  "docs\\_active\\deployment",
+        "size_kb":  6.89,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "STAGING_ENVIRONMENT.md",
+        "rel_path":  "docs\\_active\\deployment\\STAGING_ENVIRONMENT.md",
+        "dir":  "docs\\_active\\deployment",
+        "size_kb":  6.96,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DATABASE_CONNECTION_TROUBLESHOOTING.md",
+        "rel_path":  "docs\\_active\\development\\DATABASE_CONNECTION_TROUBLESHOOTING.md",
+        "dir":  "docs\\_active\\development",
+        "size_kb":  3.02,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DEVELOPMENT_WORKFLOW_GUIDE.md",
+        "rel_path":  "docs\\_active\\development\\DEVELOPMENT_WORKFLOW_GUIDE.md",
+        "dir":  "docs\\_active\\development",
+        "size_kb":  14.67,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MIGRATION_BEST_PRACTICES.md",
+        "rel_path":  "docs\\_active\\development\\MIGRATION_BEST_PRACTICES.md",
+        "dir":  "docs\\_active\\development",
+        "size_kb":  6.25,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MIGRATION_GUIDE.md",
+        "rel_path":  "docs\\_active\\development\\MIGRATION_GUIDE.md",
+        "dir":  "docs\\_active\\development",
+        "size_kb":  7.47,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "POSTMAN_API_KEY_SETUP.md",
+        "rel_path":  "docs\\_active\\development\\POSTMAN_API_KEY_SETUP.md",
+        "dir":  "docs\\_active\\development",
+        "size_kb":  2.02,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "QUICK_REFERENCE_COMMANDS.md",
+        "rel_path":  "docs\\_active\\development\\QUICK_REFERENCE_COMMANDS.md",
+        "dir":  "docs\\_active\\development",
+        "size_kb":  4.28,
+        "modified":  "2025-12-21T07:16:18"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SETUP_INSTRUCTIONS.md",
+        "rel_path":  "docs\\_active\\development\\SETUP_INSTRUCTIONS.md",
+        "dir":  "docs\\_active\\development",
+        "size_kb":  2.99,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "TESTING_GUIDE.md",
+        "rel_path":  "docs\\_active\\development\\TESTING_GUIDE.md",
+        "dir":  "docs\\_active\\development",
+        "size_kb":  22.49,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "WINDOWS_SETUP.md",
+        "rel_path":  "docs\\_active\\development\\WINDOWS_SETUP.md",
+        "dir":  "docs\\_active\\development",
+        "size_kb":  6.52,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DEPLOYMENT_CHECKLIST.md",
+        "rel_path":  "docs\\_active\\operations\\DEPLOYMENT_CHECKLIST.md",
+        "dir":  "docs\\_active\\operations",
+        "size_kb":  21.28,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "email-registry.md",
+        "rel_path":  "docs\\_active\\operations\\email-registry.md",
+        "dir":  "docs\\_active\\operations",
+        "size_kb":  11.41,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "n8n-universal-sender-workflow-spec.md",
+        "rel_path":  "docs\\_active\\operations\\n8n-universal-sender-workflow-spec.md",
+        "dir":  "docs\\_active\\operations",
+        "size_kb":  9.28,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "N8N_SETUP_COMPLETE_CHECKLIST.md",
+        "rel_path":  "docs\\_active\\operations\\N8N_SETUP_COMPLETE_CHECKLIST.md",
+        "dir":  "docs\\_active\\operations",
+        "size_kb":  5.7,
+        "modified":  "2025-12-21T07:29:36"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "N8N_WORKFLOW_IMPLEMENTATION_GUIDE.md",
+        "rel_path":  "docs\\_active\\operations\\N8N_WORKFLOW_IMPLEMENTATION_GUIDE.md",
+        "dir":  "docs\\_active\\operations",
+        "size_kb":  12.96,
+        "modified":  "2025-12-21T07:21:08"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "NOTIFICATION_SERVICE_MIGRATION.md",
+        "rel_path":  "docs\\_active\\operations\\NOTIFICATION_SERVICE_MIGRATION.md",
+        "dir":  "docs\\_active\\operations",
+        "size_kb":  7.88,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SECURITY_AUDIT_WORKFLOW_GUIDE.md",
+        "rel_path":  "docs\\_active\\operations\\SECURITY_AUDIT_WORKFLOW_GUIDE.md",
+        "dir":  "docs\\_active\\operations",
+        "size_kb":  7.87,
+        "modified":  "2025-12-21T06:00:55"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "WORKER_SCHEDULE.md",
+        "rel_path":  "docs\\_active\\operations\\WORKER_SCHEDULE.md",
+        "dir":  "docs\\_active\\operations",
+        "size_kb":  7.51,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "JWT_AUTHENTICATION_GUIDE.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\JWT_AUTHENTICATION_GUIDE.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  14.2,
+        "modified":  "2025-12-27T15:09:12"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "N8N_MCP_INTEGRATION.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\N8N_MCP_INTEGRATION.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  8.17,
+        "modified":  "2025-12-27T16:41:38"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\README.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  1.29,
+        "modified":  "2026-01-29T06:58:53"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SERVER_STARTUP_ISSUES_ANALYSIS.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\SERVER_STARTUP_ISSUES_ANALYSIS.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  4.55,
+        "modified":  "2026-01-27T23:25:46"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "STRIPE_TESTING.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\STRIPE_TESTING.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  5.56,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "TROUBLESHOOTING.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\TROUBLESHOOTING.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  5.15,
+        "modified":  "2026-01-28T17:58:37"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V1_COMPLETE_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\V1_COMPLETE_SUMMARY.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  3.93,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V2_EXECUTION_COMPLETE.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\V2_EXECUTION_COMPLETE.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  5.95,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V2_EXECUTION_PLAN.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\V2_EXECUTION_PLAN.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  6.67,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V3_COMPLETE_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\V3_COMPLETE_SUMMARY.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  4.4,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V3_DEPLOYMENT_COMPLETE.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\V3_DEPLOYMENT_COMPLETE.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  3.92,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V3_DEPLOYMENT_VERIFICATION.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\V3_DEPLOYMENT_VERIFICATION.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  7.73,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V3_NEXT_STEPS.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\V3_NEXT_STEPS.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  6.55,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V3_NEXT_STEPS_COMPLETE.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\V3_NEXT_STEPS_COMPLETE.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  4.21,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V4_DEPLOYMENT_COMPLETE.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\V4_DEPLOYMENT_COMPLETE.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  5.9,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V4_DEPLOYMENT_VERIFICATION.md",
+        "rel_path":  "docs\\_archive\\cleanup-2026-01-29\\V4_DEPLOYMENT_VERIFICATION.md",
+        "dir":  "docs\\_archive\\cleanup-2026-01-29",
+        "size_kb":  6.9,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ANALYSIS_DOCUMENTS_COMPARISON.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\ANALYSIS_DOCUMENTS_COMPARISON.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  8.24,
+        "modified":  "2025-12-21T03:06:08"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ANALYSIS_REPORT.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\ANALYSIS_REPORT.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  8.55,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ANALYSIS_REPORT_REVIEW.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\ANALYSIS_REPORT_REVIEW.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  4.21,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "BACKEND_REVIEW_ANALYSIS.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\BACKEND_REVIEW_ANALYSIS.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  22.27,
+        "modified":  "2025-12-21T02:13:07"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "BEST_PRACTICES_AUDIT.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\BEST_PRACTICES_AUDIT.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  14.1,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "BEST_PRACTICES_REVIEW.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\BEST_PRACTICES_REVIEW.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  4.09,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "COMPLETE_ANALYSIS.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\COMPLETE_ANALYSIS.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  8.69,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CURRENT_SYSTEM_INVENTORY.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\CURRENT_SYSTEM_INVENTORY.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  25.1,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "INTEGRATION_TESTS_REVIEW.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\INTEGRATION_TESTS_REVIEW.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  9.43,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "LINTING_REPORT.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\LINTING_REPORT.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  1.91,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PROJECT_ANALYSIS_2025.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\PROJECT_ANALYSIS_2025.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  10.62,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PROJECT_COMPREHENSIVE_REVIEW.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\PROJECT_COMPREHENSIVE_REVIEW.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  23.09,
+        "modified":  "2025-12-21T04:46:31"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "STATE_MACHINE_REVIEW.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\STATE_MACHINE_REVIEW.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  9.83,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "TEST_BEST_PRACTICES_REVIEW.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\TEST_BEST_PRACTICES_REVIEW.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  9.49,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V1_READINESS_ASSESSMENT.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\V1_READINESS_ASSESSMENT.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  6.87,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V1_REQUIREMENTS_AUDIT.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\V1_REQUIREMENTS_AUDIT.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  8.36,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V1_REVIEW_ANALYSIS.md",
+        "rel_path":  "docs\\_archive\\old-analyses\\V1_REVIEW_ANALYSIS.md",
+        "dir":  "docs\\_archive\\old-analyses",
+        "size_kb":  9.74,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ARCHITECTURE_ENFORCEMENT_GUIDE.md",
+        "rel_path":  "docs\\_archive\\old-misc\\ARCHITECTURE_ENFORCEMENT_GUIDE.md",
+        "dir":  "docs\\_archive\\old-misc",
+        "size_kb":  11.81,
+        "modified":  "2025-12-21T04:16:24"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "ARCHITECTURE_MIGRATION_GUIDE.md",
+        "rel_path":  "docs\\_archive\\old-misc\\ARCHITECTURE_MIGRATION_GUIDE.md",
+        "dir":  "docs\\_archive\\old-misc",
+        "size_kb":  10.97,
+        "modified":  "2025-12-21T04:16:24"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DB_SCHEMA_EXPORT_GUIDE.md",
+        "rel_path":  "docs\\_archive\\old-misc\\DB_SCHEMA_EXPORT_GUIDE.md",
+        "dir":  "docs\\_archive\\old-misc",
+        "size_kb":  6.18,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MCP_SERVERS_FIX_GUIDE.md",
+        "rel_path":  "docs\\_archive\\old-misc\\MCP_SERVERS_FIX_GUIDE.md",
+        "dir":  "docs\\_archive\\old-misc",
+        "size_kb":  1.42,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MCP_SERVERS_REVIEW.md",
+        "rel_path":  "docs\\_archive\\old-misc\\MCP_SERVERS_REVIEW.md",
+        "dir":  "docs\\_archive\\old-misc",
+        "size_kb":  6.78,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MIGRATION_EXECUTION_GUIDE.md",
+        "rel_path":  "docs\\_archive\\old-misc\\MIGRATION_EXECUTION_GUIDE.md",
+        "dir":  "docs\\_archive\\old-misc",
+        "size_kb":  4.15,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "MIGRATION_REQUIRED_FOR_TESTS.md",
+        "rel_path":  "docs\\_archive\\old-misc\\MIGRATION_REQUIRED_FOR_TESTS.md",
+        "dir":  "docs\\_archive\\old-misc",
+        "size_kb":  1.79,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "N8N_WORKFLOW_VALIDATION.md",
+        "rel_path":  "docs\\_archive\\old-misc\\N8N_WORKFLOW_VALIDATION.md",
+        "dir":  "docs\\_archive\\old-misc",
+        "size_kb":  4.05,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "TESTING_DATA_SETUP.md",
+        "rel_path":  "docs\\_archive\\old-misc\\TESTING_DATA_SETUP.md",
+        "dir":  "docs\\_archive\\old-misc",
+        "size_kb":  6.04,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "WORKFLOW_FIX_AUDIT_AUTOFIX.md",
+        "rel_path":  "docs\\_archive\\old-misc\\WORKFLOW_FIX_AUDIT_AUTOFIX.md",
+        "dir":  "docs\\_archive\\old-misc",
+        "size_kb":  2.06,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CURSOR_BUILD_PLAN.md",
+        "rel_path":  "docs\\_archive\\old-plans\\CURSOR_BUILD_PLAN.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  5.02,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "CURSOR_COMMAND.md",
+        "rel_path":  "docs\\_archive\\old-plans\\CURSOR_COMMAND.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  5.29,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "FINAL_STATUS.md",
+        "rel_path":  "docs\\_archive\\old-plans\\FINAL_STATUS.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  3.44,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "FIXES_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\old-plans\\FIXES_SUMMARY.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  2.59,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "IMPLEMENTATION_ACTION_PLAN.md",
+        "rel_path":  "docs\\_archive\\old-plans\\IMPLEMENTATION_ACTION_PLAN.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  4.45,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "IMPLEMENTATION_PLAN.md",
+        "rel_path":  "docs\\_archive\\old-plans\\IMPLEMENTATION_PLAN.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  4.81,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "NEXT_STEPS.md",
+        "rel_path":  "docs\\_archive\\old-plans\\NEXT_STEPS.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  4,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "NEXT_STEPS_ACTION_PLAN.md",
+        "rel_path":  "docs\\_archive\\old-plans\\NEXT_STEPS_ACTION_PLAN.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  6.84,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "NEXT_STEPS_CURRENT.md",
+        "rel_path":  "docs\\_archive\\old-plans\\NEXT_STEPS_CURRENT.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  6.28,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "PHASE1_COMPLETE.md",
+        "rel_path":  "docs\\_archive\\old-plans\\PHASE1_COMPLETE.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  4.27,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PHASE2_COMPLETE.md",
+        "rel_path":  "docs\\_archive\\old-plans\\PHASE2_COMPLETE.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  3.89,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "PHASE3_COMPLETE.md",
+        "rel_path":  "docs\\_archive\\old-plans\\PHASE3_COMPLETE.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  5.2,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "PHASE4_COMPLETE.md",
+        "rel_path":  "docs\\_archive\\old-plans\\PHASE4_COMPLETE.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  7.02,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "PHASE5_COMPLETE.md",
+        "rel_path":  "docs\\_archive\\old-plans\\PHASE5_COMPLETE.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  7.45,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RUNBOOK_EXECUTION_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\old-plans\\RUNBOOK_EXECUTION_SUMMARY.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  10.83,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "SUMMARY.md",
+        "rel_path":  "docs\\_archive\\old-plans\\SUMMARY.md",
+        "dir":  "docs\\_archive\\old-plans",
+        "size_kb":  3.77,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DEPLOYMENT_QUICK_START.md",
+        "rel_path":  "docs\\_archive\\old-railway\\DEPLOYMENT_QUICK_START.md",
+        "dir":  "docs\\_archive\\old-railway",
+        "size_kb":  7.09,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_BEGINNERS_GUIDE.md",
+        "rel_path":  "docs\\_archive\\old-railway\\RAILWAY_BEGINNERS_GUIDE.md",
+        "dir":  "docs\\_archive\\old-railway",
+        "size_kb":  7.26,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_DEPLOYMENT_FIX.md",
+        "rel_path":  "docs\\_archive\\old-railway\\RAILWAY_DEPLOYMENT_FIX.md",
+        "dir":  "docs\\_archive\\old-railway",
+        "size_kb":  4.51,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_ENVIRONMENTS_GUIDE.md",
+        "rel_path":  "docs\\_archive\\old-railway\\RAILWAY_ENVIRONMENTS_GUIDE.md",
+        "dir":  "docs\\_archive\\old-railway",
+        "size_kb":  4.09,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_HEALTHCHECK_FIX.md",
+        "rel_path":  "docs\\_archive\\old-railway\\RAILWAY_HEALTHCHECK_FIX.md",
+        "dir":  "docs\\_archive\\old-railway",
+        "size_kb":  5.5,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_QUICK_START.md",
+        "rel_path":  "docs\\_archive\\old-railway\\RAILWAY_QUICK_START.md",
+        "dir":  "docs\\_archive\\old-railway",
+        "size_kb":  1.62,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "RAILWAY_SETUP.md",
+        "rel_path":  "docs\\_archive\\old-railway\\RAILWAY_SETUP.md",
+        "dir":  "docs\\_archive\\old-railway",
+        "size_kb":  8.3,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "DATABASE_TEST_REPORT.md",
+        "rel_path":  "docs\\_archive\\old-tests\\DATABASE_TEST_REPORT.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  3.71,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "DATABASE_TEST_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\old-tests\\DATABASE_TEST_SUMMARY.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  2.71,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FINAL_WORKER_TEST_STATUS.md",
+        "rel_path":  "docs\\_archive\\old-tests\\FINAL_WORKER_TEST_STATUS.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  1.9,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "TESTING_STATUS.md",
+        "rel_path":  "docs\\_archive\\old-tests\\TESTING_STATUS.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  3.38,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TEST_FIXES_IMPLEMENTED.md",
+        "rel_path":  "docs\\_archive\\old-tests\\TEST_FIXES_IMPLEMENTED.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  7.28,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TEST_FIXES_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\old-tests\\TEST_FIXES_SUMMARY.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  2.11,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TEST_PASSWORD_HASH_FIX_DIFFS.md",
+        "rel_path":  "docs\\_archive\\old-tests\\TEST_PASSWORD_HASH_FIX_DIFFS.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  3.61,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TEST_PASSWORD_HASH_FIX_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\old-tests\\TEST_PASSWORD_HASH_FIX_SUMMARY.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  3.91,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "TEST_RESULTS_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\old-tests\\TEST_RESULTS_SUMMARY.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  2.92,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "TEST_STATUS_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\old-tests\\TEST_STATUS_SUMMARY.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  4.92,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "V1_HARDENING_TEST_FIXES.md",
+        "rel_path":  "docs\\_archive\\old-tests\\V1_HARDENING_TEST_FIXES.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  1.98,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V1_TESTING_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\old-tests\\V1_TESTING_SUMMARY.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  6.99,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "V1_TEST_CHECKLIST.md",
+        "rel_path":  "docs\\_archive\\old-tests\\V1_TEST_CHECKLIST.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  10.12,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V2_TESTING_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\old-tests\\V2_TESTING_SUMMARY.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  4.11,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V4_TESTING_SUMMARY.md",
+        "rel_path":  "docs\\_archive\\old-tests\\V4_TESTING_SUMMARY.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  4.96,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "WORKER_DRY_RUN_FINAL_STATUS.md",
+        "rel_path":  "docs\\_archive\\old-tests\\WORKER_DRY_RUN_FINAL_STATUS.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  2.24,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "WORKER_DRY_RUN_ISSUES.md",
+        "rel_path":  "docs\\_archive\\old-tests\\WORKER_DRY_RUN_ISSUES.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  4.51,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "WORKER_TEST_PROGRESS.md",
+        "rel_path":  "docs\\_archive\\old-tests\\WORKER_TEST_PROGRESS.md",
+        "dir":  "docs\\_archive\\old-tests",
+        "size_kb":  0.53,
+        "modified":  "2025-12-21T00:53:32"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "FUTURE_FEATURES.md",
+        "rel_path":  "docs\\_future\\v5-planning\\FUTURE_FEATURES.md",
+        "dir":  "docs\\_future\\v5-planning",
+        "size_kb":  0.09,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "ROADMAP.md",
+        "rel_path":  "docs\\_future\\v5-planning\\ROADMAP.md",
+        "dir":  "docs\\_future\\v5-planning",
+        "size_kb":  0.08,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "V5_CAPABILITIES_ANALYSIS.md",
+        "rel_path":  "docs\\_future\\v5-planning\\V5_CAPABILITIES_ANALYSIS.md",
+        "dir":  "docs\\_future\\v5-planning",
+        "size_kb":  15.3,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "md_report.md",
+        "rel_path":  "docs\\_md_inventory\\md_report.md",
+        "dir":  "docs\\_md_inventory",
+        "size_kb":  11.34,
+        "modified":  "2026-01-31T20:31:13"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README.md",
+        "rel_path":  "mcp\\README.md",
+        "dir":  "mcp",
+        "size_kb":  1.67,
+        "modified":  "2025-12-25T21:46:28"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README.md",
+        "rel_path":  "nodeSetup\\README.md",
+        "dir":  "nodeSetup",
+        "size_kb":  0.65,
+        "modified":  "2025-12-26T04:30:54"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "FINAL_PLATFORM_CAPABILITIES.md",
+        "rel_path":  "product\\FINAL_PLATFORM_CAPABILITIES.md",
+        "dir":  "product",
+        "size_kb":  0,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PRODUCT_VISION.md",
+        "rel_path":  "product\\PRODUCT_VISION.md",
+        "dir":  "product",
+        "size_kb":  0,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "uncategorized",
+        "name":  "PURETASK_LONG_TERM_ROADMAP.md",
+        "rel_path":  "product\\PURETASK_LONG_TERM_ROADMAP.md",
+        "dir":  "product",
+        "size_kb":  0,
+        "modified":  "2026-01-31T20:29:41"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "railway-variables-checklist.md",
+        "rel_path":  "scripts\\railway-variables-checklist.md",
+        "dir":  "scripts",
+        "size_kb":  1.54,
+        "modified":  "2025-12-21T00:53:35"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "setup-railway-cron.md",
+        "rel_path":  "scripts\\setup-railway-cron.md",
+        "dir":  "scripts",
+        "size_kb":  3.84,
+        "modified":  "2025-12-21T00:53:35"
+    },
+    {
+        "category":  "reference_docs",
+        "name":  "README.md",
+        "rel_path":  "src\\tests\\README.md",
+        "dir":  "src\\tests",
+        "size_kb":  0.4,
+        "modified":  "2025-12-21T00:53:35"
+    },
+    {
+        "category":  "iterative_logs",
+        "name":  "WORKER_STATUS.md",
+        "rel_path":  "src\\workers\\WORKER_STATUS.md",
+        "dir":  "src\\workers",
+        "size_kb":  7.82,
+        "modified":  "2026-01-31T20:29:41"
+    }
+]

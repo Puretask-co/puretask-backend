@@ -121,6 +121,40 @@ export async function setDayAvailability(
   return result.rows[0];
 }
 
+/** Day name to day_of_week (0=Sunday, 1=Monday, ...) */
+const DAY_NAME_TO_NUM: Record<string, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+
+/**
+ * Update cleaner availability from route body (monday/tuesday/... arrays of { start, end })
+ */
+export async function updateCleanerAvailability(
+  cleanerId: string,
+  body: Record<string, Array<{ start: string; end: string }> | undefined>
+): Promise<WeeklyAvailability[]> {
+  const slots: AvailabilitySlot[] = [];
+  for (const [dayName, entries] of Object.entries(body)) {
+    const dayOfWeek = DAY_NAME_TO_NUM[dayName.toLowerCase()];
+    if (dayOfWeek === undefined || !entries?.length) continue;
+    for (const { start, end } of entries) {
+      slots.push({
+        dayOfWeek,
+        startTime: start,
+        endTime: end,
+        isAvailable: true,
+      });
+    }
+  }
+  return setWeeklyAvailability(cleanerId, slots);
+}
+
 /**
  * Set cleaner's full week availability at once
  */

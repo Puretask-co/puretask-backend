@@ -1,0 +1,45 @@
+{
+  "sectionTitle": "Best Practices",
+  "sectionDescription": "Optional tips that help you get better reviews, fewer issues, and more repeat customers. These are guidance, not requirements.",
+  "cards": [
+    {
+      "id": "bp_confirm_arrival",
+      "title": "Confirm arrival with one tap",
+      "description": "Use the \"I've arrived\" quick template so customers know you're there.",
+      "category": "communication",
+      "badgeTrigger": "arrival_confirmation"
+    },
+    {
+      "id": "bp_completion_message",
+      "title": "Send a completion message + photos",
+      "description": "After finishing, send a quick message with your before/after photos attached.",
+      "category": "communication",
+      "badgeTrigger": "post_clean_followup"
+    },
+    {
+      "id": "bp_flag_issues_early",
+      "title": "Flag issues early to avoid disputes",
+      "description": "If you notice something unexpected (damage, missing supplies), message the client before completing.",
+      "category": "dispute_prevention",
+      "badgeTrigger": "issue_flagged_pre_completion"
+    },
+    {
+      "id": "bp_ask_focus_areas",
+      "title": "Ask about focus areas before starting",
+      "description": "A quick \"Any areas you want me to focus on?\" can prevent misunderstandings.",
+      "category": "professionalism"
+    },
+    {
+      "id": "bp_thank_you",
+      "title": "Send a thank-you after the job",
+      "description": "A simple thank-you message keeps the relationship positive and encourages reviews.",
+      "category": "courtesy"
+    }
+  ],
+  "categories": {
+    "communication": "Communication habits",
+    "dispute_prevention": "Dispute prevention habits",
+    "professionalism": "Professionalism",
+    "courtesy": "Courtesy & follow-up"
+  }
+}

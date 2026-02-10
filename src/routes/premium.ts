@@ -6,7 +6,7 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import {
   purchaseBoost,
   getActiveBoost,
@@ -28,15 +28,24 @@ import {
 const premiumRouter = Router();
 
 // All routes require auth
-premiumRouter.use(authMiddleware);
+premiumRouter.use(requireAuth);
 
 // ============================================
 // Boosts
 // ============================================
 
 /**
- * GET /premium/boosts/options
- * Get available boost options and pricing
+ * @swagger
+ * /premium/boosts/options:
+ *   get:
+ *     summary: Get boost options
+ *     description: Get available boost options and pricing for cleaners.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Boost options
  */
 premiumRouter.get("/boosts/options", async (_req: AuthedRequest, res: Response) => {
   res.json({
@@ -50,8 +59,19 @@ premiumRouter.get("/boosts/options", async (_req: AuthedRequest, res: Response) 
 });
 
 /**
- * GET /premium/boosts/active
- * Get cleaner's active boost
+ * @swagger
+ * /premium/boosts/active:
+ *   get:
+ *     summary: Get active boost
+ *     description: Get cleaner's currently active boost.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Active boost
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 premiumRouter.get("/boosts/active", async (req: AuthedRequest, res: Response) => {
   try {
@@ -68,8 +88,31 @@ premiumRouter.get("/boosts/active", async (req: AuthedRequest, res: Response) =>
 });
 
 /**
- * POST /premium/boosts/purchase
- * Purchase a boost
+ * @swagger
+ * /premium/boosts/purchase:
+ *   post:
+ *     summary: Purchase boost
+ *     description: Purchase a boost to increase job visibility.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - boostType
+ *             properties:
+ *               boostType:
+ *                 type: string
+ *                 enum: [STANDARD, PREMIUM, MEGA]
+ *     responses:
+ *       200:
+ *         description: Boost purchased
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 const purchaseBoostSchema = z.object({
   boostType: z.enum(["STANDARD", "PREMIUM", "MEGA"]),
@@ -101,8 +144,33 @@ premiumRouter.post(
 // ============================================
 
 /**
- * POST /premium/rush/calculate
- * Calculate rush fee for a job
+ * @swagger
+ * /premium/rush/calculate:
+ *   post:
+ *     summary: Calculate rush fee
+ *     description: Calculate rush fee for a job based on scheduled start time.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - scheduledStartAt
+ *               - baseCredits
+ *             properties:
+ *               scheduledStartAt:
+ *                 type: string
+ *                 format: date-time
+ *               baseCredits:
+ *                 type: integer
+ *                 minimum: 1
+ *     responses:
+ *       200:
+ *         description: Rush fee calculation
  */
 const calculateRushSchema = z.object({
   scheduledStartAt: z.string().datetime(),
@@ -131,8 +199,38 @@ premiumRouter.post(
 // ============================================
 
 /**
- * POST /premium/subscriptions
- * Create a cleaning subscription
+ * @swagger
+ * /premium/subscriptions:
+ *   post:
+ *     summary: Create subscription
+ *     description: Create a recurring cleaning subscription.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - frequency
+ *               - address
+ *               - creditAmount
+ *             properties:
+ *               cleanerId: { type: 'string', format: 'uuid' }
+ *               frequency: { type: 'string', enum: ['weekly', 'biweekly', 'monthly'] }
+ *               dayOfWeek: { type: 'integer', minimum: 0, maximum: 6 }
+ *               preferredTime: { type: 'string' }
+ *               address: { type: 'string' }
+ *               latitude: { type: 'number' }
+ *               longitude: { type: 'number' }
+ *               creditAmount: { type: 'integer', minimum: 1 }
+ *     responses:
+ *       200:
+ *         description: Subscription created
+ *       403:
+ *         description: Forbidden - clients only
  */
 const createSubscriptionSchema = z.object({
   cleanerId: z.string().uuid().optional(),
@@ -170,8 +268,19 @@ premiumRouter.post(
 );
 
 /**
- * GET /premium/subscriptions
- * Get client's subscriptions
+ * @swagger
+ * /premium/subscriptions:
+ *   get:
+ *     summary: Get subscriptions
+ *     description: Get all subscriptions for the current client.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of subscriptions
+ *       403:
+ *         description: Forbidden - clients only
  */
 premiumRouter.get("/subscriptions", async (req: AuthedRequest, res: Response) => {
   try {
@@ -188,8 +297,38 @@ premiumRouter.get("/subscriptions", async (req: AuthedRequest, res: Response) =>
 });
 
 /**
- * PATCH /premium/subscriptions/:id/status
- * Pause or resume subscription
+ * @swagger
+ * /premium/subscriptions/{id}/status:
+ *   patch:
+ *     summary: Update subscription status
+ *     description: Pause or resume a subscription.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, paused]
+ *     responses:
+ *       200:
+ *         description: Subscription status updated
+ *       403:
+ *         description: Forbidden - clients only
  */
 const updateStatusSchema = z.object({
   status: z.enum(["active", "paused"]),
@@ -221,8 +360,26 @@ premiumRouter.patch(
 );
 
 /**
- * DELETE /premium/subscriptions/:id
- * Cancel subscription
+ * @swagger
+ * /premium/subscriptions/{id}:
+ *   delete:
+ *     summary: Cancel subscription
+ *     description: Cancel a subscription.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Subscription cancelled
+ *       403:
+ *         description: Forbidden - clients only
  */
 premiumRouter.delete("/subscriptions/:id", async (req: AuthedRequest, res: Response) => {
   try {
@@ -243,8 +400,23 @@ premiumRouter.delete("/subscriptions/:id", async (req: AuthedRequest, res: Respo
 // ============================================
 
 /**
- * GET /premium/referrals/code
- * Get or generate user's referral code
+ * @swagger
+ * /premium/referrals/code:
+ *   get:
+ *     summary: Get referral code
+ *     description: Get or generate user's referral code.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Referral code
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code: { type: 'string' }
  */
 premiumRouter.get("/referrals/code", async (req: AuthedRequest, res: Response) => {
   try {
@@ -260,8 +432,17 @@ premiumRouter.get("/referrals/code", async (req: AuthedRequest, res: Response) =
 });
 
 /**
- * GET /premium/referrals/stats
- * Get user's referral stats
+ * @swagger
+ * /premium/referrals/stats:
+ *   get:
+ *     summary: Get referral stats
+ *     description: Get user's referral statistics.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Referral statistics
  */
 premiumRouter.get("/referrals/stats", async (req: AuthedRequest, res: Response) => {
   try {
@@ -274,8 +455,27 @@ premiumRouter.get("/referrals/stats", async (req: AuthedRequest, res: Response) 
 });
 
 /**
- * POST /premium/referrals/validate
- * Validate a referral code
+ * @swagger
+ * /premium/referrals/validate:
+ *   post:
+ *     summary: Validate referral code
+ *     description: Validate a referral code.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *             properties:
+ *               code: { type: 'string' }
+ *     responses:
+ *       200:
+ *         description: Referral code validation result
  */
 const validateCodeSchema = z.object({
   code: z.string().min(1),
@@ -296,8 +496,17 @@ premiumRouter.post(
 );
 
 /**
- * GET /premium/referrals/leaderboard
- * Get referral leaderboard
+ * @swagger
+ * /premium/referrals/leaderboard:
+ *   get:
+ *     summary: Get referral leaderboard
+ *     description: Get referral leaderboard showing top referrers.
+ *     tags: [Premium]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Referral leaderboard
  */
 premiumRouter.get("/referrals/leaderboard", async (_req: AuthedRequest, res: Response) => {
   try {

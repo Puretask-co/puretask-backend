@@ -3,8 +3,7 @@
 // V2 FEATURE — DISABLED FOR NOW
 
 import { Router, Response } from "express";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
-import { requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import {
   getDashboardMetrics,
@@ -24,7 +23,8 @@ import {
 const analyticsRouter = Router();
 
 // All analytics routes require admin access
-const requireAdmin = [authMiddleware, requireRole("admin")];
+analyticsRouter.use(requireAuth);
+analyticsRouter.use(requireAdmin);
 
 /**
  * Helper to parse time range from query
@@ -40,10 +40,28 @@ function parseTimeRange(query: any): TimeRange {
 // ============================================
 
 /**
- * GET /analytics/dashboard
- * Get comprehensive dashboard metrics
+ * @swagger
+ * /analytics/dashboard:
+ *   get:
+ *     summary: Get dashboard metrics
+ *     description: Get comprehensive dashboard metrics for admin analytics.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *           default: month
+ *     responses:
+ *       200:
+ *         description: Dashboard metrics
+ *       401:
+ *         description: Unauthorized - admin only
  */
-analyticsRouter.get("/dashboard", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/dashboard", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const metrics = await getDashboardMetrics(timeRange);
@@ -54,17 +72,32 @@ analyticsRouter.get("/dashboard", ...requireAdmin, async (req: AuthedRequest, re
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Revenue
 // ============================================
 
 /**
- * GET /analytics/revenue/trend
- * Get revenue over time
+ * @swagger
+ * /analytics/revenue/trend:
+ *   get:
+ *     summary: Get revenue trend
+ *     description: Get revenue trend over time.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *     responses:
+ *       200:
+ *         description: Revenue trend data
  */
-analyticsRouter.get("/revenue/trend", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/revenue/trend", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const trend = await getRevenueTrend(timeRange);
@@ -75,13 +108,34 @@ analyticsRouter.get("/revenue/trend", ...requireAdmin, async (req: AuthedRequest
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 /**
- * GET /analytics/revenue/by-period
- * Get revenue breakdown by day/week/month
+ * @swagger
+ * /analytics/revenue/by-period:
+ *   get:
+ *     summary: Get revenue by period
+ *     description: Get revenue breakdown grouped by day, week, or month.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *       - in: query
+ *         name: groupBy
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month]
+ *           default: day
+ *     responses:
+ *       200:
+ *         description: Revenue by period
  */
-analyticsRouter.get("/revenue/by-period", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/revenue/by-period", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const groupBy = (req.query.groupBy as "day" | "week" | "month") || "day";
@@ -93,17 +147,32 @@ analyticsRouter.get("/revenue/by-period", ...requireAdmin, async (req: AuthedReq
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Jobs
 // ============================================
 
 /**
- * GET /analytics/jobs/trend
- * Get job count over time
+ * @swagger
+ * /analytics/jobs/trend:
+ *   get:
+ *     summary: Get job trend
+ *     description: Get job count trend over time.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *     responses:
+ *       200:
+ *         description: Job trend data
  */
-analyticsRouter.get("/jobs/trend", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/jobs/trend", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const trend = await getJobTrend(timeRange);
@@ -114,13 +183,28 @@ analyticsRouter.get("/jobs/trend", ...requireAdmin, async (req: AuthedRequest, r
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 /**
- * GET /analytics/jobs/status
- * Get job status breakdown
+ * @swagger
+ * /analytics/jobs/status:
+ *   get:
+ *     summary: Get job status breakdown
+ *     description: Get breakdown of jobs by status.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *     responses:
+ *       200:
+ *         description: Job status breakdown
  */
-analyticsRouter.get("/jobs/status", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/jobs/status", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const breakdown = await getJobStatusBreakdown(timeRange);
@@ -131,17 +215,38 @@ analyticsRouter.get("/jobs/status", ...requireAdmin, async (req: AuthedRequest, 
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Users
 // ============================================
 
 /**
- * GET /analytics/users/signups
- * Get user signup trend
+ * @swagger
+ * /analytics/users/signups:
+ *   get:
+ *     summary: Get user signup trend
+ *     description: Get user signup trend over time, optionally filtered by role.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [client, cleaner, all]
+ *           default: all
+ *     responses:
+ *       200:
+ *         description: User signup trend
  */
-analyticsRouter.get("/users/signups", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/users/signups", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const role = (req.query.role as "client" | "cleaner" | "all") || "all";
@@ -153,17 +258,38 @@ analyticsRouter.get("/users/signups", ...requireAdmin, async (req: AuthedRequest
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Leaderboards / Top Performers
 // ============================================
 
 /**
- * GET /analytics/top/clients
- * Get top clients by spending
+ * @swagger
+ * /analytics/top/clients:
+ *   get:
+ *     summary: Get top clients
+ *     description: Get top clients by spending.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Top clients list
  */
-analyticsRouter.get("/top/clients", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/top/clients", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
@@ -175,13 +301,34 @@ analyticsRouter.get("/top/clients", ...requireAdmin, async (req: AuthedRequest, 
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 /**
- * GET /analytics/top/cleaners
- * Get top cleaners by earnings
+ * @swagger
+ * /analytics/top/cleaners:
+ *   get:
+ *     summary: Get top cleaners
+ *     description: Get top cleaners by earnings.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Top cleaners list
  */
-analyticsRouter.get("/top/cleaners", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/top/cleaners", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
@@ -193,13 +340,29 @@ analyticsRouter.get("/top/cleaners", ...requireAdmin, async (req: AuthedRequest,
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 /**
- * GET /analytics/top/rated-cleaners
- * Get top rated cleaners
+ * @swagger
+ * /analytics/top/rated-cleaners:
+ *   get:
+ *     summary: Get top rated cleaners
+ *     description: Get top rated cleaners by average rating.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Top rated cleaners list
  */
-analyticsRouter.get("/top/rated-cleaners", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/top/rated-cleaners", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
     const topRated = await getTopRatedCleaners(limit);
@@ -210,17 +373,26 @@ analyticsRouter.get("/top/rated-cleaners", ...requireAdmin, async (req: AuthedRe
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Credit Economy
 // ============================================
 
 /**
- * GET /analytics/credits/health
- * Get credit economy health metrics
+ * @swagger
+ * /analytics/credits/health:
+ *   get:
+ *     summary: Get credit economy health
+ *     description: Get credit economy health metrics.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Credit economy health metrics
  */
-analyticsRouter.get("/credits/health", ...requireAdmin, async (_req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/credits/health", authedHandler(async (_req: AuthedRequest, res: Response) => {
   try {
     const health = await getCreditEconomyHealth();
     res.json({ health });
@@ -230,17 +402,32 @@ analyticsRouter.get("/credits/health", ...requireAdmin, async (_req: AuthedReque
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 // ============================================
 // Full Report
 // ============================================
 
 /**
- * GET /analytics/report
- * Generate comprehensive analytics report
+ * @swagger
+ * /analytics/report:
+ *   get:
+ *     summary: Generate full analytics report
+ *     description: Generate comprehensive analytics report with all metrics.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timeRange
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter, year, all]
+ *     responses:
+ *       200:
+ *         description: Full analytics report
  */
-analyticsRouter.get("/report", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/report", authedHandler(async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const report = await generateFullReport(timeRange);
@@ -251,7 +438,7 @@ analyticsRouter.get("/report", ...requireAdmin, async (req: AuthedRequest, res: 
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-});
+}));
 
 export default analyticsRouter;
 

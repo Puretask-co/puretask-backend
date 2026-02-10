@@ -1,0 +1,57 @@
+{
+  "reasons": [
+    {
+      "id": "distance_too_far",
+      "label": "Distance too far",
+      "description": "Job is 11+ miles from my home (or beyond my max travel radius)",
+      "rule": "Job distance >= (cleaner max_travel_miles + 1). Default max_travel = 10 miles.",
+      "config": { "max_travel_miles_default": 10, "good_faith_if_job_distance_miles_gte": 11 }
+    },
+    {
+      "id": "time_conflict",
+      "label": "Time conflict",
+      "description": "Job is outside my availability",
+      "rule": "Job scheduled start is outside cleaner's availability windows.",
+      "config": { "good_faith_if_outside_availability": true }
+    },
+    {
+      "id": "job_mismatch",
+      "label": "Job type not offered",
+      "description": "I don't offer this service (move-out, pets, etc.)",
+      "rule": "Job requires service cleaner has explicitly opted out of (move-in/out, pets, stairs, heavy lifting).",
+      "config": { "good_faith_if_service_not_offered": true }
+    },
+    {
+      "id": "safety_concern",
+      "label": "Safety concern",
+      "description": "Address flagged, threatening client, or unsafe conditions at/near property",
+      "rule": "Platform-flagged address OR harassing/threatening client messages OR cleaner reports unsafe conditions. Optional: upload 1 photo. If no photo: short note (min 20 chars) required.",
+      "config": {
+        "optional_photo": true,
+        "note_required_if_no_photo": true,
+        "min_note_chars": 20,
+        "photo_prompt": "If you can, please upload 1 photo of the unsafe condition. This is optional, but it helps us keep the platform safe."
+      }
+    },
+    {
+      "id": "access_logistics",
+      "label": "Access / logistics mismatch",
+      "description": "Building access or parking conflicts with my constraints",
+      "rule": "Building access instructions conflict with cleaner's marked constraints.",
+      "config": { "good_faith_if_conflicts_with_cleaner_constraints": true }
+    },
+    {
+      "id": "too_short_notice",
+      "label": "Too short notice",
+      "description": "Job start is less than 18 hours away from when the request was sent",
+      "rule": "Time from request sent to job scheduled start < 18 hours.",
+      "config": { "good_faith_if_hours_to_start_lt": 18 }
+    }
+  ],
+  "limits": {
+    "good_faith_per_7_days": 6,
+    "beyond_limit_still_count_toward_acceptance": true
+  },
+  "short_notice_hours": 18,
+  "acceptance_rate_formula": "accepted / (accepted + declined_non_good_faith)"
+}

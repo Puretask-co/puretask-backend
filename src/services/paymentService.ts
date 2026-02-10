@@ -703,6 +703,11 @@ async function handlePaymentIntentSucceeded(
     [pi.id]
   );
 
+  // Record metrics
+  const { metrics } = require("../lib/metrics");
+  const amountCents = pi.amount;
+  metrics.paymentProcessed(amountCents, true);
+
   // Emit event
   await publishEvent({
     jobId: jobId || undefined,
@@ -1062,6 +1067,25 @@ export async function getPaymentIntentByJobId(
   );
 
   return result.rows[0] ?? null;
+}
+
+/**
+ * Check if a job has an active payment intent
+ */
+export async function hasActivePaymentIntentForJob(jobId: string): Promise<boolean> {
+  const result = await query<{ status: string }>(
+    `
+      SELECT status
+      FROM payment_intents
+      WHERE job_id = $1
+        AND purpose = 'job_charge'
+    `,
+    [jobId]
+  );
+
+  return result.rows.some((pi) =>
+    ["requires_payment_method", "requires_confirmation", "requires_action", "processing", "succeeded"].includes(pi.status)
+  );
 }
 
 /**

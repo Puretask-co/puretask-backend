@@ -1,5 +1,7 @@
 # PureTask Database Migrations
 
+**Section 5 policy:** One canonical way to create a fresh DB (consolidated schema); all other changes via forward-only migrations. No manual prod SQL — all schema changes go through migration files. See [docs/active/00-CRITICAL/PHASE_5_STATUS.md](../docs/active/00-CRITICAL/PHASE_5_STATUS.md).
+
 ## Quick Start (Fresh Database)
 
 For a **fresh Neon database**, run these two files in order:

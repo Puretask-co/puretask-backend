@@ -1,0 +1,75 @@
+{
+  "description": "Seasonal challenges modify progress counting. No resets. Levels stay permanent.",
+  "rules": [
+    {
+      "id": "spring_refresh",
+      "name": "Spring Refresh",
+      "period": "March–April",
+      "startMonth": 3,
+      "endMonth": 4,
+      "multipliers": [
+        { "metric": "jobs.completed.count", "filter": { "cleaning_type": "deep" }, "multiplier": 1.5 }
+      ],
+      "badge": "Spring Refresh Pro"
+    },
+    {
+      "id": "move_out_rush",
+      "name": "Move-Out Rush",
+      "period": "May–September",
+      "startMonth": 5,
+      "endMonth": 9,
+      "multipliers": [
+        { "metric": "jobs.completed.count", "filter": { "cleaning_type": ["movein", "moveout"] }, "multiplier": 2.0 },
+        { "metric": "jobs.addons.completed.count", "multiplier": 1.25 }
+      ],
+      "badge": "Turnover Specialist"
+    },
+    {
+      "id": "holiday_prep",
+      "name": "Holiday Prep",
+      "period": "Late Oct–Nov",
+      "startMonth": 10,
+      "endMonth": 11,
+      "multipliers": [
+        { "metric": "jobs.completed.count", "filter": { "time_slot": "weekend" }, "multiplier": 2.0 }
+      ],
+      "badge": "Holiday Hero"
+    },
+    {
+      "id": "end_of_year",
+      "name": "End-of-Year Excellence",
+      "period": "December",
+      "startMonth": 12,
+      "endMonth": 12,
+      "multipliers": [],
+      "emphasis": "Dispute-free streak rewards emphasized. Customer Favorite badge for 5-star streaks.",
+      "badge": "Customer Favorite"
+    },
+    {
+      "id": "weekend_warrior",
+      "name": "Weekend Warrior Month",
+      "period": "Rotating",
+      "multipliers": [
+        { "metric": "jobs.completed.count", "filter": { "time_slot": "weekend" }, "multiplier": 2.0 }
+      ],
+      "badge": "Weekend Warrior"
+    },
+    {
+      "id": "five_star_sprint",
+      "name": "5-Star Sprint",
+      "period": "Rotating",
+      "description": "Get 5 five-stars in 30 days → choice reward",
+      "metric": "ratings.five_star.count",
+      "target": 5,
+      "windowDays": 30,
+      "reward": "choice"
+    },
+    {
+      "id": "perfect_week",
+      "name": "Perfect Week",
+      "period": "Rotating",
+      "description": "7 days no lateness, cancel, or dispute → badge + visibility boost",
+      "badge": "Perfect Week"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 // Notification preferences API routes
 
 import { Router, Response } from "express";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
 import { validateBody } from "../lib/validation";
 import { z } from "zod";
 import { logger } from "../lib/logger";
@@ -14,12 +14,76 @@ import { query } from "../db/client";
 
 const notificationsRouter = Router();
 
-// All routes require authentication
-notificationsRouter.use(authMiddleware);
+notificationsRouter.use(requireAuth);
 
 /**
- * GET /notifications/preferences
- * Get current user's notification preferences
+ * @swagger
+ * /notifications:
+ *   get:
+ *     summary: Get notifications feed
+ *     description: Get notifications feed for the current user.
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Notifications feed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data: { type: 'array', items: { type: 'object' } }
+ *                 unread_count: { type: 'integer' }
+ */
+notificationsRouter.get("/", async (_req: AuthedRequest, res: Response) => {
+  res.json({ data: [], unread_count: 0 });
+});
+
+/**
+ * GET /notifications/unread-count
+ * Return unread count (placeholder)
+ */
+notificationsRouter.get("/unread-count", async (_req: AuthedRequest, res: Response) => {
+  res.json({ count: 0 });
+});
+
+/**
+ * PATCH /notifications/:id/read
+ * Mark one notification as read (placeholder)
+ */
+notificationsRouter.patch("/:id/read", async (_req: AuthedRequest, res: Response) => {
+  res.json({ success: true });
+});
+
+/**
+ * POST /notifications/read-all
+ * Mark all notifications as read (placeholder)
+ */
+notificationsRouter.post("/read-all", async (_req: AuthedRequest, res: Response) => {
+  res.json({ success: true });
+});
+
+/**
+ * DELETE /notifications/:id
+ * Delete notification (placeholder)
+ */
+notificationsRouter.delete("/:id", async (_req: AuthedRequest, res: Response) => {
+  res.json({ success: true });
+});
+
+/**
+ * @swagger
+ * /notifications/preferences:
+ *   get:
+ *     summary: Get notification preferences
+ *     description: Get current user's notification preferences.
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Notification preferences
  */
 notificationsRouter.get(
   "/preferences",
@@ -44,8 +108,30 @@ notificationsRouter.get(
 );
 
 /**
- * PUT /notifications/preferences
- * Update notification preferences
+ * @swagger
+ * /notifications/preferences:
+ *   put:
+ *     summary: Update notification preferences
+ *     description: Update user's notification preferences.
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email: { type: 'boolean' }
+ *               sms: { type: 'boolean' }
+ *               push: { type: 'boolean' }
+ *               jobUpdates: { type: 'boolean' }
+ *               marketing: { type: 'boolean' }
+ *               payoutAlerts: { type: 'boolean' }
+ *     responses:
+ *       200:
+ *         description: Preferences updated
  */
 const updatePreferencesSchema = z.object({
   email: z.boolean().optional(),

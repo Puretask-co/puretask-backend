@@ -1,10 +1,34 @@
 // src/lib/n8nClient.ts
-// n8n API client for direct workflow interaction
+// n8n API client and webhook forwarding for PureTask
+// - API: trigger workflows, list/status/executions (N8N_API_KEY, N8N_BASE_URL)
+// - Webhook outbound: forward events to n8n (N8N_WEBHOOK_URL) via postJson
 
 import { env } from "../config/env";
 import { logger } from "./logger";
+import { postJson } from "./httpClient";
 
-const N8N_BASE_URL = "https://puretask.app.n8n.cloud/api/v1";
+const DEFAULT_N8N_BASE_URL = "https://puretask.app.n8n.cloud/api/v1";
+
+function getN8nBaseUrl(): string {
+  return env.N8N_BASE_URL || DEFAULT_N8N_BASE_URL;
+}
+
+// ============================================
+// Types (for webhook payload and re-export)
+// ============================================
+
+export type N8nActorType = "client" | "cleaner" | "admin" | "system";
+
+export interface N8nEventPayload {
+  jobId: string | null;
+  actorType: N8nActorType | null;
+  actorId: string | null;
+  eventName: string;
+  payload: Record<string, unknown>;
+  timestamp: string;
+}
+
+export type N8nEventType = string; // e.g. job_created, job_completed, etc.
 
 interface N8nApiOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
@@ -26,7 +50,7 @@ async function n8nApiRequest(
   }
 
   try {
-    const response = await fetch(`${N8N_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${getN8nBaseUrl()}${endpoint}`, {
       method,
       headers: {
         "X-N8N-API-KEY": env.N8N_API_KEY,
@@ -220,10 +244,60 @@ export async function triggerN8nWorkflowWithRetry(
 }
 
 /**
- * Check if n8n is configured
+ * Check if n8n webhook (event forward) is configured
+ */
+export function isN8nWebhookConfigured(): boolean {
+  return !!env.N8N_WEBHOOK_URL;
+}
+
+/**
+ * Check if n8n API (workflow trigger/list/status) is configured
+ */
+export function isN8nApiConfigured(): boolean {
+  return !!env.N8N_API_KEY;
+}
+
+/**
+ * Check if n8n is configured (webhook and/or API; MCP URL optional for API)
  */
 export function isN8nConfigured(): boolean {
-  return !!(env.N8N_API_KEY && env.N8N_MCP_SERVER_URL);
+  return isN8nWebhookConfigured() || isN8nApiConfigured();
+}
+
+/**
+ * Forward an event to the n8n webhook URL (outbound).
+ * Same payload shape as publishEvent → maybeForwardToN8n.
+ * Used by events.ts so all n8n "send" logic lives here.
+ */
+export async function forwardEventToN8nWebhook(payload: N8nEventPayload): Promise<void> {
+  if (!env.N8N_WEBHOOK_URL) {
+    logger.warn("n8n_webhook_not_configured", { eventName: payload.eventName });
+    return;
+  }
+  try {
+    await postJson(env.N8N_WEBHOOK_URL, payload);
+    logger.info("n8n_event_forwarded", {
+      eventName: payload.eventName,
+      jobId: payload.jobId,
+    });
+  } catch (err) {
+    logger.error("n8n_forward_failed", {
+      error: (err as Error).message,
+      jobId: payload.jobId,
+      eventName: payload.eventName,
+    });
+    throw err;
+  }
+}
+
+/**
+ * Send a generic JSON body to a webhook URL (e.g. custom n8n webhook trigger).
+ */
+export async function sendN8nWebhook(
+  url: string,
+  body: Record<string, unknown>
+): Promise<void> {
+  await postJson(url, body);
 }
 
 /**
@@ -235,7 +309,7 @@ export async function testN8nConnection(): Promise<{
   error?: string;
 }> {
   try {
-    if (!isN8nConfigured()) {
+    if (!isN8nApiConfigured()) {
       return {
         connected: false,
         error: "N8N_API_KEY not configured",

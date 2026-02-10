@@ -24,6 +24,8 @@ export const env = {
   // Core runtime
   NODE_ENV: process.env.NODE_ENV || "development",
   PORT: process.env.PORT ? Number(process.env.PORT) : 4000,
+  // Local dev default is 3001 (matches puretask-frontend `next dev -p 3001`)
+  FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:3001",
 
   // Auth
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "30d",
@@ -51,6 +53,11 @@ export const env = {
 
   // Operational defaults (optional)
   GPS_CHECKIN_RADIUS_METERS: process.env.GPS_CHECKIN_RADIUS_METERS ? Number(process.env.GPS_CHECKIN_RADIUS_METERS) : 250,
+  ON_TIME_EARLY_MINUTES: process.env.ON_TIME_EARLY_MINUTES ? Number(process.env.ON_TIME_EARLY_MINUTES) : 15,
+  ON_TIME_LATE_MINUTES: process.env.ON_TIME_LATE_MINUTES ? Number(process.env.ON_TIME_LATE_MINUTES) : 15,
+  GOOD_FAITH_SHORT_NOTICE_HOURS: process.env.GOOD_FAITH_SHORT_NOTICE_HOURS
+    ? Number(process.env.GOOD_FAITH_SHORT_NOTICE_HOURS)
+    : 18,
   MIN_PHOTOS_TOTAL: process.env.MIN_PHOTOS_TOTAL ? Number(process.env.MIN_PHOTOS_TOTAL) : 3,
   MIN_BEFORE_PHOTOS: process.env.MIN_BEFORE_PHOTOS ? Number(process.env.MIN_BEFORE_PHOTOS) : 2,
   MIN_AFTER_PHOTOS: process.env.MIN_AFTER_PHOTOS ? Number(process.env.MIN_AFTER_PHOTOS) : 2,
@@ -70,10 +77,14 @@ export const env = {
 
   // Integrations (optional but recommended)
   N8N_WEBHOOK_URL: process.env.N8N_WEBHOOK_URL || "",
+  N8N_BASE_URL: process.env.N8N_BASE_URL || "", // e.g. https://puretask.app.n8n.cloud/api/v1
   N8N_MCP_SERVER_URL: process.env.N8N_MCP_SERVER_URL || "",
   N8N_API_KEY: process.env.N8N_API_KEY || "",
   APP_URL: process.env.APP_URL || "http://localhost:3000",
   STORAGE_URL: process.env.STORAGE_URL || "https://storage.puretask.com",
+  
+  // Monitoring (optional)
+  SENTRY_DSN: process.env.SENTRY_DSN || "",
   
   // Redis (for rate limiting in production)
   REDIS_URL: process.env.REDIS_URL || "",

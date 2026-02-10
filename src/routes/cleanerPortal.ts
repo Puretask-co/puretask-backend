@@ -3,7 +3,7 @@
 
 import { Router, Response } from "express";
 import { z } from "zod";
-import { jwtAuthMiddleware as jwtAuth, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import {
   getCleanerClients,
   getCleanerClientProfile,
@@ -86,14 +86,41 @@ const invoiceListSchema = z.object({
 // ============================================
 
 /**
- * GET /cleaner/clients
- * List all clients this cleaner has worked with
+ * @swagger
+ * /cleaner/clients:
+ *   get:
+ *     summary: List my clients
+ *     description: List all clients this cleaner has worked with (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: sortBy
+ *         schema: { type: string, enum: [most_recent, most_jobs, highest_earnings, favorites] }
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *       - in: query
+ *         name: favoriteOnly
+ *         schema: { type: boolean }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: offset
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: data (clients), pagination
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 router.get(
   "/clients",
-  jwtAuth,
+  requireAuth,
   requireRole("cleaner"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const filters = clientListSchema.parse(req.query);
@@ -118,17 +145,35 @@ router.get(
       });
     }
   }
-);
+));
 
 /**
- * GET /cleaner/clients/:clientId
- * Get detailed profile of a specific client
+ * @swagger
+ * /cleaner/clients/{clientId}:
+ *   get:
+ *     summary: Get client profile
+ *     description: Get detailed profile of a client the cleaner has worked with (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: clientId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Client profile
+ *       404:
+ *         description: Client not found
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 router.get(
   "/clients/:clientId",
-  jwtAuth,
+  requireAuth,
   requireRole("cleaner"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { clientId } = req.params;
@@ -155,7 +200,7 @@ router.get(
       });
     }
   }
-);
+));
 
 /**
  * GET /cleaner/clients/:clientId/jobs
@@ -163,9 +208,9 @@ router.get(
  */
 router.get(
   "/clients/:clientId/jobs",
-  jwtAuth,
+  requireAuth,
   requireRole("cleaner"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { clientId } = req.params;
@@ -192,17 +237,42 @@ router.get(
       });
     }
   }
-);
+));
 
 /**
- * PUT /cleaner/clients/:clientId/notes
- * Update notes/preferences for a client
+ * @swagger
+ * /cleaner/clients/{clientId}/notes:
+ *   put:
+ *     summary: Update client notes
+ *     description: Update notes/preferences for a client (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: clientId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               notes: { type: string }
+ *               preferences: { type: string }
+ *               is_favorite: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Note updated
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 router.put(
   "/clients/:clientId/notes",
-  jwtAuth,
+  requireAuth,
   requireRole("cleaner"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { clientId } = req.params;
@@ -223,7 +293,7 @@ router.put(
       });
     }
   }
-);
+));
 
 /**
  * POST /cleaner/clients/:clientId/favorite
@@ -231,9 +301,9 @@ router.put(
  */
 router.post(
   "/clients/:clientId/favorite",
-  jwtAuth,
+  requireAuth,
   requireRole("cleaner"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { clientId } = req.params;
@@ -253,21 +323,58 @@ router.post(
       });
     }
   }
-);
+));
 
 // ============================================
 // INVOICE ENDPOINTS (Cleaner)
 // ============================================
 
 /**
- * POST /cleaner/clients/:clientId/invoices
- * Create a new invoice for a client
+ * @swagger
+ * /cleaner/clients/{clientId}/invoices:
+ *   post:
+ *     summary: Create invoice
+ *     description: Create a new invoice for a client (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: clientId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               job_id: { type: string, format: uuid }
+ *               title: { type: string }
+ *               description: { type: string }
+ *               notes_to_client: { type: string }
+ *               due_date: { type: string }
+ *               line_items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [description, quantity, unit_price_cents]
+ *                   properties:
+ *                     description: { type: string }
+ *                     quantity: { type: number }
+ *                     unit_price_cents: { type: integer }
+ *     responses:
+ *       201:
+ *         description: Invoice created
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 router.post(
   "/clients/:clientId/invoices",
-  jwtAuth,
+  requireAuth,
   requireRole("cleaner"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { clientId } = req.params;
@@ -298,7 +405,7 @@ router.post(
       });
     }
   }
-);
+));
 
 /**
  * GET /cleaner/invoices
@@ -306,9 +413,9 @@ router.post(
  */
 router.get(
   "/invoices",
-  jwtAuth,
+  requireAuth,
   requireRole("cleaner"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const filters = invoiceListSchema.parse(req.query);
@@ -337,17 +444,35 @@ router.get(
       });
     }
   }
-);
+));
 
 /**
- * GET /cleaner/invoices/:invoiceId
- * Get a specific invoice with line items
+ * @swagger
+ * /cleaner/invoices/{invoiceId}:
+ *   get:
+ *     summary: Get invoice
+ *     description: Get a specific invoice with line items and status history (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Invoice with status_history
+ *       404:
+ *         description: Invoice not found
+ *       403:
+ *         description: Not your invoice / cleaners only
  */
 router.get(
   "/invoices/:invoiceId",
-  jwtAuth,
+  requireAuth,
   requireRole("cleaner"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { invoiceId } = req.params;
@@ -386,7 +511,7 @@ router.get(
       });
     }
   }
-);
+));
 
 /**
  * POST /cleaner/invoices/:invoiceId/send
@@ -394,9 +519,9 @@ router.get(
  */
 router.post(
   "/invoices/:invoiceId/send",
-  jwtAuth,
+  requireAuth,
   requireRole("cleaner"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { invoiceId } = req.params;
@@ -431,17 +556,40 @@ router.post(
       });
     }
   }
-);
+));
 
 /**
- * POST /cleaner/invoices/:invoiceId/cancel
- * Cancel an invoice
+ * @swagger
+ * /cleaner/invoices/{invoiceId}/cancel:
+ *   post:
+ *     summary: Cancel invoice
+ *     description: Cancel an invoice (cleaners only).
+ *     tags: [Cleaner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason: { type: string }
+ *     responses:
+ *       200:
+ *         description: Invoice cancelled
+ *       403:
+ *         description: Not your invoice / cleaners only
  */
 router.post(
   "/invoices/:invoiceId/cancel",
-  jwtAuth,
+  requireAuth,
   requireRole("cleaner"),
-  async (req: JWTAuthedRequest, res: Response) => {
+  authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
       const { invoiceId } = req.params;
@@ -462,7 +610,7 @@ router.post(
       });
     }
   }
-);
+));
 
 export default router;
 
