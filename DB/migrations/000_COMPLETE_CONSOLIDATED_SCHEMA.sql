@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- PURETASK COMPLETE CONSOLIDATED SCHEMA - ALL MIGRATIONS
 -- Run this on a FRESH database to set up everything correctly
 -- ============================================================
@@ -1981,19 +1981,19 @@ $$ LANGUAGE plpgsql;
 -- ============================================
 
 -- Invoice approval threshold (in cents) - invoices over this require admin approval
--- Default: $100 = 10000 cents
-INSERT INTO feature_flags (key, value, description)
-VALUES ('INVOICE_APPROVAL_THRESHOLD_CENTS', '10000', 'Invoices over this amount require admin approval')
+-- Default: $100 = 10000 cents (value stored in metadata for application use)
+INSERT INTO feature_flags (key, description, is_enabled, metadata)
+VALUES ('INVOICE_APPROVAL_THRESHOLD_CENTS', 'Invoices over this amount require admin approval', true, '{"value": "10000"}'::jsonb)
 ON CONFLICT (key) DO NOTHING;
 
 -- Invoice expiry days
-INSERT INTO feature_flags (key, value, description)
-VALUES ('INVOICE_EXPIRY_DAYS', '30', 'Days until unpaid invoice expires')
+INSERT INTO feature_flags (key, description, is_enabled, metadata)
+VALUES ('INVOICE_EXPIRY_DAYS', 'Days until unpaid invoice expires', true, '{"value": "30"}'::jsonb)
 ON CONFLICT (key) DO NOTHING;
 
 -- Tax rate (percentage * 100, e.g., 8.25% = 825)
-INSERT INTO feature_flags (key, value, description)
-VALUES ('INVOICE_TAX_RATE_BPS', '0', 'Tax rate in basis points (0 = no tax)')
+INSERT INTO feature_flags (key, description, is_enabled, metadata)
+VALUES ('INVOICE_TAX_RATE_BPS', 'Tax rate in basis points (0 = no tax)', true, '{"value": "0"}'::jsonb)
 ON CONFLICT (key) DO NOTHING;
 
 -- ============================================
