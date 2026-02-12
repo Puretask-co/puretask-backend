@@ -3,7 +3,7 @@
 // Integrates with credits service for escrow/release and payouts service
 
 import { query } from "../db/client";
-import { getNextStatus, JobEventType, validateTransition } from "../state/jobStateMachine";
+import { JobEventType, validateTransition } from "../state/jobStateMachine";
 import { publishEvent } from "../lib/events";
 import { getJobEventsForJob } from "./jobEvents";
 import {

@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { query } from "../db/client";
 import { User } from "../types/db";
 import { hashPassword } from "../lib/auth";
+import { updatePassword } from "./authService";
 import { logger } from "../lib/logger";
 import { sendEmail } from "../services/notifications/providers/emailProvider";
 
@@ -208,10 +209,7 @@ export async function changePassword(
   newPassword: string,
   ipAddress?: string
 ): Promise<void> {
-  // This is handled in authService.ts already, but we add extra logging here
-  // Import from authService to avoid duplication
-  const { updatePassword } = require("./authService");
-  
+  // Delegate to authService; we add extra logging here
   await updatePassword(userId, currentPassword, newPassword);
 
   // Log security event

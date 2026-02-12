@@ -101,9 +101,9 @@ async function getInvoiceConfig(): Promise<{
   expiryDays: number;
   taxRateBps: number;
 }> {
-  const result = await query<{ key: string; value: string }>(
+  const result = await query<{ key: string; value: string | null }>(
     `
-      SELECT key, value FROM feature_flags
+      SELECT key, metadata->>'value' AS value FROM feature_flags
       WHERE key IN ('INVOICE_APPROVAL_THRESHOLD_CENTS', 'INVOICE_EXPIRY_DAYS', 'INVOICE_TAX_RATE_BPS')
     `,
     []
@@ -111,7 +111,7 @@ async function getInvoiceConfig(): Promise<{
 
   const config: Record<string, string> = {};
   for (const row of result.rows) {
-    config[row.key] = row.value;
+    config[row.key] = row.value ?? "";
   }
 
   return {

@@ -4,7 +4,7 @@
 
 import { Router, Response } from "express";
 import { logger } from "../lib/logger";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { jwtAuthMiddleware, JWTAuthedRequest } from "../middleware/jwtAuth";
 import {
   getDashboardOverview,
   getSupplyDemandHeatmap,
@@ -18,9 +18,9 @@ import { getBackgroundCheckStats } from "../services/backgroundCheckService";
 const managerRouter = Router();
 
 // All routes require auth and admin role
-managerRouter.use(authMiddleware);
+managerRouter.use(jwtAuthMiddleware);
 
-const requireAdmin = (req: AuthedRequest, res: Response, next: () => void) => {
+const requireAdmin = (req: JWTAuthedRequest, res: Response, next: () => void) => {
   if (req.user?.role !== "admin") {
     return res.status(403).json({
       error: { code: "FORBIDDEN", message: "Admin access required" },
@@ -39,7 +39,7 @@ managerRouter.use(requireAdmin);
  * GET /manager/overview
  * Get complete dashboard overview with all KPIs
  */
-managerRouter.get("/overview", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/overview", async (_req: JWTAuthedRequest, res: Response) => {
   try {
     const overview = await getDashboardOverview();
     res.json({ overview });
@@ -55,7 +55,7 @@ managerRouter.get("/overview", async (_req: AuthedRequest, res: Response) => {
  * GET /manager/alerts
  * Get active alerts that need attention
  */
-managerRouter.get("/alerts", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/alerts", async (_req: JWTAuthedRequest, res: Response) => {
   try {
     const alerts = await getActiveAlerts();
     res.json({ alerts, count: alerts.length });
@@ -75,7 +75,7 @@ managerRouter.get("/alerts", async (_req: AuthedRequest, res: Response) => {
  * GET /manager/heatmap
  * Get supply/demand heatmap by hour and day
  */
-managerRouter.get("/heatmap", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/heatmap", async (_req: JWTAuthedRequest, res: Response) => {
   try {
     const heatmap = await getSupplyDemandHeatmap();
     res.json({ heatmap });
@@ -95,7 +95,7 @@ managerRouter.get("/heatmap", async (_req: AuthedRequest, res: Response) => {
  * GET /manager/tiers
  * Get cleaner tier distribution and metrics
  */
-managerRouter.get("/tiers", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/tiers", async (_req: JWTAuthedRequest, res: Response) => {
   try {
     const distribution = await getTierDistribution();
     res.json({ distribution });
@@ -115,7 +115,7 @@ managerRouter.get("/tiers", async (_req: AuthedRequest, res: Response) => {
  * GET /manager/retention
  * Get retention cohort analysis
  */
-managerRouter.get("/retention", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/retention", async (_req: JWTAuthedRequest, res: Response) => {
   try {
     const cohorts = await getRetentionCohorts();
     res.json({ cohorts });
@@ -135,7 +135,7 @@ managerRouter.get("/retention", async (_req: AuthedRequest, res: Response) => {
  * GET /manager/support-stats
  * Get support ticket statistics
  */
-managerRouter.get("/support-stats", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/support-stats", async (_req: JWTAuthedRequest, res: Response) => {
   try {
     const stats = await getTicketStats();
     res.json({ stats });
@@ -151,7 +151,7 @@ managerRouter.get("/support-stats", async (_req: AuthedRequest, res: Response) =
  * GET /manager/background-check-stats
  * Get background check statistics
  */
-managerRouter.get("/background-check-stats", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/background-check-stats", async (_req: JWTAuthedRequest, res: Response) => {
   try {
     const stats = await getBackgroundCheckStats();
     res.json({ stats });
@@ -167,7 +167,7 @@ managerRouter.get("/background-check-stats", async (_req: AuthedRequest, res: Re
  * GET /manager/full-report
  * Get comprehensive report combining all metrics
  */
-managerRouter.get("/full-report", async (_req: AuthedRequest, res: Response) => {
+managerRouter.get("/full-report", async (_req: JWTAuthedRequest, res: Response) => {
   try {
     const [overview, alerts, heatmap, tiers, retention, supportStats, bgCheckStats] =
       await Promise.all([

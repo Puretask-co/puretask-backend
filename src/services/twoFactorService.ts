@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 import { query } from "../db/client";
 import { User, TwoFactorCode } from "../types/db";
 import { logger } from "../lib/logger";
+import { verifyPassword } from "../lib/auth";
 import { sendSMS } from "../services/notifications/providers/smsProvider";
 
 /**
@@ -359,7 +360,6 @@ export async function verify2FACode(
  */
 export async function disable2FA(userId: string, password: string): Promise<void> {
   // Verify password first
-  const { verifyPassword } = require("../lib/auth");
   const userResult = await query<User>(
     `SELECT * FROM users WHERE id = $1`,
     [userId]

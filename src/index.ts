@@ -1,4 +1,4 @@
-﻿// src/index.ts
+// src/index.ts
 // Main application entry point
 
 import express from "express";
@@ -9,7 +9,6 @@ import { logger } from "./lib/logger";
 import { initRedis, closeRedis } from "./lib/redis";
 import { authMiddlewareAttachUser } from "./lib/auth";
 import {
-  generalRateLimiter,
   endpointRateLimiter,
   additionalSecurityHeaders,
   sanitizeBody,

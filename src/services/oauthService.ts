@@ -3,7 +3,7 @@
 
 import { query, withTransaction } from "../db/client";
 import { User, OAuthAccount, ClientProfile, CleanerProfile } from "../types/db";
-import { signAuthToken } from "../lib/auth";
+import { signAuthToken, hashPassword } from "../lib/auth";
 import { logger } from "../lib/logger";
 import type { PoolClient } from "pg";
 
@@ -338,8 +338,6 @@ export async function setPasswordForOAuthUser(
   userId: string,
   newPassword: string
 ): Promise<void> {
-  const { hashPassword } = require("../lib/auth");
-
   // Check if user already has password
   const canSet = await canSetPassword(userId);
   if (!canSet) {

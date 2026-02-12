@@ -226,7 +226,7 @@ export { default as reliabilityRecalc } from './reliability/reliabilityRecalc';
 // ... etc
 ```
 
-**Note**: Deprecated and disabled workers are NOT exported.
+**Note**: Deprecated and disabled workers are NOT imported in index.ts (as of 2025-02-12). The worker registry imports only from active locations: v1-core, v2-operations, v3-automation, v4-analytics, reliability.
 
 ---
 

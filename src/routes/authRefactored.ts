@@ -133,7 +133,7 @@ router.get(
 
     res.json({
       user: sanitizeUser(data.user),
-      profile: data.profile,
+      profile: data.clientProfile ?? data.cleanerProfile,
     });
   })
 );

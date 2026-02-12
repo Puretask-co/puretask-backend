@@ -53,7 +53,7 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
  * Includes JTI (JWT ID) for session tracking
  */
 export function signAuthToken(user: AuthUser, jti?: string): string {
-  const tokenId = jti || require("crypto").randomBytes(16).toString("hex");
+  const tokenId = jti || crypto.randomBytes(16).toString("hex");
   
   return jwt.sign(
     { 

@@ -56,7 +56,9 @@ export class AppError extends Error {
       error: {
         code: this.code,
         message: this.message,
-        ...(this.details && { details: this.details }),
+        ...(this.details !== undefined && this.details !== null
+          ? { details: this.details }
+          : {}),
       },
     };
   }

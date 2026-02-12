@@ -1,7 +1,6 @@
 // src/services/aiService.ts
 // AI-powered services: checklists, dispute suggestions, cleaner ranking
 
-import { query } from "../db/client";
 import { logger } from "../lib/logger";
 import { enqueue, QUEUE_NAMES } from "../lib/queue";
 

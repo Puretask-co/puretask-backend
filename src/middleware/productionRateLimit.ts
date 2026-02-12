@@ -125,7 +125,8 @@ async function rateLimitWithRedis(
   multi.expire(key, windowSeconds);
   
   const results = await multi.exec();
-  const count = results[0] as number;
+  const rawCount = results?.[0];
+  const count = typeof rawCount === "number" ? rawCount : Number(rawCount ?? 0);
   
   // Get TTL to calculate reset time
   const ttl = await redis.ttl(key);
@@ -188,13 +189,14 @@ function handleRateLimitResult(
 
     res.setHeader("Retry-After", Math.ceil((resetTime - now) / 1000));
 
-    return res.status(429).json({
+    res.status(429).json({
       error: {
         code: "RATE_LIMIT_EXCEEDED",
         message,
         retryAfter: Math.ceil((resetTime - now) / 1000),
       },
     });
+    return;
   }
 
   next();

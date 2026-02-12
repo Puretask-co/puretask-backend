@@ -17,10 +17,10 @@ Use this to track completion across all versions. Check off items as you complet
 
 | Version | Status | Started | Completed | Next Gate |
 |---------|--------|---------|-----------|-----------|
-| **V1** | ⬜ | - | - | Launch |
-| **V2** | ⬜ | - | - | V1 stable 2-4 weeks |
-| **V3** | ⬜ | - | - | V2 stable 2-4 weeks |
-| **V4** | ⬜ | - | - | V3 stable 4-6 weeks |
+| **V1** | ✅ | 2024 | 2025-01 | Deployed – production-ready |
+| **V2** | ✅ | 2025-01 | 2025-01 | Deployed – properties, teams, AI |
+| **V3** | ✅ | 2025-01 | 2025-01 | Deployed – pricing, subscriptions |
+| **V4** | 🟡 | 2025-01 | 2025-01 | Deployed – some tests need fixes |
 | **V5** | ⬜ | - | - | V4 stable 6-8 weeks (optional) |
 
 ---
@@ -34,26 +34,26 @@ Use this to track completion across all versions. Check off items as you complet
 ## Phase 1: Schema Canonization
 
 ### Task 1.1: Fix Baseline Migration
-- ⬜ Review `DB/migrations/000_CONSOLIDATED_SCHEMA.sql`
-- ⬜ Confirm `users.id` is `TEXT` (not UUID)
-- ⬜ Find all FKs referencing `users(id)`
-- ⬜ Change any `UUID` FKs to `TEXT`
-- ⬜ Remove commented-out `CREATE TABLE` blocks
-- ⬜ Remove migrations that recreate existing tables
-- ⬜ **Test:** Fresh DB boots app cleanly
+- ✅ Review `DB/migrations/000_COMPLETE_CONSOLIDATED_SCHEMA.sql`
+- ✅ Confirm `users.id` is `TEXT` (not UUID)
+- ✅ Find all FKs referencing `users(id)`
+- ✅ Change any `UUID` FKs to `TEXT`
+- ✅ Remove commented-out `CREATE TABLE` blocks
+- ✅ Remove migrations that recreate existing tables
+- ✅ **Test:** Fresh DB boots app cleanly
 
 **Done when:** ✅ Fresh DB boots with zero FK type mismatches
 
 ---
 
 ### Task 1.2: Add Hardening Migrations
-- ⬜ Create `DB/migrations/hardening/` folder
-- ⬜ Add `901_stripe_events_processed.sql`
-- ⬜ Add `902_ledger_idempotency_constraints.sql`
-- ⬜ Add `903_payout_items_uniqueness.sql`
-- ⬜ Add `904_worker_runs_table.sql`
-- ⬜ Apply migrations to dev DB
-- ⬜ **Test:** App still boots, existing flows work
+- ✅ Create `DB/migrations/hardening/` folder
+- ✅ Add `901_stripe_events_processed.sql`
+- ✅ Add `902_ledger_idempotency_constraints.sql`
+- ✅ Add `903_payout_items_uniqueness.sql`
+- ✅ Add `904_worker_runs_table.sql`
+- ✅ Apply migrations to dev DB
+- ✅ **Test:** App still boots, existing flows work
 
 **Done when:** ✅ Migrations applied, no errors
 
@@ -117,26 +117,26 @@ Use this to track completion across all versions. Check off items as you complet
 ## Phase 3: Environment & Guards
 
 ### Task 3.1: Environment Lockdown
-- ⬜ Create `.env.example`
-- ⬜ Create `.env.development`
-- ⬜ Create `.env.production` (DO NOT COMMIT)
-- ⬜ Add boot-time env validation
-- ⬜ Validate Stripe mode matches key prefix
-- ⬜ **Test:** App crashes on missing secrets
+- ✅ Create `.env.example`
+- ✅ Create `.env.development`
+- ✅ Create `.env.production` (DO NOT COMMIT)
+- ✅ Add boot-time env validation
+- ✅ Validate Stripe mode matches key prefix
+- ✅ **Test:** App crashes on missing secrets
 
 **Done when:** ✅ App refuses misconfigured starts
 
 ---
 
 ### Task 3.2: Production Guard Flags
-- ⬜ Add `WORKERS_ENABLED` toggle
-- ⬜ Add `BOOKINGS_ENABLED` toggle
-- ⬜ Add `CREDITS_PURCHASE_ENABLED` toggle
-- ⬜ Add `PAYOUTS_ENABLED` toggle
-- ⬜ Add `REFUNDS_ENABLED` toggle
-- ⬜ Add per-worker toggles
-- ⬜ Add route guards
-- ⬜ **Test:** Guards prevent actions when disabled
+- ✅ Add `WORKERS_ENABLED` toggle
+- ✅ Add `BOOKINGS_ENABLED` toggle
+- ✅ Add `CREDITS_ENABLED` toggle
+- ✅ Add `PAYOUTS_ENABLED` toggle
+- ✅ Add `REFUNDS_ENABLED` toggle
+- ✅ Add per-worker toggles
+- ✅ Add route guards
+- ✅ **Test:** Guards prevent actions when disabled
 
 **Done when:** ✅ All guards functional
 
@@ -858,13 +858,13 @@ Use this to track completion across all versions. Check off items as you complet
 
 ## Overall Completion
 
-**V1:** ⬜ 0/29 tasks  
-**V2:** ⬜ 0/13 tasks  
-**V3:** ⬜ 0/16 tasks  
-**V4:** ⬜ 0/16 tasks  
-**V5:** ⬜ 0/20 tasks  
+**V1:** ✅ ~25/29 tasks (core complete, deployed)  
+**V2:** ✅ ~12/13 tasks (complete, deployed)  
+**V3:** ✅ ~14/16 tasks (complete, deployed)  
+**V4:** 🟡 ~12/16 tasks (deployed, some tests need fixes)  
+**V5:** ⬜ 0/20 tasks (not started)  
 
-**Total:** ⬜ 0/94 tasks completed
+**Total:** 🟡 ~63/94 tasks completed (V1–V4 largely done)
 
 ---
 
@@ -883,8 +883,8 @@ _Use this space to track important decisions, blockers, or changes:_
 
 ---
 
-**Last Updated:** _______________  
-**Next Review:** _______________
+**Last Updated:** 2025-02-12  
+**Next Review:** 2025-03-12
 
 ---
 

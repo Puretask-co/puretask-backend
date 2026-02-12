@@ -3,8 +3,7 @@
 // V2 FEATURE — DISABLED FOR NOW
 
 import { Router, Response } from "express";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
-import { requireRole } from "../middleware/jwtAuth";
+import { jwtAuthMiddleware, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
 import { logger } from "../lib/logger";
 import {
   getDashboardMetrics,
@@ -24,7 +23,7 @@ import {
 const analyticsRouter = Router();
 
 // All analytics routes require admin access
-const requireAdmin = [authMiddleware, requireRole("admin")];
+const requireAdmin = [jwtAuthMiddleware, requireRole("admin")];
 
 /**
  * Helper to parse time range from query
@@ -43,7 +42,7 @@ function parseTimeRange(query: any): TimeRange {
  * GET /analytics/dashboard
  * Get comprehensive dashboard metrics
  */
-analyticsRouter.get("/dashboard", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/dashboard", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const metrics = await getDashboardMetrics(timeRange);
@@ -64,7 +63,7 @@ analyticsRouter.get("/dashboard", ...requireAdmin, async (req: AuthedRequest, re
  * GET /analytics/revenue/trend
  * Get revenue over time
  */
-analyticsRouter.get("/revenue/trend", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/revenue/trend", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const trend = await getRevenueTrend(timeRange);
@@ -81,7 +80,7 @@ analyticsRouter.get("/revenue/trend", ...requireAdmin, async (req: AuthedRequest
  * GET /analytics/revenue/by-period
  * Get revenue breakdown by day/week/month
  */
-analyticsRouter.get("/revenue/by-period", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/revenue/by-period", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const groupBy = (req.query.groupBy as "day" | "week" | "month") || "day";
@@ -103,7 +102,7 @@ analyticsRouter.get("/revenue/by-period", ...requireAdmin, async (req: AuthedReq
  * GET /analytics/jobs/trend
  * Get job count over time
  */
-analyticsRouter.get("/jobs/trend", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/jobs/trend", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const trend = await getJobTrend(timeRange);
@@ -120,7 +119,7 @@ analyticsRouter.get("/jobs/trend", ...requireAdmin, async (req: AuthedRequest, r
  * GET /analytics/jobs/status
  * Get job status breakdown
  */
-analyticsRouter.get("/jobs/status", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/jobs/status", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const breakdown = await getJobStatusBreakdown(timeRange);
@@ -141,7 +140,7 @@ analyticsRouter.get("/jobs/status", ...requireAdmin, async (req: AuthedRequest, 
  * GET /analytics/users/signups
  * Get user signup trend
  */
-analyticsRouter.get("/users/signups", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/users/signups", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const role = (req.query.role as "client" | "cleaner" | "all") || "all";
@@ -163,7 +162,7 @@ analyticsRouter.get("/users/signups", ...requireAdmin, async (req: AuthedRequest
  * GET /analytics/top/clients
  * Get top clients by spending
  */
-analyticsRouter.get("/top/clients", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/top/clients", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
@@ -181,7 +180,7 @@ analyticsRouter.get("/top/clients", ...requireAdmin, async (req: AuthedRequest, 
  * GET /analytics/top/cleaners
  * Get top cleaners by earnings
  */
-analyticsRouter.get("/top/cleaners", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/top/cleaners", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
@@ -199,7 +198,7 @@ analyticsRouter.get("/top/cleaners", ...requireAdmin, async (req: AuthedRequest,
  * GET /analytics/top/rated-cleaners
  * Get top rated cleaners
  */
-analyticsRouter.get("/top/rated-cleaners", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/top/rated-cleaners", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
     const topRated = await getTopRatedCleaners(limit);
@@ -220,7 +219,7 @@ analyticsRouter.get("/top/rated-cleaners", ...requireAdmin, async (req: AuthedRe
  * GET /analytics/credits/health
  * Get credit economy health metrics
  */
-analyticsRouter.get("/credits/health", ...requireAdmin, async (_req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/credits/health", ...requireAdmin, async (_req: JWTAuthedRequest, res: Response) => {
   try {
     const health = await getCreditEconomyHealth();
     res.json({ health });
@@ -240,7 +239,7 @@ analyticsRouter.get("/credits/health", ...requireAdmin, async (_req: AuthedReque
  * GET /analytics/report
  * Generate comprehensive analytics report
  */
-analyticsRouter.get("/report", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
+analyticsRouter.get("/report", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const report = await generateFullReport(timeRange);

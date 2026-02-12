@@ -5,8 +5,8 @@
 For a **fresh Neon database**, run these two files in order:
 
 ```bash
-# 1. Run the consolidated schema (creates all tables, functions, views)
-psql $DATABASE_URL -f DB/migrations/000_CONSOLIDATED_SCHEMA.sql
+# 1. Run the COMPLETE consolidated schema (creates all tables, functions, views)
+psql $DATABASE_URL -f DB/migrations/000_COMPLETE_CONSOLIDATED_SCHEMA.sql
 
 # 2. (Optional) Run the test seed data
 psql $DATABASE_URL -f DB/migrations/000_SEED_TEST_DATA.sql
@@ -20,9 +20,10 @@ That's it! Your database is ready.
 
 | File | Purpose |
 |------|---------|
-| `000_CONSOLIDATED_SCHEMA.sql` | **Complete schema** - all tables, indexes, functions, views |
+| `000_COMPLETE_CONSOLIDATED_SCHEMA.sql` | **Complete schema** - migrations 001–025 + hardening 901–905 |
+| `000_CONSOLIDATED_SCHEMA.sql` | Legacy schema (001–019 only) |
 | `000_SEED_TEST_DATA.sql` | Test data for development |
-| `001_init.sql` → `019_...` | Historical incremental migrations (for reference) |
+| `001_init.sql` → `025_...` | Historical incremental migrations (for reference) |
 
 ---
 
@@ -62,11 +63,12 @@ The numbered migrations (001-019) were designed to be applied incrementally:
 
 If you get errors about tables not existing:
 1. Make sure you're running migrations in numerical order
-2. Or just use `000_CONSOLIDATED_SCHEMA.sql` on a fresh database
+2. Or just use `000_COMPLETE_CONSOLIDATED_SCHEMA.sql` on a fresh database
 
-### UUID vs BIGINT type mismatch
+### Type mismatches
 
-The schema uses `UUID` for all primary keys (users.id, jobs.id, etc.). Make sure any foreign keys reference the correct type.
+- `users.id` is **TEXT** (canonical). All foreign keys to users must use TEXT.
+- Most other tables use `UUID` for primary keys. Ensure foreign keys reference the correct type.
 
 ---
 
@@ -82,7 +84,7 @@ GRANT ALL ON SCHEMA public TO postgres;
 GRANT ALL ON SCHEMA public TO public;
 ```
 
-Then run `000_CONSOLIDATED_SCHEMA.sql` again.
+Then run `000_COMPLETE_CONSOLIDATED_SCHEMA.sql` again.
 
 ---
 

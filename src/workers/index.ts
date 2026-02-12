@@ -3,9 +3,8 @@
 
 // V1 Core Workers
 import { runAutoCancelWorker } from "./v1-core/autoCancelJobs";
-import { runPayoutsWorker } from "./_deprecated/processPayouts";
-import { runKPISnapshotWorker } from "./_deprecated/kpiSnapshot";
-import { runRetryFailedEventsWorker } from "./_deprecated/retryFailedEvents";
+import { runPayoutWeeklyWorker } from "./v1-core/payoutWeekly";
+import { retryFailedNotifications } from "./v1-core/retryFailedNotifications";
 
 // V2 Operations Workers
 import { runPhotoRetentionCleanup } from "./v2-operations/photoRetentionCleanup";
@@ -24,44 +23,35 @@ import { runNightlyScoreRecompute } from "./reliability/nightlyScoreRecompute";
 import { runCleaningScores } from "./reliability/cleaningScores";
 import { runReliabilityRecalc } from "./reliability/reliabilityRecalc";
 
-// Deprecated Workers (kept for backward compatibility)
-import { runGoalChecker } from "./_deprecated/goalChecker";
-import { runStuckJobDetection } from "./_deprecated/stuckJobDetection";
 import { logger } from "../lib/logger";
 import { env } from "../config/env";
 
 type WorkerName =
   | "auto-cancel"
   | "payouts"
-  | "kpi-snapshot"
-  | "retry-events"
+  | "retry-notifications"
   | "photo-cleanup"
   | "nightly-scores"
   | "cleaning-scores"
   | "credit-economy"
   | "expire-boosts"
-  | "goal-checker"
   | "kpi-daily"
   | "reliability-recalc"
-  | "stuck-detection"
   | "subscription-jobs"
   | "weekly-summary"
   | "all";
 
-const workers: Record<string, () => Promise<any>> = {
+const workers: Record<string, () => Promise<unknown>> = {
   "auto-cancel": runAutoCancelWorker,
-  "payouts": runPayoutsWorker,
-  "kpi-snapshot": runKPISnapshotWorker,
-  "retry-events": runRetryFailedEventsWorker,
-  "photo-cleanup": runPhotoRetentionCleanup, // Per Photo Proof policy: 90-day retention
-  "nightly-scores": runNightlyScoreRecompute, // Client risk + Cleaner reliability + Flexibility scores
+  "payouts": runPayoutWeeklyWorker,
+  "retry-notifications": retryFailedNotifications,
+  "photo-cleanup": runPhotoRetentionCleanup,
+  "nightly-scores": runNightlyScoreRecompute,
   "cleaning-scores": runCleaningScores,
   "credit-economy": runCreditEconomyMaintenance,
   "expire-boosts": runExpireBoosts,
-  "goal-checker": runGoalChecker,
   "kpi-daily": runKpiDailySnapshot,
   "reliability-recalc": runReliabilityRecalc,
-  "stuck-detection": runStuckJobDetection,
   "subscription-jobs": runSubscriptionJobs,
   "weekly-summary": runWeeklySummary,
 };
