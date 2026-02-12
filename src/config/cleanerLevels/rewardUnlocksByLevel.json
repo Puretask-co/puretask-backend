@@ -1,0 +1,12 @@
+{
+  "1": { "unlocks": [], "note": "Level 1 is onboarding; no unlock rewards beyond baseline access." },
+  "2": { "unlocks": ["rwd_visibility_priority_7d", "rwd_notifications_faster"], "note": "Small temporary boost + faster notifications." },
+  "3": { "unlocks": ["rwd_exposure_early_5min_7d", "rwd_featured_48h"], "note": "Small exposure boost + featured slot." },
+  "4": { "unlocks": ["rwd_addon_spotlight_14d"], "note": "Add-on Spotlight; Level 4 unlocks add-on pathway." },
+  "5": { "unlocks": ["choice_group_lvl5"], "note": "Level 5 introduces choice rewards (choose 1)." },
+  "6": { "unlocks": ["rwd_platform_fee_reduction_2pct_30d", "rwd_instant_payout_fee_waived_10_uses"], "note": "Fee discount + payout waiver." },
+  "7": { "unlocks": ["rwd_visibility_priority_14d", "rwd_exposure_early_10min_14d"], "note": "Quality + exposure boosts." },
+  "8": { "unlocks": ["rwd_premium_clients_first_access_30d"], "note": "Premium customer pool boost." },
+  "9": { "unlocks": ["rwd_manual_job_invites_unlocked"], "note": "Manual job invites perk." },
+  "10": { "unlocks": ["rwd_max_visibility_permanent"], "note": "Prestige reward; max visibility." }
+}

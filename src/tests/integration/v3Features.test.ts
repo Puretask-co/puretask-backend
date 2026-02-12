@@ -1,7 +1,7 @@
 // src/tests/integration/v3Features.test.ts
 // V3 FEATURES: Tests for Tier-Aware Pricing, Subscriptions, Earnings Dashboard
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";

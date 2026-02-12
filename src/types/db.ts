@@ -5,7 +5,7 @@
 // ENUM TYPES
 // -------------------------
 
-export type UserRole = "client" | "cleaner" | "admin";
+export type UserRole = "client" | "cleaner" | "admin" | "super_admin";
 
 export type JobStatus =
   | "requested"

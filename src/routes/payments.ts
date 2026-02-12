@@ -8,7 +8,9 @@
 import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
-import { auth } from "../lib/auth";
+import { requireIdempotency } from "../lib/idempotency";
+import { sendSuccess } from "../lib/response";
+import { requireAuth } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { query } from "../db/client";
 import {
@@ -24,15 +26,73 @@ import { env } from "../config/env";
 const paymentsRouter = Router();
 
 // All payment routes require authentication
-paymentsRouter.use(auth());
+paymentsRouter.use(requireAuth);
 
 // ============================================
 // Wallet Top-up Flow
 // ============================================
 
 /**
- * POST /payments/credits
- * Create a PaymentIntent for buying credits (wallet top-up)
+ * @swagger
+ * /payments/credits:
+ *   post:
+ *     summary: Create payment intent for buying credits
+ *     description: |
+ *       Create a PaymentIntent for buying credits (wallet top-up).
+ *       Supports Idempotency-Key header to prevent duplicate charges.
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - credits
+ *             properties:
+ *               credits:
+ *                 type: integer
+ *                 minimum: 10
+ *                 maximum: 10000
+ *                 description: Number of credits to purchase
+ *                 example: 100
+ *               stripeCustomerId:
+ *                 type: string
+ *                 description: Stripe customer ID (optional, will be created if not provided)
+ *     responses:
+ *       200:
+ *         description: Payment intent created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     clientSecret:
+ *                       type: string
+ *                       description: Stripe client secret for payment confirmation
+ *                     paymentIntentId:
+ *                       type: string
+ *                       description: Stripe payment intent ID
+ *                     credits:
+ *                       type: number
+ *                       description: Number of credits
+ *                     amountCents:
+ *                       type: number
+ *                       description: Amount in cents
+ *                     amountFormatted:
+ *                       type: string
+ *                       description: Formatted amount (e.g., $50.00)
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ *       429:
+ *         description: Rate limit exceeded (duplicate request)
  */
 const buyCreditsSchema = z.object({
   credits: z.number().int().positive().min(10).max(10000),
@@ -41,6 +101,7 @@ const buyCreditsSchema = z.object({
 
 paymentsRouter.post(
   "/credits",
+  requireIdempotency,
   validateBody(buyCreditsSchema),
   async (req, res: Response) => {
     try {
@@ -53,7 +114,7 @@ paymentsRouter.post(
         credits,
       });
 
-      res.json({
+      sendSuccess(res, {
         clientSecret: result.clientSecret,
         paymentIntentId: result.stripePaymentIntentId,
         credits: result.credits,
@@ -74,8 +135,60 @@ paymentsRouter.post(
 );
 
 /**
- * POST /payments/checkout
- * Create a Stripe Checkout Session for credit purchases
+ * @swagger
+ * /payments/checkout:
+ *   post:
+ *     summary: Create Stripe checkout session for credit purchases
+ *     description: Create a Stripe Checkout Session for credit purchases. User will be redirected to Stripe's hosted checkout page.
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - credits
+ *               - successUrl
+ *               - cancelUrl
+ *             properties:
+ *               credits:
+ *                 type: integer
+ *                 minimum: 10
+ *                 maximum: 10000
+ *                 description: Number of credits to purchase
+ *                 example: 100
+ *               successUrl:
+ *                 type: string
+ *                 format: uri
+ *                 description: URL to redirect after successful payment
+ *                 example: "https://app.puretask.com/payment/success"
+ *               cancelUrl:
+ *                 type: string
+ *                 format: uri
+ *                 description: URL to redirect if payment is cancelled
+ *                 example: "https://app.puretask.com/payment/cancel"
+ *     responses:
+ *       200:
+ *         description: Checkout session created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sessionId:
+ *                   type: string
+ *                   description: Stripe checkout session ID
+ *                 url:
+ *                   type: string
+ *                   format: uri
+ *                   description: Checkout URL to redirect user to
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
  */
 const checkoutSchema = z.object({
   credits: z.number().int().positive().min(10).max(10000),
@@ -142,11 +255,41 @@ async function getClientStripeCustomerId(clientId: string): Promise<string | nul
 // ============================================
 
 /**
- * POST /payments/job/:jobId
- * Create a PaymentIntent for a specific job (direct charge)
- * 
- * NOTE: This charges base price + surcharge (NON_CREDIT_SURCHARGE_PERCENT).
- * Use wallet credits to avoid the surcharge.
+ * @swagger
+ * /payments/job/{jobId}:
+ *   post:
+ *     summary: Create payment intent for job charge
+ *     description: |
+ *       Create a PaymentIntent for a specific job (direct charge).
+ *       **NOTE**: This charges base price + surcharge. Use wallet credits to avoid the surcharge.
+ *     tags: [Payments, Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               stripeCustomerId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Payment intent created
+ *       400:
+ *         description: Invalid job status or payment already exists
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Job not found
  */
 const jobChargeSchema = z.object({
   stripeCustomerId: z.string().optional(),

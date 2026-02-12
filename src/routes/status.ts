@@ -4,6 +4,7 @@
 import { Router, Request, Response } from "express";
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
+import { isN8nWebhookConfigured, isN8nApiConfigured } from "../lib/n8nClient";
 
 const router = Router();
 
@@ -22,6 +23,8 @@ interface StatusSummary {
     pendingPayouts: number;
     openDisputes: number;
     openFraudAlerts: number;
+    n8nWebhookConfigured: boolean;
+    n8nApiConfigured: boolean;
   };
   alerts: string[];
   uptimeSeconds: number;
@@ -35,6 +38,46 @@ const SERVER_START = Date.now();
 // Quick operational health summary
 // ============================================
 
+/**
+ * @swagger
+ * /status/summary:
+ *   get:
+ *     summary: Get operational health summary
+ *     description: Get quick operational health summary with metrics and alerts for monitoring.
+ *     tags: [Status]
+ *     responses:
+ *       200:
+ *         description: Status summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 status:
+ *                   type: string
+ *                   enum: [ok, warning, critical]
+ *                 metrics:
+ *                   type: object
+ *                   properties:
+ *                     openPayoutFlags: { type: 'number' }
+ *                     failedWebhooks24h: { type: 'number' }
+ *                     stuckJobs: { type: 'number' }
+ *                     pausedCleaners: { type: 'number' }
+ *                     pendingPayouts: { type: 'number' }
+ *                     openDisputes: { type: 'number' }
+ *                     openFraudAlerts: { type: 'number' }
+ *                     n8nWebhookConfigured: { type: 'boolean' }
+ *                     n8nApiConfigured: { type: 'boolean' }
+ *                 alerts:
+ *                   type: array
+ *                   items: { type: 'string' }
+ *                 uptimeSeconds: { type: 'number' }
+ *       503:
+ *         description: Critical status
+ */
 router.get("/summary", async (_req: Request, res: Response) => {
   try {
     const alerts: string[] = [];
@@ -131,6 +174,8 @@ router.get("/summary", async (_req: Request, res: Response) => {
         pendingPayouts,
         openDisputes,
         openFraudAlerts,
+        n8nWebhookConfigured: isN8nWebhookConfigured(),
+        n8nApiConfigured: isN8nApiConfigured(),
       },
       alerts,
       uptimeSeconds: Math.floor((Date.now() - SERVER_START) / 1000),
@@ -157,20 +202,56 @@ router.get("/summary", async (_req: Request, res: Response) => {
   }
 });
 
-// ============================================
-// GET /status/ping
-// Simple liveness check
-// ============================================
-
+/**
+ * @swagger
+ * /status/ping:
+ *   get:
+ *     summary: Liveness check
+ *     description: Simple ping endpoint for liveness checks.
+ *     tags: [Status]
+ *     responses:
+ *       200:
+ *         description: Service is alive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 pong: { type: 'boolean', example: true }
+ *                 timestamp: { type: 'string', format: 'date-time' }
+ */
 router.get("/ping", (_req: Request, res: Response) => {
   res.json({ pong: true, timestamp: new Date().toISOString() });
 });
 
-// ============================================
-// GET /status/ready
-// Readiness check (includes DB)
-// ============================================
-
+/**
+ * @swagger
+ * /status/ready:
+ *   get:
+ *     summary: Readiness check
+ *     description: Check if service is ready to accept requests, including database connectivity.
+ *     tags: [Status]
+ *     responses:
+ *       200:
+ *         description: Service is ready
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ready: { type: 'boolean', example: true }
+ *                 timestamp: { type: 'string', format: 'date-time' }
+ *                 checks:
+ *                   type: object
+ *                   properties:
+ *                     database:
+ *                       type: object
+ *                       properties:
+ *                         ok: { type: 'boolean' }
+ *                         latencyMs: { type: 'number' }
+ *       503:
+ *         description: Service is not ready
+ */
 router.get("/ready", async (_req: Request, res: Response) => {
   try {
     const start = Date.now();

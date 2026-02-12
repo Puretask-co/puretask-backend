@@ -1,7 +1,7 @@
 // src/tests/integration/v4Features.test.ts
 // Integration tests for V4 features: Boosts, Analytics, Manager Dashboard, Risk Flags
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";

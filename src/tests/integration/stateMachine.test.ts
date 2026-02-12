@@ -2,7 +2,7 @@
 // Comprehensive integration tests for job state machine
 // Tests all transitions, permissions, and edge cases
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "@jest/globals";
 import {
   getNextStatus,
   canTransition,

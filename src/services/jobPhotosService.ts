@@ -60,6 +60,11 @@ export async function addJobPhoto(input: UploadPhotoInput): Promise<JobPhoto> {
     photoId: result.rows[0].id,
   });
 
+  // Meaningful action for level system (login streak anti-gaming)
+  import("./cleanerLevelService")
+    .then(({ recordMeaningfulAction }) => recordMeaningfulAction(cleanerId, "photo_uploaded"))
+    .catch(() => {});
+
   return result.rows[0];
 }
 
@@ -127,14 +132,20 @@ export async function deleteJobPhoto(
 /**
  * Generate a presigned URL for upload (placeholder - implement with your storage provider)
  * This would integrate with S3, Cloudinary, etc.
+ * 
+ * Security hardening:
+ * - Max file size: 10MB
+ * - TTL: 15 minutes (signed URL expires)
+ * - EXIF stripping: Should be done client-side or in storage processing
  */
 export async function getUploadUrl(options: {
   jobId: string;
   cleanerId: string;
   type: PhotoType;
   contentType: string;
-}): Promise<{ uploadUrl: string; publicUrl: string }> {
-  const { jobId, cleanerId, type, contentType } = options;
+  fileSize?: number; // In bytes
+}): Promise<{ uploadUrl: string; publicUrl: string; expiresAt: string }> {
+  const { jobId, cleanerId, type, contentType, fileSize } = options;
 
   // Validate file type
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -142,19 +153,36 @@ export async function getUploadUrl(options: {
     throw new Error("Invalid file type. Allowed: JPEG, PNG, WebP");
   }
 
+  // Validate file size (max 10MB)
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  if (fileSize && fileSize > MAX_FILE_SIZE) {
+    throw new Error(`File size exceeds maximum of ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+  }
+
   // Generate unique filename
   const timestamp = Date.now();
   const extension = contentType.split("/")[1];
   const filename = `jobs/${jobId}/${type}/${cleanerId}_${timestamp}.${extension}`;
+
+  // TTL: 15 minutes for signed URL
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
   // TODO: Implement with your storage provider (S3, Cloudinary, etc.)
   // For now, return placeholder URLs
   // Import env at top of file for STORAGE_URL
   const baseUrl = "https://storage.puretask.com"; // Update with env.STORAGE_URL when configured
 
+  // NOTE: In production, the signed URL should:
+  // 1. Include Content-Type restriction
+  // 2. Include Content-Length restriction (max 10MB)
+  // 3. Expire after 15 minutes
+  // 4. Be scoped to the specific filename
+  // Example (S3): s3.getSignedUrl('putObject', { Bucket, Key: filename, Expires: 900, ContentType: contentType, ContentLength: fileSize })
+
   return {
-    uploadUrl: `${baseUrl}/upload/${filename}`,
+    uploadUrl: `${baseUrl}/upload/${filename}?expires=${Math.floor(Date.now() / 1000) + 900}`, // 15 min TTL
     publicUrl: `${baseUrl}/${filename}`,
+    expiresAt,
   };
 }
 

@@ -2,10 +2,11 @@
 // Security middleware and headers
 
 import { Request, Response, NextFunction } from "express";
+import { env } from "../config/env";
 
 /**
- * Security headers middleware
- * Adds common security headers to all responses
+ * Enhanced security headers middleware
+ * Adds comprehensive security headers to all responses
  */
 export function securityHeaders(req: Request, res: Response, next: NextFunction) {
   // Prevent clickjacking
@@ -14,26 +15,52 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   // Prevent MIME type sniffing
   res.setHeader("X-Content-Type-Options", "nosniff");
   
-  // XSS Protection
+  // XSS Protection (legacy, but still useful)
   res.setHeader("X-XSS-Protection", "1; mode=block");
   
   // Referrer Policy
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   
+  // Permissions Policy (formerly Feature Policy)
+  res.setHeader(
+    "Permissions-Policy",
+    "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=()"
+  );
+  
   // Remove powered by header
   res.removeHeader("X-Powered-By");
   
-  // Content Security Policy (adjust as needed for your frontend)
+  // Enhanced Content Security Policy for API
+  // Note: Frontend should have its own CSP
+  const frontendUrl = env.FRONTEND_URL || "http://localhost:3000";
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'"
+    [
+      "default-src 'self'",
+      "script-src 'self'",
+      "style-src 'self' 'unsafe-inline'", // Inline styles needed for some libraries
+      "img-src 'self' data: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' " + frontendUrl,
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; ")
   );
   
   // Strict Transport Security (only in production with HTTPS)
-  if (process.env.NODE_ENV === "production") {
+  if (env.NODE_ENV === "production") {
     res.setHeader(
       "Strict-Transport-Security",
-      "max-age=31536000; includeSubDomains"
+      "max-age=31536000; includeSubDomains; preload"
+    );
+  }
+  
+  // Expect-CT header (Certificate Transparency)
+  if (env.NODE_ENV === "production") {
+    res.setHeader(
+      "Expect-CT",
+      "max-age=86400, enforce"
     );
   }
   
@@ -42,7 +69,8 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
 
 /**
  * Sanitize user input to prevent XSS
- * Basic sanitization - for more robust protection use a library like DOMPurify
+ * Basic sanitization - for more robust protection use sanitizeText from lib/sanitization
+ * @deprecated Use sanitizeText from lib/sanitization instead
  */
 export function sanitizeInput(input: string): string {
   if (typeof input !== "string") return input;

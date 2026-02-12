@@ -47,7 +47,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_enabled_at TIMESTAMPTZ;
 -- 2FA verification codes table (for SMS 2FA)
 CREATE TABLE IF NOT EXISTS two_factor_codes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   code TEXT NOT NULL,
   method TEXT NOT NULL, -- 'sms' or 'totp'
   phone TEXT, -- Phone number for SMS
@@ -68,7 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_two_factor_codes_expires_at ON two_factor_codes(e
 -- Sessions table for token tracking and revocation
 CREATE TABLE IF NOT EXISTS user_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   token_jti TEXT NOT NULL, -- JWT ID (jti claim)
   device_info JSONB, -- User agent, device type, etc.
   ip_address TEXT,
@@ -98,7 +98,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_ip TEXT;
 -- OAuth accounts table (Google, Facebook, etc.)
 CREATE TABLE IF NOT EXISTS oauth_accounts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   provider TEXT NOT NULL, -- 'google', 'facebook', 'apple', etc.
   provider_account_id TEXT NOT NULL, -- User ID from provider
   provider_email TEXT,
@@ -123,7 +123,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_oauth_accounts_provider_id
 -- Security events table for audit trail
 CREATE TABLE IF NOT EXISTS security_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
   event_type TEXT NOT NULL, -- 'login', 'logout', 'password_change', 'email_verification', '2fa_enabled', etc.
   status TEXT NOT NULL, -- 'success', 'failed', 'suspicious'
   ip_address TEXT,
@@ -171,7 +171,7 @@ CREATE INDEX IF NOT EXISTS idx_users_locked_until ON users(locked_until) WHERE l
 -- Pending email changes table (verify new email before updating)
 CREATE TABLE IF NOT EXISTS email_change_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   old_email TEXT NOT NULL,
   new_email TEXT NOT NULL,
   verification_token TEXT NOT NULL,
@@ -193,7 +193,7 @@ CREATE INDEX IF NOT EXISTS idx_email_change_requests_token
 -- Trusted devices table (skip 2FA for trusted devices)
 CREATE TABLE IF NOT EXISTS trusted_devices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   device_fingerprint TEXT NOT NULL,
   device_name TEXT,
   device_info JSONB,
@@ -280,7 +280,7 @@ $$ LANGUAGE plpgsql;
 
 -- Function to log security event
 CREATE OR REPLACE FUNCTION log_security_event(
-  p_user_id UUID,
+  p_user_id TEXT,
   p_event_type TEXT,
   p_status TEXT,
   p_ip_address TEXT DEFAULT NULL,

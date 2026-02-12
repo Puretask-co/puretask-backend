@@ -14,14 +14,20 @@ export type NotificationType =
   | "job.approved"
   | "job.disputed"
   | "job.cancelled"
+  | "job.reminder_24h"
+  | "job.reminder_2h"
+  | "job.no_show_warning"
   // Payments
   | "credits.purchased"
   | "credits.low"
   | "payout.processed"
   | "payout.failed"
+  | "payment.failed"
   // Account
   | "welcome"
-  | "password.reset";
+  | "password.reset"
+  // Subscriptions
+  | "subscription.renewal_reminder";
 
 export interface NotificationPayload {
   userId?: string; // For failures/logging and external_id targeting
@@ -31,6 +37,9 @@ export interface NotificationPayload {
   type: NotificationType;
   channel: NotificationChannel;
   data: Record<string, unknown>;
+  // Idempotency key to prevent duplicates
+  // Format: `${type}:${channel}:${userId}:${jobId || ""}:${timestampBucket || ""}`
+  dedupeKey?: string;
 }
 
 export interface NotificationResult {

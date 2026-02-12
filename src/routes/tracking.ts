@@ -5,7 +5,9 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
+import { requireIdempotency } from "../lib/idempotency";
+import { sendSuccess } from "../lib/response";
 import {
   getJobTrackingState,
   startEnRoute,
@@ -20,15 +22,43 @@ import {
 const trackingRouter = Router();
 
 // All routes require auth
-trackingRouter.use(authMiddleware);
+trackingRouter.use(requireAuth);
 
 // ============================================
 // Client Tracking View
 // ============================================
 
 /**
- * GET /tracking/:jobId
- * Get full job tracking state (for client)
+ * @swagger
+ * /tracking/{jobId}:
+ *   get:
+ *     summary: Get job tracking state
+ *     description: Get full job tracking state including location, status, and timeline.
+ *     tags: [Tracking]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Job tracking state
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 tracking:
+ *                   type: object
+ *                   properties:
+ *                     jobId: { type: 'string', format: 'uuid' }
+ *                     status: { type: 'string' }
+ *                     cleanerLocation: { type: 'object', nullable: true }
+ *                     timeline: { type: 'array', items: { type: 'object' } }
  */
 trackingRouter.get("/:jobId", async (req: AuthedRequest, res: Response) => {
   try {
@@ -56,8 +86,46 @@ const locationSchema = z.object({
 });
 
 /**
- * POST /tracking/:jobId/en-route
- * Cleaner starts heading to job
+ * @swagger
+ * /tracking/{jobId}/en-route:
+ *   post:
+ *     summary: Start en route
+ *     description: Cleaner starts heading to job location.
+ *     tags: [Tracking]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - location
+ *             properties:
+ *               location:
+ *                 type: object
+ *                 required:
+ *                   - latitude
+ *                   - longitude
+ *                 properties:
+ *                   latitude: { type: 'number', minimum: -90, maximum: 90 }
+ *                   longitude: { type: 'number', minimum: -180, maximum: 180 }
+ *                   accuracy: { type: 'number' }
+ *                   heading: { type: 'number' }
+ *                   speed: { type: 'number' }
+ *     responses:
+ *       200:
+ *         description: En route started
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 trackingRouter.post(
   "/:jobId/en-route",
@@ -81,8 +149,44 @@ trackingRouter.post(
 );
 
 /**
- * POST /tracking/:jobId/arrived
- * Cleaner arrives at location
+ * @swagger
+ * /tracking/{jobId}/arrived:
+ *   post:
+ *     summary: Mark arrived
+ *     description: Cleaner arrives at job location.
+ *     tags: [Tracking]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - location
+ *             properties:
+ *               location:
+ *                 type: object
+ *                 required:
+ *                   - latitude
+ *                   - longitude
+ *                 properties:
+ *                   latitude: { type: 'number' }
+ *                   longitude: { type: 'number' }
+ *                   accuracy: { type: 'number' }
+ *     responses:
+ *       200:
+ *         description: Arrived successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 trackingRouter.post(
   "/:jobId/arrived",
@@ -106,8 +210,47 @@ trackingRouter.post(
 );
 
 /**
- * POST /tracking/:jobId/check-in
- * Cleaner checks in with before photos
+ * @swagger
+ * /tracking/{jobId}/check-in:
+ *   post:
+ *     summary: Check in to job
+ *     description: Cleaner checks in with before photos and location.
+ *     tags: [Tracking]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - location
+ *               - beforePhotos
+ *             properties:
+ *               location:
+ *                 type: object
+ *                 required:
+ *                   - latitude
+ *                   - longitude
+ *               beforePhotos:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uri
+ *                 minItems: 1
+ *     responses:
+ *       200:
+ *         description: Checked in successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 const checkInSchema = z.object({
   location: locationSchema,
@@ -141,8 +284,43 @@ trackingRouter.post(
 );
 
 /**
- * POST /tracking/:jobId/check-out
- * Cleaner checks out with after photos
+ * @swagger
+ * /tracking/{jobId}/check-out:
+ *   post:
+ *     summary: Check out from job
+ *     description: Cleaner checks out with after photos and notes.
+ *     tags: [Tracking]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - afterPhotos
+ *             properties:
+ *               afterPhotos:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uri
+ *                 minItems: 1
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Checked out successfully
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 const checkOutSchema = z.object({
   afterPhotos: z.array(z.string().url()).min(1, "At least one after photo required"),
@@ -176,8 +354,46 @@ trackingRouter.post(
 );
 
 /**
- * POST /tracking/:jobId/location
- * Update cleaner location during job
+ * @swagger
+ * /tracking/{jobId}/location:
+ *   post:
+ *     summary: Update cleaner location
+ *     description: Update cleaner's location during job (for live tracking).
+ *     tags: [Tracking]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - location
+ *             properties:
+ *               location:
+ *                 type: object
+ *                 required:
+ *                   - latitude
+ *                   - longitude
+ *                 properties:
+ *                   latitude: { type: 'number' }
+ *                   longitude: { type: 'number' }
+ *                   accuracy: { type: 'number' }
+ *                   heading: { type: 'number' }
+ *                   speed: { type: 'number' }
+ *     responses:
+ *       200:
+ *         description: Location updated
+ *       403:
+ *         description: Forbidden - cleaners only
  */
 trackingRouter.post(
   "/:jobId/location",
@@ -204,8 +420,49 @@ trackingRouter.post(
 // ============================================
 
 /**
- * POST /tracking/:jobId/approve
- * Client approves completed job
+ * @swagger
+ * /tracking/{jobId}/approve:
+ *   post:
+ *     summary: Approve completed job
+ *     description: Client approves completed job, releases escrow, and optionally leaves rating/tip.
+ *     tags: [Tracking]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: header
+ *         name: Idempotency-Key
+ *         schema:
+ *           type: string
+ *         description: Prevents duplicate approvals
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rating
+ *             properties:
+ *               rating:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *               tip:
+ *                 type: integer
+ *                 minimum: 0
+ *               feedback:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Job approved successfully
+ *       403:
+ *         description: Forbidden - clients only
  */
 const approveSchema = z.object({
   rating: z.number().int().min(1).max(5),
@@ -215,6 +472,7 @@ const approveSchema = z.object({
 
 trackingRouter.post(
   "/:jobId/approve",
+  requireIdempotency,
   validateBody(approveSchema),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -229,7 +487,7 @@ trackingRouter.post(
         req.body.tip,
         req.body.feedback
       );
-      res.json({ success: true, status: "completed" });
+      sendSuccess(res, { success: true, status: "completed" });
     } catch (error) {
       const err = error as Error & { statusCode?: number };
       logger.error("approve_failed", { error: err.message, jobId: req.params.jobId });
@@ -241,8 +499,42 @@ trackingRouter.post(
 );
 
 /**
- * POST /tracking/:jobId/dispute
- * Client disputes job
+ * @swagger
+ * /tracking/{jobId}/dispute:
+ *   post:
+ *     summary: Dispute job
+ *     description: Client disputes a completed job and requests refund.
+ *     tags: [Tracking]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *               - requestedRefund
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 minLength: 10
+ *               requestedRefund:
+ *                 type: string
+ *                 enum: [full, partial, none]
+ *     responses:
+ *       200:
+ *         description: Dispute created
+ *       403:
+ *         description: Forbidden - clients only
  */
 const disputeSchema = z.object({
   reason: z.string().min(10),

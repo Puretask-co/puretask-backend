@@ -8,7 +8,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { env } from "../config/env";
 
-export type UserRole = "client" | "cleaner" | "admin";
+export type UserRole = "client" | "cleaner" | "admin" | "super_admin";
 
 export interface AuthUser {
   id: string;
@@ -68,8 +68,50 @@ export function signAuthToken(user: AuthUser, jti?: string): string {
 
 /**
  * Verify and decode a JWT token
+ * Also checks token_version for invalidation
+ * 
+ * NOTE: This is now async to check token_version and invalidated_tokens.
+ * For backwards compatibility, use verifyAuthTokenSync for synchronous cases.
  */
-export function verifyAuthToken(token: string): AuthUser {
+export async function verifyAuthToken(token: string): Promise<AuthUser> {
+  const decoded = jwt.verify(token, env.JWT_SECRET) as AuthUser & { token_version?: number; jti?: string };
+  
+  // Check if token is explicitly invalidated
+  const { query } = await import("../db/client");
+  if (decoded.jti) {
+    const invalidated = await query<{ jti: string }>(
+      `SELECT jti FROM invalidated_tokens WHERE jti = $1`,
+      [decoded.jti]
+    );
+    if (invalidated.rows.length > 0) {
+      throw new Error("Token has been invalidated");
+    }
+  }
+  
+  // Check token_version matches current user token_version
+  if (decoded.token_version !== undefined) {
+    const result = await query<{ token_version: number }>(
+      `SELECT token_version FROM users WHERE id = $1`,
+      [decoded.id]
+    );
+    const currentVersion = result.rows[0]?.token_version || 1;
+    if (decoded.token_version !== currentVersion) {
+      throw new Error("Token has been invalidated (version mismatch)");
+    }
+  }
+  
+  return { 
+    id: decoded.id, 
+    role: decoded.role,
+    jti: decoded.jti 
+  };
+}
+
+/**
+ * Synchronous version of verifyAuthToken (for backwards compatibility)
+ * Does NOT check token_version or invalidated_tokens (less secure)
+ */
+export function verifyAuthTokenSync(token: string): AuthUser {
   const decoded = jwt.verify(token, env.JWT_SECRET) as AuthUser;
   return { 
     id: decoded.id, 
@@ -104,8 +146,9 @@ export function authMiddlewareAttachUser(
 ): void {
   const token = extractBearerToken(req);
   if (token) {
+    // Use synchronous version to avoid blocking - token_version check happens in protected routes
     try {
-      req.user = verifyAuthToken(token);
+      req.user = verifyAuthTokenSync(token);
     } catch {
       // Ignore invalid token - user stays undefined
     }
@@ -118,7 +161,7 @@ export function authMiddlewareAttachUser(
  * Use this for protected routes
  */
 export function auth(requiredRole?: UserRole) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const token = extractBearerToken(req);
 
     if (!token) {
@@ -129,7 +172,7 @@ export function auth(requiredRole?: UserRole) {
     }
 
     try {
-      const decoded = verifyAuthToken(token);
+      const decoded = await verifyAuthToken(token);
       req.user = decoded;
 
       // Check role if required (admin can access everything)
@@ -152,7 +195,7 @@ export function auth(requiredRole?: UserRole) {
 /**
  * Require admin role
  */
-export function adminOnly(req: Request, res: Response, next: NextFunction): void {
+export async function adminOnly(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = extractBearerToken(req);
 
   if (!token) {
@@ -163,7 +206,7 @@ export function adminOnly(req: Request, res: Response, next: NextFunction): void
   }
 
   try {
-    const decoded = verifyAuthToken(token);
+    const decoded = await verifyAuthToken(token);
     req.user = decoded;
 
     if (decoded.role !== "admin") {

@@ -1,0 +1,69 @@
+{
+  "global": {
+    "headerHelper": "Levels unlock access to bigger goals and bigger rewards. Complete all Professional Standards, complete at least 1 Way to Stand Out, and stay in Good Standing.",
+    "coreSectionTitle": "Professional Standards",
+    "stretchSectionTitle": "Ways to Stand Out",
+    "maintenanceSectionTitle": "Stay in Good Standing",
+    "footerHelper": "Your level never goes down. If you fall out of Good Standing, rewards and progress may pause until you're back on track."
+  },
+  "levels": {
+    "1": {
+      "description": "Welcome to PureTask. Finish your first job the right way and you'll start getting booked more often.",
+      "coreHelper": "These steps unlock your account's full booking power.",
+      "stretchHelper": "Complete one to unlock your first boost.",
+      "maintenanceHelper": "Keep things clean and reliable from day one."
+    },
+    "2": {
+      "description": "You're building momentum. Consistency here unlocks bigger rewards and faster bookings.",
+      "coreHelper": "Show you can complete jobs, communicate, and keep customers satisfied.",
+      "stretchHelper": "Pick a challenge that matches your schedule.",
+      "maintenanceHelper": "Stay responsive and avoid preventable issues."
+    },
+    "3": {
+      "description": "Reliable cleaners earn trust — and trust earns you better visibility and better opportunities.",
+      "coreHelper": "This level proves you show up and finish cleanings consistently.",
+      "stretchHelper": "Choose the path you want to be known for: 5-star ratings, repeat clients, or consistency.",
+      "maintenanceHelper": "Keep disputes off your record to keep your momentum."
+    },
+    "4": {
+      "description": "Customers feel confident booking you. This level opens higher-value work and stronger rewards.",
+      "coreHelper": "You've shown you can handle both basic and deep cleanings reliably.",
+      "stretchHelper": "Choose how you stand out: consistency, 5-star volume, or high-demand time slots.",
+      "maintenanceHelper": "Good standing keeps your access and boosts active."
+    },
+    "5": {
+      "description": "You're operating like a pro. This level unlocks serious earning upside through better jobs and better economics.",
+      "coreHelper": "Photos, reviews, and reliability are now your main growth levers.",
+      "stretchHelper": "Pick your edge: streak performance, dispute-free consistency, repeat customers, or early-morning demand.",
+      "maintenanceHelper": "Staying active and accepting jobs keeps your pipeline full."
+    },
+    "6": {
+      "description": "Elite cleaners get more flexibility and higher leverage — including faster access to earnings.",
+      "coreHelper": "You've proven customer satisfaction and consistency under real volume.",
+      "stretchHelper": "Choose a longer-term commitment goal for bigger upside.",
+      "maintenanceHelper": "Maintain high ratings to keep elite privileges active."
+    },
+    "7": {
+      "description": "You're becoming a go-to cleaner. This level is about loyalty, repeat business, and premium job types.",
+      "coreHelper": "Stay dispute-free and keep your rating strong to keep your advantage.",
+      "stretchHelper": "Choose your specialty: move-in/out work, ultra-low cancellations, or high-demand hours.",
+      "maintenanceHelper": "Consistency matters more than ever at this level."
+    },
+    "8": {
+      "description": "Masters are scarce. You're competing on excellence — not volume alone.",
+      "coreHelper": "Strong on-time performance plus low disputes is what makes you a Master.",
+      "stretchHelper": "Hit long-term milestones to unlock top-tier economic advantages."
+    },
+    "9": {
+      "description": "You're among the best on the platform. You'll unlock the most valuable opportunities when you stay consistent.",
+      "coreHelper": "Keep rating high and disputes extremely low to protect your position.",
+      "stretchHelper": "Build a repeat-client base and long-term reliability for maximum leverage."
+    },
+    "10": {
+      "description": "Legends are the backbone of PureTask. You've built long-term trust and elite performance.",
+      "coreHelper": "You're operating at scale with consistent excellence.",
+      "stretchHelper": "Long streaks and a high volume of 5-star reviews represent true mastery.",
+      "maintenanceHelper": "Stay in the top tier of reliability to keep legend privileges active."
+    }
+  }
+}

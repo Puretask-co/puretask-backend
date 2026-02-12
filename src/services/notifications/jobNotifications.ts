@@ -4,6 +4,13 @@
 import { query } from "../../db/client";
 import { logger } from "../../lib/logger";
 import { sendNotificationToUser, sendNotification } from "./notificationService";
+import {
+  buildClientJobUrl,
+  buildCleanerJobUrl,
+  buildCheckInUrl,
+  buildPaymentUrl,
+  buildSupportUrl,
+} from "../../lib/urlBuilder";
 import type { Job } from "../../types/db";
 import type { NotificationType, NotificationChannel } from "./types";
 
@@ -21,6 +28,17 @@ async function getUserName(userId: string): Promise<string> {
   );
   const email = result.rows[0]?.email || "Customer";
   return email.split("@")[0];
+}
+
+/**
+ * Get user role
+ */
+async function getUserRole(userId: string): Promise<"client" | "cleaner" | "admin" | null> {
+  const result = await query<{ role: "client" | "cleaner" | "admin" }>(
+    `SELECT role FROM users WHERE id = $1`,
+    [userId]
+  );
+  return result.rows[0]?.role || null;
 }
 
 /**
@@ -68,6 +86,7 @@ function formatDate(dateString: string): string {
  */
 export async function notifyJobCreated(job: Job): Promise<void> {
   const clientName = await getUserName(job.client_id);
+  const jobUrl = buildClientJobUrl(job.id);
 
   await sendNotificationToUser(job.client_id, "job.created", {
     jobId: job.id,
@@ -75,6 +94,7 @@ export async function notifyJobCreated(job: Job): Promise<void> {
     address: job.address,
     scheduledDate: formatDate(job.scheduled_start_at),
     creditAmount: job.credit_amount,
+    jobUrl,
   });
 }
 
@@ -89,6 +109,7 @@ export async function notifyJobAccepted(job: Job): Promise<void> {
 
   const clientName = await getUserName(job.client_id);
   const cleaner = await getCleanerDetails(job.cleaner_id);
+  const jobUrl = buildClientJobUrl(job.id);
 
   await sendNotificationToUser(
     job.client_id,
@@ -99,6 +120,7 @@ export async function notifyJobAccepted(job: Job): Promise<void> {
       cleanerName: cleaner.name,
       address: job.address,
       scheduledDate: formatDate(job.scheduled_start_at),
+      jobUrl,
     },
     ["email", "push"] // Send both email and push
   );
@@ -112,6 +134,7 @@ export async function notifyCleanerOnTheWay(job: Job): Promise<void> {
 
   const clientName = await getUserName(job.client_id);
   const cleaner = await getCleanerDetails(job.cleaner_id);
+  const jobUrl = buildClientJobUrl(job.id);
 
   await sendNotificationToUser(
     job.client_id,
@@ -121,6 +144,7 @@ export async function notifyCleanerOnTheWay(job: Job): Promise<void> {
       clientName,
       cleanerName: cleaner.name,
       address: job.address,
+      jobUrl,
     },
     ["sms", "push"] // SMS and push for urgency
   );
@@ -134,6 +158,7 @@ export async function notifyJobStarted(job: Job): Promise<void> {
 
   const clientName = await getUserName(job.client_id);
   const cleaner = await getCleanerDetails(job.cleaner_id);
+  const jobUrl = buildClientJobUrl(job.id);
 
   await sendNotificationToUser(
     job.client_id,
@@ -149,6 +174,7 @@ export async function notifyJobStarted(job: Job): Promise<void> {
             minute: "2-digit",
           })
         : "Now",
+      jobUrl,
     },
     ["push"]
   );
@@ -162,6 +188,7 @@ export async function notifyJobCompleted(job: Job): Promise<void> {
 
   const clientName = await getUserName(job.client_id);
   const cleaner = await getCleanerDetails(job.cleaner_id);
+  const jobUrl = buildClientJobUrl(job.id);
 
   await sendNotificationToUser(
     job.client_id,
@@ -172,6 +199,7 @@ export async function notifyJobCompleted(job: Job): Promise<void> {
       cleanerName: cleaner.name,
       address: job.address,
       creditAmount: job.credit_amount,
+      jobUrl,
     },
     ["email", "sms", "push"] // All channels for important action needed
   );
@@ -206,12 +234,15 @@ export async function notifyJobApproved(job: Job): Promise<void> {
  */
 export async function notifyJobDisputed(job: Job): Promise<void> {
   const clientName = await getUserName(job.client_id);
+  const clientJobUrl = buildClientJobUrl(job.id);
+  const cleanerJobUrl = buildCleanerJobUrl(job.id);
 
   // Notify client
   await sendNotificationToUser(job.client_id, "job.disputed", {
     jobId: job.id,
     clientName,
     address: job.address,
+    jobUrl: clientJobUrl,
   });
 
   // Also notify cleaner if assigned
@@ -219,6 +250,7 @@ export async function notifyJobDisputed(job: Job): Promise<void> {
     await sendNotificationToUser(job.cleaner_id, "job.disputed", {
       jobId: job.id,
       address: job.address,
+      jobUrl: cleanerJobUrl,
     });
   }
 }

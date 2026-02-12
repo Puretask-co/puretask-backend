@@ -1,0 +1,54 @@
+﻿# Cursor ignore patterns
+# Files and folders that Cursor should ignore for context/scanning
+
+# Archived documentation
+docs/archive/**
+**/*_FIX*.md
+**/*COMPLETE*.md
+**/*PROGRESS*.md
+**/*IMPLEMENT*.md
+**/*GUIDE*.md
+**/*TODO*.md
+**/*NOTES*.md
+
+# Build and cache directories
+node_modules/**
+dist/**
+build/**
+coverage/**
+.next/**
+.cache/**
+.tmp/**
+*.log
+*.log.*
+
+# Test artifacts
+coverage/**
+.nyc_output/**
+test-results/**
+playwright-report/**
+
+# Environment and config
+.env.local
+.env.*.local
+*.local
+
+# IDE and editor
+.vscode/**
+.idea/**
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Git
+.git/**
+
+# Documentation that's not actively used
+**/docs/archive/**
+
+**/*DAY_*.md

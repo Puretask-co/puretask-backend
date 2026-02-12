@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -e
+
+# ---------- Phase 3: Block forbidden files (no .env, etc.) ----------
+STAGED=$(git diff --cached --name-only)
+if echo "$STAGED" | grep -qE '^\.env$|^\.env\.(production|staging|local)$'; then
+  echo "❌ Pre-commit: Cannot commit .env or .env.production/staging/local."
+  echo "   Remove these from the commit (they must not be in the repo)."
+  exit 1
+fi
+
+# ---------- Lint (Phase 3 guardrails) ----------
+if command -v npm >/dev/null 2>&1; then
+  npm run lint --if-present
+fi
+
+# ---------- Block new .md files unless in allowed doc paths ----------
+NEW_MD=$(git diff --cached --name-only --diff-filter=A | grep -E '\.md$' || true)
+if [ -n "$NEW_MD" ]; then
+  BAD=$(echo "$NEW_MD" | grep -vE '^(docs/active/|docs/archive/|docs/_archive/|docs/runbooks/|docs/_md_inventory/|\.githooks/)' || true)
+  if [ -n "$BAD" ]; then
+    echo "❌ New markdown files must be under: docs/active/, docs/archive/, docs/runbooks/, .githooks/"
+    echo "Blocked: $BAD"
+    exit 1
+  fi
+fi
+
+exit 0

@@ -1,0 +1,68 @@
+{
+  "templates": [
+    {
+      "id": "tmpl_on_my_way",
+      "key": "tmpl_on_my_way",
+      "label": "On my way",
+      "copy": "On my way",
+      "category": "professional"
+    },
+    {
+      "id": "tmpl_arrived",
+      "key": "tmpl_arrived",
+      "label": "I've arrived",
+      "copy": "I've arrived",
+      "category": "professional"
+    },
+    {
+      "id": "tmpl_starting_now",
+      "key": "tmpl_starting_now",
+      "label": "Starting now",
+      "copy": "Starting now",
+      "category": "professional"
+    },
+    {
+      "id": "tmpl_finished_photos_attached",
+      "key": "tmpl_finished_photos_attached",
+      "label": "Finished — photos attached",
+      "copy": "Finished — here are your photos.",
+      "category": "professional"
+    },
+    {
+      "id": "tmpl_any_focus_areas",
+      "key": "tmpl_any_focus_areas",
+      "label": "Any focus areas?",
+      "copy": "Any areas you want me to focus on?",
+      "category": "professional"
+    },
+    {
+      "id": "tmpl_thank_you",
+      "key": "tmpl_thank_you",
+      "label": "Thank you",
+      "copy": "Thanks for choosing PureTask! I just finished up — let me know if there's anything you'd like adjusted.",
+      "category": "courtesy"
+    },
+    {
+      "id": "tmpl_reschedule_offer",
+      "key": "tmpl_reschedule_offer",
+      "label": "Would you like to reschedule?",
+      "copy": "Hi! Would you like to reschedule this cleaning? If so, tell me a better day/time and I'll confirm right away.",
+      "category": "courtesy"
+    },
+    {
+      "id": "tmpl_review_request",
+      "key": "tmpl_review_request",
+      "label": "Request a review",
+      "copy": "If you were happy with the cleaning, would you mind leaving a quick review? It really helps me get booked more often. Thank you!",
+      "category": "courtesy"
+    },
+    {
+      "id": "tmpl_tip_request",
+      "key": "tmpl_tip_request",
+      "label": "Request a tip",
+      "copy": "If you feel I did a great job, tips are always appreciated — but never expected. Thank you for your support!",
+      "category": "courtesy"
+    }
+  ],
+  "meaningfulMessageMinChars": 25
+}

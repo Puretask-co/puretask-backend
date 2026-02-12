@@ -115,17 +115,28 @@ export const Errors = {
 /**
  * Standardized error response handler
  * Use this to send consistent error responses
+ * Includes requestId from request context
  */
 export function sendError(res: Response, error: unknown, context?: Record<string, unknown>): void {
+  // Get requestId from response locals or context
+  const requestId = (res.locals?.requestId || (context as any)?.requestId || (res as any).requestId) as string | undefined;
+
   // Handle AppError
   if (error instanceof AppError) {
     logger.warn("app_error", {
       code: error.code,
       message: error.message,
       statusCode: error.statusCode,
+      requestId,
       ...context,
     });
-    res.status(error.statusCode).json(error.toJSON());
+    res.status(error.statusCode).json({
+      ...error.toJSON(),
+      error: {
+        ...error.toJSON().error,
+        requestId,
+      },
+    });
     return;
   }
 
@@ -133,6 +144,7 @@ export function sendError(res: Response, error: unknown, context?: Record<string
   if (error instanceof ZodError) {
     logger.warn("validation_error", {
       issues: error.issues,
+      requestId,
       ...context,
     });
     res.status(400).json({
@@ -140,6 +152,7 @@ export function sendError(res: Response, error: unknown, context?: Record<string
         code: ErrorCode.VALIDATION_ERROR,
         message: "Validation failed",
         details: error.issues,
+        requestId,
       },
     });
     return;
@@ -155,12 +168,14 @@ export function sendError(res: Response, error: unknown, context?: Record<string
         code,
         message: error.message,
         stack: error.stack,
+        requestId,
         ...context,
       });
     } else {
       logger.warn("error", {
         code,
         message: error.message,
+        requestId,
         ...context,
       });
     }
@@ -169,6 +184,7 @@ export function sendError(res: Response, error: unknown, context?: Record<string
       error: {
         code,
         message: error.message,
+        requestId,
       },
     });
     return;
@@ -177,12 +193,14 @@ export function sendError(res: Response, error: unknown, context?: Record<string
   // Handle unknown errors
   logger.error("unknown_error", {
     error: String(error),
+    requestId,
     ...context,
   });
   res.status(500).json({
     error: {
       code: ErrorCode.INTERNAL_ERROR,
       message: "An unexpected error occurred",
+      requestId,
     },
   });
 }

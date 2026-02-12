@@ -270,6 +270,10 @@ export async function updatePassword(
     [userId, newHash]
   );
 
+  // Invalidate all existing tokens for this user
+  const { invalidateUserTokens } = await import("../lib/tokenInvalidation");
+  await invalidateUserTokens(userId, "password_changed");
+
   logger.info("password_updated", { userId });
 }
 
@@ -282,6 +286,11 @@ export async function resetPassword(userId: string, newPassword: string): Promis
     `UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`,
     [userId, newHash]
   );
+
+  // Invalidate all existing tokens for this user
+  const { invalidateUserTokens } = await import("../lib/tokenInvalidation");
+  await invalidateUserTokens(userId, "password_reset");
+
   logger.info("password_reset", { userId });
 }
 
@@ -311,6 +320,52 @@ export async function updateClientProfile(
     throw Object.assign(new Error("Profile not found"), { statusCode: 404 });
   }
 
+  return result.rows[0];
+}
+
+/**
+ * Get cleaner profile by user id
+ */
+export async function getCleanerProfile(userId: string): Promise<CleanerProfile | null> {
+  const data = await getUserWithProfile(userId);
+  return data?.cleanerProfile ?? null;
+}
+
+/**
+ * Update cleaner profile (rates, bio) for cleaner portal
+ */
+export async function updateCleanerProfileRates(
+  userId: string,
+  updates: {
+    baseRateCph?: number;
+    deepAddonCph?: number;
+    moveoutAddonCph?: number;
+    bio?: string;
+    serviceAreas?: string[];
+  }
+): Promise<CleanerProfile> {
+  const result = await query<CleanerProfile>(
+    `
+      UPDATE cleaner_profiles
+      SET base_rate_cph = COALESCE($2, base_rate_cph),
+          deep_addon_cph = COALESCE($3, deep_addon_cph),
+          moveout_addon_cph = COALESCE($4, moveout_addon_cph),
+          bio = COALESCE($5, bio),
+          updated_at = NOW()
+      WHERE user_id = $1
+      RETURNING *
+    `,
+    [
+      userId,
+      updates.baseRateCph ?? null,
+      updates.deepAddonCph ?? null,
+      updates.moveoutAddonCph ?? null,
+      updates.bio ?? null,
+    ]
+  );
+  if (result.rows.length === 0) {
+    throw Object.assign(new Error("Profile not found"), { statusCode: 404 });
+  }
   return result.rows[0];
 }
 

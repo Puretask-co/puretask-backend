@@ -4,14 +4,13 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAuthToken, AuthUser } from "../lib/auth";
 import { logger } from "../lib/logger";
-import { env } from "../config/env";
 import type { UserRole } from "../types/db";
 
 // For backwards compatibility
 export type TokenPayload = AuthUser & { email?: string | null };
-export const verifyToken = (token: string): TokenPayload => {
-  const decoded = verifyAuthToken(token);
-  return { ...decoded, email: null };
+export const verifyToken = async (token: string): Promise<TokenPayload> => {
+  const decoded = await verifyAuthToken(token);
+  return { ...decoded, email: decoded.email ?? null };
 };
 
 export interface JWTAuthedRequest extends Request {
@@ -26,53 +25,30 @@ export interface JWTAuthedRequest extends Request {
  * JWT authentication middleware
  * Validates Bearer token and attaches user to request
  * 
- * SECURITY NOTE: Legacy x-user-id/x-user-role headers are DISABLED in production
- * They are only allowed in development/test environments for testing convenience
+ * NOTE: This middleware is maintained for backwards compatibility.
+ * New routes should use requireAuth from src/middleware/authCanonical.ts
  */
-export function jwtAuthMiddleware(
+export async function jwtAuthMiddleware(
   req: JWTAuthedRequest,
   res: Response,
   next: NextFunction
-) {
+): Promise<void> {
   const authHeader = req.headers.authorization;
 
-  // Legacy auth ONLY in development/test - NEVER in production
-  if (env.NODE_ENV !== "production") {
-    const legacyRole = req.header("x-user-role");
-    const legacyId = req.header("x-user-id");
-
-    if (legacyRole && legacyId) {
-      logger.warn("legacy_auth_used", {
-        reason: "x-user-id/x-user-role headers in use",
-        warning: "This is disabled in production",
-        userId: legacyId,
-        role: legacyRole,
-      });
-
-      if (!["client", "cleaner", "admin"].includes(legacyRole)) {
-        return res.status(403).json({
-          error: { code: "INVALID_ROLE", message: "Invalid role" },
-        });
-      }
-      
-      req.user = { id: legacyId, role: legacyRole as UserRole, email: null };
-      return next();
-    }
-  }
-
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({
+    res.status(401).json({
       error: {
         code: "UNAUTHENTICATED",
         message: "Missing or invalid authorization header",
       },
     });
+    return;
   }
 
   const token = authHeader.substring(7); // Remove "Bearer "
 
   try {
-    const payload = verifyToken(token);
+    const payload = await verifyToken(token);
     req.user = {
       id: payload.id,
       role: payload.role,
@@ -84,12 +60,13 @@ export function jwtAuthMiddleware(
       error: (error as Error).message,
       ip: req.ip,
     });
-    return res.status(401).json({
+    res.status(401).json({
       error: {
         code: "INVALID_TOKEN",
         message: "Invalid or expired token",
       },
     });
+    return;
   }
 }
 
@@ -101,27 +78,26 @@ export function optionalJwtAuth(
   req: JWTAuthedRequest,
   res: Response,
   next: NextFunction
-) {
+): void {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return next();
+    next();
+    return;
   }
 
   const token = authHeader.substring(7);
 
-  try {
-    const payload = verifyToken(token);
+  void verifyToken(token).then((payload) => {
     req.user = {
       id: payload.id,
       role: payload.role,
       email: payload.email ?? null,
     };
-  } catch {
-    // Ignore invalid tokens for optional auth
-  }
-
-  next();
+    next();
+  }).catch(() => {
+    next();
+  });
 }
 
 /**

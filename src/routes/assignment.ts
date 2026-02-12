@@ -2,20 +2,55 @@
 // Assignment engine endpoints (wave-based, voluntary accept)
 
 import { Router } from "express";
-import { authMiddleware, AuthedRequest } from "../middleware/auth";
+import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { getJob } from "../services/jobsService";
 import { getWaveEligibleCleaners } from "../services/jobMatchingService";
 
 const assignmentRouter = Router();
 
-assignmentRouter.use(authMiddleware);
+assignmentRouter.use(requireAuth);
 
 /**
- * GET /assignment/:jobId/wave
- * Query wave-based eligible cleaners (long-wave model)
- * Query params: wave (default 1), limit (default 20)
+ * @swagger
+ * /assignment/{jobId}/wave:
+ *   get:
+ *     summary: Get wave-based eligible cleaners
+ *     description: Query wave-based eligible cleaners for job assignment (long-wave model).
+ *     tags: [Assignment]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: wave
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Eligible cleaners for wave
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 jobId: { type: 'string' }
+ *                 wave: { type: 'integer' }
+ *                 cleaners: { type: 'array', items: { type: 'object' } }
+ *       404:
+ *         description: Job not found
  */
-assignmentRouter.get("/:jobId/wave", async (req: AuthedRequest, res) => {
+assignmentRouter.get("/:jobId/wave", authedHandler(async (req: AuthedRequest, res) => {
   try {
     const { jobId } = req.params;
     const wave = req.query.wave ? Number(req.query.wave) : 1;
@@ -23,7 +58,8 @@ assignmentRouter.get("/:jobId/wave", async (req: AuthedRequest, res) => {
 
     const job = await getJob(jobId);
     if (!job) {
-      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Job not found" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Job not found" } });
+      return;
     }
 
     const cleaners = await getWaveEligibleCleaners(job, { wave, limit });
@@ -32,7 +68,7 @@ assignmentRouter.get("/:jobId/wave", async (req: AuthedRequest, res) => {
     const error = err as Error;
     res.status(400).json({ error: { code: "ASSIGNMENT_ERROR", message: error.message } });
   }
-});
+}));
 
 export default assignmentRouter;
 

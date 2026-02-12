@@ -1,25 +1,32 @@
 // src/lib/httpClient.ts
-// Simple HTTP client for n8n webhook calls
+// Simple HTTP client for n8n webhook calls (Section 8: SSRF-protected)
 
 import http from "http";
 import https from "https";
 import { URL } from "url";
+import { validateOutboundUrl } from "./ssrfProtection";
 
 export interface HttpClientOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   headers?: Record<string, string>;
   timeout?: number;
+  /** Skip SSRF check (e.g. for trusted internal URLs in dev). Default false. */
+  skipSsrfCheck?: boolean;
 }
 
 /**
  * Make an HTTP POST request with JSON body
  * Returns a promise that resolves when the request completes
+ * Section 8: SSRF protection applied before request
  */
 export function postJson(
   url: string,
   body: any,
   options?: HttpClientOptions
 ): Promise<void> {
+  if (!options?.skipSsrfCheck) {
+    validateOutboundUrl(url);
+  }
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
     const data = Buffer.from(JSON.stringify(body), "utf-8");
@@ -68,11 +75,15 @@ export function postJson(
 
 /**
  * Make a generic HTTP request
+ * Section 8: SSRF protection applied before request
  */
 export function request(
   url: string,
   options?: HttpClientOptions
 ): Promise<{ statusCode: number; body: string }> {
+  if (!options?.skipSsrfCheck) {
+    validateOutboundUrl(url);
+  }
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
     const isHttps = parsed.protocol === "https:";

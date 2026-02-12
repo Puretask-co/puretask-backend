@@ -3,12 +3,19 @@
 
 // V1 Core Workers
 import { runAutoCancelWorker } from "./v1-core/autoCancelJobs";
+import { runAutoExpireWorker } from "./v1-core/autoExpireAwaitingApproval";
 import { runPayoutWeeklyWorker } from "./v1-core/payoutWeekly";
 import { retryFailedNotifications } from "./v1-core/retryFailedNotifications";
+import { runWebhookRetryWorker } from "./v1-core/webhookRetry";
+import { runJobRemindersWorker } from "./v1-core/jobReminders";
+import { runNoShowDetectionWorker } from "./v1-core/noShowDetection";
 
 // V2 Operations Workers
 import { runPhotoRetentionCleanup } from "./v2-operations/photoRetentionCleanup";
 import { runCreditEconomyMaintenance } from "./v2-operations/creditEconomyMaintenance";
+import { runPayoutRetry } from "./v2-operations/payoutRetry";
+import { main as runPayoutReconciliation } from "./v2-operations/payoutReconciliation";
+import { main as runBackupDaily } from "./v2-operations/backupDaily";
 
 // V3 Automation Workers
 import { runSubscriptionJobs } from "./v3-automation/subscriptionJobs";
@@ -23,13 +30,22 @@ import { runNightlyScoreRecompute } from "./reliability/nightlyScoreRecompute";
 import { runCleaningScores } from "./reliability/cleaningScores";
 import { runReliabilityRecalc } from "./reliability/reliabilityRecalc";
 
+// Gamification Workers
+import { runComputeGovernorMetrics } from "./gamification/computeGovernorMetrics";
+
+// Other Workers
+import { runOnboardingReminderWorker } from "./onboardingReminderWorker";
+
 import { logger } from "../lib/logger";
 import { env } from "../config/env";
 
 type WorkerName =
   | "auto-cancel"
+  | "auto-expire"
   | "payouts"
+  | "payout-weekly"
   | "retry-notifications"
+  | "webhook-retry"
   | "photo-cleanup"
   | "nightly-scores"
   | "cleaning-scores"
@@ -39,12 +55,22 @@ type WorkerName =
   | "reliability-recalc"
   | "subscription-jobs"
   | "weekly-summary"
+  | "onboarding-reminders"
+  | "payout-retry"
+  | "payout-reconciliation"
+  | "backup-daily"
+  | "job-reminders"
+  | "no-show-detection"
+  | "governor-metrics"
   | "all";
 
 const workers: Record<string, () => Promise<unknown>> = {
   "auto-cancel": runAutoCancelWorker,
+  "auto-expire": runAutoExpireWorker,
   "payouts": runPayoutWeeklyWorker,
+  "payout-weekly": runPayoutWeeklyWorker,
   "retry-notifications": retryFailedNotifications,
+  "webhook-retry": runWebhookRetryWorker,
   "photo-cleanup": runPhotoRetentionCleanup,
   "nightly-scores": runNightlyScoreRecompute,
   "cleaning-scores": runCleaningScores,
@@ -54,6 +80,13 @@ const workers: Record<string, () => Promise<unknown>> = {
   "reliability-recalc": runReliabilityRecalc,
   "subscription-jobs": runSubscriptionJobs,
   "weekly-summary": runWeeklySummary,
+  "onboarding-reminders": runOnboardingReminderWorker,
+  "payout-retry": runPayoutRetry,
+  "payout-reconciliation": runPayoutReconciliation,
+  "backup-daily": runBackupDaily,
+  "job-reminders": runJobRemindersWorker,
+  "no-show-detection": runNoShowDetectionWorker,
+  "governor-metrics": runComputeGovernorMetrics,
 };
 
 /**

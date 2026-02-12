@@ -1,7 +1,7 @@
 // src/tests/smoke/credits.test.ts
 // Credits routes smoke tests
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "@jest/globals";
 import request from "supertest";
 import app from "../../index";
 
