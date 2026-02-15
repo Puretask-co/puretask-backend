@@ -12,11 +12,7 @@ export interface MetricTags {
  * In production, this would send to a metrics service (Datadog, Prometheus, etc.)
  * For now, we log metrics which can be scraped or sent to a service later
  */
-export function recordMetric(
-  name: string,
-  value: number,
-  tags?: MetricTags
-): void {
+export function recordMetric(name: string, value: number, tags?: MetricTags): void {
   logger.info("metric", {
     name,
     value,
@@ -28,21 +24,14 @@ export function recordMetric(
 /**
  * Increment a counter metric
  */
-export function incrementCounter(
-  name: string,
-  tags?: MetricTags
-): void {
+export function incrementCounter(name: string, tags?: MetricTags): void {
   recordMetric(name, 1, tags);
 }
 
 /**
  * Record a timing/duration metric (in milliseconds)
  */
-export function recordTiming(
-  name: string,
-  durationMs: number,
-  tags?: MetricTags
-): void {
+export function recordTiming(name: string, durationMs: number, tags?: MetricTags): void {
   recordMetric(name, durationMs, { ...tags, unit: "ms" });
 }
 

@@ -30,6 +30,9 @@ jobs:
       - name: Run linter
         run: npm run lint
       
+      - name: Check formatting
+        run: npm run format:check
+      
       - name: Run type check
         run: npm run typecheck
 
@@ -63,6 +66,11 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
+      
+      - name: Setup test database
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/puretask_test
+        run: npm run db:setup:test
       
       - name: Run tests
         env:

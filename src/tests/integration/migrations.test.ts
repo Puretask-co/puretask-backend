@@ -1,10 +1,10 @@
 // src/tests/integration/migrations.test.ts
 // Integration tests for database migrations
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
-import { query } from '../../db/client';
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { query } from "../../db/client";
 
-describe('Database Migrations', () => {
+describe("Database Migrations", () => {
   beforeAll(async () => {
     // Ensure test database is set up
   });
@@ -13,8 +13,8 @@ describe('Database Migrations', () => {
     // Cleanup if needed
   });
 
-  describe('035_onboarding_enhancements.sql', () => {
-    it('has onboarding_current_step column in cleaner_profiles', async () => {
+  describe("035_onboarding_enhancements.sql", () => {
+    it("has onboarding_current_step column in cleaner_profiles", async () => {
       const result = await query(`
         SELECT column_name 
         FROM information_schema.columns 
@@ -25,7 +25,7 @@ describe('Database Migrations', () => {
       expect(result.rows.length).toBeGreaterThan(0);
     });
 
-    it('has onboarding_reminder_sent_at column', async () => {
+    it("has onboarding_reminder_sent_at column", async () => {
       const result = await query(`
         SELECT column_name 
         FROM information_schema.columns 
@@ -36,7 +36,7 @@ describe('Database Migrations', () => {
       expect(result.rows.length).toBeGreaterThan(0);
     });
 
-    it('has index for abandoned onboarding', async () => {
+    it("has index for abandoned onboarding", async () => {
       const result = await query(`
         SELECT indexname 
         FROM pg_indexes 
@@ -48,8 +48,8 @@ describe('Database Migrations', () => {
     });
   });
 
-  describe('Migration Idempotency', () => {
-    it('can query onboarding columns without errors', async () => {
+  describe("Migration Idempotency", () => {
+    it("can query onboarding columns without errors", async () => {
       // Test that columns exist and can be queried
       const result = await query(`
         SELECT onboarding_current_step, onboarding_reminder_sent_at

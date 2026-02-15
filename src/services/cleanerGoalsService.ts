@@ -155,10 +155,7 @@ export async function createDefaultMonthlyGoals(
 /**
  * Get cleaner's goals for a month
  */
-export async function getCleanerGoals(
-  cleanerId: string,
-  month?: Date
-): Promise<CleanerGoal[]> {
+export async function getCleanerGoals(cleanerId: string, month?: Date): Promise<CleanerGoal[]> {
   const monthStr = month
     ? month.toISOString().slice(0, 7) + "-01"
     : new Date().toISOString().slice(0, 7) + "-01";
@@ -236,10 +233,9 @@ async function checkAndAwardGoals(cleanerId: string, month: string): Promise<voi
     });
 
     // Mark as awarded
-    await query(
-      `UPDATE cleaner_goals SET is_awarded = true, awarded_at = NOW() WHERE id = $1`,
-      [goal.id]
-    );
+    await query(`UPDATE cleaner_goals SET is_awarded = true, awarded_at = NOW() WHERE id = $1`, [
+      goal.id,
+    ]);
 
     logger.info("goal_achieved", {
       cleanerId,
@@ -530,4 +526,3 @@ export async function getReliabilityBreakdown(cleanerId: string): Promise<Reliab
     },
   };
 }
-

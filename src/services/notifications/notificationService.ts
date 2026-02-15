@@ -47,7 +47,7 @@ function getDedupeWindow(type: NotificationType): { window: "ever" | "time"; min
     "job.disputed",
     "job.cancelled",
     "job.reminder_24h", // Has timestamp bucket in dedupe key
-    "job.reminder_2h",  // Has timestamp bucket in dedupe key
+    "job.reminder_2h", // Has timestamp bucket in dedupe key
     "job.no_show_warning", // Has timestamp bucket in dedupe key
     "credits.purchased",
     "payout.processed",
@@ -58,11 +58,11 @@ function getDedupeWindow(type: NotificationType): { window: "ever" | "time"; min
   }
 
   // Time-windowed dedupe - allow re-send after cooldown
-  const timeWindowedTypes: Record<NotificationType, number> = {
-    "password.reset": 60,        // 1 hour - user can request reset again
-    "payment.failed": 60,       // 1 hour - payment can fail multiple times
-    "payout.failed": 1440,      // 24 hours - payout issues need attention
-    "credits.low": 1440,        // 24 hours - warn again if still low
+  const timeWindowedTypes: Partial<Record<NotificationType, number>> = {
+    "password.reset": 60, // 1 hour - user can request reset again
+    "payment.failed": 60, // 1 hour - payment can fail multiple times
+    "payout.failed": 1440, // 24 hours - payout issues need attention
+    "credits.low": 1440, // 24 hours - warn again if still low
     "subscription.renewal_reminder": 1440, // 24 hours - daily reminder is fine
   };
 
@@ -206,10 +206,9 @@ export async function sendNotification(input: NotificationPayload): Promise<Noti
       // Extract context for logging
       const jobId = (input.data as any)?.jobId as string | undefined;
       const rendered = renderNotification(input.type, input.data as TemplateData, [input.channel]);
-      const primaryActionUrl = rendered?.email?.primaryActionUrl || 
-                               rendered?.sms?.primaryActionUrl || 
-                               rendered?.push?.url;
-      
+      const primaryActionUrl =
+        rendered?.email?.primaryActionUrl || rendered?.sms?.primaryActionUrl || rendered?.push?.url;
+
       await logDeliveryAttempt({
         userId: input.userId ?? null,
         type: input.type,
@@ -228,9 +227,9 @@ export async function sendNotification(input: NotificationPayload): Promise<Noti
   try {
     // Use event-based notifications if n8n is configured and feature flag is enabled
     // Push notifications always use direct calls (OneSignal)
-    const shouldUseEventBased = 
-      env.N8N_WEBHOOK_URL && 
-      env.USE_EVENT_BASED_NOTIFICATIONS && 
+    const shouldUseEventBased =
+      env.N8N_WEBHOOK_URL &&
+      env.USE_EVENT_BASED_NOTIFICATIONS &&
       (input.channel === "email" || input.channel === "sms");
 
     if (shouldUseEventBased) {
@@ -239,13 +238,13 @@ export async function sendNotification(input: NotificationPayload): Promise<Noti
         type: input.type,
       });
       const result = await sendNotificationViaEvent(input);
-      
+
       // Log delivery attempt
       // Extract context for logging
       const jobId = (input.data as any)?.jobId as string | undefined;
-      const primaryActionUrl = rendered?.email?.primaryActionUrl || 
-                               rendered?.sms?.primaryActionUrl || 
-                               rendered?.push?.url;
+      const rendered = renderNotification(input.type, input.data as TemplateData, [input.channel]);
+      const primaryActionUrl =
+        rendered?.email?.primaryActionUrl || rendered?.sms?.primaryActionUrl || rendered?.push?.url;
 
       await logDeliveryAttempt({
         userId: input.userId ?? null,
@@ -296,9 +295,8 @@ export async function sendNotification(input: NotificationPayload): Promise<Noti
     // Extract context for logging
     const rendered = renderNotification(input.type, input.data as TemplateData, [input.channel]);
     const jobId = (input.data as any)?.jobId as string | undefined;
-    const primaryActionUrl = rendered?.email?.primaryActionUrl || 
-                             rendered?.sms?.primaryActionUrl || 
-                             rendered?.push?.url;
+    const primaryActionUrl =
+      rendered?.email?.primaryActionUrl || rendered?.sms?.primaryActionUrl || rendered?.push?.url;
 
     // Log delivery attempt
     await logDeliveryAttempt({
@@ -336,7 +334,7 @@ export async function sendNotification(input: NotificationPayload): Promise<Noti
 
     // Extract context for logging
     const jobId = (input.data as any)?.jobId as string | undefined;
-    
+
     // Log failure
     await logDeliveryAttempt({
       userId: input.userId ?? null,
@@ -411,18 +409,18 @@ async function sendEmailNotification(input: NotificationPayload): Promise<Notifi
     return { success: false, error: "Missing email address" };
   }
 
-    // Use new template system
-    const rendered = renderNotification(input.type, input.data as TemplateData, ["email"]);
-    
-    if (!rendered.email) {
-      logger.warn("email_template_not_available_fallback", { 
-        type: input.type,
-        message: "Falling back to deprecated template helpers - migrate to renderNotification()",
-      });
-      // Fallback to old system for backwards compatibility
-      const subject = getEmailSubject(input.type, input.data as TemplateData);
-      const text = getEmailBody(input.type, input.data);
-    
+  // Use new template system
+  const rendered = renderNotification(input.type, input.data as TemplateData, ["email"]);
+
+  if (!rendered.email) {
+    logger.warn("email_template_not_available_fallback", {
+      type: input.type,
+      message: "Falling back to deprecated template helpers - migrate to renderNotification()",
+    });
+    // Fallback to old system for backwards compatibility
+    const subject = getEmailSubject(input.type, input.data as TemplateData);
+    const text = getEmailBody(input.type, input.data);
+
     const sgMail = await import("@sendgrid/mail").then((m) => m.default);
     sgMail.setApiKey(env.SENDGRID_API_KEY);
 
@@ -476,7 +474,7 @@ async function sendSmsNotification(input: NotificationPayload): Promise<Notifica
 
   // Use new template system
   const rendered = renderNotification(input.type, input.data as TemplateData, ["sms"]);
-  
+
   let body: string;
   if (rendered.sms) {
     body = rendered.sms.text;
@@ -521,7 +519,7 @@ async function sendPushNotification(input: NotificationPayload): Promise<Notific
 
   // Use new template system
   const rendered = renderNotification(input.type, input.data as TemplateData, ["push"]);
-  
+
   let title: string;
   let message: string;
   let url: string | undefined;
@@ -573,7 +571,7 @@ async function sendPushNotification(input: NotificationPayload): Promise<Notific
     throw new Error(`OneSignal error: ${response.status} ${text}`);
   }
 
-  const result = await response.json() as { id?: string };
+  const result = (await response.json()) as { id?: string };
 
   logger.info("push_sent", {
     type: input.type,
@@ -598,10 +596,7 @@ interface UserContactInfo {
 export async function getUserContactInfo(userId: string): Promise<UserContactInfo | null> {
   // For now, we only have email in the users table
   // In the future, you might add phone and push_token columns
-  const result = await query<{ email: string }>(
-    `SELECT email FROM users WHERE id = $1`,
-    [userId]
-  );
+  const result = await query<{ email: string }>(`SELECT email FROM users WHERE id = $1`, [userId]);
 
   if (result.rows.length === 0) {
     return null;

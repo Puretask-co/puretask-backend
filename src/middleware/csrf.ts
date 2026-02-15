@@ -10,7 +10,7 @@ import { logger } from "../lib/logger";
  */
 
 // Store tokens in memory (in production, use Redis)
-const csrfTokens = new Map<string, { token: string; expiresAt: number }>();
+export const csrfTokens = new Map<string, { token: string; expiresAt: number }>();
 
 // Token expiration: 1 hour
 const TOKEN_EXPIRATION = 60 * 60 * 1000;
@@ -42,7 +42,7 @@ export function storeCsrfToken(sessionId: string, token: string): void {
  */
 export function validateCsrfToken(sessionId: string, token: string): boolean {
   const stored = csrfTokens.get(sessionId);
-  
+
   if (!stored) {
     return false;
   }
@@ -85,7 +85,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction) 
   }
 
   // POST/PUT/PATCH/DELETE: Validate token
-  const token = req.headers["x-csrf-token"] as string || req.body?._csrf;
+  const token = (req.headers["x-csrf-token"] as string) || req.body?._csrf;
 
   if (!token) {
     logger.warn("csrf_token_missing", {

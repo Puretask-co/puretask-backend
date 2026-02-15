@@ -80,7 +80,7 @@ async function retryFailedNotifications(): Promise<{
         // Delete successful retry
         await query(`DELETE FROM notification_failures WHERE id = $1`, [failure.id]);
         succeeded++;
-        
+
         logger.info("notification_retry_succeeded", {
           failureId: failure.id,
           channel: failure.channel,
@@ -202,4 +202,3 @@ if (require.main === module) {
 }
 
 export { retryFailedNotifications, cleanupOldFailures };
-

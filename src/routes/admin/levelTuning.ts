@@ -2,7 +2,12 @@
 // Admin endpoints for gamification config: goals, levels, rewards, level copy
 
 import { Router, Response } from "express";
-import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../../middleware/authCanonical";
+import {
+  requireAuth,
+  requireAdmin,
+  AuthedRequest,
+  authedHandler,
+} from "../../middleware/authCanonical";
 import {
   getGoals,
   getGoalsForLevel,

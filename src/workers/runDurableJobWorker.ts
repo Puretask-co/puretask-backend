@@ -3,6 +3,9 @@
 // Usage: ts-node src/workers/runDurableJobWorker.ts [--loop] [--interval=10000]
 
 import { runDurableJobWorkerCycle, runDurableJobWorkerLoop } from "./durableJobWorker";
+import { registerWorkerHandlers } from "./workerHandlers";
+
+registerWorkerHandlers();
 
 const args = process.argv.slice(2);
 const loop = args.includes("--loop");

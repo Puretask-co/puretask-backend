@@ -3,7 +3,13 @@
 
 import { Router, Response } from "express";
 import { z } from "zod";
-import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import {
+  requireAuth,
+  requireRole,
+  AuthedRequest,
+  authedHandler,
+} from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 import {
   getClientInvoices,
   getInvoiceWithLineItems,
@@ -139,6 +145,7 @@ router.get(
   "/invoices/:invoiceId",
   requireAuth,
   requireRole("client"),
+  requireOwnership("invoice", "invoiceId"),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
@@ -230,6 +237,7 @@ router.post(
   "/invoices/:invoiceId/pay",
   requireAuth,
   requireRole("client"),
+  requireOwnership("invoice", "invoiceId"),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
@@ -306,6 +314,7 @@ router.post(
   "/invoices/:invoiceId/decline",
   requireAuth,
   requireRole("client"),
+  requireOwnership("invoice", "invoiceId"),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
@@ -330,4 +339,3 @@ router.post(
 );
 
 export default router;
-

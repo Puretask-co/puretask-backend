@@ -6,6 +6,7 @@ import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
 import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 import {
   addJobPhoto,
   getJobPhotos,
@@ -59,34 +60,31 @@ photosRouter.use(requireAuth);
  *                     before: { type: 'integer' }
  *                     after: { type: 'integer' }
  */
-photosRouter.get(
-  "/job/:jobId",
-  async (req: AuthedRequest, res: Response) => {
-    try {
-      const { jobId } = req.params;
-      const { type } = req.query;
+photosRouter.get("/job/:jobId", requireOwnership("job", "jobId"), async (req: AuthedRequest, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const { type } = req.query;
 
-      let photos;
-      if (type && ["before", "after"].includes(type as string)) {
-        photos = await getJobPhotosByType(jobId, type as "before" | "after");
-      } else {
-        photos = await getJobPhotos(jobId);
-      }
-
-      const counts = await getPhotoCount(jobId);
-
-      res.json({ photos, counts });
-    } catch (error) {
-      logger.error("get_photos_failed", {
-        error: (error as Error).message,
-        jobId: req.params.jobId,
-      });
-      res.status(500).json({
-        error: { code: "GET_PHOTOS_FAILED", message: "Failed to get photos" },
-      });
+    let photos;
+    if (type && ["before", "after"].includes(type as string)) {
+      photos = await getJobPhotosByType(jobId, type as "before" | "after");
+    } else {
+      photos = await getJobPhotos(jobId);
     }
+
+    const counts = await getPhotoCount(jobId);
+
+    res.json({ photos, counts });
+  } catch (error) {
+    logger.error("get_photos_failed", {
+      error: (error as Error).message,
+      jobId: req.params.jobId,
+    });
+    res.status(500).json({
+      error: { code: "GET_PHOTOS_FAILED", message: "Failed to get photos" },
+    });
   }
-);
+});
 
 /**
  * @swagger
@@ -133,6 +131,7 @@ const addPhotoSchema = z.object({
 
 photosRouter.post(
   "/job/:jobId",
+  requireOwnership("job", "jobId"),
   validateBody(addPhotoSchema),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -155,10 +154,7 @@ photosRouter.post(
       });
 
       const message = (error as Error).message;
-      if (
-        message.includes("not assigned") ||
-        message.includes("can only be uploaded")
-      ) {
+      if (message.includes("not assigned") || message.includes("can only be uploaded")) {
         return res.status(403).json({
           error: { code: "FORBIDDEN", message },
         });
@@ -223,11 +219,17 @@ photosRouter.post(
 const uploadUrlSchema = z.object({
   type: z.enum(["before", "after"]),
   contentType: z.string(),
-  fileSize: z.number().int().positive().max(10 * 1024 * 1024).optional(), // Max 10MB
+  fileSize: z
+    .number()
+    .int()
+    .positive()
+    .max(10 * 1024 * 1024)
+    .optional(), // Max 10MB
 });
 
 photosRouter.post(
   "/job/:jobId/upload-url",
+  requireOwnership("job", "jobId"),
   validateBody(uploadUrlSchema),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -285,32 +287,28 @@ photosRouter.post(
  *       404:
  *         description: Photo not found or not yours
  */
-photosRouter.delete(
-  "/:photoId",
-  async (req: AuthedRequest, res: Response) => {
-    try {
-      const { photoId } = req.params;
-      const deleted = await deleteJobPhoto(photoId, req.user!.id);
+photosRouter.delete("/:photoId", requireOwnership("photo", "photoId"), async (req: AuthedRequest, res: Response) => {
+  try {
+    const { photoId } = req.params;
+    const deleted = await deleteJobPhoto(photoId, req.user!.id);
 
-      if (!deleted) {
-        return res.status(404).json({
-          error: { code: "NOT_FOUND", message: "Photo not found or not yours" },
-        });
-      }
-
-      res.json({ success: true });
-    } catch (error) {
-      logger.error("delete_photo_failed", {
-        error: (error as Error).message,
-        photoId: req.params.photoId,
-        userId: req.user?.id,
-      });
-      res.status(500).json({
-        error: { code: "DELETE_PHOTO_FAILED", message: "Failed to delete photo" },
+    if (!deleted) {
+      return res.status(404).json({
+        error: { code: "NOT_FOUND", message: "Photo not found or not yours" },
       });
     }
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error("delete_photo_failed", {
+      error: (error as Error).message,
+      photoId: req.params.photoId,
+      userId: req.user?.id,
+    });
+    res.status(500).json({
+      error: { code: "DELETE_PHOTO_FAILED", message: "Failed to delete photo" },
+    });
   }
-);
+});
 
 export default photosRouter;
-

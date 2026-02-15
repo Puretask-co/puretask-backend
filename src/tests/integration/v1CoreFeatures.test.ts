@@ -1,12 +1,23 @@
 // src/tests/integration/v1CoreFeatures.test.ts
 // V1 CORE FEATURES: Tests for reliability system and top 3 cleaner selection
 
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { query } from "../../db/client";
 import { createJob } from "../../services/jobsService";
-import { findMatchingCleaners, broadcastJobToCleaners, acceptJobOffer } from "../../services/jobMatchingService";
-import { updateCleanerReliability, getCleanerReliabilityInfo } from "../../services/reliabilityService";
-import { getCleanerPayoutPercent, recordEarningsForCompletedJob } from "../../services/payoutsService";
+import {
+  findMatchingCleaners,
+  broadcastJobToCleaners,
+  acceptJobOffer,
+} from "../../services/jobMatchingService";
+import { setDayAvailability, setPreferences } from "../../services/availabilityService";
+import {
+  updateCleanerReliability,
+  getCleanerReliabilityInfo,
+} from "../../services/reliabilityService";
+import {
+  getCleanerPayoutPercent,
+  recordEarningsForCompletedJob,
+} from "../../services/payoutsService";
 import { addLedgerEntry } from "../../services/creditsService";
 import { TEST_PASSWORD_HASH } from "../helpers/testConstants";
 
@@ -62,12 +73,21 @@ describe("V1 Core Features: Top 3 Cleaner Selection", () => {
       deltaCredits: 5000,
       reason: "adjustment",
     });
+
+    // Set availability for all 7 days (08:00-20:00) so is_cleaner_available returns true
+    // Set preferences to allow 2-hour jobs (min 1h, max 8h)
+    for (const cleanerId of [TEST_CLEANER_1_ID, TEST_CLEANER_2_ID, TEST_CLEANER_3_ID]) {
+      for (let d = 0; d <= 6; d++) {
+        await setDayAvailability(cleanerId, d, "08:00", "20:00", true);
+      }
+      await setPreferences(cleanerId, { min_job_duration_h: 1, max_job_duration_h: 8 });
+    }
   });
 
   beforeEach(async () => {
-    // Create a test job
+    // Create a test job (must be at least MIN_LEAD_TIME_HOURS from now; use 3 to be safe)
     const scheduledStart = new Date();
-    scheduledStart.setHours(scheduledStart.getHours() + 2);
+    scheduledStart.setHours(scheduledStart.getHours() + 3);
     const scheduledEnd = new Date(scheduledStart);
     scheduledEnd.setHours(scheduledEnd.getHours() + 2);
 
@@ -90,6 +110,11 @@ describe("V1 Core Features: Top 3 Cleaner Selection", () => {
     await query(`DELETE FROM jobs WHERE id = $1`, [testJobId]);
     await query(`DELETE FROM credit_ledger WHERE user_id IN ($1, $2, $3, $4)`, [
       TEST_CLIENT_ID,
+      TEST_CLEANER_1_ID,
+      TEST_CLEANER_2_ID,
+      TEST_CLEANER_3_ID,
+    ]);
+    await query(`DELETE FROM cleaner_availability WHERE cleaner_id IN ($1, $2, $3)`, [
       TEST_CLEANER_1_ID,
       TEST_CLEANER_2_ID,
       TEST_CLEANER_3_ID,
@@ -173,7 +198,9 @@ describe("V1 Core Features: Top 3 Cleaner Selection", () => {
     expect(result.success).toBe(true);
 
     // Verify job is assigned
-    const updatedJob = await query(`SELECT cleaner_id, status FROM jobs WHERE id = $1`, [testJobId]);
+    const updatedJob = await query(`SELECT cleaner_id, status FROM jobs WHERE id = $1`, [
+      testJobId,
+    ]);
     expect(updatedJob.rows[0].cleaner_id).toBe(cleanerIds[0]);
     expect(updatedJob.rows[0].status).toBe("accepted");
 
@@ -228,8 +255,14 @@ describe("V1 Core Features: Reliability → Tier → Payout Flow", () => {
   afterAll(async () => {
     await query(`DELETE FROM reliability_history WHERE cleaner_id = $1`, [testCleanerId]);
     await query(`DELETE FROM payouts WHERE cleaner_id = $1`, [testCleanerId]);
-    await query(`DELETE FROM credit_ledger WHERE user_id IN ($1, $2)`, [testClientId, testCleanerId]);
-    await query(`DELETE FROM jobs WHERE cleaner_id = $1 OR client_id = $2`, [testCleanerId, testClientId]);
+    await query(`DELETE FROM credit_ledger WHERE user_id IN ($1, $2)`, [
+      testClientId,
+      testCleanerId,
+    ]);
+    await query(`DELETE FROM jobs WHERE cleaner_id = $1 OR client_id = $2`, [
+      testCleanerId,
+      testClientId,
+    ]);
     await query(`DELETE FROM cleaner_profiles WHERE user_id = $1`, [testCleanerId]);
     await query(`DELETE FROM users WHERE id IN ($1, $2)`, [testClientId, testCleanerId]);
   });
@@ -250,7 +283,7 @@ describe("V1 Core Features: Reliability → Tier → Payout Flow", () => {
       `SELECT reliability_score, tier FROM cleaner_profiles WHERE user_id = $1`,
       [testCleanerId]
     );
-    expect(profile.rows[0].reliability_score).toBe(update.newScore);
+    expect(Number(profile.rows[0].reliability_score)).toBe(update.newScore);
     expect(profile.rows[0].tier).toBeDefined();
   });
 
@@ -265,10 +298,10 @@ describe("V1 Core Features: Reliability → Tier → Payout Flow", () => {
 
     for (const { tier, expectedPercent } of tiers) {
       // Update tier (without triggering updated_at if column doesn't exist)
-      await query(
-        `UPDATE cleaner_profiles SET tier = $1 WHERE user_id = $2`,
-        [tier, testCleanerId]
-      );
+      await query(`UPDATE cleaner_profiles SET tier = $1 WHERE user_id = $2`, [
+        tier,
+        testCleanerId,
+      ]);
 
       // Get payout percentage
       const payoutPercent = await getCleanerPayoutPercent(testCleanerId);
@@ -283,9 +316,9 @@ describe("V1 Core Features: Reliability → Tier → Payout Flow", () => {
       [testCleanerId]
     );
 
-    // Create a test job and complete it
+    // Create a test job and complete it (MIN_LEAD_TIME_HOURS is 2, use 4 to be safe)
     const scheduledStart = new Date();
-    scheduledStart.setHours(scheduledStart.getHours() + 2);
+    scheduledStart.setHours(scheduledStart.getHours() + 4);
     const scheduledEnd = new Date(scheduledStart);
     scheduledEnd.setHours(scheduledEnd.getHours() + 2);
 
@@ -300,10 +333,10 @@ describe("V1 Core Features: Reliability → Tier → Payout Flow", () => {
     testJobId = job.id;
 
     // Assign cleaner and complete job
-    await query(
-      `UPDATE jobs SET cleaner_id = $1, status = 'awaiting_approval' WHERE id = $2`,
-      [testCleanerId, testJobId]
-    );
+    await query(`UPDATE jobs SET cleaner_id = $1, status = 'awaiting_approval' WHERE id = $2`, [
+      testCleanerId,
+      testJobId,
+    ]);
 
     // Get payout percentage (should be 84% for gold)
     const payoutPercent = await getCleanerPayoutPercent(testCleanerId);
@@ -313,9 +346,9 @@ describe("V1 Core Features: Reliability → Tier → Payout Flow", () => {
     const updatedJob = await query(`SELECT * FROM jobs WHERE id = $1`, [testJobId]);
     const payout = await recordEarningsForCompletedJob(updatedJob.rows[0]);
 
-    // Verify payout amount is 84% of job amount
+    // Verify payout amount is 84% of job amount (DB returns numeric as string)
     const expectedPayoutCredits = Math.round(100 * 0.84); // 84 credits
-    expect(payout.amount_credits).toBe(expectedPayoutCredits);
+    expect(Number(payout.amount_credits)).toBe(expectedPayoutCredits);
 
     // Cleanup
     await query(`DELETE FROM payouts WHERE id = $1`, [payout.id]);
@@ -359,4 +392,3 @@ describe("V1 Core Features: Reliability Endpoint", () => {
     expect(reliability.stats).toBeDefined();
   });
 });
-

@@ -37,21 +37,19 @@ export async function recordEvent(evt: EventRecord): Promise<void> {
     payload, idempotency_key
   ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)${conflictClause}`;
 
-  await query(
-    [
-      eventId,
-      evt.event_type,
-      evt.occurred_at,
-      evt.source,
-      evt.cleaner_id ?? null,
-      evt.client_id ?? null,
-      evt.job_id ?? null,
-      evt.job_request_id ?? null,
-      evt.region_id ?? null,
-      JSON.stringify(evt.payload ?? {}),
-      evt.idempotency_key ?? null,
-    ]
-  );
+  await query([
+    eventId,
+    evt.event_type,
+    evt.occurred_at,
+    evt.source,
+    evt.cleaner_id ?? null,
+    evt.client_id ?? null,
+    evt.job_id ?? null,
+    evt.job_request_id ?? null,
+    evt.region_id ?? null,
+    JSON.stringify(evt.payload ?? {}),
+    evt.idempotency_key ?? null,
+  ]);
 }
 
 /**

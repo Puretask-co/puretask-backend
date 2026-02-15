@@ -24,7 +24,7 @@ export interface JWTAuthedRequest extends Request {
 /**
  * JWT authentication middleware
  * Validates Bearer token and attaches user to request
- * 
+ *
  * NOTE: This middleware is maintained for backwards compatibility.
  * New routes should use requireAuth from src/middleware/authCanonical.ts
  */
@@ -74,11 +74,7 @@ export async function jwtAuthMiddleware(
  * Optional JWT middleware - doesn't fail if no token
  * Useful for routes that work with or without auth
  */
-export function optionalJwtAuth(
-  req: JWTAuthedRequest,
-  res: Response,
-  next: NextFunction
-): void {
+export function optionalJwtAuth(req: JWTAuthedRequest, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -88,16 +84,18 @@ export function optionalJwtAuth(
 
   const token = authHeader.substring(7);
 
-  void verifyToken(token).then((payload) => {
-    req.user = {
-      id: payload.id,
-      role: payload.role,
-      email: payload.email ?? null,
-    };
-    next();
-  }).catch(() => {
-    next();
-  });
+  void verifyToken(token)
+    .then((payload) => {
+      req.user = {
+        id: payload.id,
+        role: payload.role,
+        email: payload.email ?? null,
+      };
+      next();
+    })
+    .catch(() => {
+      next();
+    });
 }
 
 /**
@@ -123,4 +121,3 @@ export function requireRole(...allowedRoles: UserRole[]) {
     next();
   };
 }
-

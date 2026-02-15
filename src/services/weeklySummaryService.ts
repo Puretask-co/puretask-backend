@@ -175,10 +175,7 @@ export async function getCleanerWeeklySummary(
   const profileResult = await query<{
     reliability_score: string;
     tier: string;
-  }>(
-    `SELECT reliability_score::text, tier FROM cleaner_profiles WHERE user_id = $1`,
-    [userId]
-  );
+  }>(`SELECT reliability_score::text, tier FROM cleaner_profiles WHERE user_id = $1`, [userId]);
 
   // Get pending payout amount
   const payoutResult = await query<{ pending_cents: string }>(
@@ -259,7 +256,14 @@ function generateCleanerTips(data: {
     gold: 95,
     platinum: 100,
   };
-  const nextTier = data.tier === "bronze" ? "silver" : data.tier === "silver" ? "gold" : data.tier === "gold" ? "platinum" : null;
+  const nextTier =
+    data.tier === "bronze"
+      ? "silver"
+      : data.tier === "silver"
+        ? "gold"
+        : data.tier === "gold"
+          ? "platinum"
+          : null;
   if (nextTier && data.reliabilityScore >= tierThresholds[data.tier] - 5) {
     tips.push(`🎯 You're close to ${nextTier} tier! Keep up the great work.`);
   }
@@ -328,7 +332,9 @@ export async function sendClientWeeklySummaryEmail(summary: ClientWeeklySummary)
 /**
  * Send weekly summary email to a cleaner
  */
-export async function sendCleanerWeeklySummaryEmail(summary: CleanerWeeklySummary): Promise<boolean> {
+export async function sendCleanerWeeklySummaryEmail(
+  summary: CleanerWeeklySummary
+): Promise<boolean> {
   try {
     await sendNotification({
       email: summary.email,
@@ -376,9 +382,7 @@ export async function sendAllClientWeeklySummaries(
   weekStart: Date,
   weekEnd: Date
 ): Promise<{ sent: number; failed: number }> {
-  const clientsResult = await query<{ id: string }>(
-    `SELECT id FROM users WHERE role = 'client'`
-  );
+  const clientsResult = await query<{ id: string }>(`SELECT id FROM users WHERE role = 'client'`);
 
   let sent = 0;
   let failed = 0;
@@ -402,9 +406,7 @@ export async function sendAllCleanerWeeklySummaries(
   weekStart: Date,
   weekEnd: Date
 ): Promise<{ sent: number; failed: number }> {
-  const cleanersResult = await query<{ id: string }>(
-    `SELECT id FROM users WHERE role = 'cleaner'`
-  );
+  const cleanersResult = await query<{ id: string }>(`SELECT id FROM users WHERE role = 'cleaner'`);
 
   let sent = 0;
   let failed = 0;
@@ -439,7 +441,7 @@ function formatDate(isoDate: string): string {
 export function getPreviousWeekRange(): { weekStart: Date; weekEnd: Date } {
   const now = new Date();
   const dayOfWeek = now.getDay();
-  
+
   // Get last Sunday (start of previous week)
   const weekEnd = new Date(now);
   weekEnd.setDate(now.getDate() - dayOfWeek);
@@ -452,4 +454,3 @@ export function getPreviousWeekRange(): { weekStart: Date; weekEnd: Date } {
 
   return { weekStart, weekEnd };
 }
-

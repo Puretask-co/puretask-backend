@@ -1,9 +1,14 @@
 // src/routes/admin/cleaners.ts
-import { Router, Response, NextFunction, Request } from 'express';
-import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from '../../middleware/authCanonical';
-import { query } from '../../db/client';
-import { logger } from '../../lib/logger';
-import { CleanerManagementItem } from '../../types/admin';
+import { Router, Response, NextFunction, Request } from "express";
+import {
+  requireAuth,
+  requireAdmin,
+  AuthedRequest,
+  authedHandler,
+} from "../../middleware/authCanonical";
+import { query } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { CleanerManagementItem } from "../../types/admin";
 
 const router = Router();
 
@@ -55,7 +60,7 @@ router.use(requireAdmin);
  *       200:
  *         description: List of cleaners
  */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;
   try {
     const {
@@ -64,15 +69,15 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       search,
       minRating,
       verified,
-      page = '1',
-      limit = '50',
-      sortBy = 'createdAt',
-      sortOrder = 'DESC'
+      page = "1",
+      limit = "50",
+      sortBy = "createdAt",
+      sortOrder = "DESC",
     } = req.query;
 
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-    const conditions: string[] = ['1=1'];
+    const conditions: string[] = ["1=1"];
     const params: any[] = [];
     let paramIndex = 1;
 
@@ -84,9 +89,9 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (status) {
       // Determine status based on last activity
-      if (status === 'active') {
+      if (status === "active") {
         conditions.push(`u.last_login_at >= NOW() - INTERVAL '30 days'`);
-      } else if (status === 'inactive') {
+      } else if (status === "inactive") {
         conditions.push(`u.last_login_at < NOW() - INTERVAL '30 days' OR u.last_login_at IS NULL`);
       }
     }
@@ -97,9 +102,9 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       paramIndex++;
     }
 
-    if (verified === 'true') {
+    if (verified === "true") {
       conditions.push(`cp.verified_badge = true`);
-    } else if (verified === 'false') {
+    } else if (verified === "false") {
       conditions.push(`cp.verified_badge = false`);
     }
 
@@ -113,20 +118,20 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       paramIndex++;
     }
 
-    const whereClause = conditions.join(' AND ');
+    const whereClause = conditions.join(" AND ");
 
     const validSortColumns: Record<string, string> = {
-      name: 'cp.full_name',
-      email: 'cp.user_email',
-      tier: 'cp.tier',
-      rating: 'cp.average_rating',
-      score: 'cp.reliability_score',
-      createdAt: 'cp.created_at',
-      earnings: 'total_earnings'
+      name: "cp.full_name",
+      email: "cp.user_email",
+      tier: "cp.tier",
+      rating: "cp.average_rating",
+      score: "cp.reliability_score",
+      createdAt: "cp.created_at",
+      earnings: "total_earnings",
     };
 
-    const sortColumn = validSortColumns[sortBy as string] || 'cp.created_at';
-    const order = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    const sortColumn = validSortColumns[sortBy as string] || "cp.created_at";
+    const order = sortOrder === "ASC" ? "ASC" : "DESC";
 
     // Get total count
     const countResult = await query(
@@ -181,7 +186,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       [...params, parseInt(limit as string), offset]
     );
 
-    const cleaners: CleanerManagementItem[] = cleanersResult.rows.map(row => ({
+    const cleaners: CleanerManagementItem[] = cleanersResult.rows.map((row) => ({
       id: row.id,
       userId: row.user_id,
       fullName: row.full_name,
@@ -200,7 +205,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       aiOnboardingCompleted: row.ai_onboarding_completed,
       aiFeaturesActiveCount: parseInt(row.ai_features_active_count || 0),
       createdAt: row.created_at,
-      lastActiveAt: row.last_login_at
+      lastActiveAt: row.last_login_at,
     }));
 
     res.json({
@@ -209,17 +214,17 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
         total: totalCount,
-        pages: Math.ceil(totalCount / parseInt(limit as string))
-      }
+        pages: Math.ceil(totalCount / parseInt(limit as string)),
+      },
     });
 
-    logger.info('Admin cleaners list retrieved', {
+    logger.info("Admin cleaners list retrieved", {
       adminId: req.user?.id,
-      count: cleaners.length
+      count: cleaners.length,
     });
   } catch (error) {
-    logger.error('Error fetching admin cleaners', { error });
-    res.status(500).json({ error: 'Failed to fetch cleaners' });
+    logger.error("Error fetching admin cleaners", { error });
+    res.status(500).json({ error: "Failed to fetch cleaners" });
   }
 });
 
@@ -227,12 +232,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  * GET /admin/cleaners/:id
  * Get detailed cleaner information
  */
-router.get('/:id', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
+router.get(
+  "/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
 
-    const result = await query(
-      `SELECT 
+      const result = await query(
+        `SELECT 
         cp.*,
         u.email,
         u.created_at as user_created_at,
@@ -266,119 +273,128 @@ router.get('/:id', authedHandler(async (req: AuthedRequest, res: Response) => {
         GROUP BY cleaner_email
       ) review_stats ON review_stats.cleaner_email = cp.user_email
       WHERE cp.user_id = $1`,
-      [id]
-    );
+        [id]
+      );
 
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Cleaner not found' });
-      return;
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: "Cleaner not found" });
+        return;
+      }
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      logger.error("Error fetching cleaner details", { error, cleanerId: req.params.id });
+      res.status(500).json({ error: "Failed to fetch cleaner details" });
     }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    logger.error('Error fetching cleaner details', { error, cleanerId: req.params.id });
-    res.status(500).json({ error: 'Failed to fetch cleaner details' });
-  }
-}));
+  })
+);
 
 /**
  * PATCH /admin/cleaners/:id/verified-badge
  * Toggle verified badge for cleaner
  */
-router.patch('/:id/verified-badge', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { verified } = req.body;
+router.patch(
+  "/:id/verified-badge",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { verified } = req.body;
 
-    const result = await query(
-      `UPDATE cleaner_profiles 
+      const result = await query(
+        `UPDATE cleaner_profiles 
        SET verified_badge = $1, updated_at = NOW()
        WHERE user_id = $2
        RETURNING *`,
-      [verified, id]
-    );
+        [verified, id]
+      );
 
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Cleaner not found' });
-      return;
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: "Cleaner not found" });
+        return;
+      }
+
+      logger.info("Admin toggled verified badge", {
+        adminId: req.user?.id,
+        cleanerId: id,
+        verified,
+      });
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      logger.error("Error updating verified badge", { error, cleanerId: req.params.id });
+      res.status(500).json({ error: "Failed to update verified badge" });
     }
-
-    logger.info('Admin toggled verified badge', {
-      adminId: req.user?.id,
-      cleanerId: id,
-      verified
-    });
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    logger.error('Error updating verified badge', { error, cleanerId: req.params.id });
-    res.status(500).json({ error: 'Failed to update verified badge' });
-  }
-}));
+  })
+);
 
 /**
  * PATCH /admin/cleaners/:id/tier
  * Update cleaner tier (admin override)
  */
-router.patch('/:id/tier', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { tier, reason } = req.body;
+router.patch(
+  "/:id/tier",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { tier, reason } = req.body;
 
-    const validTiers = ['Rookie', 'Semi Pro', 'Pro', 'Gold', 'Platinum'];
-    if (!validTiers.includes(tier)) {
-      res.status(400).json({ error: 'Invalid tier' });
-      return;
-    }
+      const validTiers = ["Rookie", "Semi Pro", "Pro", "Gold", "Platinum"];
+      if (!validTiers.includes(tier)) {
+        res.status(400).json({ error: "Invalid tier" });
+        return;
+      }
 
-    const result = await query(
-      `UPDATE cleaner_profiles 
+      const result = await query(
+        `UPDATE cleaner_profiles 
        SET tier = $1, updated_at = NOW()
        WHERE user_id = $2
        RETURNING *`,
-      [tier, id]
-    );
+        [tier, id]
+      );
 
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Cleaner not found' });
-      return;
-    }
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: "Cleaner not found" });
+        return;
+      }
 
-    // Log admin action
-    await query(
-      `INSERT INTO admin_audit_log (admin_id, action, resource_type, resource_id, changes, ip_address)
+      // Log admin action
+      await query(
+        `INSERT INTO admin_audit_log (admin_id, action, resource_type, resource_id, changes, ip_address)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        req.user?.id,
-        'update_cleaner_tier',
-        'cleaner',
-        id,
-        JSON.stringify({ tier, reason }),
-        req.ip
-      ]
-    );
+        [
+          req.user?.id,
+          "update_cleaner_tier",
+          "cleaner",
+          id,
+          JSON.stringify({ tier, reason }),
+          req.ip,
+        ]
+      );
 
-    logger.info('Admin updated cleaner tier', {
-      adminId: req.user?.id,
-      cleanerId: id,
-      tier,
-      reason
-    });
+      logger.info("Admin updated cleaner tier", {
+        adminId: req.user?.id,
+        cleanerId: id,
+        tier,
+        reason,
+      });
 
-    res.json(result.rows[0]);
-  } catch (error) {
-    logger.error('Error updating cleaner tier', { error, cleanerId: req.params.id });
-    res.status(500).json({ error: 'Failed to update tier' });
-  }
-}));
+      res.json(result.rows[0]);
+    } catch (error) {
+      logger.error("Error updating cleaner tier", { error, cleanerId: req.params.id });
+      res.status(500).json({ error: "Failed to update tier" });
+    }
+  })
+);
 
 /**
  * GET /admin/cleaners/stats/summary
  * Get cleaner statistics summary
  */
-router.get('/stats/summary', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const stats = await query(`
+router.get(
+  "/stats/summary",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const stats = await query(`
       SELECT 
         COUNT(*) as total,
         COUNT(*) FILTER (WHERE tier = 'Rookie') as rookie,
@@ -393,55 +409,55 @@ router.get('/stats/summary', authedHandler(async (req: AuthedRequest, res: Respo
       FROM cleaner_profiles
     `);
 
-    res.json(stats.rows[0]);
-  } catch (error) {
-    logger.error('Error fetching cleaner stats', { error });
-    res.status(500).json({ error: 'Failed to fetch cleaner stats' });
-  }
-}));
+      res.json(stats.rows[0]);
+    } catch (error) {
+      logger.error("Error fetching cleaner stats", { error });
+      res.status(500).json({ error: "Failed to fetch cleaner stats" });
+    }
+  })
+);
 
 /**
  * POST /admin/cleaners/:id/suspend
  * Suspend a cleaner account
  */
-router.post('/:id/suspend', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { reason, duration } = req.body;
+router.post(
+  "/:id/suspend",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { reason, duration } = req.body;
 
-    // Update user status
-    await query(
-      `UPDATE users SET status = 'suspended', updated_at = NOW() WHERE id = $1`,
-      [id]
-    );
+      // Update user status
+      await query(`UPDATE users SET status = 'suspended', updated_at = NOW() WHERE id = $1`, [id]);
 
-    // Log suspension
-    await query(
-      `INSERT INTO admin_audit_log (admin_id, action, resource_type, resource_id, changes, ip_address)
+      // Log suspension
+      await query(
+        `INSERT INTO admin_audit_log (admin_id, action, resource_type, resource_id, changes, ip_address)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        req.user?.id,
-        'suspend_cleaner',
-        'cleaner',
-        id,
-        JSON.stringify({ reason, duration }),
-        req.ip
-      ]
-    );
+        [
+          req.user?.id,
+          "suspend_cleaner",
+          "cleaner",
+          id,
+          JSON.stringify({ reason, duration }),
+          req.ip,
+        ]
+      );
 
-    logger.warn('Admin suspended cleaner', {
-      adminId: req.user?.id,
-      cleanerId: id,
-      reason,
-      duration
-    });
+      logger.warn("Admin suspended cleaner", {
+        adminId: req.user?.id,
+        cleanerId: id,
+        reason,
+        duration,
+      });
 
-    res.json({ success: true, message: 'Cleaner suspended' });
-  } catch (error) {
-    logger.error('Error suspending cleaner', { error, cleanerId: req.params.id });
-    res.status(500).json({ error: 'Failed to suspend cleaner' });
-  }
-}));
+      res.json({ success: true, message: "Cleaner suspended" });
+    } catch (error) {
+      logger.error("Error suspending cleaner", { error, cleanerId: req.params.id });
+      res.status(500).json({ error: "Failed to suspend cleaner" });
+    }
+  })
+);
 
 export default router;
-

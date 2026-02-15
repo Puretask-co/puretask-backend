@@ -1,4 +1,4 @@
-import { describe, it, expect } from "@jest/globals";
+import { describe, it, expect } from "vitest";
 import { routeDisputeSchema } from "../../routes/admin";
 
 describe("dispute routing schema", () => {
@@ -13,4 +13,3 @@ describe("dispute routing schema", () => {
     expect(() => routeDisputeSchema.parse({ routeTo: "bad" as any })).toThrow();
   });
 });
-

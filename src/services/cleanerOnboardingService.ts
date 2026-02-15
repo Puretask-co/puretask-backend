@@ -3,7 +3,12 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import { uploadFile, validateFile, PROFILE_PHOTO_TYPES, ID_DOCUMENT_TYPES } from "./fileUploadService";
+import {
+  uploadFile,
+  validateFile,
+  PROFILE_PHOTO_TYPES,
+  ID_DOCUMENT_TYPES,
+} from "./fileUploadService";
 
 /**
  * Save agreements (Step 1)
@@ -102,10 +107,9 @@ export async function uploadFacePhoto(
     }
 
     // Get user_id for folder structure
-    const profileResult = await query(
-      `SELECT user_id FROM cleaner_profiles WHERE id = $1`,
-      [cleanerId]
-    );
+    const profileResult = await query(`SELECT user_id FROM cleaner_profiles WHERE id = $1`, [
+      cleanerId,
+    ]);
 
     if (profileResult.rows.length === 0) {
       return { success: false, error: "Cleaner profile not found" };
@@ -155,10 +159,9 @@ export async function uploadIDVerification(
     }
 
     // Get user_id for folder structure
-    const profileResult = await query(
-      `SELECT user_id FROM cleaner_profiles WHERE id = $1`,
-      [cleanerId]
-    );
+    const profileResult = await query(`SELECT user_id FROM cleaner_profiles WHERE id = $1`, [
+      cleanerId,
+    ]);
 
     if (profileResult.rows.length === 0) {
       return { success: false, error: "Cleaner profile not found" };
@@ -225,10 +228,9 @@ export async function saveBackgroundCheckConsent(
 
     // If record already exists, get it
     if (!backgroundCheckId) {
-      const existing = await query(
-        `SELECT id FROM background_checks WHERE cleaner_id = $1`,
-        [cleanerId]
-      );
+      const existing = await query(`SELECT id FROM background_checks WHERE cleaner_id = $1`, [
+        cleanerId,
+      ]);
       backgroundCheckId = existing.rows[0]?.id;
     }
 
@@ -381,13 +383,14 @@ export async function saveRates(
 /**
  * Complete onboarding (Step 10)
  */
-export async function completeOnboarding(cleanerId: string): Promise<{ success: boolean; error?: string }> {
+export async function completeOnboarding(
+  cleanerId: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     // Verify all steps are complete
-    const progressResult = await query(
-      `SELECT cleaner_onboarding_progress($1) as progress`,
-      [cleanerId]
-    );
+    const progressResult = await query(`SELECT cleaner_onboarding_progress($1) as progress`, [
+      cleanerId,
+    ]);
 
     const progress = progressResult.rows[0].progress;
     const completedSteps = progress.completed;

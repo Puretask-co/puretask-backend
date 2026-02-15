@@ -5,6 +5,19 @@
 
 ---
 
+## Status (2026-02-02)
+
+| Quick Win | Status | Notes |
+|-----------|--------|-------|
+| 1. Fix Failing Tests | 🔄 In progress | Schema alignment, JWT auth in tests |
+| 2. OpenAPI Specification | ✅ Done | Swagger UI at `/api-docs` |
+| 3. Standardize Error Handling | ✅ Done | AppError, asyncHandler, sendError |
+| 4. Update README | ✅ Done | Migrations, format, CONTRIBUTING link |
+
+See [DOCUMENT_EXECUTION_TRACKER.md](./DOCUMENT_EXECUTION_TRACKER.md) for full cross-doc status.
+
+---
+
 ## 🎯 Quick Wins (This Week)
 
 ### 1. Fix Failing Tests

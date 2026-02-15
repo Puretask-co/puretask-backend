@@ -59,7 +59,7 @@ managerRouter.get("/overview", async (_req: JWTAuthedRequest, res: Response) => 
       error: { code: "GET_OVERVIEW_FAILED", message: (error as Error).message },
     });
   }
-}));
+});
 
 /**
  * @swagger
@@ -84,7 +84,7 @@ managerRouter.get("/alerts", async (_req: JWTAuthedRequest, res: Response) => {
       error: { code: "GET_ALERTS_FAILED", message: (error as Error).message },
     });
   }
-}));
+});
 
 // ============================================
 // Supply & Demand
@@ -113,7 +113,7 @@ managerRouter.get("/heatmap", async (_req: JWTAuthedRequest, res: Response) => {
       error: { code: "GET_HEATMAP_FAILED", message: (error as Error).message },
     });
   }
-}));
+});
 
 // ============================================
 // Cleaner Analytics
@@ -142,7 +142,7 @@ managerRouter.get("/tiers", async (_req: JWTAuthedRequest, res: Response) => {
       error: { code: "GET_TIERS_FAILED", message: (error as Error).message },
     });
   }
-}));
+});
 
 // ============================================
 // Retention Analytics
@@ -162,7 +162,7 @@ managerRouter.get("/retention", async (_req: JWTAuthedRequest, res: Response) =>
       error: { code: "GET_RETENTION_FAILED", message: (error as Error).message },
     });
   }
-}));
+});
 
 // ============================================
 // Operational Stats
@@ -191,7 +191,7 @@ managerRouter.get("/support-stats", async (_req: JWTAuthedRequest, res: Response
       error: { code: "GET_SUPPORT_STATS_FAILED", message: (error as Error).message },
     });
   }
-}));
+});
 
 /**
  * @swagger
@@ -216,7 +216,7 @@ managerRouter.get("/background-check-stats", async (_req: JWTAuthedRequest, res:
       error: { code: "GET_BGCHECK_STATS_FAILED", message: (error as Error).message },
     });
   }
-}));
+});
 
 /**
  * @swagger
@@ -260,7 +260,6 @@ managerRouter.get("/full-report", async (_req: JWTAuthedRequest, res: Response) 
       error: { code: "GET_REPORT_FAILED", message: (error as Error).message },
     });
   }
-}));
+});
 
 export default managerRouter;
-

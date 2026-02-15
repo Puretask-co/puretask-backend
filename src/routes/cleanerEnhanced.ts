@@ -5,7 +5,12 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import {
+  requireAuth,
+  requireRole,
+  AuthedRequest,
+  authedHandler,
+} from "../middleware/authCanonical";
 import { query } from "../db/client";
 
 const cleanerEnhancedRouter = Router();
@@ -39,22 +44,24 @@ cleanerEnhancedRouter.use(requireRole("cleaner", "admin"));
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/dashboard/analytics", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { period = "month" } = req.query;
+cleanerEnhancedRouter.get(
+  "/dashboard/analytics",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { period = "month" } = req.query;
 
-    const periodMap: Record<string, string> = {
-      week: "7 days",
-      month: "30 days",
-      year: "365 days",
-    };
+      const periodMap: Record<string, string> = {
+        week: "7 days",
+        month: "30 days",
+        year: "365 days",
+      };
 
-    const periodInterval = periodMap[period as string] || "30 days";
+      const periodInterval = periodMap[period as string] || "30 days";
 
-    // Earnings trend
-    const earningsTrend = await query(
-      `
+      // Earnings trend
+      const earningsTrend = await query(
+        `
       SELECT 
         DATE_TRUNC('day', j.completed_at) as date,
         SUM(ce.net_amount_cents) / 100.0 as earnings
@@ -66,12 +73,12 @@ cleanerEnhancedRouter.get("/dashboard/analytics", authedHandler(async (req: Auth
       GROUP BY DATE_TRUNC('day', j.completed_at)
       ORDER BY date ASC
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    // Jobs completed trend
-    const jobsTrend = await query(
-      `
+      // Jobs completed trend
+      const jobsTrend = await query(
+        `
       SELECT 
         DATE_TRUNC('day', completed_at) as date,
         COUNT(*) as count
@@ -82,12 +89,12 @@ cleanerEnhancedRouter.get("/dashboard/analytics", authedHandler(async (req: Auth
       GROUP BY DATE_TRUNC('day', completed_at)
       ORDER BY date ASC
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    // Rating trend
-    const ratingTrend = await query(
-      `
+      // Rating trend
+      const ratingTrend = await query(
+        `
       SELECT 
         DATE_TRUNC('day', r.created_at) as date,
         AVG(r.rating)::numeric(3,2) as avg_rating
@@ -97,12 +104,12 @@ cleanerEnhancedRouter.get("/dashboard/analytics", authedHandler(async (req: Auth
       GROUP BY DATE_TRUNC('day', r.created_at)
       ORDER BY date ASC
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    // Platform averages for comparison
-    const platformAvg = await query(
-      `
+      // Platform averages for comparison
+      const platformAvg = await query(
+        `
       SELECT 
         AVG(ce.net_amount_cents) / 100.0 as avg_earnings,
         AVG(job_count.count) as avg_jobs
@@ -117,27 +124,28 @@ cleanerEnhancedRouter.get("/dashboard/analytics", authedHandler(async (req: Auth
       WHERE ce.created_at >= NOW() - INTERVAL '${periodInterval}'
       LIMIT 1
       `,
-      []
-    );
+        []
+      );
 
-    res.json({
-      analytics: {
-        earningsTrend: earningsTrend.rows,
-        jobsTrend: jobsTrend.rows,
-        ratingTrend: ratingTrend.rows,
-        platformAverage: platformAvg.rows[0] || { avg_earnings: 0, avg_jobs: 0 },
-      },
-    });
-  } catch (error) {
-    logger.error("get_dashboard_analytics_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_ANALYTICS_FAILED", message: "Failed to get analytics" },
-    });
-  }
-}));
+      res.json({
+        analytics: {
+          earningsTrend: earningsTrend.rows,
+          jobsTrend: jobsTrend.rows,
+          ratingTrend: ratingTrend.rows,
+          platformAverage: platformAvg.rows[0] || { avg_earnings: 0, avg_jobs: 0 },
+        },
+      });
+    } catch (error) {
+      logger.error("get_dashboard_analytics_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_ANALYTICS_FAILED", message: "Failed to get analytics" },
+      });
+    }
+  })
+);
 
 // ============================================
 // GOALS
@@ -234,32 +242,35 @@ cleanerEnhancedRouter.post(
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/goals", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
+cleanerEnhancedRouter.get(
+  "/goals",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
 
-    const result = await query(
-      `
+      const result = await query(
+        `
       SELECT metadata->'goals' as goals
       FROM cleaner_profiles
       WHERE user_id = $1
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    const goals = result.rows[0]?.goals || {};
+      const goals = result.rows[0]?.goals || {};
 
-    res.json({ goals });
-  } catch (error) {
-    logger.error("get_goals_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_GOALS_FAILED", message: "Failed to get goals" },
-    });
-  }
-}));
+      res.json({ goals });
+    } catch (error) {
+      logger.error("get_goals_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_GOALS_FAILED", message: "Failed to get goals" },
+      });
+    }
+  })
+);
 
 // ============================================
 // CALENDAR ENHANCEMENTS
@@ -293,21 +304,23 @@ cleanerEnhancedRouter.get("/goals", authedHandler(async (req: AuthedRequest, res
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/calendar/conflicts", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { start_date, end_date } = req.query;
+cleanerEnhancedRouter.get(
+  "/calendar/conflicts",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { start_date, end_date } = req.query;
 
-    if (!start_date || !end_date) {
-      res.status(400).json({
-        error: { code: "MISSING_DATES", message: "start_date and end_date required" },
-      });
-      return;
-    }
+      if (!start_date || !end_date) {
+        res.status(400).json({
+          error: { code: "MISSING_DATES", message: "start_date and end_date required" },
+        });
+        return;
+      }
 
-    // Find overlapping jobs
-    const conflicts = await query(
-      `
+      // Find overlapping jobs
+      const conflicts = await query(
+        `
       SELECT 
         j1.id as job1_id,
         j1.scheduled_start_at as job1_start,
@@ -329,20 +342,21 @@ cleanerEnhancedRouter.get("/calendar/conflicts", authedHandler(async (req: Authe
         AND j1.scheduled_start_at >= $2::timestamp
         AND j1.scheduled_end_at <= $3::timestamp
       `,
-      [cleanerId, start_date, end_date]
-    );
+        [cleanerId, start_date, end_date]
+      );
 
-    res.json({ conflicts: conflicts.rows });
-  } catch (error) {
-    logger.error("detect_conflicts_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "DETECT_CONFLICTS_FAILED", message: "Failed to detect conflicts" },
-    });
-  }
-}));
+      res.json({ conflicts: conflicts.rows });
+    } catch (error) {
+      logger.error("detect_conflicts_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "DETECT_CONFLICTS_FAILED", message: "Failed to detect conflicts" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -369,14 +383,16 @@ cleanerEnhancedRouter.get("/calendar/conflicts", authedHandler(async (req: Authe
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.post("/calendar/optimize", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { date } = req.body;
+cleanerEnhancedRouter.post(
+  "/calendar/optimize",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { date } = req.body;
 
-    // Analyze historical earnings by day/time
-    const earningsByTime = await query(
-      `
+      // Analyze historical earnings by day/time
+      const earningsByTime = await query(
+        `
       SELECT 
         EXTRACT(DOW FROM scheduled_start_at) as day_of_week,
         EXTRACT(HOUR FROM scheduled_start_at) as hour,
@@ -390,31 +406,32 @@ cleanerEnhancedRouter.post("/calendar/optimize", authedHandler(async (req: Authe
       ORDER BY avg_earnings DESC
       LIMIT 10
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    const suggestions = {
-      optimalTimes: earningsByTime.rows.map((row) => ({
-        dayOfWeek: parseInt(row.day_of_week),
-        hour: parseInt(row.hour),
-        avgEarnings: parseFloat(row.avg_earnings),
-        jobCount: parseInt(row.job_count),
-      })),
-      recommendation:
-        "Based on your earnings history, we recommend focusing on these time slots for maximum earnings.",
-    };
+      const suggestions = {
+        optimalTimes: earningsByTime.rows.map((row) => ({
+          dayOfWeek: parseInt(row.day_of_week),
+          hour: parseInt(row.hour),
+          avgEarnings: parseFloat(row.avg_earnings),
+          jobCount: parseInt(row.job_count),
+        })),
+        recommendation:
+          "Based on your earnings history, we recommend focusing on these time slots for maximum earnings.",
+      };
 
-    res.json({ suggestions });
-  } catch (error) {
-    logger.error("optimize_schedule_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "OPTIMIZE_FAILED", message: "Failed to optimize schedule" },
-    });
-  }
-}));
+      res.json({ suggestions });
+    } catch (error) {
+      logger.error("optimize_schedule_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "OPTIMIZE_FAILED", message: "Failed to optimize schedule" },
+      });
+    }
+  })
+);
 
 // ============================================
 // JOB MATCHING
@@ -442,29 +459,28 @@ cleanerEnhancedRouter.post("/calendar/optimize", authedHandler(async (req: Authe
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/jobs/:id/matching-score", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { id } = req.params;
+cleanerEnhancedRouter.get(
+  "/jobs/:id/matching-score",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { id } = req.params;
 
-    // Get job details
-    const job = await query(
-      "SELECT * FROM jobs WHERE id = $1::uuid",
-      [id]
-    );
+      // Get job details
+      const job = await query("SELECT * FROM jobs WHERE id = $1::uuid", [id]);
 
-    if (job.rows.length === 0) {
-      res.status(404).json({
-        error: { code: "JOB_NOT_FOUND", message: "Job not found" },
-      });
-      return;
-    }
+      if (job.rows.length === 0) {
+        res.status(404).json({
+          error: { code: "JOB_NOT_FOUND", message: "Job not found" },
+        });
+        return;
+      }
 
-    const jobData = job.rows[0];
+      const jobData = job.rows[0];
 
-    // Get cleaner profile
-    const cleaner = await query(
-      `
+      // Get cleaner profile
+      const cleaner = await query(
+        `
       SELECT 
         cp.*,
         u.email,
@@ -475,69 +491,71 @@ cleanerEnhancedRouter.get("/jobs/:id/matching-score", authedHandler(async (req: 
       LEFT JOIN cleaner_availability ca ON ca.cleaner_id = cp.user_id
       WHERE cp.user_id = $1
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    if (cleaner.rows.length === 0) {
-      res.status(404).json({
-        error: { code: "CLEANER_NOT_FOUND", message: "Cleaner not found" },
+      if (cleaner.rows.length === 0) {
+        res.status(404).json({
+          error: { code: "CLEANER_NOT_FOUND", message: "Cleaner not found" },
+        });
+        return;
+      }
+
+      const cleanerData = cleaner.rows[0];
+
+      // Calculate match score (simplified)
+      let score = 0;
+      const factors: any[] = [];
+
+      // Location match (if we have coordinates)
+      if (jobData.latitude && jobData.longitude && cleanerData.latitude && cleanerData.longitude) {
+        // Simplified distance calculation
+        const distance =
+          Math.sqrt(
+            Math.pow(jobData.latitude - cleanerData.latitude, 2) +
+              Math.pow(jobData.longitude - cleanerData.longitude, 2)
+          ) * 69; // Rough miles conversion
+        const locationScore = Math.max(0, 100 - distance * 2);
+        score += locationScore * 0.3;
+        factors.push({ name: "Location", score: locationScore, weight: 0.3 });
+      }
+
+      // Availability match
+      const availabilityScore = 80; // Simplified - would check actual availability
+      score += availabilityScore * 0.2;
+      factors.push({ name: "Availability", score: availabilityScore, weight: 0.2 });
+
+      // Rating match
+      const ratingScore = (cleanerData.avg_rating || 0) * 20;
+      score += ratingScore * 0.2;
+      factors.push({ name: "Rating", score: ratingScore, weight: 0.2 });
+
+      // Service type match
+      const serviceScore = 90; // Simplified
+      score += serviceScore * 0.15;
+      factors.push({ name: "Service Type", score: serviceScore, weight: 0.15 });
+
+      // Job value match
+      const valueScore = 85; // Simplified
+      score += valueScore * 0.15;
+      factors.push({ name: "Job Value", score: valueScore, weight: 0.15 });
+
+      res.json({
+        matchingScore: Math.round(score),
+        factors,
+        recommendation: score >= 80 ? "high" : score >= 60 ? "medium" : "low",
       });
-      return;
+    } catch (error) {
+      logger.error("calculate_matching_score_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "CALCULATE_SCORE_FAILED", message: "Failed to calculate score" },
+      });
     }
-
-    const cleanerData = cleaner.rows[0];
-
-    // Calculate match score (simplified)
-    let score = 0;
-    const factors: any[] = [];
-
-    // Location match (if we have coordinates)
-    if (jobData.latitude && jobData.longitude && cleanerData.latitude && cleanerData.longitude) {
-      // Simplified distance calculation
-      const distance = Math.sqrt(
-        Math.pow(jobData.latitude - cleanerData.latitude, 2) +
-          Math.pow(jobData.longitude - cleanerData.longitude, 2)
-      ) * 69; // Rough miles conversion
-      const locationScore = Math.max(0, 100 - distance * 2);
-      score += locationScore * 0.3;
-      factors.push({ name: "Location", score: locationScore, weight: 0.3 });
-    }
-
-    // Availability match
-    const availabilityScore = 80; // Simplified - would check actual availability
-    score += availabilityScore * 0.2;
-    factors.push({ name: "Availability", score: availabilityScore, weight: 0.2 });
-
-    // Rating match
-    const ratingScore = (cleanerData.avg_rating || 0) * 20;
-    score += ratingScore * 0.2;
-    factors.push({ name: "Rating", score: ratingScore, weight: 0.2 });
-
-    // Service type match
-    const serviceScore = 90; // Simplified
-    score += serviceScore * 0.15;
-    factors.push({ name: "Service Type", score: serviceScore, weight: 0.15 });
-
-    // Job value match
-    const valueScore = 85; // Simplified
-    score += valueScore * 0.15;
-    factors.push({ name: "Job Value", score: valueScore, weight: 0.15 });
-
-    res.json({
-      matchingScore: Math.round(score),
-      factors,
-      recommendation: score >= 80 ? "high" : score >= 60 ? "medium" : "low",
-    });
-  } catch (error) {
-    logger.error("calculate_matching_score_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "CALCULATE_SCORE_FAILED", message: "Failed to calculate score" },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -801,13 +819,15 @@ cleanerEnhancedRouter.post(
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/jobs/:id/directions", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { id } = req.params;
+cleanerEnhancedRouter.get(
+  "/jobs/:id/directions",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { id } = req.params;
 
-    const job = await query(
-      `
+      const job = await query(
+        `
       SELECT 
         j.address,
         j.latitude,
@@ -818,39 +838,40 @@ cleanerEnhancedRouter.get("/jobs/:id/directions", authedHandler(async (req: Auth
       LEFT JOIN cleaner_profiles cp ON cp.user_id = $1
       WHERE j.id = $2::uuid AND j.cleaner_id = $1
       `,
-      [cleanerId, id]
-    );
+        [cleanerId, id]
+      );
 
-    if (job.rows.length === 0) {
-      res.status(404).json({
-        error: { code: "JOB_NOT_FOUND", message: "Job not found" },
+      if (job.rows.length === 0) {
+        res.status(404).json({
+          error: { code: "JOB_NOT_FOUND", message: "Job not found" },
+        });
+        return;
+      }
+
+      const jobData = job.rows[0];
+
+      // Generate Google Maps directions URL
+      const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${jobData.latitude},${jobData.longitude}`;
+
+      res.json({
+        address: jobData.address,
+        coordinates: {
+          latitude: jobData.latitude,
+          longitude: jobData.longitude,
+        },
+        directionsUrl,
       });
-      return;
+    } catch (error) {
+      logger.error("get_directions_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_DIRECTIONS_FAILED", message: "Failed to get directions" },
+      });
     }
-
-    const jobData = job.rows[0];
-
-    // Generate Google Maps directions URL
-    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${jobData.latitude},${jobData.longitude}`;
-
-    res.json({
-      address: jobData.address,
-      coordinates: {
-        latitude: jobData.latitude,
-        longitude: jobData.longitude,
-      },
-      directionsUrl,
-    });
-  } catch (error) {
-    logger.error("get_directions_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_DIRECTIONS_FAILED", message: "Failed to get directions" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // EARNINGS ENHANCEMENTS
@@ -876,16 +897,18 @@ cleanerEnhancedRouter.get("/jobs/:id/directions", authedHandler(async (req: Auth
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/earnings/tax-report", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { year } = req.query;
+cleanerEnhancedRouter.get(
+  "/earnings/tax-report",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { year } = req.query;
 
-    const yearFilter = year ? `AND EXTRACT(YEAR FROM ce.created_at) = $2` : "";
-    const params = year ? [cleanerId, parseInt(year as string)] : [cleanerId];
+      const yearFilter = year ? `AND EXTRACT(YEAR FROM ce.created_at) = $2` : "";
+      const params = year ? [cleanerId, parseInt(year as string)] : [cleanerId];
 
-    const taxReport = await query(
-      `
+      const taxReport = await query(
+        `
       SELECT 
         EXTRACT(YEAR FROM ce.created_at) as year,
         EXTRACT(QUARTER FROM ce.created_at) as quarter,
@@ -898,20 +921,21 @@ cleanerEnhancedRouter.get("/earnings/tax-report", authedHandler(async (req: Auth
       GROUP BY EXTRACT(YEAR FROM ce.created_at), EXTRACT(QUARTER FROM ce.created_at)
       ORDER BY year DESC, quarter DESC
       `,
-      params
-    );
+        params
+      );
 
-    res.json({ taxReport: taxReport.rows });
-  } catch (error) {
-    logger.error("get_tax_report_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_TAX_REPORT_FAILED", message: "Failed to get tax report" },
-    });
-  }
-}));
+      res.json({ taxReport: taxReport.rows });
+    } catch (error) {
+      logger.error("get_tax_report_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_TAX_REPORT_FAILED", message: "Failed to get tax report" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -935,22 +959,24 @@ cleanerEnhancedRouter.get("/earnings/tax-report", authedHandler(async (req: Auth
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/earnings/breakdown", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { period = "month" } = req.query;
+cleanerEnhancedRouter.get(
+  "/earnings/breakdown",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { period = "month" } = req.query;
 
-    const periodMap: Record<string, string> = {
-      week: "7 days",
-      month: "30 days",
-      year: "365 days",
-    };
+      const periodMap: Record<string, string> = {
+        week: "7 days",
+        month: "30 days",
+        year: "365 days",
+      };
 
-    const periodInterval = periodMap[period as string] || "30 days";
+      const periodInterval = periodMap[period as string] || "30 days";
 
-    // Breakdown by service type
-    const byServiceType = await query(
-      `
+      // Breakdown by service type
+      const byServiceType = await query(
+        `
       SELECT 
         j.service_type,
         SUM(ce.net_amount_cents) / 100.0 as total_earnings,
@@ -963,12 +989,12 @@ cleanerEnhancedRouter.get("/earnings/breakdown", authedHandler(async (req: Authe
       GROUP BY j.service_type
       ORDER BY total_earnings DESC
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    // Breakdown by client
-    const byClient = await query(
-      `
+      // Breakdown by client
+      const byClient = await query(
+        `
       SELECT 
         j.client_id,
         u.email as client_email,
@@ -985,25 +1011,26 @@ cleanerEnhancedRouter.get("/earnings/breakdown", authedHandler(async (req: Authe
       ORDER BY total_earnings DESC
       LIMIT 10
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    res.json({
-      breakdown: {
-        byServiceType: byServiceType.rows,
-        byClient: byClient.rows,
-      },
-    });
-  } catch (error) {
-    logger.error("get_earnings_breakdown_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_BREAKDOWN_FAILED", message: "Failed to get breakdown" },
-    });
-  }
-}));
+      res.json({
+        breakdown: {
+          byServiceType: byServiceType.rows,
+          byClient: byClient.rows,
+        },
+      });
+    } catch (error) {
+      logger.error("get_earnings_breakdown_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_BREAKDOWN_FAILED", message: "Failed to get breakdown" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1035,13 +1062,15 @@ cleanerEnhancedRouter.get("/earnings/breakdown", authedHandler(async (req: Authe
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/earnings/export", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { start_date, end_date } = req.query;
+cleanerEnhancedRouter.get(
+  "/earnings/export",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { start_date, end_date } = req.query;
 
-    const earnings = await query(
-      `
+      const earnings = await query(
+        `
       SELECT 
         ce.created_at as date,
         j.id as job_id,
@@ -1057,37 +1086,39 @@ cleanerEnhancedRouter.get("/earnings/export", authedHandler(async (req: AuthedRe
         ${end_date ? `AND ce.created_at <= $${start_date ? "3" : "2"}::timestamp` : ""}
       ORDER BY ce.created_at DESC
       `,
-      start_date && end_date
-        ? [cleanerId, start_date, end_date]
-        : start_date
-        ? [cleanerId, start_date]
-        : end_date
-        ? [cleanerId, end_date]
-        : [cleanerId]
-    );
+        start_date && end_date
+          ? [cleanerId, start_date, end_date]
+          : start_date
+            ? [cleanerId, start_date]
+            : end_date
+              ? [cleanerId, end_date]
+              : [cleanerId]
+      );
 
-    // Generate CSV
-    const csvHeader = "Date,Job ID,Service Type,Gross Earnings,Platform Fee,Net Earnings,Status\n";
-    const csvRows = earnings.rows
-      .map(
-        (row) =>
-          `${row.date},${row.job_id},${row.service_type || ""},${row.gross_earnings},${row.platform_fee},${row.net_earnings},${row.status}`
-      )
-      .join("\n");
+      // Generate CSV
+      const csvHeader =
+        "Date,Job ID,Service Type,Gross Earnings,Platform Fee,Net Earnings,Status\n";
+      const csvRows = earnings.rows
+        .map(
+          (row) =>
+            `${row.date},${row.job_id},${row.service_type || ""},${row.gross_earnings},${row.platform_fee},${row.net_earnings},${row.status}`
+        )
+        .join("\n");
 
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Content-Disposition", `attachment; filename="earnings-${cleanerId}.csv"`);
-    res.send(csvHeader + csvRows);
-  } catch (error) {
-    logger.error("export_earnings_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "EXPORT_FAILED", message: "Failed to export earnings" },
-    });
-  }
-}));
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="earnings-${cleanerId}.csv"`);
+      res.send(csvHeader + csvRows);
+    } catch (error) {
+      logger.error("export_earnings_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "EXPORT_FAILED", message: "Failed to export earnings" },
+      });
+    }
+  })
+);
 
 // ============================================
 // PROFILE ENHANCEMENTS
@@ -1108,12 +1139,14 @@ cleanerEnhancedRouter.get("/earnings/export", authedHandler(async (req: AuthedRe
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/profile/completeness", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
+cleanerEnhancedRouter.get(
+  "/profile/completeness",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
 
-    const profile = await query(
-      `
+      const profile = await query(
+        `
       SELECT 
         cp.*,
         u.email,
@@ -1123,54 +1156,55 @@ cleanerEnhancedRouter.get("/profile/completeness", authedHandler(async (req: Aut
       INNER JOIN users u ON u.id = cp.user_id
       WHERE cp.user_id = $1
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    if (profile.rows.length === 0) {
-      res.status(404).json({
-        error: { code: "PROFILE_NOT_FOUND", message: "Profile not found" },
+      if (profile.rows.length === 0) {
+        res.status(404).json({
+          error: { code: "PROFILE_NOT_FOUND", message: "Profile not found" },
+        });
+        return;
+      }
+
+      const p = profile.rows[0];
+      let completeness = 0;
+      const missing: string[] = [];
+
+      // Check required fields
+      if (p.first_name && p.last_name) completeness += 10;
+      else missing.push("Name");
+      if (p.bio) completeness += 10;
+      else missing.push("Bio");
+      if (p.avatar_url) completeness += 10;
+      else missing.push("Profile Photo");
+      if (p.base_rate_cph) completeness += 10;
+      else missing.push("Pricing");
+      if (parseInt(p.service_areas_count) > 0) completeness += 10;
+      else missing.push("Service Areas");
+      if (p.phone) completeness += 5;
+      else missing.push("Phone Number");
+      if (parseInt(p.certifications_count) > 0) completeness += 5;
+      else missing.push("Certifications");
+      if (p.background_check_status === "verified") completeness += 10;
+      else missing.push("Background Check");
+      // Add more checks...
+
+      res.json({
+        completeness: Math.min(100, completeness),
+        missing,
+        impact: completeness >= 80 ? "high" : completeness >= 60 ? "medium" : "low",
       });
-      return;
+    } catch (error) {
+      logger.error("get_completeness_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_COMPLETENESS_FAILED", message: "Failed to get completeness" },
+      });
     }
-
-    const p = profile.rows[0];
-    let completeness = 0;
-    const missing: string[] = [];
-
-    // Check required fields
-    if (p.first_name && p.last_name) completeness += 10;
-    else missing.push("Name");
-    if (p.bio) completeness += 10;
-    else missing.push("Bio");
-    if (p.avatar_url) completeness += 10;
-    else missing.push("Profile Photo");
-    if (p.base_rate_cph) completeness += 10;
-    else missing.push("Pricing");
-    if (parseInt(p.service_areas_count) > 0) completeness += 10;
-    else missing.push("Service Areas");
-    if (p.phone) completeness += 5;
-    else missing.push("Phone Number");
-    if (parseInt(p.certifications_count) > 0) completeness += 5;
-    else missing.push("Certifications");
-    if (p.background_check_status === "verified") completeness += 10;
-    else missing.push("Background Check");
-    // Add more checks...
-
-    res.json({
-      completeness: Math.min(100, completeness),
-      missing,
-      impact: completeness >= 80 ? "high" : completeness >= 60 ? "medium" : "low",
-    });
-  } catch (error) {
-    logger.error("get_completeness_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_COMPLETENESS_FAILED", message: "Failed to get completeness" },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -1187,12 +1221,14 @@ cleanerEnhancedRouter.get("/profile/completeness", authedHandler(async (req: Aut
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/profile/preview", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
+cleanerEnhancedRouter.get(
+  "/profile/preview",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
 
-    const profile = await query(
-      `
+      const profile = await query(
+        `
       SELECT 
         u.id,
         cp.first_name || ' ' || COALESCE(cp.last_name, '') as name,
@@ -1212,27 +1248,28 @@ cleanerEnhancedRouter.get("/profile/preview", authedHandler(async (req: AuthedRe
       ) review_count ON review_count.reviewee_id = u.id
       WHERE u.id = $1
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    if (profile.rows.length === 0) {
-      res.status(404).json({
-        error: { code: "PROFILE_NOT_FOUND", message: "Profile not found" },
+      if (profile.rows.length === 0) {
+        res.status(404).json({
+          error: { code: "PROFILE_NOT_FOUND", message: "Profile not found" },
+        });
+        return;
+      }
+
+      res.json({ profile: profile.rows[0] });
+    } catch (error) {
+      logger.error("get_profile_preview_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
       });
-      return;
+      res.status(500).json({
+        error: { code: "GET_PREVIEW_FAILED", message: "Failed to get preview" },
+      });
     }
-
-    res.json({ profile: profile.rows[0] });
-  } catch (error) {
-    logger.error("get_profile_preview_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_PREVIEW_FAILED", message: "Failed to get preview" },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -1261,33 +1298,36 @@ cleanerEnhancedRouter.get("/profile/preview", authedHandler(async (req: AuthedRe
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.post("/profile/video", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { video_url } = req.body;
+cleanerEnhancedRouter.post(
+  "/profile/video",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { video_url } = req.body;
 
-    await query(
-      `
+      await query(
+        `
       UPDATE cleaner_profiles
       SET metadata = COALESCE(metadata, '{}'::jsonb) || 
           jsonb_build_object('intro_video_url', $1),
           updated_at = NOW()
       WHERE user_id = $2
       `,
-      [video_url, cleanerId]
-    );
+        [video_url, cleanerId]
+      );
 
-    res.json({ success: true, video_url });
-  } catch (error) {
-    logger.error("upload_video_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "UPLOAD_VIDEO_FAILED", message: "Failed to upload video" },
-    });
-  }
-}));
+      res.json({ success: true, video_url });
+    } catch (error) {
+      logger.error("upload_video_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "UPLOAD_VIDEO_FAILED", message: "Failed to upload video" },
+      });
+    }
+  })
+);
 
 // ============================================
 // AVAILABILITY ENHANCEMENTS
@@ -1308,13 +1348,15 @@ cleanerEnhancedRouter.post("/profile/video", authedHandler(async (req: AuthedReq
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/availability/suggestions", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
+cleanerEnhancedRouter.get(
+  "/availability/suggestions",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
 
-    // Analyze peak demand times based on job requests
-    const peakDemand = await query(
-      `
+      // Analyze peak demand times based on job requests
+      const peakDemand = await query(
+        `
       SELECT 
         EXTRACT(DOW FROM scheduled_start_at) as day_of_week,
         EXTRACT(HOUR FROM scheduled_start_at) as hour,
@@ -1328,12 +1370,12 @@ cleanerEnhancedRouter.get("/availability/suggestions", authedHandler(async (req:
       ORDER BY request_count DESC, avg_value DESC
       LIMIT 10
       `,
-      []
-    );
+        []
+      );
 
-    // Get cleaner's best earning times
-    const bestEarningTimes = await query(
-      `
+      // Get cleaner's best earning times
+      const bestEarningTimes = await query(
+        `
       SELECT 
         EXTRACT(DOW FROM scheduled_start_at) as day_of_week,
         EXTRACT(HOUR FROM scheduled_start_at) as hour,
@@ -1347,35 +1389,36 @@ cleanerEnhancedRouter.get("/availability/suggestions", authedHandler(async (req:
       ORDER BY avg_earnings DESC
       LIMIT 10
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    res.json({
-      suggestions: {
-        peakDemand: peakDemand.rows.map((row) => ({
-          dayOfWeek: parseInt(row.day_of_week),
-          hour: parseInt(row.hour),
-          requestCount: parseInt(row.request_count),
-          avgValue: parseFloat(row.avg_value),
-        })),
-        bestEarningTimes: bestEarningTimes.rows.map((row) => ({
-          dayOfWeek: parseInt(row.day_of_week),
-          hour: parseInt(row.hour),
-          avgEarnings: parseFloat(row.avg_earnings),
-          jobCount: parseInt(row.job_count),
-        })),
-      },
-    });
-  } catch (error) {
-    logger.error("get_availability_suggestions_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_SUGGESTIONS_FAILED", message: "Failed to get suggestions" },
-    });
-  }
-}));
+      res.json({
+        suggestions: {
+          peakDemand: peakDemand.rows.map((row) => ({
+            dayOfWeek: parseInt(row.day_of_week),
+            hour: parseInt(row.hour),
+            requestCount: parseInt(row.request_count),
+            avgValue: parseFloat(row.avg_value),
+          })),
+          bestEarningTimes: bestEarningTimes.rows.map((row) => ({
+            dayOfWeek: parseInt(row.day_of_week),
+            hour: parseInt(row.hour),
+            avgEarnings: parseFloat(row.avg_earnings),
+            jobCount: parseInt(row.job_count),
+          })),
+        },
+      });
+    } catch (error) {
+      logger.error("get_availability_suggestions_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_SUGGESTIONS_FAILED", message: "Failed to get suggestions" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1474,13 +1517,15 @@ cleanerEnhancedRouter.post(
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/certifications/recommendations", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
+cleanerEnhancedRouter.get(
+  "/certifications/recommendations",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
 
-    // Get cleaner stats
-    const stats = await query(
-      `
+      // Get cleaner stats
+      const stats = await query(
+        `
       SELECT 
         COUNT(*) FILTER (WHERE j.status = 'completed') as completed_jobs,
         AVG(r.rating)::numeric(3,2) as avg_rating,
@@ -1489,46 +1534,47 @@ cleanerEnhancedRouter.get("/certifications/recommendations", authedHandler(async
       LEFT JOIN reviews r ON r.job_id = j.id AND r.reviewee_id = $1
       WHERE j.cleaner_id = $1
       `,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    const { completed_jobs, avg_rating, unique_clients } = stats.rows[0] || {};
+      const { completed_jobs, avg_rating, unique_clients } = stats.rows[0] || {};
 
-    // Generate recommendations based on stats
-    const recommendations = [];
+      // Generate recommendations based on stats
+      const recommendations = [];
 
-    if (completed_jobs >= 20 && avg_rating >= 4.5) {
-      recommendations.push({
-        name: "Move In/Out Expert",
-        reason: "You've completed 20+ jobs with high ratings. Unlock move-in/out jobs!",
+      if (completed_jobs >= 20 && avg_rating >= 4.5) {
+        recommendations.push({
+          name: "Move In/Out Expert",
+          reason: "You've completed 20+ jobs with high ratings. Unlock move-in/out jobs!",
+        });
+      }
+
+      if (completed_jobs >= 50) {
+        recommendations.push({
+          name: "Commercial Cleaning Certified",
+          reason: "You've completed 50+ residential jobs. Ready for commercial?",
+        });
+      }
+
+      if (avg_rating >= 4.8) {
+        recommendations.push({
+          name: "Premium Cleaner",
+          reason: "Your excellent ratings qualify you for premium certification!",
+        });
+      }
+
+      res.json({ recommendations });
+    } catch (error) {
+      logger.error("get_certification_recommendations_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_RECOMMENDATIONS_FAILED", message: "Failed to get recommendations" },
       });
     }
-
-    if (completed_jobs >= 50) {
-      recommendations.push({
-        name: "Commercial Cleaning Certified",
-        reason: "You've completed 50+ residential jobs. Ready for commercial?",
-      });
-    }
-
-    if (avg_rating >= 4.8) {
-      recommendations.push({
-        name: "Premium Cleaner",
-        reason: "Your excellent ratings qualify you for premium certification!",
-      });
-    }
-
-    res.json({ recommendations });
-  } catch (error) {
-    logger.error("get_certification_recommendations_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_RECOMMENDATIONS_FAILED", message: "Failed to get recommendations" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // LEADERBOARD
@@ -1549,14 +1595,17 @@ cleanerEnhancedRouter.get("/certifications/recommendations", authedHandler(async
  *       403:
  *         description: Forbidden - cleaners only
  */
-cleanerEnhancedRouter.get("/leaderboard/personal", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { timeframe = "month", category = "earnings" } = req.query;
+cleanerEnhancedRouter.get(
+  "/leaderboard/personal",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { timeframe = "month", category = "earnings" } = req.query;
 
-    // Get cleaner's rank
-    const rankQuery = category === "earnings"
-      ? `
+      // Get cleaner's rank
+      const rankQuery =
+        category === "earnings"
+          ? `
         SELECT COUNT(*) + 1 as rank
         FROM cleaner_earnings ce1
         WHERE (
@@ -1571,7 +1620,7 @@ cleanerEnhancedRouter.get("/leaderboard/personal", authedHandler(async (req: Aut
             AND ce3.created_at >= NOW() - INTERVAL '${timeframe === "month" ? "30 days" : timeframe === "year" ? "365 days" : "7 days"}'
         )
       `
-      : `
+          : `
         SELECT COUNT(*) + 1 as rank
         FROM jobs j1
         WHERE (
@@ -1589,28 +1638,32 @@ cleanerEnhancedRouter.get("/leaderboard/personal", authedHandler(async (req: Aut
         )
       `;
 
-    const rankResult = await query(rankQuery, [cleanerId]);
-    const rank = parseInt(rankResult.rows[0]?.rank || "0", 10);
+      const rankResult = await query(rankQuery, [cleanerId]);
+      const rank = parseInt(rankResult.rows[0]?.rank || "0", 10);
 
-    // Get trend (simplified - would compare to previous period)
-    const trend = rank > 0 ? Math.floor(Math.random() * 5) - 2 : 0; // Placeholder
+      // Get trend (simplified - would compare to previous period)
+      const trend = rank > 0 ? Math.floor(Math.random() * 5) - 2 : 0; // Placeholder
 
-    // Get next rank info
-    const nextRank = rank > 1 ? {
-      rank: rank - 1,
-      gap: category === "earnings" ? "$500 more" : "5 more bookings",
-    } : null;
+      // Get next rank info
+      const nextRank =
+        rank > 1
+          ? {
+              rank: rank - 1,
+              gap: category === "earnings" ? "$500 more" : "5 more bookings",
+            }
+          : null;
 
-    res.json({ rank, trend, nextRank });
-  } catch (error) {
-    logger.error("get_personal_leaderboard_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_LEADERBOARD_FAILED", message: "Failed to get leaderboard" },
-    });
-  }
-}));
+      res.json({ rank, trend, nextRank });
+    } catch (error) {
+      logger.error("get_personal_leaderboard_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_LEADERBOARD_FAILED", message: "Failed to get leaderboard" },
+      });
+    }
+  })
+);
 
 export default cleanerEnhancedRouter;

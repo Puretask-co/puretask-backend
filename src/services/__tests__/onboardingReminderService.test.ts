@@ -1,42 +1,41 @@
 // src/services/__tests__/onboardingReminderService.test.ts
 // Unit tests for onboarding reminder service
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { jest } from '@jest/globals';
+import { beforeEach, vi } from "vitest";
 import {
   getAbandonedOnboardingCleaners,
   sendOnboardingReminder,
   sendOnboardingReminders,
-} from '../onboardingReminderService';
-import { query } from '../../db/client';
-import sgMail from '@sendgrid/mail';
-import { env } from '../../config/env';
+} from "../onboardingReminderService";
+import { query } from "../../db/client";
+import sgMail from "@sendgrid/mail";
+import { env } from "../../config/env";
 
-jest.mock('../../db/client');
-jest.mock('@sendgrid/mail');
-jest.mock('../../lib/logger', () => ({
+vi.mock("../../db/client");
+vi.mock("@sendgrid/mail");
+vi.mock("../../lib/logger", () => ({
   logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
   },
 }));
 
-describe('onboardingReminderService', () => {
+describe("onboardingReminderService", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
-  describe('getAbandonedOnboardingCleaners', () => {
-    it('finds cleaners who abandoned onboarding', async () => {
+  describe("getAbandonedOnboardingCleaners", () => {
+    it("finds cleaners who abandoned onboarding", async () => {
       const mockCleaners = [
         {
-          id: 'cleaner-1',
-          user_id: 'user-1',
-          first_name: 'John',
-          onboarding_current_step: 'phone-verification',
+          id: "cleaner-1",
+          user_id: "user-1",
+          first_name: "John",
+          onboarding_current_step: "phone-verification",
           onboarding_started_at: new Date(Date.now() - 25 * 60 * 60 * 1000), // 25 hours ago
-          email: 'john@example.com',
+          email: "john@example.com",
         },
       ];
 
@@ -46,29 +45,29 @@ describe('onboardingReminderService', () => {
       const result = await getAbandonedOnboardingCleaners(24);
 
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('cleaner-1');
+      expect(result[0].id).toBe("cleaner-1");
       expect(mockQuery).toHaveBeenCalled();
     });
 
-    it('respects hours threshold', async () => {
+    it("respects hours threshold", async () => {
       const mockQuery = query as any;
       mockQuery.mockResolvedValueOnce({ rows: [] });
 
       await getAbandonedOnboardingCleaners(48);
 
       const queryCall = mockQuery.mock.calls[0][0];
-      expect(queryCall).toContain('$1');
+      expect(queryCall).toContain("$1");
     });
   });
 
-  describe('sendOnboardingReminder', () => {
-    it('sends email via SendGrid', async () => {
+  describe("sendOnboardingReminder", () => {
+    it("sends email via SendGrid", async () => {
       const mockCleaner = {
-        id: 'cleaner-1',
-        user_id: 'user-1',
-        first_name: 'John',
-        email: 'john@example.com',
-        onboarding_current_step: 'phone-verification',
+        id: "cleaner-1",
+        user_id: "user-1",
+        first_name: "John",
+        email: "john@example.com",
+        onboarding_current_step: "phone-verification",
       };
 
       const mockQuery = query as any;
@@ -81,22 +80,22 @@ describe('onboardingReminderService', () => {
       expect(result.success).toBe(true);
       expect(sgMail.send).toHaveBeenCalledWith(
         expect.objectContaining({
-          to: 'john@example.com',
-          subject: 'Complete Your PureTask Onboarding',
+          to: "john@example.com",
+          subject: "Complete Your PureTask Onboarding",
         })
       );
     });
 
-    it('handles SendGrid errors', async () => {
+    it("handles SendGrid errors", async () => {
       const mockCleaner = {
-        id: 'cleaner-1',
-        user_id: 'user-1',
-        first_name: 'John',
-        email: 'john@example.com',
-        onboarding_current_step: 'phone-verification',
+        id: "cleaner-1",
+        user_id: "user-1",
+        first_name: "John",
+        email: "john@example.com",
+        onboarding_current_step: "phone-verification",
       };
 
-      const errorMessage = 'Invalid email';
+      const errorMessage = "Invalid email";
       const sendGridError = new Error(errorMessage);
       (sendGridError as any).response = {
         body: {
@@ -113,44 +112,44 @@ describe('onboardingReminderService', () => {
       expect(result.error).toBe(errorMessage);
     });
 
-    it('skips when SendGrid not configured', async () => {
+    it("skips when SendGrid not configured", async () => {
       const originalKey = env.SENDGRID_API_KEY;
       delete (env as any).SENDGRID_API_KEY;
 
       const mockCleaner = {
-        id: 'cleaner-1',
-        user_id: 'user-1',
-        first_name: 'John',
-        email: 'john@example.com',
-        onboarding_current_step: 'phone-verification',
+        id: "cleaner-1",
+        user_id: "user-1",
+        first_name: "John",
+        email: "john@example.com",
+        onboarding_current_step: "phone-verification",
       };
 
       const result = await sendOnboardingReminder(mockCleaner);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('SendGrid not configured');
+      expect(result.error).toContain("SendGrid not configured");
 
       env.SENDGRID_API_KEY = originalKey;
     });
   });
 
-  describe('sendOnboardingReminders', () => {
-    it('sends reminders to all abandoned cleaners', async () => {
+  describe("sendOnboardingReminders", () => {
+    it("sends reminders to all abandoned cleaners", async () => {
       const mockCleaners = [
         {
-          id: 'cleaner-1',
-          user_id: 'user-1',
-          first_name: 'John',
-          email: 'john@example.com',
-          onboarding_current_step: 'phone-verification',
+          id: "cleaner-1",
+          user_id: "user-1",
+          first_name: "John",
+          email: "john@example.com",
+          onboarding_current_step: "phone-verification",
           onboarding_started_at: new Date(Date.now() - 25 * 60 * 60 * 1000),
         },
         {
-          id: 'cleaner-2',
-          user_id: 'user-2',
-          first_name: 'Jane',
-          email: 'jane@example.com',
-          onboarding_current_step: 'basic-info',
+          id: "cleaner-2",
+          user_id: "user-2",
+          first_name: "Jane",
+          email: "jane@example.com",
+          onboarding_current_step: "basic-info",
           onboarding_started_at: new Date(Date.now() - 30 * 60 * 60 * 1000),
         },
       ];
@@ -172,34 +171,32 @@ describe('onboardingReminderService', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it('handles partial failures', async () => {
+    it("handles partial failures", async () => {
       const mockCleaners = [
         {
-          id: 'cleaner-1',
-          user_id: 'user-1',
-          first_name: 'John',
-          email: 'john@example.com',
-          onboarding_current_step: 'phone-verification',
+          id: "cleaner-1",
+          user_id: "user-1",
+          first_name: "John",
+          email: "john@example.com",
+          onboarding_current_step: "phone-verification",
           onboarding_started_at: new Date(Date.now() - 25 * 60 * 60 * 1000),
         },
         {
-          id: 'cleaner-2',
-          user_id: 'user-2',
-          first_name: 'Jane',
-          email: 'invalid-email',
-          onboarding_current_step: 'basic-info',
+          id: "cleaner-2",
+          user_id: "user-2",
+          first_name: "Jane",
+          email: "invalid-email",
+          onboarding_current_step: "basic-info",
           onboarding_started_at: new Date(Date.now() - 30 * 60 * 60 * 1000),
         },
       ];
 
       const mockQuery = query as any;
-      mockQuery
-        .mockResolvedValueOnce({ rows: mockCleaners })
-        .mockResolvedValueOnce({ rows: [] });
+      mockQuery.mockResolvedValueOnce({ rows: mockCleaners }).mockResolvedValueOnce({ rows: [] });
 
       (sgMail.send as any)
         .mockResolvedValueOnce([{ statusCode: 202 }])
-        .mockRejectedValueOnce({ message: 'Invalid email' });
+        .mockRejectedValueOnce({ message: "Invalid email" });
 
       const result = await sendOnboardingReminders(24);
 

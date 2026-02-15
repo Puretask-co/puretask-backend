@@ -51,9 +51,7 @@ async function storeIdempotencyResult(
 /**
  * Get idempotency result
  */
-async function getIdempotencyResult(
-  key: string
-): Promise<IdempotencyRecord | null> {
+async function getIdempotencyResult(key: string): Promise<IdempotencyRecord | null> {
   try {
     const result = await query<IdempotencyRecord>(
       `
@@ -71,9 +69,10 @@ async function getIdempotencyResult(
 
     return {
       ...result.rows[0],
-      response_body: typeof result.rows[0].response_body === "string"
-        ? JSON.parse(result.rows[0].response_body)
-        : result.rows[0].response_body,
+      response_body:
+        typeof result.rows[0].response_body === "string"
+          ? JSON.parse(result.rows[0].response_body)
+          : result.rows[0].response_body,
     };
   } catch (error) {
     logger.error("idempotency_get_failed", {
@@ -90,20 +89,16 @@ async function getIdempotencyResult(
 
 /**
  * Middleware to handle Idempotency-Key header
- * 
+ *
  * If the same key is used again, returns the previous response.
  * Otherwise, stores the response for future requests.
- * 
+ *
  * Usage:
  * router.post('/jobs', requireIdempotency, async (req, res) => {
  *   // Your handler
  * });
  */
-export function requireIdempotency(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function requireIdempotency(req: Request, res: Response, next: NextFunction): void {
   const idempotencyKey = req.headers["idempotency-key"] as string;
 
   if (!idempotencyKey) {
@@ -114,7 +109,8 @@ export function requireIdempotency(
   if (!/^[a-zA-Z0-9_-]{1,255}$/.test(idempotencyKey)) {
     return sendError(res, {
       code: ErrorCode.VALIDATION_ERROR,
-      message: "Invalid Idempotency-Key format. Must be alphanumeric with dashes/underscores, max 255 characters.",
+      message:
+        "Invalid Idempotency-Key format. Must be alphanumeric with dashes/underscores, max 255 characters.",
       statusCode: 400,
     } as any);
   }
@@ -171,11 +167,7 @@ export function requireIdempotency(
 /**
  * Optional idempotency (doesn't require key, but uses it if provided)
  */
-export function optionalIdempotency(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function optionalIdempotency(req: Request, res: Response, next: NextFunction): void {
   const idempotencyKey = req.headers["idempotency-key"] as string;
 
   if (!idempotencyKey) {

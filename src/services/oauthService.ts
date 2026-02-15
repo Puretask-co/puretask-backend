@@ -63,18 +63,16 @@ export async function handleOAuthLogin(
       );
 
       // Get user
-      const userResult = await client.query<User>(
-        `SELECT * FROM users WHERE id = $1`,
-        [oauthAccount.user_id]
-      );
+      const userResult = await client.query<User>(`SELECT * FROM users WHERE id = $1`, [
+        oauthAccount.user_id,
+      ]);
 
       user = userResult.rows[0];
     } else {
       // Check if user exists with this email
-      const existingUserResult = await client.query<User>(
-        `SELECT * FROM users WHERE email = $1`,
-        [profile.email]
-      );
+      const existingUserResult = await client.query<User>(`SELECT * FROM users WHERE email = $1`, [
+        profile.email,
+      ]);
 
       if (existingUserResult.rows.length > 0) {
         // Link OAuth to existing user
@@ -174,15 +172,12 @@ export async function handleOAuthLogin(
     );
 
     // Log security event
-    await client.query(
-      `SELECT log_security_event($1, $2, $3, NULL, NULL, $4::JSONB)`,
-      [
-        user.id,
-        "oauth_login",
-        "success",
-        JSON.stringify({ provider: profile.provider, new_user: isNewUser }),
-      ]
-    );
+    await client.query(`SELECT log_security_event($1, $2, $3, NULL, NULL, $4::JSONB)`, [
+      user.id,
+      "oauth_login",
+      "success",
+      JSON.stringify({ provider: profile.provider, new_user: isNewUser }),
+    ]);
 
     // Generate JWT token
     const token = signAuthToken({
@@ -209,15 +204,9 @@ export async function getUserOAuthAccounts(userId: string): Promise<OAuthAccount
 /**
  * Unlink OAuth account
  */
-export async function unlinkOAuthAccount(
-  userId: string,
-  provider: OAuthProvider
-): Promise<void> {
+export async function unlinkOAuthAccount(userId: string, provider: OAuthProvider): Promise<void> {
   // Check if user has a password set (can't unlink if no password and only one OAuth)
-  const userResult = await query<User>(
-    `SELECT password_hash FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT password_hash FROM users WHERE id = $1`, [userId]);
 
   const user = userResult.rows[0];
 
@@ -232,9 +221,7 @@ export async function unlinkOAuthAccount(
 
     if (count <= 1) {
       throw Object.assign(
-        new Error(
-          "Cannot unlink last authentication method. Please set a password first."
-        ),
+        new Error("Cannot unlink last authentication method. Please set a password first."),
         { statusCode: 400, code: "LAST_AUTH_METHOD" }
       );
     }
@@ -248,10 +235,12 @@ export async function unlinkOAuthAccount(
   );
 
   // Log security event
-  await query(
-    `SELECT log_security_event($1, $2, $3, NULL, NULL, $4::JSONB)`,
-    [userId, "oauth_unlinked", "success", JSON.stringify({ provider })]
-  );
+  await query(`SELECT log_security_event($1, $2, $3, NULL, NULL, $4::JSONB)`, [
+    userId,
+    "oauth_unlinked",
+    "success",
+    JSON.stringify({ provider }),
+  ]);
 
   logger.info("oauth_unlinked", { userId, provider });
 }
@@ -259,10 +248,7 @@ export async function unlinkOAuthAccount(
 /**
  * Check if user has OAuth account for provider
  */
-export async function hasOAuthAccount(
-  userId: string,
-  provider: OAuthProvider
-): Promise<boolean> {
+export async function hasOAuthAccount(userId: string, provider: OAuthProvider): Promise<boolean> {
   const result = await query<{ exists: boolean }>(
     `SELECT EXISTS(
       SELECT 1 FROM oauth_accounts 
@@ -306,12 +292,7 @@ export async function refreshOAuthToken(
          token_expires_at = $3,
          updated_at = NOW()
      WHERE id = $4`,
-    [
-      newAccessToken,
-      newRefreshToken || null,
-      expiresAt?.toISOString() || null,
-      accountId,
-    ]
+    [newAccessToken, newRefreshToken || null, expiresAt?.toISOString() || null, accountId]
   );
 
   logger.info("oauth_token_refreshed", { accountId });
@@ -321,10 +302,7 @@ export async function refreshOAuthToken(
  * Check if user can set password (OAuth-only users)
  */
 export async function canSetPassword(userId: string): Promise<boolean> {
-  const userResult = await query<User>(
-    `SELECT password_hash FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT password_hash FROM users WHERE id = $1`, [userId]);
 
   const user = userResult.rows[0];
 
@@ -334,10 +312,7 @@ export async function canSetPassword(userId: string): Promise<boolean> {
 /**
  * Set password for OAuth-only user
  */
-export async function setPasswordForOAuthUser(
-  userId: string,
-  newPassword: string
-): Promise<void> {
+export async function setPasswordForOAuthUser(userId: string, newPassword: string): Promise<void> {
   // Check if user already has password
   const canSet = await canSetPassword(userId);
   if (!canSet) {
@@ -360,11 +335,11 @@ export async function setPasswordForOAuthUser(
   );
 
   // Log security event
-  await query(
-    `SELECT log_security_event($1, $2, $3, NULL, NULL, '{}'::JSONB)`,
-    [userId, "password_set", "success"]
-  );
+  await query(`SELECT log_security_event($1, $2, $3, NULL, NULL, '{}'::JSONB)`, [
+    userId,
+    "password_set",
+    "success",
+  ]);
 
   logger.info("password_set_oauth_user", { userId });
 }
-

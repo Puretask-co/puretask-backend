@@ -40,7 +40,12 @@ export interface LevelProgress {
   /** Placeholder: extra bookings attributed to active rewards this week */
   rewardAttribution?: { extraBookingsThisWeek: number };
   /** In-app copy for current level (cleaner-facing) */
-  levelCopy?: { description: string; coreHelper?: string; stretchHelper?: string; maintenanceHelper?: string };
+  levelCopy?: {
+    description: string;
+    coreHelper?: string;
+    stretchHelper?: string;
+    maintenanceHelper?: string;
+  };
 }
 
 // ============================================
@@ -52,7 +57,12 @@ export interface LevelProgress {
  */
 export async function getLevelProgress(cleanerId: string): Promise<LevelProgress> {
   const [progressRow, goalsRows] = await Promise.all([
-    query<{ current_level: number; level_name: string; level_reached_at: string | null; maintenance_paused: boolean }>(
+    query<{
+      current_level: number;
+      level_name: string;
+      level_reached_at: string | null;
+      maintenance_paused: boolean;
+    }>(
       `SELECT lp.current_level, ld.name as level_name, lp.level_reached_at, lp.maintenance_paused
        FROM cleaner_level_progress lp
        JOIN cleaner_level_definitions ld ON ld.level = lp.current_level
@@ -768,7 +778,8 @@ async function checkLevelUpEligibility(
     `SELECT maintenance_paused FROM cleaner_level_progress WHERE cleaner_id = $1`,
     [cleanerId]
   );
-  if (progressRow.rows[0]?.maintenance_paused) blockers.push("Maintenance paused - restore compliance");
+  if (progressRow.rows[0]?.maintenance_paused)
+    blockers.push("Maintenance paused - restore compliance");
 
   return {
     eligible: allCore && oneStretch && allMaintenance && !progressRow.rows[0]?.maintenance_paused,
@@ -785,7 +796,11 @@ export async function checkAndProcessGoals(cleanerId: string): Promise<{
   leveledUp: boolean;
 }> {
   const newCompletions: string[] = [];
-  const rewardsToGrant: Array<{ goalKey: string; rewardType: string; config: Record<string, unknown> }> = [];
+  const rewardsToGrant: Array<{
+    goalKey: string;
+    rewardType: string;
+    config: Record<string, unknown>;
+  }> = [];
   let leveledUp = false;
   let level = 1;
 
@@ -946,7 +961,9 @@ export async function recordMeaningfulAction(cleanerId: string, actionType: stri
  * Returns estimated extra bookings from active rewards this week.
  * TODO: Implement by correlating boost activation with new bookings.
  */
-export async function getRewardAttribution(cleanerId: string): Promise<{ extraBookingsThisWeek: number }> {
+export async function getRewardAttribution(
+  cleanerId: string
+): Promise<{ extraBookingsThisWeek: number }> {
   const r = await query<{ count: string }>(
     `SELECT COALESCE(SUM(extra_bookings_attributed), 0)::text
      FROM cleaner_boost_attribution_placeholder

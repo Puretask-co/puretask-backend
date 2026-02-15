@@ -6,6 +6,7 @@ import { logger } from "../lib/logger";
 import { env } from "../config/env";
 import { runWorker } from "./index";
 import { runLockRecovery } from "./lockRecovery";
+import { enqueue } from "../services/durableJobService";
 
 // ============================================
 // Worker Schedule Configuration
@@ -176,10 +177,26 @@ export async function startInternalScheduler(): Promise<void> {
         logger.info("scheduled_worker_triggered", {
           worker: schedule.workerName,
           schedule: schedule.cronExpression,
+          enqueueOnly: env.CRONS_ENQUEUE_ONLY,
         });
 
         try {
-          if (schedule.workerName === "lock-recovery") {
+          if (env.CRONS_ENQUEUE_ONLY) {
+            const bucket = Math.floor(Date.now() / 60_000).toString(); // 1 min bucket
+            const key = `${schedule.workerName}:${bucket}`;
+            const inserted = await enqueue(
+              schedule.workerName,
+              key,
+              { triggeredAt: new Date().toISOString() },
+              new Date()
+            );
+            if (!inserted) {
+              logger.debug("scheduled_worker_already_queued", {
+                worker: schedule.workerName,
+                key,
+              });
+            }
+          } else if (schedule.workerName === "lock-recovery") {
             await runLockRecovery();
           } else {
             await runWorker(schedule.workerName as any);
@@ -250,10 +267,23 @@ export async function runScheduledWorker(workerName: string): Promise<void> {
   logger.info("scheduled_worker_running", {
     worker: workerName,
     description: schedule.description,
+    enqueueOnly: env.CRONS_ENQUEUE_ONLY,
   });
 
   try {
-    if (workerName === "lock-recovery") {
+    if (env.CRONS_ENQUEUE_ONLY) {
+      const bucket = Math.floor(Date.now() / 60_000).toString();
+      const key = `${workerName}:${bucket}`;
+      const inserted = await enqueue(
+        workerName,
+        key,
+        { triggeredAt: new Date().toISOString() },
+        new Date()
+      );
+      if (!inserted) {
+        logger.info("scheduled_worker_already_queued", { worker: workerName, key });
+      }
+    } else if (workerName === "lock-recovery") {
       await runLockRecovery();
     } else {
       await runWorker(workerName as any);

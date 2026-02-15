@@ -166,10 +166,7 @@ export async function revokeAllUserSessions(
   userId: string,
   reason: string = "user_logout_all"
 ): Promise<number> {
-  const result = await query(
-    `SELECT revoke_all_user_sessions($1) as count`,
-    [userId]
-  );
+  const result = await query(`SELECT revoke_all_user_sessions($1) as count`, [userId]);
 
   const count = result.rows[0]?.count ?? 0;
 
@@ -201,7 +198,10 @@ export async function getUserActiveSessions(userId: string): Promise<UserSession
 /**
  * Get all sessions for a user (including revoked/expired)
  */
-export async function getUserAllSessions(userId: string, limit: number = 50): Promise<UserSession[]> {
+export async function getUserAllSessions(
+  userId: string,
+  limit: number = 50
+): Promise<UserSession[]> {
   const result = await query<UserSession>(
     `SELECT * FROM user_sessions 
      WHERE user_id = $1
@@ -217,10 +217,7 @@ export async function getUserAllSessions(userId: string, limit: number = 50): Pr
  * Get session by ID
  */
 export async function getSessionById(sessionId: string): Promise<UserSession | null> {
-  const result = await query<UserSession>(
-    `SELECT * FROM user_sessions WHERE id = $1`,
-    [sessionId]
-  );
+  const result = await query<UserSession>(`SELECT * FROM user_sessions WHERE id = $1`, [sessionId]);
 
   return result.rows[0] ?? null;
 }
@@ -285,7 +282,8 @@ export async function getUserSessionStats(userId: string): Promise<{
   const devices = devicesResult.rows.map((session) => {
     const info = session.device_info as any;
     return {
-      device: `${info.device || "Desktop"} - ${info.os || "Unknown"} ${info.osVersion || ""}`.trim(),
+      device:
+        `${info.device || "Desktop"} - ${info.os || "Unknown"} ${info.osVersion || ""}`.trim(),
       lastUsed: session.last_activity_at,
     };
   });
@@ -374,9 +372,5 @@ export function generateDeviceFingerprint(req: Request): string {
     device: deviceInfo.device,
   };
 
-  return crypto
-    .createHash("sha256")
-    .update(JSON.stringify(fingerprintData))
-    .digest("hex");
+  return crypto.createHash("sha256").update(JSON.stringify(fingerprintData)).digest("hex");
 }
-

@@ -1,27 +1,28 @@
 // src/lib/__tests__/n8nClient.test.ts
 // Unit tests for n8n client (config, event forward, webhook send)
 
-import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
-import { jest } from "@jest/globals";
+import { beforeEach, afterEach, vi } from "vitest";
 
-const mockPostJson = jest.fn();
-const mockLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-};
+const { mockPostJson, mockLogger } = vi.hoisted(() => ({
+  mockPostJson: vi.fn(),
+  mockLogger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 
-jest.mock("../../config/env", () => ({
+vi.mock("../../config/env", () => ({
   env: {
     N8N_WEBHOOK_URL: "",
     N8N_API_KEY: "",
     N8N_BASE_URL: "",
   },
 }));
-jest.mock("../httpClient", () => ({
+vi.mock("../httpClient", () => ({
   postJson: (...args: unknown[]) => mockPostJson(...args),
 }));
-jest.mock("../logger", () => ({
+vi.mock("../logger", () => ({
   logger: mockLogger,
 }));
 
@@ -39,7 +40,7 @@ import { env } from "../../config/env";
 
 describe("n8nClient", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     (env as any).N8N_WEBHOOK_URL = "";
     (env as any).N8N_API_KEY = "";
   });
@@ -104,7 +105,7 @@ describe("n8nClient", () => {
     it("calls postJson with URL and payload when N8N_WEBHOOK_URL is set", async () => {
       (env as any).N8N_WEBHOOK_URL = "https://n8n.example.com/hook";
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(mockPostJson as jest.Mock<any>).mockResolvedValueOnce(undefined);
+      (mockPostJson as vi.Mock<any>).mockResolvedValueOnce(undefined);
 
       await forwardEventToN8nWebhook(payload);
 
@@ -119,7 +120,7 @@ describe("n8nClient", () => {
     it("throws when postJson fails and N8N_WEBHOOK_URL is set", async () => {
       (env as any).N8N_WEBHOOK_URL = "https://n8n.example.com/hook";
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (mockPostJson as jest.Mock<any>).mockRejectedValueOnce(new Error("Network error"));
+      (mockPostJson as vi.Mock<any>).mockRejectedValueOnce(new Error("Network error"));
 
       await expect(forwardEventToN8nWebhook(payload)).rejects.toThrow("Network error");
       expect(mockLogger.error).toHaveBeenCalledWith("n8n_forward_failed", expect.any(Object));
@@ -129,7 +130,7 @@ describe("n8nClient", () => {
   describe("sendN8nWebhook", () => {
     it("calls postJson with given url and body", async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (mockPostJson as jest.Mock<any>).mockResolvedValueOnce(undefined);
+      (mockPostJson as vi.Mock<any>).mockResolvedValueOnce(undefined);
       const url = "https://custom.example.com/trigger";
       const body = { action: "sync", id: "123" };
 

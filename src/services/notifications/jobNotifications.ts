@@ -22,10 +22,7 @@ import type { NotificationType, NotificationChannel } from "./types";
  * Get user name from email (first part before @)
  */
 async function getUserName(userId: string): Promise<string> {
-  const result = await query<{ email: string }>(
-    `SELECT email FROM users WHERE id = $1`,
-    [userId]
-  );
+  const result = await query<{ email: string }>(`SELECT email FROM users WHERE id = $1`, [userId]);
   const email = result.rows[0]?.email || "Customer";
   return email.split("@")[0];
 }
@@ -258,10 +255,7 @@ export async function notifyJobDisputed(job: Job): Promise<void> {
 /**
  * Notify client when job is cancelled
  */
-export async function notifyJobCancelled(
-  job: Job,
-  creditsRefunded?: number
-): Promise<void> {
+export async function notifyJobCancelled(job: Job, creditsRefunded?: number): Promise<void> {
   const clientName = await getUserName(job.client_id);
 
   await sendNotificationToUser(job.client_id, "job.cancelled", {
@@ -288,10 +282,7 @@ export async function notifyJobCancelled(
 /**
  * Notify client when credits are purchased
  */
-export async function notifyCreditsLow(
-  userId: string,
-  currentBalance: number
-): Promise<void> {
+export async function notifyCreditsLow(userId: string, currentBalance: number): Promise<void> {
   const userName = await getUserName(userId);
 
   await sendNotificationToUser(userId, "credits.low", {

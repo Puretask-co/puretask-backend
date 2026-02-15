@@ -1,6 +1,6 @@
 // src/routes/payments.ts
 // Payment routes for both wallet top-up and job charge flows
-// 
+//
 // Key pricing difference:
 // - Wallet top-ups: base price (CENTS_PER_CREDIT)
 // - Direct job charge: base price + surcharge (NON_CREDIT_SURCHARGE_PERCENT)
@@ -11,6 +11,7 @@ import { validateBody } from "../lib/validation";
 import { requireIdempotency } from "../lib/idempotency";
 import { sendSuccess } from "../lib/response";
 import { requireAuth } from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 import { logger } from "../lib/logger";
 import { query } from "../db/client";
 import {
@@ -196,37 +197,33 @@ const checkoutSchema = z.object({
   cancelUrl: z.string().url(),
 });
 
-paymentsRouter.post(
-  "/checkout",
-  validateBody(checkoutSchema),
-  async (req, res: Response) => {
-    try {
-      const { credits, successUrl, cancelUrl } = req.body;
-      const priceInCents = credits * env.CENTS_PER_CREDIT;
+paymentsRouter.post("/checkout", validateBody(checkoutSchema), async (req, res: Response) => {
+  try {
+    const { credits, successUrl, cancelUrl } = req.body;
+    const priceInCents = credits * env.CENTS_PER_CREDIT;
 
-      const session = await createCheckoutSession({
-        userId: req.user!.id,
-        creditAmount: credits,
-        priceInCents,
-        successUrl,
-        cancelUrl,
-      });
+    const session = await createCheckoutSession({
+      userId: req.user!.id,
+      creditAmount: credits,
+      priceInCents,
+      successUrl,
+      cancelUrl,
+    });
 
-      res.json({
-        sessionId: session.id,
-        url: session.url,
-      });
-    } catch (error) {
-      logger.error("create_checkout_session_failed", {
-        error: (error as Error).message,
-        userId: req.user?.id,
-      });
-      res.status(500).json({
-        error: { code: "CHECKOUT_FAILED", message: "Failed to create checkout session" },
-      });
-    }
+    res.json({
+      sessionId: session.id,
+      url: session.url,
+    });
+  } catch (error) {
+    logger.error("create_checkout_session_failed", {
+      error: (error as Error).message,
+      userId: req.user?.id,
+    });
+    res.status(500).json({
+      error: { code: "CHECKOUT_FAILED", message: "Failed to create checkout session" },
+    });
   }
-);
+});
 
 // ============================================
 // Helper: Get Client Stripe Customer ID
@@ -297,94 +294,101 @@ const jobChargeSchema = z.object({
 
 paymentsRouter.post(
   "/job/:jobId",
+  requireOwnership("job", "jobId"),
   validateBody(jobChargeSchema),
   async (req, res: Response) => {
-    try {
-      const { jobId } = req.params;
-      const clientId = req.user!.id;
-      const { stripeCustomerId: providedCustomerId } = req.body;
+  try {
+    const { jobId } = req.params;
+    const clientId = req.user!.id;
+    const { stripeCustomerId: providedCustomerId } = req.body;
 
-      // Get job with ownership check
-      const job = await getJobForClient(jobId, clientId);
+    // Get job with ownership check
+    const job = await getJobForClient(jobId, clientId);
 
-      // Only allow payment for jobs in 'requested' status
-      if (job.status !== "requested") {
-        return res.status(400).json({
-          error: { 
-            code: "INVALID_STATUS", 
-            message: "Job is not in payable state (expected 'requested')",
-            currentStatus: job.status,
-          },
-        });
-      }
+    // Only allow payment for jobs in 'requested' status
+    if (job.status !== "requested") {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_STATUS",
+          message: "Job is not in payable state (expected 'requested')",
+          currentStatus: job.status,
+        },
+      });
+    }
 
-      // Check if there's already an existing job_charge PI for this job
-      const existingPis = await query<{ status: string }>(
-        `
+    // Check if there's already an existing job_charge PI for this job
+    const existingPis = await query<{ status: string }>(
+      `
           SELECT status
           FROM payment_intents
           WHERE job_id = $1
             AND purpose = 'job_charge'
         `,
-        [jobId]
-      );
+      [jobId]
+    );
 
-      const hasActivePi = existingPis.rows.some((pi) =>
-        ["requires_payment_method", "requires_confirmation", "requires_action", "processing", "succeeded"].includes(pi.status)
-      );
+    const hasActivePi = existingPis.rows.some((pi) =>
+      [
+        "requires_payment_method",
+        "requires_confirmation",
+        "requires_action",
+        "processing",
+        "succeeded",
+      ].includes(pi.status)
+    );
 
-      if (hasActivePi) {
-        return res.status(400).json({
-          error: { 
-            code: "PAYMENT_EXISTS", 
-            message: "Payment for this job already exists or has been processed",
-          },
-        });
-      }
-
-      // Get Stripe customer ID (from request or profile)
-      const stripeCustomerId = providedCustomerId || await getClientStripeCustomerId(clientId);
-
-      const result = await createJobPaymentIntent({
-        job,
-        clientId,
-        clientStripeCustomerId: stripeCustomerId ?? undefined,
-      });
-
-      // Calculate pricing info for response
-      const baseAmountCents = job.credit_amount * env.CENTS_PER_CREDIT;
-      const surchargePercent = env.NON_CREDIT_SURCHARGE_PERCENT;
-      const surchargeAmountCents = result.amountCents - baseAmountCents;
-
-      res.json({
-        clientSecret: result.clientSecret,
-        paymentIntentId: result.stripePaymentIntentId,
-        jobId: result.jobId,
-        credits: result.credits,
-        // Pricing breakdown
-        baseAmountCents,
-        surchargePercent,
-        surchargeAmountCents,
-        totalAmountCents: result.amountCents,
-        totalAmountFormatted: `$${(result.amountCents / 100).toFixed(2)}`,
-        // Helpful message
-        pricingNote: surchargePercent > 0 
-          ? `Includes ${surchargePercent}% convenience fee. Use wallet credits to save!`
-          : undefined,
-      });
-    } catch (error) {
-      const err = error as Error & { statusCode?: number };
-      logger.error("create_job_payment_failed", {
-        error: err.message,
-        userId: req.user?.id,
-        jobId: req.params.jobId,
-      });
-      res.status(err.statusCode || 500).json({
-        error: { code: "PAYMENT_FAILED", message: err.message },
+    if (hasActivePi) {
+      return res.status(400).json({
+        error: {
+          code: "PAYMENT_EXISTS",
+          message: "Payment for this job already exists or has been processed",
+        },
       });
     }
+
+    // Get Stripe customer ID (from request or profile)
+    const stripeCustomerId = providedCustomerId || (await getClientStripeCustomerId(clientId));
+
+    const result = await createJobPaymentIntent({
+      job,
+      clientId,
+      clientStripeCustomerId: stripeCustomerId ?? undefined,
+    });
+
+    // Calculate pricing info for response
+    const baseAmountCents = job.credit_amount * env.CENTS_PER_CREDIT;
+    const surchargePercent = env.NON_CREDIT_SURCHARGE_PERCENT;
+    const surchargeAmountCents = result.amountCents - baseAmountCents;
+
+    res.json({
+      clientSecret: result.clientSecret,
+      paymentIntentId: result.stripePaymentIntentId,
+      jobId: result.jobId,
+      credits: result.credits,
+      // Pricing breakdown
+      baseAmountCents,
+      surchargePercent,
+      surchargeAmountCents,
+      totalAmountCents: result.amountCents,
+      totalAmountFormatted: `$${(result.amountCents / 100).toFixed(2)}`,
+      // Helpful message
+      pricingNote:
+        surchargePercent > 0
+          ? `Includes ${surchargePercent}% convenience fee. Use wallet credits to save!`
+          : undefined,
+    });
+  } catch (error) {
+    const err = error as Error & { statusCode?: number };
+    logger.error("create_job_payment_failed", {
+      error: err.message,
+      userId: req.user?.id,
+      jobId: req.params.jobId,
+    });
+    res.status(err.statusCode || 500).json({
+      error: { code: "PAYMENT_FAILED", message: err.message },
+    });
   }
-);
+});
 
 // ============================================
 // Balance & History
@@ -456,7 +460,7 @@ paymentsRouter.get("/history", async (req, res: Response) => {
 /**
  * GET /payments/pricing
  * Get credit pricing information including surcharge details
- * 
+ *
  * Shows both wallet (base) pricing and direct card pricing (with surcharge).
  */
 paymentsRouter.get("/pricing", (_req, res: Response) => {
@@ -472,7 +476,7 @@ paymentsRouter.get("/pricing", (_req, res: Response) => {
     const walletPrice = credits * centsPerCredit;
     const cardPrice = Math.round(walletPrice * surchargeMultiplier);
     const savings = cardPrice - walletPrice;
-    
+
     return {
       credits,
       // Wallet price (using pre-purchased credits)
@@ -492,13 +496,14 @@ paymentsRouter.get("/pricing", (_req, res: Response) => {
     // Base conversion rate
     centsPerCredit,
     currency: env.PAYOUT_CURRENCY,
-    
+
     // Surcharge info
     surchargePercent,
-    surchargeNote: surchargePercent > 0 
-      ? `Direct card payments include a ${surchargePercent}% convenience fee. Buy credits to save!`
-      : "No surcharge on direct payments",
-    
+    surchargeNote:
+      surchargePercent > 0
+        ? `Direct card payments include a ${surchargePercent}% convenience fee. Buy credits to save!`
+        : "No surcharge on direct payments",
+
     // Credit packages (for wallet top-up)
     packages: [
       buildPackage(50),
@@ -507,7 +512,7 @@ paymentsRouter.get("/pricing", (_req, res: Response) => {
       buildPackage(500),
       buildPackage(1000, { bestValue: true }),
     ],
-    
+
     // Example pricing for a 100-credit job
     example: {
       jobCredits: 100,
@@ -521,4 +526,3 @@ paymentsRouter.get("/pricing", (_req, res: Response) => {
 });
 
 export default paymentsRouter;
-

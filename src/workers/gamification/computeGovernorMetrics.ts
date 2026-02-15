@@ -8,7 +8,10 @@ import { query } from "../../db/client";
 import { MarketplaceGovernorService } from "../../services/marketplaceGovernorService";
 import { logger } from "../../lib/logger";
 
-const REGIONS = (process.env.REGION_IDS || "__global__").split(",").map((s) => s.trim()).filter(Boolean);
+const REGIONS = (process.env.REGION_IDS || "__global__")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const EVENT_TABLE = process.env.EVENT_TABLE_NAME || "pt_event_log";
 
 type MetricsRow = {
@@ -40,7 +43,10 @@ async function queryActiveCleaners(regionId: string): Promise<number> {
     );
     return Number(r.rows[0]?.n ?? 0);
   } catch (e) {
-    logger.warn("governor_metrics_active_cleaners_failed", { regionId, error: (e as Error).message });
+    logger.warn("governor_metrics_active_cleaners_failed", {
+      regionId,
+      error: (e as Error).message,
+    });
     return 0;
   }
 }
@@ -195,7 +201,10 @@ async function queryAcceptanceRate(regionId: string): Promise<number | null> {
     );
     return Number(r.rows[0]?.r ?? 1);
   } catch (e) {
-    logger.warn("governor_metrics_acceptance_rate_failed", { regionId, error: (e as Error).message });
+    logger.warn("governor_metrics_acceptance_rate_failed", {
+      regionId,
+      error: (e as Error).message,
+    });
     return null;
   }
 }

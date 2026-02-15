@@ -12,11 +12,7 @@ export class TwilioProvider implements NotificationProvider {
   channel = "sms" as const;
 
   isConfigured(): boolean {
-    return !!(
-      env.TWILIO_ACCOUNT_SID &&
-      env.TWILIO_AUTH_TOKEN &&
-      process.env.TWILIO_PHONE_NUMBER
-    );
+    return !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
   }
 
   async send(payload: SMSPayload): Promise<NotificationResult> {
@@ -44,9 +40,7 @@ export class TwilioProvider implements NotificationProvider {
       const response = await fetch(url, {
         method: "POST",
         headers: {
-          "Authorization":
-            "Basic " +
-            Buffer.from(`${accountSid}:${authToken}`).toString("base64"),
+          Authorization: "Basic " + Buffer.from(`${accountSid}:${authToken}`).toString("base64"),
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: params.toString(),
@@ -94,4 +88,3 @@ export class TwilioProvider implements NotificationProvider {
 }
 
 export const twilioProvider = new TwilioProvider();
-

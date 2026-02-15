@@ -65,8 +65,12 @@ describe("Gamification Metrics — Spec Compliance", () => {
     it("photo before clock-in or after clock-out does NOT qualify", () => {
       const clockIn = new Date("2025-02-02T10:00:00Z");
       const clockOut = new Date("2025-02-02T12:00:00Z");
-      expect(isPhotoWithinJobWindow(new Date("2025-02-02T09:59:00Z"), clockIn, clockOut)).toBe(false);
-      expect(isPhotoWithinJobWindow(new Date("2025-02-02T12:01:00Z"), clockIn, clockOut)).toBe(false);
+      expect(isPhotoWithinJobWindow(new Date("2025-02-02T09:59:00Z"), clockIn, clockOut)).toBe(
+        false
+      );
+      expect(isPhotoWithinJobWindow(new Date("2025-02-02T12:01:00Z"), clockIn, clockOut)).toBe(
+        false
+      );
     });
   });
 

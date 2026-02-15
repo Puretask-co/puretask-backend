@@ -5,7 +5,12 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import {
+  requireAuth,
+  requireRole,
+  AuthedRequest,
+  authedHandler,
+} from "../middleware/authCanonical";
 import { query } from "../db/client";
 
 const clientRouter = Router();
@@ -55,12 +60,14 @@ clientRouter.use(requireRole("client", "admin"));
  *       401:
  *         description: Unauthorized
  */
-clientRouter.get("/favorites", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
+clientRouter.get(
+  "/favorites",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
 
-    const result = await query(
-      `
+      const result = await query(
+        `
       SELECT 
         fc.id,
         fc.created_at,
@@ -87,35 +94,36 @@ clientRouter.get("/favorites", authedHandler(async (req: AuthedRequest, res: Res
       WHERE fc.client_id = $1
       ORDER BY fc.created_at DESC
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    res.json({
-      favorites: result.rows.map((row) => ({
-        id: row.id,
-        cleaner: {
-          id: row.cleaner_id,
-          name: row.cleaner_name || row.cleaner_email,
-          email: row.cleaner_email,
-          avatar_url: row.avatar_url,
-          price_per_hour: parseFloat(row.price_per_hour || "0"),
-          bio: row.bio,
-          rating: parseFloat(row.rating || "0"),
-          reviews_count: parseInt(row.reviews_count || "0"),
-        },
-        created_at: row.created_at,
-      })),
-    });
-  } catch (error) {
-    logger.error("get_favorites_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_FAVORITES_FAILED", message: "Failed to get favorites" },
-    });
-  }
-}));
+      res.json({
+        favorites: result.rows.map((row) => ({
+          id: row.id,
+          cleaner: {
+            id: row.cleaner_id,
+            name: row.cleaner_name || row.cleaner_email,
+            email: row.cleaner_email,
+            avatar_url: row.avatar_url,
+            price_per_hour: parseFloat(row.price_per_hour || "0"),
+            bio: row.bio,
+            rating: parseFloat(row.rating || "0"),
+            reviews_count: parseInt(row.reviews_count || "0"),
+          },
+          created_at: row.created_at,
+        })),
+      });
+    } catch (error) {
+      logger.error("get_favorites_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_FAVORITES_FAILED", message: "Failed to get favorites" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -202,40 +210,43 @@ clientRouter.post(
         error: { code: "ADD_FAVORITE_FAILED", message: "Failed to add favorite" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * DELETE /client/favorites/:id
  * Remove a favorite
  */
-clientRouter.delete("/favorites/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
-    const { id } = req.params;
+clientRouter.delete(
+  "/favorites/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
+      const { id } = req.params;
 
-    const result = await query(
-      "DELETE FROM favorite_cleaners WHERE id = $1 AND client_id = $2 RETURNING id",
-      [id, clientId]
-    );
+      const result = await query(
+        "DELETE FROM favorite_cleaners WHERE id = $1 AND client_id = $2 RETURNING id",
+        [id, clientId]
+      );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "FAVORITE_NOT_FOUND", message: "Favorite not found" },
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          error: { code: "FAVORITE_NOT_FOUND", message: "Favorite not found" },
+        });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("remove_favorite_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "REMOVE_FAVORITE_FAILED", message: "Failed to remove favorite" },
       });
     }
-
-    res.json({ success: true });
-  } catch (error) {
-    logger.error("remove_favorite_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "REMOVE_FAVORITE_FAILED", message: "Failed to remove favorite" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // ADDRESSES
@@ -275,12 +286,14 @@ clientRouter.delete("/favorites/:id", authedHandler(async (req: AuthedRequest, r
  *                       longitude: { type: 'number', nullable: true }
  *                       is_default: { type: 'boolean' }
  */
-clientRouter.get("/addresses", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
+clientRouter.get(
+  "/addresses",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
 
-    const result = await query(
-      `
+      const result = await query(
+        `
       SELECT 
         id,
         label,
@@ -299,22 +312,23 @@ clientRouter.get("/addresses", authedHandler(async (req: AuthedRequest, res: Res
       WHERE user_id = $1
       ORDER BY is_default DESC, created_at DESC
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    res.json({
-      addresses: result.rows,
-    });
-  } catch (error) {
-    logger.error("get_addresses_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_ADDRESSES_FAILED", message: "Failed to get addresses" },
-    });
-  }
-}));
+      res.json({
+        addresses: result.rows,
+      });
+    } catch (error) {
+      logger.error("get_addresses_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_ADDRESSES_FAILED", message: "Failed to get addresses" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -368,8 +382,18 @@ clientRouter.post(
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
-      const { label, line1, line2, city, state, postal_code, country, latitude, longitude, is_default } =
-        req.body;
+      const {
+        label,
+        line1,
+        line2,
+        city,
+        state,
+        postal_code,
+        country,
+        latitude,
+        longitude,
+        is_default,
+      } = req.body;
 
       // If setting as default, unset other defaults
       if (is_default) {
@@ -384,7 +408,19 @@ clientRouter.post(
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING id, created_at, updated_at
         `,
-        [clientId, label || null, line1, line2 || null, city, state || null, postal_code || null, country || "US", latitude || null, longitude || null, is_default]
+        [
+          clientId,
+          label || null,
+          line1,
+          line2 || null,
+          city,
+          state || null,
+          postal_code || null,
+          country || "US",
+          latitude || null,
+          longitude || null,
+          is_default,
+        ]
       );
 
       res.status(201).json({
@@ -404,8 +440,8 @@ clientRouter.post(
         error: { code: "ADD_ADDRESS_FAILED", message: "Failed to add address" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -471,7 +507,14 @@ clientRouter.patch(
 
       Object.entries(updates).forEach(([key, value]) => {
         if (value !== undefined) {
-          const dbKey = key === "postal_code" ? "postal_code" : key === "latitude" ? "lat" : key === "longitude" ? "lng" : key;
+          const dbKey =
+            key === "postal_code"
+              ? "postal_code"
+              : key === "latitude"
+                ? "lat"
+                : key === "longitude"
+                  ? "lng"
+                  : key;
           setClause.push(`${dbKey} = $${paramIndex}`);
           values.push(value);
           paramIndex++;
@@ -511,8 +554,8 @@ clientRouter.patch(
         error: { code: "UPDATE_ADDRESS_FAILED", message: "Failed to update address" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -536,42 +579,45 @@ clientRouter.patch(
  *       404:
  *         description: Address not found
  */
-clientRouter.patch("/addresses/:id/default", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
-    const { id } = req.params;
+clientRouter.patch(
+  "/addresses/:id/default",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
+      const { id } = req.params;
 
-    // Unset all other defaults
-    await query("UPDATE addresses SET is_default = false WHERE user_id = $1", [clientId]);
+      // Unset all other defaults
+      await query("UPDATE addresses SET is_default = false WHERE user_id = $1", [clientId]);
 
-    // Set this one as default
-    const result = await query(
-      `
+      // Set this one as default
+      const result = await query(
+        `
       UPDATE addresses
       SET is_default = true, updated_at = NOW()
       WHERE id = $1 AND user_id = $2
       RETURNING *
       `,
-      [id, clientId]
-    );
+        [id, clientId]
+      );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "ADDRESS_NOT_FOUND", message: "Address not found" },
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          error: { code: "ADDRESS_NOT_FOUND", message: "Address not found" },
+        });
+      }
+
+      res.json({ address: result.rows[0] });
+    } catch (error) {
+      logger.error("set_default_address_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "SET_DEFAULT_ADDRESS_FAILED", message: "Failed to set default address" },
       });
     }
-
-    res.json({ address: result.rows[0] });
-  } catch (error) {
-    logger.error("set_default_address_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "SET_DEFAULT_ADDRESS_FAILED", message: "Failed to set default address" },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -595,33 +641,36 @@ clientRouter.patch("/addresses/:id/default", authedHandler(async (req: AuthedReq
  *       404:
  *         description: Address not found
  */
-clientRouter.delete("/addresses/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
-    const { id } = req.params;
+clientRouter.delete(
+  "/addresses/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
+      const { id } = req.params;
 
-    const result = await query(
-      "DELETE FROM addresses WHERE id = $1 AND user_id = $2 RETURNING id",
-      [id, clientId]
-    );
+      const result = await query(
+        "DELETE FROM addresses WHERE id = $1 AND user_id = $2 RETURNING id",
+        [id, clientId]
+      );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "ADDRESS_NOT_FOUND", message: "Address not found" },
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          error: { code: "ADDRESS_NOT_FOUND", message: "Address not found" },
+        });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("delete_address_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "DELETE_ADDRESS_FAILED", message: "Failed to delete address" },
       });
     }
-
-    res.json({ success: true });
-  } catch (error) {
-    logger.error("delete_address_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "DELETE_ADDRESS_FAILED", message: "Failed to delete address" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // PAYMENT METHODS
@@ -649,47 +698,50 @@ clientRouter.delete("/addresses/:id", authedHandler(async (req: AuthedRequest, r
  *                   items:
  *                     type: object
  */
-clientRouter.get("/payment-methods", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
+clientRouter.get(
+  "/payment-methods",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
 
-    // Get Stripe customer ID
-    const customerResult = await query(
-      "SELECT stripe_customer_id, default_payment_method_id FROM stripe_customers WHERE user_id = $1",
-      [clientId]
-    );
+      // Get Stripe customer ID
+      const customerResult = await query(
+        "SELECT stripe_customer_id, default_payment_method_id FROM stripe_customers WHERE user_id = $1",
+        [clientId]
+      );
 
-    if (customerResult.rows.length === 0) {
-      // No Stripe customer yet - return empty array
-      return res.json({ paymentMethods: [] });
+      if (customerResult.rows.length === 0) {
+        // No Stripe customer yet - return empty array
+        return res.json({ paymentMethods: [] });
+      }
+
+      const stripeCustomerId = customerResult.rows[0].stripe_customer_id;
+      const defaultPaymentMethodId = customerResult.rows[0].default_payment_method_id;
+
+      // TODO: Call Stripe API to get payment methods
+      // For now, return empty array or placeholder
+      // In production, you would use:
+      // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+      // const paymentMethods = await stripe.paymentMethods.list({
+      //   customer: stripeCustomerId,
+      //   type: 'card',
+      // });
+
+      res.json({
+        paymentMethods: [], // Placeholder - would be populated from Stripe API
+        message: "Payment methods are managed through Stripe. Integration pending.",
+      });
+    } catch (error) {
+      logger.error("get_payment_methods_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_PAYMENT_METHODS_FAILED", message: "Failed to get payment methods" },
+      });
     }
-
-    const stripeCustomerId = customerResult.rows[0].stripe_customer_id;
-    const defaultPaymentMethodId = customerResult.rows[0].default_payment_method_id;
-
-    // TODO: Call Stripe API to get payment methods
-    // For now, return empty array or placeholder
-    // In production, you would use:
-    // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    // const paymentMethods = await stripe.paymentMethods.list({
-    //   customer: stripeCustomerId,
-    //   type: 'card',
-    // });
-
-    res.json({
-      paymentMethods: [], // Placeholder - would be populated from Stripe API
-      message: "Payment methods are managed through Stripe. Integration pending.",
-    });
-  } catch (error) {
-    logger.error("get_payment_methods_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_PAYMENT_METHODS_FAILED", message: "Failed to get payment methods" },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -761,8 +813,8 @@ clientRouter.patch(
         },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -786,46 +838,49 @@ clientRouter.patch(
  *       404:
  *         description: Customer not found
  */
-clientRouter.delete("/payment-methods/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
-    const { id } = req.params; // This is the Stripe payment method ID
+clientRouter.delete(
+  "/payment-methods/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
+      const { id } = req.params; // This is the Stripe payment method ID
 
-    // Get Stripe customer ID
-    const customerResult = await query(
-      "SELECT stripe_customer_id, default_payment_method_id FROM stripe_customers WHERE user_id = $1",
-      [clientId]
-    );
-
-    if (customerResult.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "CUSTOMER_NOT_FOUND", message: "Stripe customer not found" },
-      });
-    }
-
-    // If this is the default payment method, clear it
-    if (customerResult.rows[0].default_payment_method_id === id) {
-      await query(
-        "UPDATE stripe_customers SET default_payment_method_id = NULL, updated_at = NOW() WHERE user_id = $1",
+      // Get Stripe customer ID
+      const customerResult = await query(
+        "SELECT stripe_customer_id, default_payment_method_id FROM stripe_customers WHERE user_id = $1",
         [clientId]
       );
+
+      if (customerResult.rows.length === 0) {
+        return res.status(404).json({
+          error: { code: "CUSTOMER_NOT_FOUND", message: "Stripe customer not found" },
+        });
+      }
+
+      // If this is the default payment method, clear it
+      if (customerResult.rows[0].default_payment_method_id === id) {
+        await query(
+          "UPDATE stripe_customers SET default_payment_method_id = NULL, updated_at = NOW() WHERE user_id = $1",
+          [clientId]
+        );
+      }
+
+      // TODO: Call Stripe API to detach payment method
+      // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+      // await stripe.paymentMethods.detach(id);
+
+      res.json({ success: true, message: "Payment method removed" });
+    } catch (error) {
+      logger.error("delete_payment_method_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "DELETE_PAYMENT_METHOD_FAILED", message: "Failed to delete payment method" },
+      });
     }
-
-    // TODO: Call Stripe API to detach payment method
-    // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    // await stripe.paymentMethods.detach(id);
-
-    res.json({ success: true, message: "Payment method removed" });
-  } catch (error) {
-    logger.error("delete_payment_method_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "DELETE_PAYMENT_METHOD_FAILED", message: "Failed to delete payment method" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // RECURRING BOOKINGS
@@ -853,12 +908,14 @@ clientRouter.delete("/payment-methods/:id", authedHandler(async (req: AuthedRequ
  *                   items:
  *                     type: object
  */
-clientRouter.get("/recurring-bookings", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
+clientRouter.get(
+  "/recurring-bookings",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
 
-    const result = await query(
-      `
+      const result = await query(
+        `
       SELECT 
         cs.id,
         cs.frequency,
@@ -880,39 +937,40 @@ clientRouter.get("/recurring-bookings", authedHandler(async (req: AuthedRequest,
       WHERE cs.client_id = $1
       ORDER BY cs.created_at DESC
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    res.json({
-      recurringBookings: result.rows.map((row) => ({
-        id: row.id,
-        frequency: row.frequency,
-        day_of_week: row.day_of_week,
-        preferred_time: row.preferred_time,
-        address: row.address,
-        next_booking_date: row.next_job_date,
-        status: row.status,
-        cleaner: row.cleaner_id
-          ? {
-              id: row.cleaner_id,
-              name: row.cleaner_name,
-            }
-          : null,
-      })),
-    });
-  } catch (error) {
-    logger.error("get_recurring_bookings_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: {
-        code: "GET_RECURRING_BOOKINGS_FAILED",
-        message: "Failed to get recurring bookings",
-      },
-    });
-  }
-}));
+      res.json({
+        recurringBookings: result.rows.map((row) => ({
+          id: row.id,
+          frequency: row.frequency,
+          day_of_week: row.day_of_week,
+          preferred_time: row.preferred_time,
+          address: row.address,
+          next_booking_date: row.next_job_date,
+          status: row.status,
+          cleaner: row.cleaner_id
+            ? {
+                id: row.cleaner_id,
+                name: row.cleaner_name,
+              }
+            : null,
+        })),
+      });
+    } catch (error) {
+      logger.error("get_recurring_bookings_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "GET_RECURRING_BOOKINGS_FAILED",
+          message: "Failed to get recurring bookings",
+        },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1017,8 +1075,8 @@ clientRouter.post(
         },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -1078,10 +1136,10 @@ clientRouter.patch(
             key === "service_type"
               ? "cleaning_type"
               : key === "duration_hours"
-              ? "base_hours"
-              : key === "start_date"
-              ? "next_job_date"
-              : key;
+                ? "base_hours"
+                : key === "start_date"
+                  ? "next_job_date"
+                  : key;
           setClause.push(`${dbKey} = $${paramIndex}`);
           values.push(value);
           paramIndex++;
@@ -1124,8 +1182,8 @@ clientRouter.patch(
         },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -1149,36 +1207,39 @@ clientRouter.patch(
  *       404:
  *         description: Recurring booking not found
  */
-clientRouter.delete("/recurring-bookings/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
-    const { id } = req.params;
+clientRouter.delete(
+  "/recurring-bookings/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
+      const { id } = req.params;
 
-    const result = await query(
-      "UPDATE cleaning_subscriptions SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1::uuid AND client_id = $2 RETURNING id",
-      [id, clientId]
-    );
+      const result = await query(
+        "UPDATE cleaning_subscriptions SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1::uuid AND client_id = $2 RETURNING id",
+        [id, clientId]
+      );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "RECURRING_BOOKING_NOT_FOUND", message: "Recurring booking not found" },
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          error: { code: "RECURRING_BOOKING_NOT_FOUND", message: "Recurring booking not found" },
+        });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("delete_recurring_booking_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "DELETE_RECURRING_BOOKING_FAILED",
+          message: "Failed to delete recurring booking",
+        },
       });
     }
-
-    res.json({ success: true });
-  } catch (error) {
-    logger.error("delete_recurring_booking_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: {
-        code: "DELETE_RECURRING_BOOKING_FAILED",
-        message: "Failed to delete recurring booking",
-      },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // REVIEWS
@@ -1213,12 +1274,14 @@ clientRouter.delete("/recurring-bookings/:id", authedHandler(async (req: AuthedR
  *                       cleaner: { type: 'object' }
  *                       created_at: { type: 'string', format: 'date-time' }
  */
-clientRouter.get("/reviews/given", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
+clientRouter.get(
+  "/reviews/given",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
 
-    const result = await query(
-      `
+      const result = await query(
+        `
       SELECT 
         r.id,
         r.job_id,
@@ -1235,35 +1298,36 @@ clientRouter.get("/reviews/given", authedHandler(async (req: AuthedRequest, res:
       WHERE r.reviewer_id = $1 AND r.reviewer_type = 'client'
       ORDER BY r.created_at DESC
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    res.json({
-      reviews: result.rows.map((row) => ({
-        id: row.id,
-        job_id: row.job_id,
-        rating: row.rating,
-        comment: row.comment,
-        cleaner_id: row.cleaner_id,
-        cleaner: {
-          id: row.cleaner_id,
-          name: row.cleaner_name,
-          avatar_url: row.cleaner_avatar,
-        },
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      })),
-    });
-  } catch (error) {
-    logger.error("get_reviews_given_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_REVIEWS_FAILED", message: "Failed to get reviews" },
-    });
-  }
-}));
+      res.json({
+        reviews: result.rows.map((row) => ({
+          id: row.id,
+          job_id: row.job_id,
+          rating: row.rating,
+          comment: row.comment,
+          cleaner_id: row.cleaner_id,
+          cleaner: {
+            id: row.cleaner_id,
+            name: row.cleaner_name,
+            avatar_url: row.cleaner_avatar,
+          },
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+        })),
+      });
+    } catch (error) {
+      logger.error("get_reviews_given_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_REVIEWS_FAILED", message: "Failed to get reviews" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1366,8 +1430,8 @@ clientRouter.post(
         error: { code: "CREATE_REVIEW_FAILED", message: "Failed to create review" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * PATCH /client/reviews/:id
@@ -1436,39 +1500,42 @@ clientRouter.patch(
         error: { code: "UPDATE_REVIEW_FAILED", message: "Failed to update review" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * DELETE /client/reviews/:id
  * Delete a review
  */
-clientRouter.delete("/reviews/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
-    const { id } = req.params;
+clientRouter.delete(
+  "/reviews/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
+      const { id } = req.params;
 
-    const result = await query(
-      "DELETE FROM reviews WHERE id = $1::uuid AND reviewer_id = $2 RETURNING id",
-      [id, clientId]
-    );
+      const result = await query(
+        "DELETE FROM reviews WHERE id = $1::uuid AND reviewer_id = $2 RETURNING id",
+        [id, clientId]
+      );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "REVIEW_NOT_FOUND", message: "Review not found" },
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          error: { code: "REVIEW_NOT_FOUND", message: "Review not found" },
+        });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("delete_review_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "DELETE_REVIEW_FAILED", message: "Failed to delete review" },
       });
     }
-
-    res.json({ success: true });
-  } catch (error) {
-    logger.error("delete_review_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "DELETE_REVIEW_FAILED", message: "Failed to delete review" },
-    });
-  }
-}));
+  })
+);
 
 export default clientRouter;

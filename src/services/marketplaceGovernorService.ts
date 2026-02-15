@@ -271,10 +271,9 @@ export class MarketplaceGovernorService {
 
   private async getConfigRow(regionId: string): Promise<{ config: unknown } | null> {
     try {
-      const r = await query(
-        `SELECT config FROM region_governor_config WHERE region_id = $1`,
-        [regionId]
-      );
+      const r = await query(`SELECT config FROM region_governor_config WHERE region_id = $1`, [
+        regionId,
+      ]);
       return (r.rows[0] as { config: unknown }) ?? null;
     } catch {
       return null;
@@ -341,7 +340,13 @@ export class MarketplaceGovernorService {
       await query(
         `INSERT INTO region_governor_audit (region_id, action, actor, before_state, after_state)
          VALUES ($1, $2, $3, $4::jsonb, $5::jsonb)`,
-        [regionId, action, actor ?? null, JSON.stringify(beforeVal ?? null), JSON.stringify(afterVal ?? null)]
+        [
+          regionId,
+          action,
+          actor ?? null,
+          JSON.stringify(beforeVal ?? null),
+          JSON.stringify(afterVal ?? null),
+        ]
       );
     } catch {
       // Non-critical

@@ -4,7 +4,7 @@
 // Basic HTML sanitization (for server-side, use DOMPurify in production)
 function basicSanitizeHtml(html: string): string {
   if (typeof html !== "string") return html;
-  
+
   // Remove all HTML tags
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
@@ -23,15 +23,21 @@ export function sanitizeHtml(html: string): string {
 }
 
 /**
+ * Strip HTML tags but keep text content (for sanitizeText)
+ */
+function stripHtmlTagsKeepContent(html: string): string {
+  if (typeof html !== "string") return html;
+  return html.replace(/<[^>]+>/g, "").trim();
+}
+
+/**
  * Sanitize plain text (remove HTML, trim, normalize)
  */
 export function sanitizeText(text: string): string {
   if (typeof text !== "string") return text;
-  
-  return text
-    .trim()
-    .replace(/[<>]/g, "") // Remove angle brackets
-    .replace(/&/g, "&amp;")
+
+  return stripHtmlTagsKeepContent(text)
+    .replace(/&/g, "&amp;") // Escape after stripping tags
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#x27;")
     .replace(/\//g, "&#x2F;")
@@ -51,7 +57,7 @@ export function sanitizeEmail(email: string): string {
  */
 export function sanitizeUrl(url: string): string {
   if (typeof url !== "string") return url;
-  
+
   try {
     const parsed = new URL(url);
     // Only allow http/https
@@ -85,17 +91,17 @@ export function sanitizeObject<T extends Record<string, any>>(
   } = {}
 ): T {
   const { allowHtml = false, allowedFields, maxDepth = 10 } = options;
-  
+
   if (maxDepth <= 0) return obj;
-  
+
   if (typeof obj !== "object" || obj === null) {
-    return typeof obj === "string" 
-      ? (allowHtml ? sanitizeHtml(obj) : sanitizeText(obj)) as unknown as T
+    return typeof obj === "string"
+      ? ((allowHtml ? sanitizeHtml(obj) : sanitizeText(obj)) as unknown as T)
       : obj;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => 
+    return obj.map((item) =>
       sanitizeObject(item, { ...options, maxDepth: maxDepth - 1 })
     ) as unknown as T;
   }
@@ -108,7 +114,17 @@ export function sanitizeObject<T extends Record<string, any>>(
     }
 
     if (typeof value === "string") {
-      sanitized[key] = allowHtml ? sanitizeHtml(value) : sanitizeText(value);
+      const keyLower = key.toLowerCase();
+      sanitized[key] =
+        keyLower === "email"
+          ? sanitizeEmail(value)
+          : keyLower === "url"
+            ? sanitizeUrl(value)
+            : keyLower === "phone"
+              ? sanitizePhone(value)
+              : allowHtml
+                ? sanitizeHtml(value)
+                : sanitizeText(value);
     } else if (typeof value === "object" && value !== null) {
       sanitized[key] = sanitizeObject(value, { ...options, maxDepth: maxDepth - 1 });
     } else {
@@ -124,7 +140,7 @@ export function sanitizeObject<T extends Record<string, any>>(
  */
 export function sanitizeSql(input: string): string {
   if (typeof input !== "string") return input;
-  
+
   // Remove common SQL injection patterns
   return input
     .replace(/['";\\]/g, "")

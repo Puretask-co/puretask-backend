@@ -289,9 +289,7 @@ Guidelines:
 /**
  * Generate dispute resolution suggestion using AI
  */
-export async function generateDisputeSuggestion(
-  input: DisputeInput
-): Promise<DisputeSuggestion> {
+export async function generateDisputeSuggestion(input: DisputeInput): Promise<DisputeSuggestion> {
   const userMessage = `
 Dispute Details:
 - Job ID: ${input.job_id}
@@ -342,9 +340,10 @@ function generateFallbackDisputeSuggestion(input: DisputeInput): DisputeSuggesti
   let score = 50; // Start neutral
 
   // Client history factor
-  const disputeRate = input.job_metadata.client_history.disputes / 
+  const disputeRate =
+    input.job_metadata.client_history.disputes /
     Math.max(input.job_metadata.client_history.total_jobs, 1);
-  
+
   if (disputeRate > 0.3) {
     score -= 20;
     factors.push("High dispute rate from client (>30%)");
@@ -434,4 +433,3 @@ export async function queueDisputeSuggestion(
   await enqueue(QUEUE_NAMES.AI_DISPUTE, { disputeId, input });
   logger.debug("dispute_suggestion_queued", { disputeId });
 }
-

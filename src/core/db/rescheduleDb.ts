@@ -3,7 +3,7 @@
 
 import { query } from "../../db/client";
 import { logger } from "../../lib/logger";
-import { RescheduleEvent, TimeBucket } from '../types';
+import { RescheduleEvent, TimeBucket } from "../types";
 
 // ============================================
 // Types
@@ -13,23 +13,23 @@ export interface RescheduleEventInsert {
   jobId: number;
   clientId: number;
   cleanerId: number;
-  requestedBy: 'client' | 'cleaner';
-  requestedTo: 'client' | 'cleaner';
+  requestedBy: "client" | "cleaner";
+  requestedTo: "client" | "cleaner";
   tRequest: Date;
   tStartOriginal: Date;
   tStartNew: Date;
   hoursBeforeOriginal: number;
   bucket: TimeBucket;
   reasonCode: string | null;
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  status: "pending" | "accepted" | "declined" | "expired";
   isReasonable: boolean;
-  declinedBy?: 'client' | 'cleaner' | null;
+  declinedBy?: "client" | "cleaner" | null;
   declineReasonCode?: string | null;
 }
 
 export interface RescheduleEventUpdate {
-  status?: 'pending' | 'accepted' | 'declined' | 'expired';
-  declinedBy?: 'client' | 'cleaner' | null;
+  status?: "pending" | "accepted" | "declined" | "expired";
+  declinedBy?: "client" | "cleaner" | null;
   declineReasonCode?: string | null;
 }
 
@@ -95,7 +95,7 @@ export async function updateRescheduleEvent(
   id: number,
   updates: RescheduleEventUpdate
 ): Promise<RescheduleEvent> {
-  const setClauses: string[] = ['updated_at = NOW()'];
+  const setClauses: string[] = ["updated_at = NOW()"];
   const values: any[] = [id];
   let paramIndex = 2;
 
@@ -114,7 +114,7 @@ export async function updateRescheduleEvent(
 
   const result = await query<any>(
     `UPDATE reschedule_events
-     SET ${setClauses.join(', ')}
+     SET ${setClauses.join(", ")}
      WHERE id = $1
      RETURNING *`,
     values
@@ -135,10 +135,7 @@ export async function updateRescheduleEvent(
  * Task 3.3: db.rescheduleEvents.findById(id)
  */
 export async function findRescheduleEventById(id: number): Promise<RescheduleEvent | null> {
-  const result = await query<any>(
-    `SELECT * FROM reschedule_events WHERE id = $1`,
-    [id]
-  );
+  const result = await query<any>(`SELECT * FROM reschedule_events WHERE id = $1`, [id]);
 
   if (result.rows.length === 0) return null;
 
@@ -151,7 +148,7 @@ export async function findRescheduleEventById(id: number): Promise<RescheduleEve
 
 /**
  * Task 3.4: db.rescheduleEvents.countForJob(jobId)
- * 
+ *
  * Enforces max 1 reschedule per job rule.
  */
 export async function countReschedulesForJob(jobId: number): Promise<number> {
@@ -171,7 +168,7 @@ export async function countReschedulesForJob(jobId: number): Promise<number> {
 
 /**
  * Task 3.5: db.rescheduleEvents.countLateClientReschedulesLt24LastNDays(clientId, days)
- * 
+ *
  * Used for pattern detection (3+ in 14 days → +10 risk).
  */
 export async function countLateClientReschedulesLt24LastNDays(
@@ -197,7 +194,7 @@ export async function countLateClientReschedulesLt24LastNDays(
 
 /**
  * Task 3.6: db.jobs.updateStartTime(jobId, newStartTime)
- * 
+ *
  * Updates job's scheduled start time (preserving duration).
  */
 export async function updateJobStartTime(jobId: number, newStartTime: Date): Promise<void> {
@@ -236,7 +233,7 @@ export async function updateJobStartTime(jobId: number, newStartTime: Date): Pro
 
 /**
  * Task 3.7: db.availability.isCleanerAvailableForRange(cleanerId, startTime, endTime)
- * 
+ *
  * Checks if cleaner is available for a time range.
  */
 export async function isCleanerAvailableForRange(
@@ -261,7 +258,7 @@ export async function isCleanerAvailableForRange(
   if (conflictResult.rows.length > 0) {
     return {
       available: false,
-      reason: 'job_conflict',
+      reason: "job_conflict",
       conflictJobId: Number(conflictResult.rows[0].id),
     };
   }
@@ -277,7 +274,7 @@ export async function isCleanerAvailableForRange(
   );
 
   if (blackoutResult.rows.length > 0) {
-    return { available: false, reason: 'blackout_period' };
+    return { available: false, reason: "blackout_period" };
   }
 
   // Check weekly availability blocks
@@ -296,7 +293,7 @@ export async function isCleanerAvailableForRange(
   );
 
   if (availabilityResult.rows.length === 0) {
-    return { available: false, reason: 'outside_availability' };
+    return { available: false, reason: "outside_availability" };
   }
 
   return { available: true };
@@ -308,7 +305,7 @@ export async function isCleanerAvailableForRange(
 
 /**
  * Task 3.9: db.flexibility.logCleanerDeclineReasonableRequest({...})
- * 
+ *
  * Logs when a cleaner declines a reasonable reschedule request.
  * Used for Low Flexibility badge calculation.
  */
@@ -320,11 +317,7 @@ export async function logCleanerDeclineReasonableRequest(data: {
   await query(
     `INSERT INTO flexibility_decline_events (cleaner_id, reschedule_event_id, created_at)
      VALUES ($1, $2, $3)`,
-    [
-      String(data.cleanerId),
-      data.rescheduleId,
-      (data.createdAt || new Date()).toISOString(),
-    ]
+    [String(data.cleanerId), data.rescheduleId, (data.createdAt || new Date()).toISOString()]
   );
 
   logger.info("cleaner_reasonable_decline_logged", {
@@ -413,4 +406,3 @@ export async function getCleanerRescheduleStats(
     reasonableDeclines: Number(declinesResult.rows[0]?.count || 0),
   };
 }
-

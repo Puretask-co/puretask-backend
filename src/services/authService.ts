@@ -45,10 +45,7 @@ export async function registerUser(input: RegisterInput): Promise<User> {
   }
 
   // Check if email already exists (case-insensitive via CITEXT)
-  const existing = await query<User>(
-    `SELECT id FROM users WHERE email = $1`,
-    [email]
-  );
+  const existing = await query<User>(`SELECT id FROM users WHERE email = $1`, [email]);
 
   if (existing.rows.length > 0) {
     throw Object.assign(new Error("Email already in use"), {
@@ -80,10 +77,7 @@ export async function registerUser(input: RegisterInput): Promise<User> {
 
     // Create corresponding profile in the same transaction
     if (role === "client") {
-      await client.query(
-        `INSERT INTO client_profiles (user_id) VALUES ($1)`,
-        [newUser.id]
-      );
+      await client.query(`INSERT INTO client_profiles (user_id) VALUES ($1)`, [newUser.id]);
     } else if (role === "cleaner") {
       // Try to insert with all columns first (if they exist)
       // If columns don't exist, fall back to just user_id
@@ -98,12 +92,9 @@ export async function registerUser(input: RegisterInput): Promise<User> {
         await client.query("RELEASE SAVEPOINT cleaner_profile_insert");
       } catch (error: any) {
         // If columns don't exist (error code 42703 = undefined column), rollback to savepoint and try with just user_id
-        if (error?.code === '42703') {
+        if (error?.code === "42703") {
           await client.query("ROLLBACK TO SAVEPOINT cleaner_profile_insert");
-          await client.query(
-            `INSERT INTO cleaner_profiles (user_id) VALUES ($1)`,
-            [newUser.id]
-          );
+          await client.query(`INSERT INTO cleaner_profiles (user_id) VALUES ($1)`, [newUser.id]);
         } else {
           // Re-throw other errors
           throw error;
@@ -133,10 +124,7 @@ export async function registerUser(input: RegisterInput): Promise<User> {
  */
 export async function loginUser(email: string, password: string): Promise<User> {
   // Find user by email
-  const result = await query<User>(
-    `SELECT * FROM users WHERE email = $1`,
-    [email]
-  );
+  const result = await query<User>(`SELECT * FROM users WHERE email = $1`, [email]);
 
   const user = result.rows[0];
 
@@ -175,10 +163,7 @@ export async function loginUser(email: string, password: string): Promise<User> 
  * Get user by ID
  */
 export async function getUserById(id: string): Promise<User | null> {
-  const result = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [id]
-  );
+  const result = await query<User>(`SELECT * FROM users WHERE id = $1`, [id]);
   return result.rows[0] ?? null;
 }
 
@@ -186,10 +171,7 @@ export async function getUserById(id: string): Promise<User | null> {
  * Get user by email
  */
 export async function getUserByEmail(email: string): Promise<User | null> {
-  const result = await query<User>(
-    `SELECT * FROM users WHERE email = $1`,
-    [email]
-  );
+  const result = await query<User>(`SELECT * FROM users WHERE email = $1`, [email]);
   return result.rows[0] ?? null;
 }
 
@@ -201,10 +183,7 @@ export async function getUserWithProfile(userId: string): Promise<{
   clientProfile?: ClientProfile;
   cleanerProfile?: CleanerProfile;
 } | null> {
-  const userResult = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
 
   const user = userResult.rows[0];
   if (!user) {
@@ -244,10 +223,7 @@ export async function updatePassword(
   newPassword: string
 ): Promise<void> {
   // Get current user
-  const result = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const result = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
 
   const user = result.rows[0];
   if (!user) {
@@ -265,10 +241,10 @@ export async function updatePassword(
 
   // Hash and update new password
   const newHash = await hashPassword(newPassword);
-  await query(
-    `UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`,
-    [userId, newHash]
-  );
+  await query(`UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`, [
+    userId,
+    newHash,
+  ]);
 
   // Invalidate all existing tokens for this user
   const { invalidateUserTokens } = await import("../lib/tokenInvalidation");
@@ -282,10 +258,10 @@ export async function updatePassword(
  */
 export async function resetPassword(userId: string, newPassword: string): Promise<void> {
   const newHash = await hashPassword(newPassword);
-  await query(
-    `UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`,
-    [userId, newHash]
-  );
+  await query(`UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`, [
+    userId,
+    newHash,
+  ]);
 
   // Invalidate all existing tokens for this user
   const { invalidateUserTokens } = await import("../lib/tokenInvalidation");

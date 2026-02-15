@@ -242,7 +242,14 @@ export async function createInvoice(
   }
 
   // Record status history
-  await recordStatusChange(invoice.id, null, initialStatus, cleanerId, "cleaner", "Invoice created");
+  await recordStatusChange(
+    invoice.id,
+    null,
+    initialStatus,
+    cleanerId,
+    "cleaner",
+    "Invoice created"
+  );
 
   // Log and alert if needs approval
   logger.info("invoice_created", {
@@ -288,10 +295,9 @@ export async function sendInvoice(
   // Validate status transition
   const validFromStatuses: InvoiceStatus[] = ["draft", "pending_approval"];
   if (!validFromStatuses.includes(invoice.status)) {
-    throw Object.assign(
-      new Error(`Cannot send invoice with status '${invoice.status}'`),
-      { statusCode: 400 }
-    );
+    throw Object.assign(new Error(`Cannot send invoice with status '${invoice.status}'`), {
+      statusCode: 400,
+    });
   }
 
   // If pending approval, only admin can send
@@ -312,7 +318,14 @@ export async function sendInvoice(
     [invoiceId]
   );
 
-  await recordStatusChange(invoiceId, invoice.status, "sent", actorId, actorType, "Invoice sent to client");
+  await recordStatusChange(
+    invoiceId,
+    invoice.status,
+    "sent",
+    actorId,
+    actorType,
+    "Invoice sent to client"
+  );
 
   logger.info("invoice_sent", {
     invoiceId,
@@ -330,10 +343,7 @@ export async function sendInvoice(
 // Pay Invoice (Client)
 // ============================================
 
-export async function payInvoiceWithCredits(
-  invoiceId: string,
-  clientId: string
-): Promise<Invoice> {
+export async function payInvoiceWithCredits(invoiceId: string, clientId: string): Promise<Invoice> {
   const invoice = await getInvoiceById(invoiceId);
   if (!invoice) {
     throw Object.assign(new Error("Invoice not found"), { statusCode: 404 });
@@ -481,7 +491,14 @@ export async function handleInvoicePaymentSuccess(
     [invoice.id]
   );
 
-  await recordStatusChange(invoice.id, invoice.status, "paid", null, "system", "Paid with card via Stripe");
+  await recordStatusChange(
+    invoice.id,
+    invoice.status,
+    "paid",
+    null,
+    "system",
+    "Paid with card via Stripe"
+  );
 
   logger.info("invoice_paid_stripe", {
     invoiceId: invoice.id,
@@ -526,7 +543,14 @@ export async function declineInvoice(
     [invoiceId, reason || null]
   );
 
-  await recordStatusChange(invoiceId, "sent", "declined", clientId, "client", reason || "Client declined");
+  await recordStatusChange(
+    invoiceId,
+    "sent",
+    "declined",
+    clientId,
+    "client",
+    reason || "Client declined"
+  );
 
   logger.info("invoice_declined", {
     invoiceId,
@@ -559,10 +583,9 @@ export async function cancelInvoice(
 
   const cancellableStatuses: InvoiceStatus[] = ["draft", "pending_approval", "sent"];
   if (!cancellableStatuses.includes(invoice.status)) {
-    throw Object.assign(
-      new Error(`Cannot cancel invoice with status '${invoice.status}'`),
-      { statusCode: 400 }
-    );
+    throw Object.assign(new Error(`Cannot cancel invoice with status '${invoice.status}'`), {
+      statusCode: 400,
+    });
   }
 
   const result = await query<Invoice>(
@@ -575,7 +598,14 @@ export async function cancelInvoice(
     [invoiceId]
   );
 
-  await recordStatusChange(invoiceId, invoice.status, "cancelled", cleanerId, "cleaner", reason || "Cancelled by cleaner");
+  await recordStatusChange(
+    invoiceId,
+    invoice.status,
+    "cancelled",
+    cleanerId,
+    "cleaner",
+    reason || "Cancelled by cleaner"
+  );
 
   logger.info("invoice_cancelled", {
     invoiceId,
@@ -601,10 +631,9 @@ export async function adminApproveInvoice(
   }
 
   if (invoice.status !== "pending_approval") {
-    throw Object.assign(
-      new Error(`Invoice is not pending approval (status: ${invoice.status})`),
-      { statusCode: 400 }
-    );
+    throw Object.assign(new Error(`Invoice is not pending approval (status: ${invoice.status})`), {
+      statusCode: 400,
+    });
   }
 
   const newStatus: InvoiceStatus = autoSend ? "sent" : "draft";
@@ -619,7 +648,14 @@ export async function adminApproveInvoice(
     [invoiceId, newStatus, adminId]
   );
 
-  await recordStatusChange(invoiceId, "pending_approval", newStatus, adminId, "admin", `Approved by admin${autoSend ? " and sent" : ""}`);
+  await recordStatusChange(
+    invoiceId,
+    "pending_approval",
+    newStatus,
+    adminId,
+    "admin",
+    `Approved by admin${autoSend ? " and sent" : ""}`
+  );
 
   logger.info("invoice_approved", {
     invoiceId,
@@ -646,10 +682,9 @@ export async function adminDenyInvoice(
   }
 
   if (invoice.status !== "pending_approval") {
-    throw Object.assign(
-      new Error(`Invoice is not pending approval (status: ${invoice.status})`),
-      { statusCode: 400 }
-    );
+    throw Object.assign(new Error(`Invoice is not pending approval (status: ${invoice.status})`), {
+      statusCode: 400,
+    });
   }
 
   const result = await query<Invoice>(
@@ -662,7 +697,14 @@ export async function adminDenyInvoice(
     [invoiceId, reason]
   );
 
-  await recordStatusChange(invoiceId, "pending_approval", "cancelled", adminId, "admin", `Denied: ${reason}`);
+  await recordStatusChange(
+    invoiceId,
+    "pending_approval",
+    "cancelled",
+    adminId,
+    "admin",
+    `Denied: ${reason}`
+  );
 
   logger.info("invoice_denied", {
     invoiceId,
@@ -680,14 +722,13 @@ export async function adminDenyInvoice(
 // ============================================
 
 export async function getInvoiceById(invoiceId: string): Promise<Invoice | null> {
-  const result = await query<Invoice>(
-    `SELECT * FROM invoices WHERE id = $1`,
-    [invoiceId]
-  );
+  const result = await query<Invoice>(`SELECT * FROM invoices WHERE id = $1`, [invoiceId]);
   return result.rows[0] ?? null;
 }
 
-export async function getInvoiceWithLineItems(invoiceId: string): Promise<InvoiceWithLineItems | null> {
+export async function getInvoiceWithLineItems(
+  invoiceId: string
+): Promise<InvoiceWithLineItems | null> {
   const invoice = await getInvoiceById(invoiceId);
   if (!invoice) return null;
 
@@ -722,8 +763,12 @@ export async function getInvoiceWithLineItems(invoiceId: string): Promise<Invoic
   return {
     ...invoice,
     line_items: lineItemsResult.rows,
-    cleaner_name: names ? `${names.cleaner_first_name || ""} ${names.cleaner_last_name || ""}`.trim() : undefined,
-    client_name: names ? `${names.client_first_name || ""} ${names.client_last_name || ""}`.trim() : undefined,
+    cleaner_name: names
+      ? `${names.cleaner_first_name || ""} ${names.cleaner_last_name || ""}`.trim()
+      : undefined,
+    client_name: names
+      ? `${names.client_first_name || ""} ${names.client_last_name || ""}`.trim()
+      : undefined,
   };
 }
 
@@ -923,9 +968,7 @@ async function creditCleanerFromInvoice(
 // Get Invoice Status History
 // ============================================
 
-export async function getInvoiceStatusHistory(
-  invoiceId: string
-): Promise<InvoiceStatusHistory[]> {
+export async function getInvoiceStatusHistory(invoiceId: string): Promise<InvoiceStatusHistory[]> {
   const result = await query<InvoiceStatusHistory>(
     `
       SELECT * FROM invoice_status_history
@@ -936,4 +979,3 @@ export async function getInvoiceStatusHistory(
   );
   return result.rows;
 }
-

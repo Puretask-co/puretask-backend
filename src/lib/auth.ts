@@ -8,7 +8,14 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { env } from "../config/env";
 
-export type UserRole = "client" | "cleaner" | "admin" | "super_admin";
+export type UserRole =
+  | "client"
+  | "cleaner"
+  | "admin"
+  | "super_admin"
+  | "support_agent"
+  | "support_lead"
+  | "ops_finance";
 
 export interface AuthUser {
   id: string;
@@ -54,12 +61,12 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
  */
 export function signAuthToken(user: AuthUser, jti?: string): string {
   const tokenId = jti || crypto.randomBytes(16).toString("hex");
-  
+
   return jwt.sign(
-    { 
-      id: user.id, 
+    {
+      id: user.id,
       role: user.role,
-      jti: tokenId 
+      jti: tokenId,
     },
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
@@ -69,13 +76,16 @@ export function signAuthToken(user: AuthUser, jti?: string): string {
 /**
  * Verify and decode a JWT token
  * Also checks token_version for invalidation
- * 
+ *
  * NOTE: This is now async to check token_version and invalidated_tokens.
  * For backwards compatibility, use verifyAuthTokenSync for synchronous cases.
  */
 export async function verifyAuthToken(token: string): Promise<AuthUser> {
-  const decoded = jwt.verify(token, env.JWT_SECRET) as AuthUser & { token_version?: number; jti?: string };
-  
+  const decoded = jwt.verify(token, env.JWT_SECRET) as AuthUser & {
+    token_version?: number;
+    jti?: string;
+  };
+
   // Check if token is explicitly invalidated
   const { query } = await import("../db/client");
   if (decoded.jti) {
@@ -87,7 +97,7 @@ export async function verifyAuthToken(token: string): Promise<AuthUser> {
       throw new Error("Token has been invalidated");
     }
   }
-  
+
   // Check token_version matches current user token_version
   if (decoded.token_version !== undefined) {
     const result = await query<{ token_version: number }>(
@@ -99,11 +109,11 @@ export async function verifyAuthToken(token: string): Promise<AuthUser> {
       throw new Error("Token has been invalidated (version mismatch)");
     }
   }
-  
-  return { 
-    id: decoded.id, 
+
+  return {
+    id: decoded.id,
     role: decoded.role,
-    jti: decoded.jti 
+    jti: decoded.jti,
   };
 }
 
@@ -113,10 +123,10 @@ export async function verifyAuthToken(token: string): Promise<AuthUser> {
  */
 export function verifyAuthTokenSync(token: string): AuthUser {
   const decoded = jwt.verify(token, env.JWT_SECRET) as AuthUser;
-  return { 
-    id: decoded.id, 
+  return {
+    id: decoded.id,
     role: decoded.role,
-    jti: decoded.jti 
+    jti: decoded.jti,
   };
 }
 
@@ -139,11 +149,7 @@ function extractBearerToken(req: Request): string | null {
  * Attach user to request if valid JWT is present (but don't enforce auth)
  * Use this for routes where auth is optional
  */
-export function authMiddlewareAttachUser(
-  req: Request,
-  _res: Response,
-  next: NextFunction
-): void {
+export function authMiddlewareAttachUser(req: Request, _res: Response, next: NextFunction): void {
   const token = extractBearerToken(req);
   if (token) {
     // Use synchronous version to avoid blocking - token_version check happens in protected routes
@@ -248,11 +254,7 @@ export async function adminOnly(req: Request, res: Response, next: NextFunction)
  * // Set header: x-n8n-signature = signature
  * ```
  */
-export function verifyN8nSignature(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function verifyN8nSignature(req: Request, res: Response, next: NextFunction): void {
   const secret = env.N8N_WEBHOOK_SECRET;
 
   // If secret not configured

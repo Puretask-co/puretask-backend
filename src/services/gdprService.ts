@@ -72,10 +72,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
   logger.info("gdpr_data_export_started", { userId });
 
   // Get user profile
-  const userResult = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
   const user = userResult.rows[0];
 
   if (!user) {
@@ -87,10 +84,9 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     default_address: string | null;
     created_at: string;
     updated_at: string;
-  }>(
-    `SELECT default_address, created_at, updated_at FROM client_profiles WHERE user_id = $1`,
-    [userId]
-  );
+  }>(`SELECT default_address, created_at, updated_at FROM client_profiles WHERE user_id = $1`, [
+    userId,
+  ]);
 
   // Get cleaner profile if exists
   const cleanerProfileResult = await query<{

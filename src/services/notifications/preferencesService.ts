@@ -27,9 +27,7 @@ export interface UpdatePreferencesInput {
  * Get notification preferences for a user
  * Creates default preferences if they don't exist
  */
-export async function getNotificationPreferences(
-  userId: string
-): Promise<NotificationPreferences> {
+export async function getNotificationPreferences(userId: string): Promise<NotificationPreferences> {
   const result = await query<NotificationPreferences>(
     `
       SELECT * FROM notification_preferences
@@ -117,4 +115,3 @@ export async function updateNotificationPreferences(
 
   return result.rows[0];
 }
-

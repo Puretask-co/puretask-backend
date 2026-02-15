@@ -37,10 +37,7 @@ export function parsePagination(req: Request): PaginationParams {
     parseInt((req.query.limit as string) || String(DEFAULT_LIMIT), 10),
     MAX_LIMIT
   );
-  const offset = Math.max(
-    parseInt((req.query.offset as string) || "0", 10),
-    0
-  );
+  const offset = Math.max(parseInt((req.query.offset as string) || "0", 10), 0);
 
   return { limit, offset };
 }

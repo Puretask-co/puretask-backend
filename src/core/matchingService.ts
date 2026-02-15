@@ -11,16 +11,10 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import {
-  Job,
-  Client,
-  Cleaner,
-  ClientRiskScore,
-  MatchingInput,
-} from './types';
-import { MATCHING_CONFIG as cfg } from './config';
-import { ClientRiskService } from './clientRiskService';
-import { ReliabilityTier } from './scoring';
+import { Job, Client, Cleaner, ClientRiskScore, MatchingInput } from "./types";
+import { MATCHING_CONFIG as cfg } from "./config";
+import { ClientRiskService } from "./clientRiskService";
+import { ReliabilityTier } from "./scoring";
 
 // ============================================
 // Types
@@ -87,7 +81,7 @@ export class MatchingService {
 
       // Calculate distance (simplified - you'd use actual geocoding)
       const distanceKm = await this.calculateDistance(job, cleaner);
-      
+
       // Check repeat client status
       const isRepeatClient = previousCleanerIds.includes(cleaner.id);
 
@@ -138,13 +132,8 @@ export class MatchingService {
    * Higher score = better match
    */
   static computeMatchScore(input: MatchingInput): { score: number; factors: MatchingFactors } {
-    const {
-      candidateCleaner,
-      clientRisk,
-      distanceKm,
-      isRepeatClient,
-      clientFlexibilityScore,
-    } = input;
+    const { candidateCleaner, clientRisk, distanceKm, isRepeatClient, clientFlexibilityScore } =
+      input;
 
     const factors: MatchingFactors = {
       reliabilityPoints: 0,
@@ -157,7 +146,8 @@ export class MatchingService {
     let score = 0;
 
     // 1. Reliability heavy weight (0-200 points)
-    factors.reliabilityPoints = candidateCleaner.reliabilityScore * cfg.weights.reliabilityMultiplier;
+    factors.reliabilityPoints =
+      candidateCleaner.reliabilityScore * cfg.weights.reliabilityMultiplier;
     score += factors.reliabilityPoints;
 
     // 2. Distance penalty (every km reduces score)
@@ -182,8 +172,8 @@ export class MatchingService {
 
     // 5. Risk-aware: deprioritize high-risk clients' access to top-tier cleaners
     if (
-      (clientRisk.riskBand === 'high' || clientRisk.riskBand === 'critical') &&
-      candidateCleaner.reliabilityTier === 'Elite'
+      (clientRisk.riskBand === "high" || clientRisk.riskBand === "critical") &&
+      candidateCleaner.reliabilityTier === "Elite"
     ) {
       factors.riskPenalty = cfg.weights.riskPenaltyElite;
       score -= factors.riskPenalty;
@@ -197,8 +187,8 @@ export class MatchingService {
    */
   private static shouldShowCleaner(cleaner: Cleaner, clientRisk: ClientRiskScore): boolean {
     // High/critical risk clients don't get Elite cleaners unless necessary
-    if (clientRisk.riskBand === 'high' || clientRisk.riskBand === 'critical') {
-      if (cleaner.reliabilityTier === 'Elite') {
+    if (clientRisk.riskBand === "high" || clientRisk.riskBand === "critical") {
+      if (cleaner.reliabilityTier === "Elite") {
         // For now, don't completely hide - just penalize in scoring
         // Return true to allow matching but with penalty
         return true;
@@ -248,31 +238,30 @@ export class MatchingService {
          AND bp.start_ts < $5
          AND bp.end_ts > $4
        )`,
-      [
-        dayOfWeek,
-        startTimeStr,
-        endTimeStr,
-        job.startTime.toISOString(),
-        job.endTime.toISOString(),
-      ]
+      [dayOfWeek, startTimeStr, endTimeStr, job.startTime.toISOString(), job.endTime.toISOString()]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       id: Number(row.id),
       reliabilityScore: Number(row.reliability_score || 70),
       reliabilityTier: this.mapTierFromDb(row.reliability_tier) as ReliabilityTier,
-      flexibilityStatus: row.flexibility_status as 'normal' | 'low_flex',
+      flexibilityStatus: row.flexibility_status as "normal" | "low_flex",
       flexibilityBadgeActive: row.flexibility_badge_active,
     }));
   }
 
   private static mapTierFromDb(tier: string | null): ReliabilityTier {
-    if (!tier) return 'Developing';
-    switch (tier.toLowerCase().replace('_', ' ')) {
-      case 'elite': return 'Elite';
-      case 'pro': return 'Pro';
-      case 'semi pro': case 'semi_pro': return 'Semi Pro';
-      default: return 'Developing';
+    if (!tier) return "Developing";
+    switch (tier.toLowerCase().replace("_", " ")) {
+      case "elite":
+        return "Elite";
+      case "pro":
+        return "Pro";
+      case "semi pro":
+      case "semi_pro":
+        return "Semi Pro";
+      default:
+        return "Developing";
     }
   }
 
@@ -285,7 +274,7 @@ export class MatchingService {
        ORDER BY cleaner_id`,
       [String(clientId)]
     );
-    return result.rows.map(row => Number(row.cleaner_id));
+    return result.rows.map((row) => Number(row.cleaner_id));
   }
 
   private static async calculateDistance(job: Job, cleaner: Cleaner): Promise<number> {
@@ -311,8 +300,10 @@ export class MatchingService {
     const dLon = this.toRad(jLon - cLon);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(cLat)) * Math.cos(this.toRad(jLat)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      Math.cos(this.toRad(cLat)) *
+        Math.cos(this.toRad(jLat)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
@@ -357,7 +348,7 @@ export class MatchingService {
       clientRisk = {
         clientId,
         riskScore: 0,
-        riskBand: 'normal',
+        riskBand: "normal",
         lastRecomputedAt: new Date(),
       };
     }
@@ -389,4 +380,3 @@ export class MatchingService {
     };
   }
 }
-

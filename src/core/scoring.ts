@@ -1,13 +1,13 @@
 // src/core/scoring.ts
 // Scoring helpers for risk and reliability calculations
 
-import { ClientRiskScore, CleanerMetrics } from './types';
+import { ClientRiskScore, CleanerMetrics } from "./types";
 
 // ============================================
 // Risk Score Helpers
 // ============================================
 
-export type RiskBand = 'normal' | 'mild' | 'elevated' | 'high' | 'critical';
+export type RiskBand = "normal" | "mild" | "elevated" | "high" | "critical";
 
 /**
  * Compute risk band from score
@@ -18,18 +18,18 @@ export type RiskBand = 'normal' | 'mild' | 'elevated' | 'high' | 'critical';
  * 60-100: critical
  */
 export function computeRiskBand(score: number): RiskBand {
-  if (score <= 9) return 'normal';
-  if (score <= 19) return 'mild';
-  if (score <= 39) return 'elevated';
-  if (score <= 59) return 'high';
-  return 'critical';
+  if (score <= 9) return "normal";
+  if (score <= 19) return "mild";
+  if (score <= 39) return "elevated";
+  if (score <= 59) return "high";
+  return "critical";
 }
 
 // ============================================
 // Reliability Score Helpers
 // ============================================
 
-export type ReliabilityTier = 'Developing' | 'Semi Pro' | 'Pro' | 'Elite';
+export type ReliabilityTier = "Developing" | "Semi Pro" | "Pro" | "Elite";
 
 /**
  * Compute reliability tier from score
@@ -39,10 +39,10 @@ export type ReliabilityTier = 'Developing' | 'Semi Pro' | 'Pro' | 'Elite';
  * 90-100: Elite
  */
 export function computeReliabilityTier(score: number): ReliabilityTier {
-  if (score < 60) return 'Developing';
-  if (score < 75) return 'Semi Pro';
-  if (score < 90) return 'Pro';
-  return 'Elite';
+  if (score < 60) return "Developing";
+  if (score < 75) return "Semi Pro";
+  if (score < 90) return "Pro";
+  return "Elite";
 }
 
 /**
@@ -54,7 +54,7 @@ export function clampScore(score: number, min = 0, max = 100): number {
 
 /**
  * Compute reliability base points from metrics
- * 
+ *
  * Weights (per spec):
  * - Attendance: 25 points
  * - Punctuality: 20 points
@@ -92,16 +92,16 @@ export function computeReliabilityBasePoints(metrics: CleanerMetrics): number {
 
   // Attendance (0-25 points)
   score += attendanceRate * 25;
-  
+
   // Punctuality (0-20 points)
   score += onTimeRate * 20;
-  
+
   // Photo compliance (0-15 points)
   score += photoRate * 15;
-  
+
   // Communication (0-10 points)
   score += commRate * 10;
-  
+
   // Completion (0-10 points)
   score += completionRate * 10;
 
@@ -123,11 +123,16 @@ export function computeReliabilityBasePoints(metrics: CleanerMetrics): number {
  */
 export function getPayoutPercentForTier(tier: ReliabilityTier): number {
   switch (tier) {
-    case 'Elite': return 85;
-    case 'Pro': return 84;
-    case 'Semi Pro': return 82;
-    case 'Developing': return 80;
-    default: return 80;
+    case "Elite":
+      return 85;
+    case "Pro":
+      return 84;
+    case "Semi Pro":
+      return 82;
+    case "Developing":
+      return 80;
+    default:
+      return 80;
   }
 }
 
@@ -140,11 +145,15 @@ export function getPayoutPercentForTier(tier: ReliabilityTier): number {
  */
 export function getCreditRateRangeForTier(tier: ReliabilityTier): { min: number; max: number } {
   switch (tier) {
-    case 'Elite': return { min: 600, max: 850 };
-    case 'Pro': return { min: 450, max: 600 };
-    case 'Semi Pro': return { min: 350, max: 450 };
-    case 'Developing': return { min: 150, max: 350 };
-    default: return { min: 150, max: 350 };
+    case "Elite":
+      return { min: 600, max: 850 };
+    case "Pro":
+      return { min: 450, max: 600 };
+    case "Semi Pro":
+      return { min: 350, max: 450 };
+    case "Developing":
+      return { min: 150, max: 350 };
+    default:
+      return { min: 150, max: 350 };
   }
 }
-

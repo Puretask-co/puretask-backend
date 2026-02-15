@@ -85,10 +85,7 @@ export function makeGrant(params: {
   };
 }
 
-export function validateChoiceSelection(
-  group: ChoiceRewardGroup,
-  reward_id: string
-): boolean {
+export function validateChoiceSelection(group: ChoiceRewardGroup, reward_id: string): boolean {
   return group.options.includes(reward_id);
 }
 

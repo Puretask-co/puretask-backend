@@ -2,7 +2,7 @@
 // Authentication smoke tests
 
 import request from "supertest";
-import { describe, it, expect, afterAll } from "@jest/globals";
+import { describe, it, expect, afterAll } from "vitest";
 import app from "../../index";
 import { cleanupTestData } from "../helpers/testUtils";
 
@@ -17,13 +17,11 @@ describe("Auth Smoke Tests", () => {
 
   describe("POST /auth/register", () => {
     it("registers a new client successfully", async () => {
-      const res = await request(app)
-        .post("/auth/register")
-        .send({
-          email: testEmail,
-          password: testPassword,
-          role: "client",
-        });
+      const res = await request(app).post("/auth/register").send({
+        email: testEmail,
+        password: testPassword,
+        role: "client",
+      });
 
       expect(res.status).toBe(201);
       expect(res.body.token).toBeTruthy();
@@ -35,50 +33,42 @@ describe("Auth Smoke Tests", () => {
     });
 
     it("rejects duplicate email registration", async () => {
-      const res = await request(app)
-        .post("/auth/register")
-        .send({
-          email: testEmail,
-          password: testPassword,
-          role: "client",
-        });
+      const res = await request(app).post("/auth/register").send({
+        email: testEmail,
+        password: testPassword,
+        role: "client",
+      });
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe("EMAIL_EXISTS");
     });
 
     it("rejects invalid email format", async () => {
-      const res = await request(app)
-        .post("/auth/register")
-        .send({
-          email: "not-an-email",
-          password: testPassword,
-          role: "client",
-        });
+      const res = await request(app).post("/auth/register").send({
+        email: "not-an-email",
+        password: testPassword,
+        role: "client",
+      });
 
       expect(res.status).toBe(400);
     });
 
     it("rejects short password", async () => {
-      const res = await request(app)
-        .post("/auth/register")
-        .send({
-          email: "new@test.puretask.com",
-          password: "short",
-          role: "client",
-        });
+      const res = await request(app).post("/auth/register").send({
+        email: "new@test.puretask.com",
+        password: "short",
+        role: "client",
+      });
 
       expect(res.status).toBe(400);
     });
 
     it("rejects admin role registration", async () => {
-      const res = await request(app)
-        .post("/auth/register")
-        .send({
-          email: "admin@test.puretask.com",
-          password: testPassword,
-          role: "admin",
-        });
+      const res = await request(app).post("/auth/register").send({
+        email: "admin@test.puretask.com",
+        password: testPassword,
+        role: "admin",
+      });
 
       expect(res.status).toBe(400);
     });
@@ -86,12 +76,10 @@ describe("Auth Smoke Tests", () => {
 
   describe("POST /auth/login", () => {
     it("logs in with correct credentials", async () => {
-      const res = await request(app)
-        .post("/auth/login")
-        .send({
-          email: testEmail,
-          password: testPassword,
-        });
+      const res = await request(app).post("/auth/login").send({
+        email: testEmail,
+        password: testPassword,
+      });
 
       expect(res.status).toBe(200);
       expect(res.body.token).toBeTruthy();
@@ -99,24 +87,20 @@ describe("Auth Smoke Tests", () => {
     });
 
     it("rejects wrong password", async () => {
-      const res = await request(app)
-        .post("/auth/login")
-        .send({
-          email: testEmail,
-          password: "wrongpassword",
-        });
+      const res = await request(app).post("/auth/login").send({
+        email: testEmail,
+        password: "wrongpassword",
+      });
 
       expect(res.status).toBe(401);
       expect(res.body.error.code).toBe("INVALID_CREDENTIALS");
     });
 
     it("rejects non-existent email", async () => {
-      const res = await request(app)
-        .post("/auth/login")
-        .send({
-          email: "nonexistent@test.puretask.com",
-          password: testPassword,
-        });
+      const res = await request(app).post("/auth/login").send({
+        email: "nonexistent@test.puretask.com",
+        password: testPassword,
+      });
 
       expect(res.status).toBe(401);
     });
@@ -124,9 +108,7 @@ describe("Auth Smoke Tests", () => {
 
   describe("GET /auth/me", () => {
     it("returns current user with valid token", async () => {
-      const res = await request(app)
-        .get("/auth/me")
-        .set("Authorization", `Bearer ${authToken}`);
+      const res = await request(app).get("/auth/me").set("Authorization", `Bearer ${authToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.user.email).toBe(testEmail);

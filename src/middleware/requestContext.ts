@@ -2,7 +2,12 @@
 // Request context middleware for tracing
 
 import { Request, Response, NextFunction } from "express";
-import { withRequestContext, generateRequestId, enrichContext, getRequestContext } from "../lib/logger";
+import {
+  withRequestContext,
+  generateRequestId,
+  enrichContext,
+  getRequestContext,
+} from "../lib/logger";
 
 // Header names for request/correlation IDs
 const REQUEST_ID_HEADER = "x-request-id";
@@ -24,18 +29,12 @@ declare global {
  * - Propagates correlation ID for distributed tracing
  * - Makes IDs available in logger context
  */
-export function requestContextMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function requestContextMiddleware(req: Request, res: Response, next: NextFunction): void {
   // Get or generate request ID
-  const requestId =
-    (req.headers[REQUEST_ID_HEADER] as string) || generateRequestId();
+  const requestId = (req.headers[REQUEST_ID_HEADER] as string) || generateRequestId();
 
   // Get correlation ID (for cross-service tracing)
-  const correlationId =
-    (req.headers[CORRELATION_ID_HEADER] as string) || requestId;
+  const correlationId = (req.headers[CORRELATION_ID_HEADER] as string) || requestId;
 
   // Attach to request object
   req.requestId = requestId;
@@ -87,4 +86,3 @@ export function getCurrentRequestId(): string | undefined {
 export function getCurrentCorrelationId(): string | undefined {
   return getRequestContext()?.correlationId;
 }
-

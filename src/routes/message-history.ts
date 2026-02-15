@@ -1,6 +1,6 @@
 /**
  * Message History & Saved Messages API
- * 
+ *
  * Handles: message logging, message history, saved drafts
  */
 
@@ -64,7 +64,7 @@ router.post("/messages/log", async (req: AuthedRequest, res) => {
       booking_id,
       message_type,
       channel,
-      was_ai_generated
+      was_ai_generated,
     } = req.body;
 
     if (!message_content) {
@@ -98,18 +98,18 @@ router.post("/messages/log", async (req: AuthedRequest, res) => {
       [
         cleanerId,
         message_content,
-        recipient_type || 'client',
+        recipient_type || "client",
         recipient_id || null,
         recipient_name || null,
         template_id || null,
         template_name || null,
         variables_used ? JSON.stringify(variables_used) : null,
         booking_id || null,
-        message_type || 'general',
-        channel || 'manual',
+        message_type || "general",
+        channel || "manual",
         character_count,
         word_count,
-        was_ai_generated || false
+        was_ai_generated || false,
       ]
     );
 
@@ -364,14 +364,7 @@ router.post("/messages/saved", async (req: AuthedRequest, res) => {
         title,
         content,
         created_at as "createdAt"`,
-      [
-        cleanerId,
-        title,
-        content,
-        category || null,
-        tags || [],
-        is_favorite || false
-      ]
+      [cleanerId, title, content, category || null, tags || [], is_favorite || false]
     );
 
     res.status(201).json({
@@ -525,4 +518,3 @@ router.post("/messages/saved/:id/use", async (req: AuthedRequest, res) => {
 });
 
 export default router;
-

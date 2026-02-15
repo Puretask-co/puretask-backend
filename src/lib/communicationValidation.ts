@@ -29,7 +29,7 @@ export const VALID_TEMPLATE_ENV_VARS = [
   "SMS_TEMPLATE_JOB_REMINDER",
 ] as const;
 
-export type TemplateEnvVar = typeof VALID_TEMPLATE_ENV_VARS[number];
+export type TemplateEnvVar = (typeof VALID_TEMPLATE_ENV_VARS)[number];
 
 /**
  * Communication channel types
@@ -97,11 +97,15 @@ export function validateEmailPayload(payload: unknown): CommunicationPayload {
   const isSMSTemplate = validated.templateEnvVar.startsWith("SMS_TEMPLATE_");
 
   if (validated.channel === "email" && !isEmailTemplate) {
-    throw new Error(`Email channel requires SENDGRID_TEMPLATE_* env var, got: ${validated.templateEnvVar}`);
+    throw new Error(
+      `Email channel requires SENDGRID_TEMPLATE_* env var, got: ${validated.templateEnvVar}`
+    );
   }
 
   if (validated.channel === "sms" && !isSMSTemplate) {
-    throw new Error(`SMS channel requires SMS_TEMPLATE_* env var, got: ${validated.templateEnvVar}`);
+    throw new Error(
+      `SMS channel requires SMS_TEMPLATE_* env var, got: ${validated.templateEnvVar}`
+    );
   }
 
   return validated;
@@ -116,7 +120,7 @@ export function validateTemplateKey(templateKey: string): TemplateEnvVar {
   // Env var format: SENDGRID_TEMPLATE_CLIENT_JOB_BOOKED
 
   const envVar = templateKeyToEnvVar(templateKey);
-  
+
   if (!VALID_TEMPLATE_ENV_VARS.includes(envVar as any)) {
     throw new Error(
       `Invalid template key: ${templateKey}. Must map to one of: ${VALID_TEMPLATE_ENV_VARS.join(", ")}`
@@ -135,7 +139,9 @@ function templateKeyToEnvVar(templateKey: string): string {
   const parts = templateKey.split(".");
 
   if (parts.length < 3) {
-    throw new Error(`Invalid template key format: ${templateKey}. Expected format: {channel}.{domain}.{action}`);
+    throw new Error(
+      `Invalid template key format: ${templateKey}. Expected format: {channel}.{domain}.{action}`
+    );
   }
 
   const [channel, domain, ...actionParts] = parts;
@@ -159,7 +165,9 @@ export function getTemplateIdFromEnvVar(envVar: TemplateEnvVar): string {
   const templateId = (env as any)[envVar];
 
   if (!templateId) {
-    throw new Error(`Template ID not found for env var: ${envVar}. Check environment configuration.`);
+    throw new Error(
+      `Template ID not found for env var: ${envVar}. Check environment configuration.`
+    );
   }
 
   return templateId;
@@ -231,4 +239,3 @@ export const TEMPLATE_TO_EVENT_MAP: Record<string, string> = {
 export function getEventNameFromTemplateKey(templateKey: string): string {
   return TEMPLATE_TO_EVENT_MAP[templateKey] || `communication.${templateKey.split(".")[0]}`;
 }
-

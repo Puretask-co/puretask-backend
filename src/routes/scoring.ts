@@ -58,7 +58,7 @@ scoringRouter.get("/reliability/:cleanerId", async (req: AuthedRequest, res) => 
     );
 
     const currentScore = Number(result.rows[0]?.reliability_score || 70);
-    const currentTier = result.rows[0]?.tier || 'developing';
+    const currentTier = result.rows[0]?.tier || "developing";
 
     return res.json({
       cleanerId,
@@ -75,15 +75,15 @@ scoringRouter.get("/reliability/:cleanerId", async (req: AuthedRequest, res) => 
         completionOkJobs: metrics.completionOkJobs,
         ratingsSum: metrics.ratingsSum,
         ratingsCount: metrics.ratingsCount,
-        avgRating: metrics.ratingsCount > 0 
-          ? Math.round(metrics.ratingsSum / metrics.ratingsCount * 10) / 10 
-          : null,
+        avgRating:
+          metrics.ratingsCount > 0
+            ? Math.round((metrics.ratingsSum / metrics.ratingsCount) * 10) / 10
+            : null,
       },
       eventPenaltySum: eventPenalty,
       weeklyStreakCount: streakCount,
       lastUpdated: metrics.updatedAt.toISOString(),
     });
-
   } catch (err) {
     logger.error("get_reliability_score_error", {
       cleanerId,
@@ -118,7 +118,7 @@ scoringRouter.post("/reliability/:cleanerId/recompute", async (req: AuthedReques
   const cleanerId = Number(req.params.cleanerId);
   const userRole = req.user?.role;
 
-  if (userRole !== 'admin') {
+  if (userRole !== "admin") {
     return res.status(403).json({ error: "Unauthorized - only admins can trigger recompute" });
   }
 
@@ -143,7 +143,6 @@ scoringRouter.post("/reliability/:cleanerId/recompute", async (req: AuthedReques
       },
       stats: result.stats,
     });
-
   } catch (err) {
     logger.error("reliability_recompute_error", {
       cleanerId,
@@ -159,7 +158,7 @@ scoringRouter.post("/reliability/:cleanerId/recompute", async (req: AuthedReques
 scoringRouter.post("/reliability/recompute-all", async (req: AuthedRequest, res) => {
   const userRole = req.user?.role;
 
-  if (userRole !== 'admin') {
+  if (userRole !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
 
@@ -176,7 +175,6 @@ scoringRouter.post("/reliability/recompute-all", async (req: AuthedRequest, res)
       processed: result.processed,
       failed: result.failed,
     });
-
   } catch (err) {
     logger.error("reliability_recompute_all_error", {
       error: (err as Error).message,
@@ -215,19 +213,19 @@ scoringRouter.get("/risk/:clientId", async (req: AuthedRequest, res) => {
     const riskScore = await coreDb.clientRiskScores.get(clientId);
     const eventSum = await coreDb.clientRiskEvents.sumWeightsSince(clientId, 60);
     const hasRecentEvents = await coreDb.clientRiskEvents.existsSince(clientId, 7);
-    const lateReschedules14d = await coreDb.clientRiskEvents.countLateReschedulesLast14Days(clientId);
+    const lateReschedules14d =
+      await coreDb.clientRiskEvents.countLateReschedulesLast14Days(clientId);
 
     return res.json({
       clientId,
       currentScore: riskScore?.riskScore || 0,
-      currentBand: riskScore?.riskBand || 'normal',
+      currentBand: riskScore?.riskBand || "normal",
       eventWeightSum60d: eventSum,
       hasEventsLast7d: hasRecentEvents,
       lateReschedulesLast14d: lateReschedules14d,
       patternTriggered: lateReschedules14d >= 3,
       lastUpdated: riskScore?.updatedAt?.toISOString() || null,
     });
-
   } catch (err) {
     logger.error("get_risk_score_error", {
       clientId,
@@ -262,7 +260,7 @@ scoringRouter.post("/risk/:clientId/recompute", async (req: AuthedRequest, res) 
   const clientId = Number(req.params.clientId);
   const userRole = req.user?.role;
 
-  if (userRole !== 'admin') {
+  if (userRole !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
 
@@ -287,7 +285,6 @@ scoringRouter.post("/risk/:clientId/recompute", async (req: AuthedRequest, res) 
       },
       stats: result.stats,
     });
-
   } catch (err) {
     logger.error("risk_recompute_error", {
       clientId,
@@ -315,7 +312,7 @@ scoringRouter.post("/risk/:clientId/recompute", async (req: AuthedRequest, res) 
 scoringRouter.post("/risk/recompute-all", async (req: AuthedRequest, res) => {
   const userRole = req.user?.role;
 
-  if (userRole !== 'admin') {
+  if (userRole !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
 
@@ -332,7 +329,6 @@ scoringRouter.post("/risk/recompute-all", async (req: AuthedRequest, res) => {
       processed: result.processed,
       failed: result.failed,
     });
-
   } catch (err) {
     logger.error("risk_recompute_all_error", {
       error: (err as Error).message,
@@ -363,7 +359,7 @@ scoringRouter.post("/risk/recompute-all", async (req: AuthedRequest, res) => {
 scoringRouter.post("/flexibility/evaluate-cleaners", async (req: AuthedRequest, res) => {
   const userRole = req.user?.role;
 
-  if (userRole !== 'admin') {
+  if (userRole !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
 
@@ -376,7 +372,6 @@ scoringRouter.post("/flexibility/evaluate-cleaners", async (req: AuthedRequest, 
       badgesAssigned: result.badgesAssigned,
       badgesRemoved: result.badgesRemoved,
     });
-
   } catch (err) {
     logger.error("flexibility_evaluate_error", {
       error: (err as Error).message,
@@ -403,7 +398,7 @@ scoringRouter.post("/flexibility/evaluate-cleaners", async (req: AuthedRequest, 
 scoringRouter.post("/flexibility/recompute-clients", async (req: AuthedRequest, res) => {
   const userRole = req.user?.role;
 
-  if (userRole !== 'admin') {
+  if (userRole !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
 
@@ -414,7 +409,6 @@ scoringRouter.post("/flexibility/recompute-clients", async (req: AuthedRequest, 
       success: true,
       evaluated: result.evaluated,
     });
-
   } catch (err) {
     logger.error("client_flex_recompute_error", {
       error: (err as Error).message,
@@ -445,7 +439,7 @@ scoringRouter.post("/flexibility/recompute-clients", async (req: AuthedRequest, 
 scoringRouter.post("/inconvenience/detect-patterns", async (req: AuthedRequest, res) => {
   const userRole = req.user?.role;
 
-  if (userRole !== 'admin') {
+  if (userRole !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
 
@@ -457,7 +451,6 @@ scoringRouter.post("/inconvenience/detect-patterns", async (req: AuthedRequest, 
       clientEventsCreated: result.clientEventsCreated,
       cleanerEventsCreated: result.cleanerEventsCreated,
     });
-
   } catch (err) {
     logger.error("inconvenience_pattern_error", {
       error: (err as Error).message,
@@ -476,7 +469,7 @@ scoringRouter.post("/inconvenience/detect-patterns", async (req: AuthedRequest, 
 scoringRouter.post("/nightly-recompute", async (req: AuthedRequest, res) => {
   const userRole = req.user?.role;
 
-  if (userRole !== 'admin') {
+  if (userRole !== "admin") {
     return res.status(403).json({ error: "Unauthorized" });
   }
 
@@ -511,13 +504,12 @@ scoringRouter.post("/nightly-recompute", async (req: AuthedRequest, res) => {
       durationMs,
       results,
     });
-
   } catch (err) {
     logger.error("nightly_recompute_error", {
       error: (err as Error).message,
       partialResults: results,
     });
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: (err as Error).message,
       partialResults: results,
     });

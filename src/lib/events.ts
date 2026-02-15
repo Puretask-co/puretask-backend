@@ -37,13 +37,7 @@ export interface PublishEventInput {
  * Note: job_id is NOT NULL in the schema, so events without a jobId are logged but not stored in DB
  */
 export async function publishEvent(input: PublishEventInput): Promise<void> {
-  const {
-    jobId = null,
-    actorType = null,
-    actorId = null,
-    eventName,
-    payload = {},
-  } = input;
+  const { jobId = null, actorType = null, actorId = null, eventName, payload = {} } = input;
 
   const payloadJson = JSON.stringify(payload);
 
@@ -86,7 +80,7 @@ export async function publishEvent(input: PublishEventInput): Promise<void> {
   // n8n workflows triggered by events handle all communications
   // If n8n is not configured, notifications can still be sent via the notification service
   // which will use direct provider calls as fallback
-  
+
   // Legacy notification sending (disabled in favor of event-driven n8n architecture):
   // maybeSendNotifications(jobId, eventName, payload).catch((err) => {
   //   logger.error("event_notification_failed_non_blocking", {
@@ -142,10 +136,7 @@ async function maybeSendNotifications(
     }
 
     // Get job to find client/cleaner
-    const jobResult = await query<Job>(
-      `SELECT * FROM jobs WHERE id = $1`,
-      [jobId]
-    );
+    const jobResult = await query<Job>(`SELECT * FROM jobs WHERE id = $1`, [jobId]);
     const job = jobResult.rows[0];
     if (!job) return;
 
@@ -170,10 +161,9 @@ async function maybeSendNotifications(
     if (!targetUserId) return;
 
     // Get user contact info
-    const userResult = await query<{ email: string }>(
-      `SELECT email FROM users WHERE id = $1`,
-      [targetUserId]
-    );
+    const userResult = await query<{ email: string }>(`SELECT email FROM users WHERE id = $1`, [
+      targetUserId,
+    ]);
     const user = userResult.rows[0];
     if (!user) return;
 
@@ -234,10 +224,7 @@ export async function getJobEvents(jobId: string, limit: number = 100): Promise<
 /**
  * Get events by event type
  */
-export async function getEventsByType(
-  eventType: string,
-  limit: number = 100
-): Promise<JobEvent[]> {
+export async function getEventsByType(eventType: string, limit: number = 100): Promise<JobEvent[]> {
   const result = await query<JobEvent>(
     `
       SELECT *
@@ -254,10 +241,7 @@ export async function getEventsByType(
 /**
  * Get events by actor
  */
-export async function getEventsByActor(
-  actorId: string,
-  limit: number = 100
-): Promise<JobEvent[]> {
+export async function getEventsByActor(actorId: string, limit: number = 100): Promise<JobEvent[]> {
   const result = await query<JobEvent>(
     `
       SELECT *

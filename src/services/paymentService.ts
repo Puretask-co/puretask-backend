@@ -42,7 +42,7 @@ export interface CreateJobChargeResult {
 
 /**
  * Create a PaymentIntent for wallet top-up (buying credits)
- * 
+ *
  * Flow:
  * 1. Client calls POST /payments/credits with { credits: 500 }
  * 2. Backend creates PI with purpose='wallet_topup'
@@ -127,11 +127,11 @@ export async function createWalletTopupIntent(params: {
 
 /**
  * Create a PaymentIntent for direct job charge (pay at booking)
- * 
+ *
  * SURCHARGE: Clients who pay directly by card (instead of using wallet credits)
  * are charged an extra X% (configured via NON_CREDIT_SURCHARGE_PERCENT).
  * This incentivizes using wallet credits.
- * 
+ *
  * Flow:
  * 1. Client creates a job with paymentMode='card'
  * 2. Backend creates job row + PI with purpose='job_charge'
@@ -141,7 +141,7 @@ export async function createWalletTopupIntent(params: {
  *    a. Credits are minted to client's wallet (purchase)
  *    b. Credits are immediately escrowed for the job (job_escrow)
  * 4. Job is now paid and ready for cleaner
- * 
+ *
  * The extra % is pure revenue for PureTask, NOT extra credits.
  */
 export async function createJobPaymentIntent(params: {
@@ -156,10 +156,10 @@ export async function createJobPaymentIntent(params: {
   }
 
   const credits = job.credit_amount;
-  
+
   // Base price (what they'd pay if using wallet credits)
   const baseAmountCents = credits * env.CENTS_PER_CREDIT;
-  
+
   // Apply surcharge for direct card payment
   const surchargePercent = env.NON_CREDIT_SURCHARGE_PERCENT || 0;
   const multiplier = 1 + surchargePercent / 100;
@@ -171,9 +171,9 @@ export async function createJobPaymentIntent(params: {
     currency: env.PAYOUT_CURRENCY,
     metadata: {
       purpose: "job_charge",
-      credits: String(credits),                       // Credits that will be minted internally
-      base_amount_cents: String(baseAmountCents),     // What wallet users pay
-      surcharge_percent: String(surchargePercent),    // Extra % charged
+      credits: String(credits), // Credits that will be minted internally
+      base_amount_cents: String(baseAmountCents), // What wallet users pay
+      surcharge_percent: String(surchargePercent), // Extra % charged
       amount_cents_with_surcharge: String(amountCents), // Final charge
       clientId,
       jobId: job.id,
@@ -376,7 +376,10 @@ export async function createInvoicePaymentIntent(options: {
  * - Processes payment_intent.succeeded for both purposes
  * - Updates payment_intents status
  */
-export async function isObjectAlreadyProcessed(objectId: string, objectType: string): Promise<boolean> {
+export async function isObjectAlreadyProcessed(
+  objectId: string,
+  objectType: string
+): Promise<boolean> {
   const existing = await query<{ object_id: string }>(
     `
       SELECT object_id
@@ -412,7 +415,7 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
   // First, check idempotency using the new processed table (fast path)
   // Extract object ID safely (not all Stripe objects have id)
   const objectId = (event.data?.object as any)?.id || null;
-  
+
   const processedCheck = await query<{ id: string }>(
     `
       INSERT INTO stripe_events_processed (stripe_event_id, stripe_object_id, event_type, raw_payload)
@@ -458,7 +461,7 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
           });
           break;
         }
-        
+
         await handlePaymentIntentSucceeded(event as Stripe.PaymentIntentSucceededEvent);
         await markObjectProcessed(pi.id, "payment_intent");
         break;
@@ -478,7 +481,10 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
           break;
         }
         await handlePaymentIntentFailed(event as Stripe.PaymentIntentPaymentFailedEvent);
-        await markObjectProcessed((event as Stripe.PaymentIntentPaymentFailedEvent).data.object.id, "payment_intent");
+        await markObjectProcessed(
+          (event as Stripe.PaymentIntentPaymentFailedEvent).data.object.id,
+          "payment_intent"
+        );
         break;
 
       case "invoice.paid": {
@@ -536,7 +542,10 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       case "transfer.reversed": {
         const transfer = (event as Stripe.Event).data.object as { id: string };
         if (await isObjectAlreadyProcessed(transfer.id, "transfer")) {
-          logger.info("stripe_object_already_processed", { objectId: transfer.id, type: "transfer" });
+          logger.info("stripe_object_already_processed", {
+            objectId: transfer.id,
+            type: "transfer",
+          });
           break;
         }
         await handleTransferEvent(event);
@@ -551,27 +560,27 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
         });
     }
 
-      // Mark event as processed
-      await query(
-        `
+    // Mark event as processed
+    await query(
+      `
           UPDATE stripe_events
           SET processed = true,
               processed_at = NOW()
           WHERE stripe_event_id = $1
         `,
-        [event.id]
-      );
-    } catch (error) {
-      logger.error("stripe_event_processing_failed", {
-        error: (error as Error).message,
-        eventId: event.id,
-        eventType: event.type,
-      });
-      // Note: stripe_events_processed already marked, but event failed
-      // This is OK - the event will be retried but won't duplicate due to idempotency check
-      throw error;
-    }
+      [event.id]
+    );
+  } catch (error) {
+    logger.error("stripe_event_processing_failed", {
+      error: (error as Error).message,
+      eventId: event.id,
+      eventType: event.type,
+    });
+    // Note: stripe_events_processed already marked, but event failed
+    // This is OK - the event will be retried but won't duplicate due to idempotency check
+    throw error;
   }
+}
 
 /**
  * Handle payment_intent.succeeded for both:
@@ -802,8 +811,7 @@ async function handleInvoicePaid(event: Stripe.InvoicePaidEvent): Promise<void> 
 
   // Determine credits to grant; prefer metadata.credits or metadata.credits_per_cycle
   const rawCredits =
-    (invoice.metadata && (invoice.metadata.credits || invoice.metadata.credits_per_cycle)) ||
-    null;
+    (invoice.metadata && (invoice.metadata.credits || invoice.metadata.credits_per_cycle)) || null;
   const { env } = await import("../config/env");
   const credits = rawCredits ? Number(rawCredits) : env.SUBSCRIPTION_DEFAULT_CREDITS;
 
@@ -850,7 +858,10 @@ async function handleInvoicePaymentFailed(event: Stripe.InvoicePaymentFailedEven
  */
 async function handleChargeRefunded(event: Stripe.ChargeRefundedEvent): Promise<void> {
   const charge = event.data.object;
-  logger.info("charge_refunded_received", { chargeId: charge.id, paymentIntent: charge.payment_intent });
+  logger.info("charge_refunded_received", {
+    chargeId: charge.id,
+    paymentIntent: charge.payment_intent,
+  });
 
   const paymentIntentId = typeof charge.payment_intent === "string" ? charge.payment_intent : null;
   if (!paymentIntentId) {
@@ -858,7 +869,11 @@ async function handleChargeRefunded(event: Stripe.ChargeRefundedEvent): Promise<
     return;
   }
 
-  const paymentIntentRow = await query<{ job_id: string | null; client_id: string | null; purpose: string | null }>(
+  const paymentIntentRow = await query<{
+    job_id: string | null;
+    client_id: string | null;
+    purpose: string | null;
+  }>(
     `
       SELECT job_id, client_id, purpose
       FROM payment_intents
@@ -868,7 +883,11 @@ async function handleChargeRefunded(event: Stripe.ChargeRefundedEvent): Promise<
     [paymentIntentId]
   );
 
-  const { job_id: jobId = null, client_id: clientId = null, purpose = null } = paymentIntentRow.rows[0] || {};
+  const {
+    job_id: jobId = null,
+    client_id: clientId = null,
+    purpose = null,
+  } = paymentIntentRow.rows[0] || {};
 
   // Directly invoke refund processor (scaffolded). Uses stripe_events idempotency to avoid double work.
   const { processStripeRefund } = await import("./refundProcessor");
@@ -897,20 +916,29 @@ async function handleChargeRefunded(event: Stripe.ChargeRefundedEvent): Promise<
  */
 async function handleChargeDisputeEvent(event: Stripe.Event): Promise<void> {
   const dispute = event.data.object as Stripe.Dispute;
-  logger.info("charge_dispute_event", { disputeId: dispute.id, type: event.type, chargeId: dispute.charge });
+  logger.info("charge_dispute_event", {
+    disputeId: dispute.id,
+    type: event.type,
+    chargeId: dispute.charge,
+  });
 
   const chargeId = typeof dispute.charge === "string" ? dispute.charge : null;
   if (!chargeId) return;
 
   // Attempt to find payment_intent from charge (if included)
-  const paymentIntentId = typeof dispute.payment_intent === "string" ? dispute.payment_intent : null;
+  const paymentIntentId =
+    typeof dispute.payment_intent === "string" ? dispute.payment_intent : null;
 
   // Resolve job/client if possible
   let jobId: string | null = null;
   let clientId: string | null = null;
 
   if (paymentIntentId) {
-    const paymentIntentRow = await query<{ job_id: string | null; client_id: string | null; purpose: string | null }>(
+    const paymentIntentRow = await query<{
+      job_id: string | null;
+      client_id: string | null;
+      purpose: string | null;
+    }>(
       `
         SELECT job_id, client_id, purpose
         FROM payment_intents
@@ -1052,9 +1080,7 @@ async function handleTransferEvent(event: Stripe.Event): Promise<void> {
 /**
  * Get payment intent by job ID
  */
-export async function getPaymentIntentByJobId(
-  jobId: string
-): Promise<PaymentIntent | null> {
+export async function getPaymentIntentByJobId(jobId: string): Promise<PaymentIntent | null> {
   const result = await query<PaymentIntent>(
     `
       SELECT *
@@ -1084,7 +1110,13 @@ export async function hasActivePaymentIntentForJob(jobId: string): Promise<boole
   );
 
   return result.rows.some((pi) =>
-    ["requires_payment_method", "requires_confirmation", "requires_action", "processing", "succeeded"].includes(pi.status)
+    [
+      "requires_payment_method",
+      "requires_confirmation",
+      "requires_action",
+      "processing",
+      "succeeded",
+    ].includes(pi.status)
   );
 }
 

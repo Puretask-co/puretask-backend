@@ -16,11 +16,11 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
 // ============================================
 
 export const PAYOUT_CONFIG = {
-  DEFAULT_MINIMUM_CENTS: 2500,  // $25 minimum
+  DEFAULT_MINIMUM_CENTS: 2500, // $25 minimum
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_INTERVALS_MS: [
-    5 * 60 * 1000,      // 5 minutes
-    30 * 60 * 1000,     // 30 minutes
+    5 * 60 * 1000, // 5 minutes
+    30 * 60 * 1000, // 30 minutes
     2 * 60 * 60 * 1000, // 2 hours
   ],
   INSTANT_PAYOUT_FEE_PERCENT: 1.5,
@@ -72,9 +72,7 @@ export interface EligibleCleaner {
  * Get cleaners eligible for payout (met minimum threshold)
  */
 export async function getCleanersEligibleForPayout(): Promise<EligibleCleaner[]> {
-  const result = await query<EligibleCleaner>(
-    `SELECT * FROM cleaners_eligible_for_payout`
-  );
+  const result = await query<EligibleCleaner>(`SELECT * FROM cleaners_eligible_for_payout`);
   return result.rows;
 }
 
@@ -167,10 +165,7 @@ export async function reversePayout(params: {
     amount_cents: number;
     stripe_transfer_id: string | null;
     status: string;
-  }>(
-    `SELECT * FROM payouts WHERE id = $1`,
-    [payoutId]
-  );
+  }>(`SELECT * FROM payouts WHERE id = $1`, [payoutId]);
 
   const payout = payoutResult.rows[0];
   if (!payout) {
@@ -185,13 +180,10 @@ export async function reversePayout(params: {
   let stripeReversalId: string | null = null;
   if (payout.stripe_transfer_id) {
     try {
-      const reversal = await stripe.transfers.createReversal(
-        payout.stripe_transfer_id,
-        {
-          amount: payout.amount_cents,
-          description: `Reversal: ${reason}`,
-        }
-      );
+      const reversal = await stripe.transfers.createReversal(payout.stripe_transfer_id, {
+        amount: payout.amount_cents,
+        description: `Reversal: ${reason}`,
+      });
       stripeReversalId = reversal.id;
       logger.info("stripe_transfer_reversed", {
         transferId: payout.stripe_transfer_id,
@@ -228,10 +220,9 @@ export async function reversePayout(params: {
   );
 
   // Update payout status
-  await query(
-    `UPDATE payouts SET status = 'reversed', updated_at = NOW() WHERE id = $1`,
-    [payoutId]
-  );
+  await query(`UPDATE payouts SET status = 'reversed', updated_at = NOW() WHERE id = $1`, [
+    payoutId,
+  ]);
 
   // Deduct credits from cleaner (they got paid but we reversed it)
   await query(
@@ -298,10 +289,9 @@ export async function releaseDisputeHold(
   adjustmentId: string,
   resolution: "refund" | "release"
 ): Promise<void> {
-  const result = await query<PayoutAdjustment>(
-    `SELECT * FROM payout_adjustments WHERE id = $1`,
-    [adjustmentId]
-  );
+  const result = await query<PayoutAdjustment>(`SELECT * FROM payout_adjustments WHERE id = $1`, [
+    adjustmentId,
+  ]);
 
   const adjustment = result.rows[0];
   if (!adjustment) {
@@ -397,10 +387,7 @@ export async function processPayoutRetries(): Promise<{
   for (const item of pendingResult.rows) {
     try {
       // Mark as processing
-      await query(
-        `UPDATE payout_retry_queue SET status = 'processing' WHERE id = $1`,
-        [item.id]
-      );
+      await query(`UPDATE payout_retry_queue SET status = 'processing' WHERE id = $1`, [item.id]);
 
       if (!item.stripe_account_id) {
         throw new Error("No Stripe account ID");
@@ -444,10 +431,9 @@ export async function processPayoutRetries(): Promise<{
           `UPDATE payout_retry_queue SET status = 'failed', error_message = $2, updated_at = NOW() WHERE id = $1`,
           [item.id, (err as Error).message]
         );
-        await query(
-          `UPDATE payouts SET status = 'failed', updated_at = NOW() WHERE id = $1`,
-          [item.payout_id]
-        );
+        await query(`UPDATE payouts SET status = 'failed', updated_at = NOW() WHERE id = $1`, [
+          item.payout_id,
+        ]);
         exhausted++;
 
         logger.error("payout_retry_exhausted", {
@@ -506,9 +492,7 @@ export async function processPayoutRetries(): Promise<{
 /**
  * Process instant payout for cleaner (with fee)
  */
-export async function processInstantPayout(
-  cleanerId: string
-): Promise<{
+export async function processInstantPayout(cleanerId: string): Promise<{
   transferId: string;
   amountCents: number;
   feeCents: number;
@@ -518,10 +502,9 @@ export async function processInstantPayout(
   const profileResult = await query<{
     stripe_account_id: string | null;
     instant_payout_enabled: boolean;
-  }>(
-    `SELECT stripe_account_id, instant_payout_enabled FROM cleaner_profiles WHERE user_id = $1`,
-    [cleanerId]
-  );
+  }>(`SELECT stripe_account_id, instant_payout_enabled FROM cleaner_profiles WHERE user_id = $1`, [
+    cleanerId,
+  ]);
 
   const profile = profileResult.rows[0];
   if (!profile?.stripe_account_id) {
@@ -580,4 +563,3 @@ export async function processInstantPayout(
     netAmountCents,
   };
 }
-

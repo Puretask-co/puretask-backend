@@ -70,7 +70,7 @@ async function autoApproveJob(job: ExpirableJob): Promise<void> {
     // Release credits to cleaner
     if (job.cleaner_id && job.credit_amount > 0) {
       await releaseJobCreditsToCleaner(job.cleaner_id, job.id, job.credit_amount);
-      
+
       // Create payout record
       const jobForPayout = {
         id: job.id,
@@ -156,4 +156,3 @@ if (require.main === module) {
       process.exit(1);
     });
 }
-

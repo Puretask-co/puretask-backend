@@ -5,7 +5,14 @@
 // ENUM TYPES
 // -------------------------
 
-export type UserRole = "client" | "cleaner" | "admin" | "super_admin";
+export type UserRole =
+  | "client"
+  | "cleaner"
+  | "admin"
+  | "super_admin"
+  | "support_agent"
+  | "support_lead"
+  | "ops_finance";
 
 export type JobStatus =
   | "requested"
@@ -351,8 +358,8 @@ export interface CleanerAvailability {
   id: string;
   cleaner_id: string;
   day_of_week: number; // 0=Sunday, 1=Monday, etc.
-  start_time: string;  // HH:MM format
-  end_time: string;    // HH:MM format
+  start_time: string; // HH:MM format
+  end_time: string; // HH:MM format
   is_available: boolean;
   created_at: string;
   updated_at: string;

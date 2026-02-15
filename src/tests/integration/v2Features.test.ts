@@ -2,7 +2,7 @@
 // V2 FEATURES: Tests for Properties, Teams, Calendar, AI, Goals
 // Tests that V2 routes are enabled and working
 
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";
@@ -69,8 +69,7 @@ describe("V2 Features Integration Tests", () => {
     it("should create a property", async () => {
       const res = await request(app)
         .post("/v2/properties")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role)
+        .set("Authorization", `Bearer ${client.token}`)
         .send({
           label: "Test Home",
           address_line1: "123 Test Street",
@@ -94,8 +93,7 @@ describe("V2 Features Integration Tests", () => {
     it("should list client properties", async () => {
       const res = await request(app)
         .get("/v2/properties")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.properties).toBeDefined();
@@ -111,8 +109,7 @@ describe("V2 Features Integration Tests", () => {
 
       const res = await request(app)
         .get(`/v2/properties/${propertyId}`)
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.property).toBeDefined();
@@ -124,8 +121,7 @@ describe("V2 Features Integration Tests", () => {
 
       const res = await request(app)
         .patch(`/v2/properties/${propertyId}`)
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role)
+        .set("Authorization", `Bearer ${client.token}`)
         .send({
           label: "Updated Test Home",
           bedrooms: 4,
@@ -141,8 +137,7 @@ describe("V2 Features Integration Tests", () => {
 
       const res = await request(app)
         .get(`/v2/properties/${propertyId}/suggestions`)
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.suggestions).toBeDefined();
@@ -154,8 +149,7 @@ describe("V2 Features Integration Tests", () => {
     it("should create a team", async () => {
       const res = await request(app)
         .post("/v2/teams")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role)
+        .set("Authorization", `Bearer ${cleaner.token}`)
         .send({
           name: "Test Cleaning Team",
           description: "A test team",
@@ -174,8 +168,7 @@ describe("V2 Features Integration Tests", () => {
 
       const res = await request(app)
         .get("/v2/teams/my")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role);
+        .set("Authorization", `Bearer ${cleaner.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.team).toBeDefined();
@@ -187,8 +180,7 @@ describe("V2 Features Integration Tests", () => {
 
       const res = await request(app)
         .get(`/v2/teams/${teamId}/stats`)
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role);
+        .set("Authorization", `Bearer ${cleaner.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.stats).toBeDefined();
@@ -199,8 +191,7 @@ describe("V2 Features Integration Tests", () => {
     it("should get cleaner goals", async () => {
       const res = await request(app)
         .get("/v2/cleaner/goals")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role);
+        .set("Authorization", `Bearer ${cleaner.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.goals).toBeDefined();
@@ -210,8 +201,7 @@ describe("V2 Features Integration Tests", () => {
     it("should get route suggestions", async () => {
       const res = await request(app)
         .get("/v2/cleaner/route-suggestions")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role);
+        .set("Authorization", `Bearer ${cleaner.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.suggestions).toBeDefined();
@@ -220,13 +210,15 @@ describe("V2 Features Integration Tests", () => {
     it("should get reliability breakdown", async () => {
       const res = await request(app)
         .get("/v2/cleaner/reliability-breakdown")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role);
+        .set("Authorization", `Bearer ${cleaner.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.breakdown).toBeDefined();
       // breakdown should have current_score (snake_case) from the service
-      expect(res.body.breakdown.current_score !== undefined || res.body.breakdown.currentScore !== undefined).toBe(true);
+      expect(
+        res.body.breakdown.current_score !== undefined ||
+          res.body.breakdown.currentScore !== undefined
+      ).toBe(true);
       expect(res.body.breakdown.tier).toBeDefined();
     });
   });
@@ -235,8 +227,7 @@ describe("V2 Features Integration Tests", () => {
     it("should get Google connect URL", async () => {
       const res = await request(app)
         .get("/v2/calendar/google/connect")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       // Should return URL or error about missing Google config
       expect([200, 400, 500]).toContain(res.status);
@@ -245,8 +236,7 @@ describe("V2 Features Integration Tests", () => {
     it("should get calendar connection status", async () => {
       const res = await request(app)
         .get("/v2/calendar/connection")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.connection).toBeDefined();
@@ -257,8 +247,7 @@ describe("V2 Features Integration Tests", () => {
     it("should generate checklist (with fallback if no OpenAI key)", async () => {
       const res = await request(app)
         .post("/v2/ai/checklist")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role)
+        .set("Authorization", `Bearer ${client.token}`)
         .send({
           bedrooms: 3,
           bathrooms: 2,
@@ -276,8 +265,7 @@ describe("V2 Features Integration Tests", () => {
     it("should generate dispute suggestion (admin only)", async () => {
       const res = await request(app)
         .post("/v2/ai/dispute-suggestion")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .send({
           job_id: "00000000-0000-0000-0000-000000000000",
           client_complaint: "Test complaint",
@@ -290,8 +278,7 @@ describe("V2 Features Integration Tests", () => {
     it("should reject non-admin dispute suggestion requests", async () => {
       const res = await request(app)
         .post("/v2/ai/dispute-suggestion")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role)
+        .set("Authorization", `Bearer ${client.token}`)
         .send({
           job_id: "00000000-0000-0000-0000-000000000000",
           client_complaint: "Test complaint",
@@ -303,10 +290,7 @@ describe("V2 Features Integration Tests", () => {
 
   describe("Backward Compatibility - V1 Routes", () => {
     it("should still have V1 /jobs routes working", async () => {
-      const res = await request(app)
-        .get("/jobs")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+      const res = await request(app).get("/jobs").set("Authorization", `Bearer ${client.token}`);
 
       // Should not be 404 (route exists)
       expect(res.status).not.toBe(404);
@@ -315,8 +299,7 @@ describe("V2 Features Integration Tests", () => {
     it("should still have V1 /cleaner routes working", async () => {
       const res = await request(app)
         .get("/cleaner/reliability")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role);
+        .set("Authorization", `Bearer ${cleaner.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.reliability).toBeDefined();
@@ -375,4 +358,3 @@ describe("V2 Features Integration Tests", () => {
     });
   });
 });
-

@@ -180,7 +180,7 @@
 | 1.1 Fix npm/Vitest | 2025-02-12 | - | Blocked: npm install fails (MODULE_NOT_FOUND in npm). User must run `npm install -g npm@latest` or reinstall Node. |
 | 1.2 Sync git | - | - | User action: close Cursor, run git pull/push from external terminal |
 | 1.3 Fix V4 500s | 2025-02-12 | 2025-02-12 | Analytics & manager switched from legacy authMiddleware to jwtAuthMiddleware. Works with JWT (prod) and x-user-id (test). |
-| 1.4 Fix V4 tests | - | - | Pending – needs npm run test to pass |
+| 1.4 Fix V4 tests | 2025-02-12 | - | In progress: migrated Jest→Vitest, added vitest dep, 72 tests pass. Remaining: metrics module, schema mismatches, jest refs in externalServices |
 | 2.1 Add CI | 2025-02-12 | 2025-02-12 | `.github/workflows/test.yml` created. Runs typecheck, lint, test. Add DATABASE_URL secret for tests. |
 | 2.2 Update MASTER_CHECKLIST | 2025-02-12 | 2025-02-12 | Version overview and key tasks marked complete |
 | 2.3 Reduce ESLint | 2025-02-12 | - | Partial: removed unused imports (index, aiService, jobsService), fixed workers index type. 191 warnings remain (mostly `any`) |

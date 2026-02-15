@@ -204,10 +204,7 @@ export async function calculateRushFee(
 /**
  * Mark job as rush and apply fee
  */
-export async function applyRushFee(
-  jobId: string,
-  rushFee: number
-): Promise<void> {
+export async function applyRushFee(jobId: string, rushFee: number): Promise<void> {
   await query(
     `UPDATE jobs SET is_rush = true, rush_fee_credits = $2, updated_at = NOW() WHERE id = $1`,
     [jobId, rushFee]
@@ -283,9 +280,7 @@ export async function createSubscription(params: {
 /**
  * Get client's subscriptions
  */
-export async function getClientSubscriptions(
-  clientId: string
-): Promise<CleaningSubscription[]> {
+export async function getClientSubscriptions(clientId: string): Promise<CleaningSubscription[]> {
   const result = await query<CleaningSubscription>(
     `SELECT * FROM cleaning_subscriptions WHERE client_id = $1 ORDER BY created_at DESC`,
     [clientId]
@@ -330,10 +325,7 @@ export async function updateSubscriptionStatus(
 /**
  * Cancel subscription
  */
-export async function cancelSubscription(
-  subscriptionId: string,
-  clientId: string
-): Promise<void> {
+export async function cancelSubscription(subscriptionId: string, clientId: string): Promise<void> {
   await query(
     `
       UPDATE cleaning_subscriptions 
@@ -430,4 +422,3 @@ function calculateNextJobDate(
 
   return next;
 }
-

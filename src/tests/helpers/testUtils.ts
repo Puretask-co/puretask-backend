@@ -4,6 +4,7 @@
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";
+import { addLedgerEntry, getUserBalance as getCreditBalance } from "../../services/creditsService";
 
 // ============================================
 // Types
@@ -46,28 +47,25 @@ export async function createTestClient(): Promise<TestUser> {
   const email = uniqueEmail("client");
   const password = "testpassword123";
 
-  const res = await request(app)
-    .post("/auth/register")
-    .send({
-      email,
-      password,
-      role: "client",
-    });
+  const res = await request(app).post("/auth/register").send({
+    email,
+    password,
+    role: "client",
+  });
 
   if (res.status !== 201) {
     throw new Error(`Failed to create test client: ${res.status} ${JSON.stringify(res.body)}`);
   }
 
   const userId = res.body.user.id;
-  
+
   // Verify user was actually created in database (test isolation)
-  const userCheck = await query<{ id: string }>(
-    `SELECT id FROM users WHERE id = $1`,
-    [userId]
-  );
-  
+  const userCheck = await query<{ id: string }>(`SELECT id FROM users WHERE id = $1`, [userId]);
+
   if (userCheck.rows.length === 0) {
-    throw new Error(`User ${userId} was not found in database after registration - transaction issue`);
+    throw new Error(
+      `User ${userId} was not found in database after registration - transaction issue`
+    );
   }
 
   return {
@@ -85,36 +83,33 @@ export async function createTestCleaner(): Promise<TestUser> {
   const email = uniqueEmail("cleaner");
   const password = "testpassword123";
 
-  const res = await request(app)
-    .post("/auth/register")
-    .send({
-      email,
-      password,
-      role: "cleaner",
-    });
+  const res = await request(app).post("/auth/register").send({
+    email,
+    password,
+    role: "cleaner",
+  });
 
   if (res.status !== 201) {
     throw new Error(`Failed to create test cleaner: ${res.status} ${JSON.stringify(res.body)}`);
   }
 
   const userId = res.body.user.id;
-  
+
   // Verify user was actually created in database (test isolation)
-  const userCheck = await query<{ id: string }>(
-    `SELECT id FROM users WHERE id = $1`,
-    [userId]
-  );
-  
+  const userCheck = await query<{ id: string }>(`SELECT id FROM users WHERE id = $1`, [userId]);
+
   if (userCheck.rows.length === 0) {
-    throw new Error(`User ${userId} was not found in database after registration - transaction issue`);
+    throw new Error(
+      `User ${userId} was not found in database after registration - transaction issue`
+    );
   }
-  
+
   // Verify cleaner_profile was created
   const profileCheck = await query<{ user_id: string }>(
     `SELECT user_id FROM cleaner_profiles WHERE user_id = $1`,
     [userId]
   );
-  
+
   if (profileCheck.rows.length === 0) {
     // This is a warning, not an error - profile might be created lazily
     console.warn(`Cleaner profile not found for user ${userId} - may be created later`);
@@ -135,7 +130,7 @@ export async function createTestAdmin(): Promise<TestUser> {
   const email = uniqueEmail("admin");
   // Note: In real tests, you'd hash the password properly
   // For simplicity, we'll create via DB and then login
-  
+
   const bcrypt = await import("bcryptjs");
   const passwordHash = await bcrypt.hash("adminpassword123", 10);
 
@@ -212,40 +207,28 @@ export async function createTestJob(
 // ============================================
 
 /**
- * Add credits to a user's account (directly in DB)
- * Note: credit_ledger uses 'amount' and 'direction' columns, not 'delta_credits'
- * Ensures user exists before adding credits to prevent FK violations
+ * Add credits to a user's account (uses creditsService)
+ * credit_ledger uses delta_credits and reason
  */
 export async function addCreditsToUser(userId: string, amount: number): Promise<void> {
-  // First verify user exists
-  const userCheck = await query<{ id: string }>(
-    `SELECT id FROM users WHERE id = $1`,
-    [userId]
-  );
-  
+  const userCheck = await query<{ id: string }>(`SELECT id FROM users WHERE id = $1`, [userId]);
+
   if (userCheck.rows.length === 0) {
     throw new Error(`Cannot add credits: user ${userId} does not exist in users table`);
   }
-  
-  await query(
-    `
-      INSERT INTO credit_ledger (user_id, amount, direction, reason)
-      VALUES ($1, $2, 'credit', 'purchase')
-    `,
-    [userId, amount]
-  );
+
+  await addLedgerEntry({
+    userId,
+    deltaCredits: amount,
+    reason: "adjustment",
+  });
 }
 
 /**
- * Get user's credit balance
- * Note: credit_ledger uses 'amount' and 'direction' columns, not 'delta_credits'
+ * Get user's credit balance (uses creditsService)
  */
 export async function getUserBalance(userId: string): Promise<number> {
-  const result = await query<{ balance: string }>(
-    `SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0) as balance FROM credit_ledger WHERE user_id = $1`,
-    [userId]
-  );
-  return Number(result.rows[0]?.balance || 0);
+  return getCreditBalance(userId);
 }
 
 // ============================================
@@ -261,15 +244,12 @@ export async function transitionJobTo(
   cleanerId?: string
 ): Promise<void> {
   const updates: string[] = [`status = '${targetStatus}'`, `updated_at = NOW()`];
-  
+
   if (cleanerId) {
     updates.push(`cleaner_id = '${cleanerId}'`);
   }
 
-  await query(
-    `UPDATE jobs SET ${updates.join(", ")} WHERE id = $1`,
-    [jobId]
-  );
+  await query(`UPDATE jobs SET ${updates.join(", ")} WHERE id = $1`, [jobId]);
 }
 
 // ============================================
@@ -300,13 +280,19 @@ export async function cleanupTestData(): Promise<void> {
       await query(cleanupQuery);
     } catch (error: any) {
       // Ignore errors about missing tables or columns (schema might not be fully migrated)
-      if (error?.code === '42P01' || error?.code === '42703') {
+      if (error?.code === "42P01" || error?.code === "42703") {
         // Table or column doesn't exist - skip this cleanup step
         continue;
       }
       // Ignore connection errors during cleanup (non-critical)
-      if (error?.code === 'ECONNRESET' || error?.code === 'ECONNREFUSED' || error?.message?.includes('socket')) {
-        console.warn(`Cleanup query failed due to connection issue (non-critical): ${error.message}`);
+      if (
+        error?.code === "ECONNRESET" ||
+        error?.code === "ECONNREFUSED" ||
+        error?.message?.includes("socket")
+      ) {
+        console.warn(
+          `Cleanup query failed due to connection issue (non-critical): ${error.message}`
+        );
         continue;
       }
       // Re-throw other errors
@@ -323,15 +309,12 @@ export async function cleanupTestData(): Promise<void> {
  * Assert job is in expected status
  */
 export async function assertJobStatus(jobId: string, expectedStatus: string): Promise<void> {
-  const result = await query<{ status: string }>(
-    `SELECT status FROM jobs WHERE id = $1`,
-    [jobId]
-  );
-  
+  const result = await query<{ status: string }>(`SELECT status FROM jobs WHERE id = $1`, [jobId]);
+
   if (result.rows.length === 0) {
     throw new Error(`Job ${jobId} not found`);
   }
-  
+
   if (result.rows[0].status !== expectedStatus) {
     throw new Error(`Expected job status '${expectedStatus}', got '${result.rows[0].status}'`);
   }
@@ -354,13 +337,16 @@ export async function assertCreditLedgerEntry(
     `,
     [userId, jobId, expectedReason]
   );
-  
+
   if (result.rows.length === 0) {
-    throw new Error(`Credit ledger entry not found for user ${userId}, job ${jobId}, reason ${expectedReason}`);
+    throw new Error(
+      `Credit ledger entry not found for user ${userId}, job ${jobId}, reason ${expectedReason}`
+    );
   }
-  
+
   if (expectedAmount !== undefined && result.rows[0].delta_credits !== expectedAmount) {
-    throw new Error(`Expected credit amount ${expectedAmount}, got ${result.rows[0].delta_credits}`);
+    throw new Error(
+      `Expected credit amount ${expectedAmount}, got ${result.rows[0].delta_credits}`
+    );
   }
 }
-

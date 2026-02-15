@@ -83,7 +83,9 @@ premiumRouter.get("/boosts/active", async (req: AuthedRequest, res: Response) =>
     res.json({ boost });
   } catch (error) {
     logger.error("get_active_boost_failed", { error: (error as Error).message });
-    res.status(500).json({ error: { code: "GET_BOOST_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_BOOST_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -189,7 +191,9 @@ premiumRouter.post(
       res.json(result);
     } catch (error) {
       logger.error("calculate_rush_failed", { error: (error as Error).message });
-      res.status(500).json({ error: { code: "CALCULATE_RUSH_FAILED", message: (error as Error).message } });
+      res
+        .status(500)
+        .json({ error: { code: "CALCULATE_RUSH_FAILED", message: (error as Error).message } });
     }
   }
 );
@@ -292,7 +296,9 @@ premiumRouter.get("/subscriptions", async (req: AuthedRequest, res: Response) =>
     res.json({ subscriptions });
   } catch (error) {
     logger.error("get_subscriptions_failed", { error: (error as Error).message });
-    res.status(500).json({ error: { code: "GET_SUBSCRIPTIONS_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_SUBSCRIPTIONS_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -391,7 +397,9 @@ premiumRouter.delete("/subscriptions/:id", async (req: AuthedRequest, res: Respo
     res.json({ cancelled: true });
   } catch (error) {
     logger.error("cancel_subscription_failed", { error: (error as Error).message });
-    res.status(500).json({ error: { code: "CANCEL_SUBSCRIPTION_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "CANCEL_SUBSCRIPTION_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -450,7 +458,9 @@ premiumRouter.get("/referrals/stats", async (req: AuthedRequest, res: Response) 
     res.json({ stats });
   } catch (error) {
     logger.error("get_referral_stats_failed", { error: (error as Error).message });
-    res.status(500).json({ error: { code: "GET_STATS_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_STATS_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -490,7 +500,9 @@ premiumRouter.post(
       res.json(result);
     } catch (error) {
       logger.error("validate_code_failed", { error: (error as Error).message });
-      res.status(500).json({ error: { code: "VALIDATE_FAILED", message: (error as Error).message } });
+      res
+        .status(500)
+        .json({ error: { code: "VALIDATE_FAILED", message: (error as Error).message } });
     }
   }
 );
@@ -514,9 +526,10 @@ premiumRouter.get("/referrals/leaderboard", async (_req: AuthedRequest, res: Res
     res.json({ leaderboard });
   } catch (error) {
     logger.error("get_leaderboard_failed", { error: (error as Error).message });
-    res.status(500).json({ error: { code: "GET_LEADERBOARD_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_LEADERBOARD_FAILED", message: (error as Error).message } });
   }
 });
 
 export default premiumRouter;
-

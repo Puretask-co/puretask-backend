@@ -72,13 +72,7 @@ export async function getCleanerClients(
   cleanerId: string,
   filters: ClientListFilters = {}
 ): Promise<{ clients: CleanerClient[]; total: number }> {
-  const {
-    sortBy = "most_recent",
-    search,
-    favoriteOnly = false,
-    limit = 50,
-    offset = 0,
-  } = filters;
+  const { sortBy = "most_recent", search, favoriteOnly = false, limit = 50, offset = 0 } = filters;
 
   // Build WHERE clause
   const conditions: string[] = ["cleaner_id = $1"];
@@ -322,10 +316,7 @@ export async function upsertCleanerClientNote(
   return result.rows[0];
 }
 
-export async function toggleClientFavorite(
-  cleanerId: string,
-  clientId: string
-): Promise<boolean> {
+export async function toggleClientFavorite(cleanerId: string, clientId: string): Promise<boolean> {
   // Verify the cleaner has worked with this client
   const relationship = await query<{ exists: boolean }>(
     `
@@ -386,4 +377,3 @@ export async function validateCleanerClientRelationship(
 
   return result.rows[0]?.exists ?? false;
 }
-

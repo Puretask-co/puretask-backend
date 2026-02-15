@@ -19,14 +19,14 @@ export interface AdminDashboardStats {
     amount: number;
   }[];
   systemHealth: {
-    status: 'healthy' | 'warning' | 'critical';
+    status: "healthy" | "warning" | "critical";
     uptime: number;
     lastCheck: string;
     issues: string[];
   };
   alerts: {
     id: string;
-    type: 'warning' | 'error' | 'info';
+    type: "warning" | "error" | "info";
     message: string;
     timestamp: string;
   }[];
@@ -79,7 +79,7 @@ export interface CleanerManagementItem {
   averageRating: number;
   totalJobs: number;
   totalEarnings: number;
-  status: 'active' | 'inactive' | 'suspended';
+  status: "active" | "inactive" | "suspended";
   verifiedBadge: boolean;
   instantBookEnabled: boolean;
   specialtyTags: string[];
@@ -99,7 +99,7 @@ export interface ClientManagementItem {
   totalBookings: number;
   totalSpent: number;
   creditBalance: number;
-  status: 'active' | 'inactive' | 'flagged';
+  status: "active" | "inactive" | "flagged";
   riskFlags: string[];
   createdAt: string;
   lastBookingAt?: string;
@@ -176,7 +176,7 @@ export interface RiskManagementData {
     flags: {
       type: string;
       reason: string;
-      severity: 'low' | 'medium' | 'high';
+      severity: "low" | "medium" | "high";
       createdAt: string;
     }[];
     totalBookings: number;
@@ -189,7 +189,7 @@ export interface RiskManagementData {
     flags: {
       type: string;
       reason: string;
-      severity: 'low' | 'medium' | 'high';
+      severity: "low" | "medium" | "high";
       createdAt: string;
     }[];
     reliabilityScore: number;
@@ -287,7 +287,7 @@ export interface NotificationTemplate {
 export interface PricingRule {
   id: string;
   name: string;
-  type: 'multiplier' | 'fixed_adjustment' | 'percentage_discount';
+  type: "multiplier" | "fixed_adjustment" | "percentage_discount";
   value: number;
   conditions: {
     cleaningType?: string[];
@@ -318,14 +318,13 @@ export interface SupportTicket {
   userId: string;
   userName: string;
   userEmail: string;
-  userType: 'client' | 'cleaner';
+  userType: "client" | "cleaner";
   subject: string;
   description: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: "open" | "in_progress" | "resolved" | "closed";
+  priority: "low" | "medium" | "high" | "urgent";
   assignedTo?: string;
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
 }
-

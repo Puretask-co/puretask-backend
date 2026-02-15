@@ -3,7 +3,7 @@
 
 import { query } from "../../db/client";
 import { logger } from "../../lib/logger";
-import { CancellationType, CancellationActor, TimeBucket } from '../types';
+import { CancellationType, CancellationActor, TimeBucket } from "../types";
 
 // ============================================
 // Types
@@ -103,7 +103,7 @@ export async function insertCancellationEvent(
 
 /**
  * Task 4.2: db.credits.applyCancellation({...})
- * 
+ *
  * Handles all credit movements for a cancellation:
  * - Refund credits to client
  * - Compensation credits to cleaner
@@ -120,14 +120,8 @@ export async function applyCancellationCredits(data: {
   platformCompCredits: number;
   bonusCreditsToClient?: number;
 }): Promise<void> {
-  const {
-    jobId,
-    clientId,
-    cleanerId,
-    refundCredits,
-    cleanerCompCredits,
-    bonusCreditsToClient,
-  } = data;
+  const { jobId, clientId, cleanerId, refundCredits, cleanerCompCredits, bonusCreditsToClient } =
+    data;
 
   // Refund credits to client
   if (refundCredits > 0) {
@@ -175,10 +169,9 @@ export async function applyCancellationCredits(data: {
   }
 
   // Release any remaining escrow (handled by job status update)
-  await query(
-    `UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1`,
-    [String(jobId)]
-  );
+  await query(`UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [
+    String(jobId),
+  ]);
 }
 
 // ============================================
@@ -212,10 +205,7 @@ export async function getClientGraceRemaining(clientId: number): Promise<number>
 /**
  * Use a grace cancellation for a client
  */
-export async function useGraceCancellation(
-  clientId: number,
-  jobId?: number
-): Promise<void> {
+export async function useGraceCancellation(clientId: number, jobId?: number): Promise<void> {
   await query(
     `UPDATE client_profiles
      SET grace_cancellations_used = COALESCE(grace_cancellations_used, 0) + 1, updated_at = NOW()
@@ -310,10 +300,9 @@ export async function getCleanerCancellationStats(
  * Mark a job as client no-show
  */
 export async function markClientNoShow(jobId: number): Promise<void> {
-  await query(
-    `UPDATE jobs SET status = 'no_show_client', updated_at = NOW() WHERE id = $1`,
-    [String(jobId)]
-  );
+  await query(`UPDATE jobs SET status = 'no_show_client', updated_at = NOW() WHERE id = $1`, [
+    String(jobId),
+  ]);
 
   logger.info("job_marked_client_no_show", { jobId });
 }
@@ -322,11 +311,9 @@ export async function markClientNoShow(jobId: number): Promise<void> {
  * Mark a job as cleaner no-show
  */
 export async function markCleanerNoShow(jobId: number): Promise<void> {
-  await query(
-    `UPDATE jobs SET status = 'no_show_cleaner', updated_at = NOW() WHERE id = $1`,
-    [String(jobId)]
-  );
+  await query(`UPDATE jobs SET status = 'no_show_cleaner', updated_at = NOW() WHERE id = $1`, [
+    String(jobId),
+  ]);
 
   logger.info("job_marked_cleaner_no_show", { jobId });
 }
-

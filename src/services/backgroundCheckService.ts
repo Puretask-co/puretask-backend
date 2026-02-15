@@ -21,7 +21,7 @@ const CHECKR_CONFIG = {
 // Types
 // ============================================
 
-export type BackgroundCheckStatus = 
+export type BackgroundCheckStatus =
   | "not_started"
   | "pending"
   | "processing"
@@ -94,15 +94,14 @@ export async function initiateBackgroundCheck(
   );
 
   if (existingResult.rows.length > 0) {
-    throw Object.assign(
-      new Error("Background check already in progress or valid"),
-      { statusCode: 400 }
-    );
+    throw Object.assign(new Error("Background check already in progress or valid"), {
+      statusCode: 400,
+    });
   }
 
   // Create Checkr candidate and report (placeholder - implement actual API call)
   let providerId: string | null = null;
-  
+
   if (CHECKR_CONFIG.API_KEY) {
     try {
       // Example Checkr API call (you'd use their actual SDK or API)
@@ -134,14 +133,13 @@ export async function initiateBackgroundCheck(
       //     package: 'tasker_standard', // Your configured package
       //   }),
       // });
-      
+
       providerId = `checkr_${Date.now()}`; // Placeholder
     } catch (err) {
       logger.error("checkr_api_failed", { error: (err as Error).message });
-      throw Object.assign(
-        new Error("Failed to initiate background check with provider"),
-        { statusCode: 500 }
-      );
+      throw Object.assign(new Error("Failed to initiate background check with provider"), {
+        statusCode: 500,
+      });
     }
   } else {
     // Mock mode for development
@@ -217,8 +215,9 @@ export async function getBackgroundCheckStatus(cleanerId: string): Promise<{
   }
 
   const check = result.rows[0];
-  const isValid = check.status === "clear" && 
-    check.expires_at !== null && 
+  const isValid =
+    check.status === "clear" &&
+    check.expires_at !== null &&
     new Date(check.expires_at) > new Date();
 
   return {
@@ -298,7 +297,7 @@ async function handleReportCompleted(data: Record<string, unknown>): Promise<voi
     [
       check.id,
       newStatus,
-      data.report_url as string || null,
+      (data.report_url as string) || null,
       JSON.stringify({ checkrResult: result, checkrStatus: status }),
     ]
   );
@@ -441,12 +440,14 @@ export async function adminUpdateCheckStatus(
 /**
  * Get cleaners needing background checks
  */
-export async function getCleanersNeedingChecks(): Promise<Array<{
-  cleaner_id: string;
-  email: string;
-  status: string;
-  last_check_date: string | null;
-}>> {
+export async function getCleanersNeedingChecks(): Promise<
+  Array<{
+    cleaner_id: string;
+    email: string;
+    status: string;
+    last_check_date: string | null;
+  }>
+> {
   const result = await query<{
     cleaner_id: string;
     email: string;
@@ -523,4 +524,3 @@ export async function getBackgroundCheckStats(): Promise<{
     expiringSoon: Number(row?.expiring_soon || 0),
   };
 }
-

@@ -33,8 +33,8 @@ PureTask Backend API - Uber-style cleaning marketplace built with Node.js, TypeS
 
 4. **Run database migrations**
    ```bash
-   # Migrations are in DB/migrations/
-   # Run them against your database
+   npm run db:migrate
+   # Or for test DB: npm run db:setup:test
    ```
 
 5. **Start development server**
@@ -89,6 +89,10 @@ npm run typecheck
 
 # Linting
 npm run lint
+
+# Format code (Prettier)
+npm run format
+npm run format:check
 ```
 
 ## API Documentation
@@ -210,10 +214,12 @@ npm run worker:payout-weekly
 
 ## Contributing
 
+See [docs/active/CONTRIBUTING.md](docs/active/CONTRIBUTING.md). Quick checklist:
+
 1. Create a feature branch
 2. Make your changes
 3. Write/update tests
-4. Run `npm test` and `npm run lint`
+4. Run `npm test`, `npm run lint`, `npm run format:check`, `npm run typecheck`
 5. Submit a pull request
 
 ## License

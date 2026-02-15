@@ -71,7 +71,7 @@ analyticsRouter.get("/dashboard", ...requireAdmin, async (req: JWTAuthedRequest,
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-}));
+});
 
 // ============================================
 // Revenue
@@ -96,18 +96,22 @@ analyticsRouter.get("/dashboard", ...requireAdmin, async (req: JWTAuthedRequest,
  *       200:
  *         description: Revenue trend data
  */
-analyticsRouter.get("/revenue/trend", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
-  try {
-    const timeRange = parseTimeRange(req.query);
-    const trend = await getRevenueTrend(timeRange);
-    res.json({ timeRange, trend });
-  } catch (error) {
-    logger.error("analytics_revenue_trend_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
-    });
+analyticsRouter.get(
+  "/revenue/trend",
+  ...requireAdmin,
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const timeRange = parseTimeRange(req.query);
+      const trend = await getRevenueTrend(timeRange);
+      res.json({ timeRange, trend });
+    } catch (error) {
+      logger.error("analytics_revenue_trend_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
+      });
+    }
   }
-}));
+);
 
 /**
  * @swagger
@@ -134,19 +138,23 @@ analyticsRouter.get("/revenue/trend", ...requireAdmin, async (req: JWTAuthedRequ
  *       200:
  *         description: Revenue by period
  */
-analyticsRouter.get("/revenue/by-period", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
-  try {
-    const timeRange = parseTimeRange(req.query);
-    const groupBy = (req.query.groupBy as "day" | "week" | "month") || "day";
-    const data = await getRevenueByPeriod(groupBy, timeRange);
-    res.json({ timeRange, groupBy, data });
-  } catch (error) {
-    logger.error("analytics_revenue_period_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
-    });
+analyticsRouter.get(
+  "/revenue/by-period",
+  ...requireAdmin,
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const timeRange = parseTimeRange(req.query);
+      const groupBy = (req.query.groupBy as "day" | "week" | "month") || "day";
+      const data = await getRevenueByPeriod(groupBy, timeRange);
+      res.json({ timeRange, groupBy, data });
+    } catch (error) {
+      logger.error("analytics_revenue_period_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
+      });
+    }
   }
-}));
+);
 
 // ============================================
 // Jobs
@@ -171,18 +179,22 @@ analyticsRouter.get("/revenue/by-period", ...requireAdmin, async (req: JWTAuthed
  *       200:
  *         description: Job trend data
  */
-analyticsRouter.get("/jobs/trend", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
-  try {
-    const timeRange = parseTimeRange(req.query);
-    const trend = await getJobTrend(timeRange);
-    res.json({ timeRange, trend });
-  } catch (error) {
-    logger.error("analytics_job_trend_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
-    });
+analyticsRouter.get(
+  "/jobs/trend",
+  ...requireAdmin,
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const timeRange = parseTimeRange(req.query);
+      const trend = await getJobTrend(timeRange);
+      res.json({ timeRange, trend });
+    } catch (error) {
+      logger.error("analytics_job_trend_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
+      });
+    }
   }
-}));
+);
 
 /**
  * @swagger
@@ -203,18 +215,22 @@ analyticsRouter.get("/jobs/trend", ...requireAdmin, async (req: JWTAuthedRequest
  *       200:
  *         description: Job status breakdown
  */
-analyticsRouter.get("/jobs/status", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
-  try {
-    const timeRange = parseTimeRange(req.query);
-    const breakdown = await getJobStatusBreakdown(timeRange);
-    res.json({ timeRange, breakdown });
-  } catch (error) {
-    logger.error("analytics_job_status_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
-    });
+analyticsRouter.get(
+  "/jobs/status",
+  ...requireAdmin,
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const timeRange = parseTimeRange(req.query);
+      const breakdown = await getJobStatusBreakdown(timeRange);
+      res.json({ timeRange, breakdown });
+    } catch (error) {
+      logger.error("analytics_job_status_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
+      });
+    }
   }
-}));
+);
 
 // ============================================
 // Users
@@ -245,19 +261,23 @@ analyticsRouter.get("/jobs/status", ...requireAdmin, async (req: JWTAuthedReques
  *       200:
  *         description: User signup trend
  */
-analyticsRouter.get("/users/signups", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
-  try {
-    const timeRange = parseTimeRange(req.query);
-    const role = (req.query.role as "client" | "cleaner" | "all") || "all";
-    const trend = await getUserSignupTrend(role, timeRange);
-    res.json({ timeRange, role, trend });
-  } catch (error) {
-    logger.error("analytics_user_signups_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
-    });
+analyticsRouter.get(
+  "/users/signups",
+  ...requireAdmin,
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const timeRange = parseTimeRange(req.query);
+      const role = (req.query.role as "client" | "cleaner" | "all") || "all";
+      const trend = await getUserSignupTrend(role, timeRange);
+      res.json({ timeRange, role, trend });
+    } catch (error) {
+      logger.error("analytics_user_signups_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
+      });
+    }
   }
-}));
+);
 
 // ============================================
 // Leaderboards / Top Performers
@@ -288,19 +308,23 @@ analyticsRouter.get("/users/signups", ...requireAdmin, async (req: JWTAuthedRequ
  *       200:
  *         description: Top clients list
  */
-analyticsRouter.get("/top/clients", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
-  try {
-    const timeRange = parseTimeRange(req.query);
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
-    const topClients = await getTopClients(limit, timeRange);
-    res.json({ timeRange, limit, data: topClients });
-  } catch (error) {
-    logger.error("analytics_top_clients_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
-    });
+analyticsRouter.get(
+  "/top/clients",
+  ...requireAdmin,
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const timeRange = parseTimeRange(req.query);
+      const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
+      const topClients = await getTopClients(limit, timeRange);
+      res.json({ timeRange, limit, data: topClients });
+    } catch (error) {
+      logger.error("analytics_top_clients_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
+      });
+    }
   }
-}));
+);
 
 /**
  * @swagger
@@ -327,19 +351,23 @@ analyticsRouter.get("/top/clients", ...requireAdmin, async (req: JWTAuthedReques
  *       200:
  *         description: Top cleaners list
  */
-analyticsRouter.get("/top/cleaners", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
-  try {
-    const timeRange = parseTimeRange(req.query);
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
-    const topCleaners = await getTopCleaners(limit, timeRange);
-    res.json({ timeRange, limit, data: topCleaners });
-  } catch (error) {
-    logger.error("analytics_top_cleaners_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
-    });
+analyticsRouter.get(
+  "/top/cleaners",
+  ...requireAdmin,
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const timeRange = parseTimeRange(req.query);
+      const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
+      const topCleaners = await getTopCleaners(limit, timeRange);
+      res.json({ timeRange, limit, data: topCleaners });
+    } catch (error) {
+      logger.error("analytics_top_cleaners_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
+      });
+    }
   }
-}));
+);
 
 /**
  * @swagger
@@ -361,18 +389,22 @@ analyticsRouter.get("/top/cleaners", ...requireAdmin, async (req: JWTAuthedReque
  *       200:
  *         description: Top rated cleaners list
  */
-analyticsRouter.get("/top/rated-cleaners", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
-  try {
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
-    const topRated = await getTopRatedCleaners(limit);
-    res.json({ limit, data: topRated });
-  } catch (error) {
-    logger.error("analytics_top_rated_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
-    });
+analyticsRouter.get(
+  "/top/rated-cleaners",
+  ...requireAdmin,
+  async (req: JWTAuthedRequest, res: Response) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
+      const topRated = await getTopRatedCleaners(limit);
+      res.json({ limit, data: topRated });
+    } catch (error) {
+      logger.error("analytics_top_rated_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
+      });
+    }
   }
-}));
+);
 
 // ============================================
 // Credit Economy
@@ -391,17 +423,21 @@ analyticsRouter.get("/top/rated-cleaners", ...requireAdmin, async (req: JWTAuthe
  *       200:
  *         description: Credit economy health metrics
  */
-analyticsRouter.get("/credits/health", ...requireAdmin, async (_req: JWTAuthedRequest, res: Response) => {
-  try {
-    const health = await getCreditEconomyHealth();
-    res.json({ health });
-  } catch (error) {
-    logger.error("analytics_credit_health_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
-    });
+analyticsRouter.get(
+  "/credits/health",
+  ...requireAdmin,
+  async (_req: JWTAuthedRequest, res: Response) => {
+    try {
+      const health = await getCreditEconomyHealth();
+      res.json({ health });
+    } catch (error) {
+      logger.error("analytics_credit_health_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
+      });
+    }
   }
-}));
+);
 
 // ============================================
 // Full Report
@@ -437,7 +473,6 @@ analyticsRouter.get("/report", ...requireAdmin, async (req: JWTAuthedRequest, re
       error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
     });
   }
-}));
+});
 
 export default analyticsRouter;
-

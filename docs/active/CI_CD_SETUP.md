@@ -1,7 +1,8 @@
 # CI/CD Pipeline Setup Guide
 
 ## Overview
-This document describes the CI/CD pipeline setup for PureTask Backend using GitHub Actions.
+This document describes the CI/CD pipeline setup for PureTask Backend using GitHub Actions.  
+**Cross-doc status:** [DOCUMENT_EXECUTION_TRACKER.md](./DOCUMENT_EXECUTION_TRACKER.md)
 
 ## Workflows
 
@@ -9,7 +10,7 @@ This document describes the CI/CD pipeline setup for PureTask Backend using GitH
 **Triggers**: Push/PR to `main` or `develop` branches
 
 **Jobs**:
-- **lint**: Runs ESLint and TypeScript type checking
+- **lint**: Runs ESLint, `npm run format:check` (Prettier), and TypeScript type checking
 - **test**: Runs all tests with PostgreSQL service
 - **build**: Builds the application (runs after lint/test pass)
 - **security-scan**: Runs npm audit and secret scanning

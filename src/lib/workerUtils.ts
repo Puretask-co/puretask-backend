@@ -12,7 +12,7 @@ export interface WorkerRunResult {
 
 /**
  * V1 HARDENING: Execute a worker function with advisory lock and run tracking
- * 
+ *
  * @param workerName - Unique name for the worker (e.g., "payouts", "auto-cancel")
  * @param lockId - Unique PostgreSQL advisory lock ID (must be unique per worker)
  * @param workerFn - The actual worker function to execute
@@ -73,12 +73,7 @@ export async function runWorkerWithLock<T extends WorkerRunResult>(
               metadata = $3::jsonb
           WHERE id = $4
         `,
-        [
-          result.processed || 0,
-          result.failed || 0,
-          JSON.stringify(result),
-          workerRunId,
-        ]
+        [result.processed || 0, result.failed || 0, JSON.stringify(result), workerRunId]
       );
     }
 
@@ -92,22 +87,24 @@ export async function runWorkerWithLock<T extends WorkerRunResult>(
   } catch (error) {
     // Update worker run as failed
     if (workerRunId) {
-      await client.query(
-        `
+      await client
+        .query(
+          `
           UPDATE worker_runs
           SET status = 'failed',
               finished_at = NOW(),
               error_message = $1
           WHERE id = $2
         `,
-        [(error as Error).message, workerRunId]
-      ).catch((updateError) => {
-        logger.error("worker_run_update_failed", {
-          workerName,
-          workerRunId,
-          error: (updateError as Error).message,
+          [(error as Error).message, workerRunId]
+        )
+        .catch((updateError) => {
+          logger.error("worker_run_update_failed", {
+            workerName,
+            workerRunId,
+            error: (updateError as Error).message,
+          });
         });
-      });
     }
 
     logger.error("worker_failed", {
@@ -139,10 +136,9 @@ export function getWorkerLockId(workerName: string): number {
   let hash = 0;
   for (let i = 0; i < workerName.length; i++) {
     const char = workerName.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
   // Return positive number in range 2000-9999
   return Math.abs(hash % 8000) + 2000;
 }
-

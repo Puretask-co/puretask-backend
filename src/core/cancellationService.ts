@@ -20,14 +20,14 @@ import {
   CancellationEvent,
   ClientRiskEvent,
   CleanerEvent,
-} from './types';
+} from "./types";
 import {
   computeHoursBeforeStart,
   computeWindow,
   baseFeePctForWindow,
   getTimeBucket,
-} from './timeBuckets';
-import { CANCELLATION_CONFIG as cfg } from './config';
+} from "./timeBuckets";
+import { CANCELLATION_CONFIG as cfg } from "./config";
 
 // ============================================
 // Types
@@ -110,7 +110,7 @@ export class CancellationServiceV2 {
 
     const hoursBefore = computeHoursBeforeStart(scheduledStart, now);
     const window: CancellationWindow | null =
-      type === 'client_cancel_normal' || type === 'client_cancel_after_reschedule_declined'
+      type === "client_cancel_normal" || type === "client_cancel_after_reschedule_declined"
         ? computeWindow(hoursBefore)
         : null;
 
@@ -118,30 +118,25 @@ export class CancellationServiceV2 {
     let feeBreakdown: CancellationFeeBreakdown;
 
     switch (type) {
-      case 'client_cancel_normal':
-      case 'client_cancel_after_reschedule_declined':
-        feeBreakdown = await this.handleClientCancellation(
-          input,
-          client,
-          window,
-          hoursBefore
-        );
+      case "client_cancel_normal":
+      case "client_cancel_after_reschedule_declined":
+        feeBreakdown = await this.handleClientCancellation(input, client, window, hoursBefore);
         break;
 
-      case 'cleaner_cancel_normal':
-      case 'cleaner_cancel_emergency':
+      case "cleaner_cancel_normal":
+      case "cleaner_cancel_emergency":
         feeBreakdown = await this.handleCleanerCancellation(input, isEmergency);
         break;
 
-      case 'client_no_show':
+      case "client_no_show":
         feeBreakdown = await this.handleClientNoShow(input);
         break;
 
-      case 'cleaner_no_show':
+      case "cleaner_no_show":
         feeBreakdown = await this.handleCleanerNoShow(input);
         break;
 
-      case 'system_cancel':
+      case "system_cancel":
         feeBreakdown = await this.handleSystemCancel(input);
         break;
 
@@ -149,8 +144,8 @@ export class CancellationServiceV2 {
         throw new Error(`Unsupported cancellation type: ${type}`);
     }
 
-    const isNoShow = type === 'client_no_show' || type === 'cleaner_no_show';
-    const bucket = hoursBefore > 0 ? getTimeBucket(hoursBefore) : 'no_show';
+    const isNoShow = type === "client_no_show" || type === "cleaner_no_show";
+    const bucket = hoursBefore > 0 ? getTimeBucket(hoursBefore) : "no_show";
 
     // Persist cancellation event
     const cancellationEvent = await this.persistCancellationEvent({
@@ -161,7 +156,7 @@ export class CancellationServiceV2 {
       hoursBeforeStart: isNoShow ? null : hoursBefore,
       bucket,
       reasonCode,
-      afterRescheduleDeclined: type === 'client_cancel_after_reschedule_declined',
+      afterRescheduleDeclined: type === "client_cancel_after_reschedule_declined",
       feePct: feeBreakdown.feePct,
       feeCredits: feeBreakdown.feeCredits,
       refundCredits: feeBreakdown.refundCredits,
@@ -192,8 +187,9 @@ export class CancellationServiceV2 {
     // Publish system event
     await publishEvent({
       jobId: String(jobId),
-      actorType: actor === 'system' ? 'system' : actor,
-      actorId: actor === 'client' ? String(clientId) : actor === 'cleaner' ? String(cleanerId) : null,
+      actorType: actor === "system" ? "system" : actor,
+      actorId:
+        actor === "client" ? String(clientId) : actor === "cleaner" ? String(cleanerId) : null,
       eventName: `cancellation.${type}`,
       payload: {
         type,
@@ -221,7 +217,7 @@ export class CancellationServiceV2 {
       cleanerId,
       feeBreakdown,
       isNoShow,
-      afterRescheduleDeclined: type === 'client_cancel_after_reschedule_declined',
+      afterRescheduleDeclined: type === "client_cancel_after_reschedule_declined",
     };
   }
 
@@ -239,7 +235,7 @@ export class CancellationServiceV2 {
 
     if (!window) {
       // After start time - should be no-show, not cancellation
-      throw new Error('client_cancel called after start time – use client_no_show instead');
+      throw new Error("client_cancel called after start time – use client_no_show instead");
     }
 
     const baseFeePct = baseFeePctForWindow(window);
@@ -249,7 +245,7 @@ export class CancellationServiceV2 {
     let feePct = baseFeePct;
     let graceUsed = false;
 
-    const isClientInitiated = input.actor === 'client';
+    const isClientInitiated = input.actor === "client";
 
     if (
       isClientInitiated &&
@@ -326,9 +322,7 @@ export class CancellationServiceV2 {
     const feeCredits = heldCredits;
     const refundCredits = 0;
 
-    const cleanerCompCredits = Math.round(
-      feeCredits * cfg.feeSplits.clientNoShowCleanerCompPct
-    );
+    const cleanerCompCredits = Math.round(feeCredits * cfg.feeSplits.clientNoShowCleanerCompPct);
     const platformCompCredits = feeCredits - cleanerCompCredits;
 
     return {
@@ -404,32 +398,34 @@ export class CancellationServiceV2 {
     const cleanerEvents: CleanerEvent[] = [];
 
     switch (type) {
-      case 'client_cancel_normal':
-      case 'client_cancel_after_reschedule_declined': {
-        if (window === '50%' || window === '100%') {
+      case "client_cancel_normal":
+      case "client_cancel_after_reschedule_declined": {
+        if (window === "50%" || window === "100%") {
           let weight: number;
-          
+
           if (feeBreakdown.graceUsed) {
-            weight = window === '50%'
-              ? cfg.riskWeights.clientLateCancel24_48WithGrace
-              : cfg.riskWeights.clientLateCancelLt24WithGrace;
+            weight =
+              window === "50%"
+                ? cfg.riskWeights.clientLateCancel24_48WithGrace
+                : cfg.riskWeights.clientLateCancelLt24WithGrace;
           } else {
-            weight = window === '50%'
-              ? cfg.riskWeights.clientLateCancel24_48
-              : cfg.riskWeights.clientLateCancelLt24;
+            weight =
+              window === "50%"
+                ? cfg.riskWeights.clientLateCancel24_48
+                : cfg.riskWeights.clientLateCancelLt24;
           }
 
-          if (type === 'client_cancel_after_reschedule_declined') {
+          if (type === "client_cancel_after_reschedule_declined") {
             weight += cfg.riskWeights.clientExtraAfterDeclined;
           }
 
           clientRiskEvents.push({
             clientId,
             jobId,
-            eventType: `cancel_${window === '50%' ? '24_48' : 'lt24'}`,
+            eventType: `cancel_${window === "50%" ? "24_48" : "lt24"}`,
             weight,
             metadata: {
-              afterRescheduleDeclined: type === 'client_cancel_after_reschedule_declined',
+              afterRescheduleDeclined: type === "client_cancel_after_reschedule_declined",
               graceUsed: feeBreakdown.graceUsed,
               cancellationEventId,
             },
@@ -438,29 +434,29 @@ export class CancellationServiceV2 {
         break;
       }
 
-      case 'client_no_show': {
+      case "client_no_show": {
         clientRiskEvents.push({
           clientId,
           jobId,
-          eventType: 'client_no_show',
+          eventType: "client_no_show",
           weight: cfg.riskWeights.clientNoShow,
           metadata: { cancellationEventId },
         });
         break;
       }
 
-      case 'cleaner_cancel_normal':
-      case 'cleaner_cancel_emergency': {
+      case "cleaner_cancel_normal":
+      case "cleaner_cancel_emergency": {
         const w = computeWindow(hoursBefore);
 
         let weight = 0;
-        if (w === '50%') {
+        if (w === "50%") {
           weight = cfg.reliabilityWeights.cleanerCancel24_48;
-        } else if (w === '100%') {
+        } else if (w === "100%") {
           weight = cfg.reliabilityWeights.cleanerCancelLt24;
         }
 
-        if (type === 'cleaner_cancel_emergency' && weight !== 0) {
+        if (type === "cleaner_cancel_emergency" && weight !== 0) {
           // Softer penalty for emergencies
           weight = cfg.reliabilityWeights.cleanerEmergencyCancelAdjustment;
         }
@@ -469,7 +465,7 @@ export class CancellationServiceV2 {
           cleanerEvents.push({
             cleanerId,
             jobId,
-            eventType: 'cleaner_cancel',
+            eventType: "cleaner_cancel",
             weight,
             metadata: { cancellationEventId, emergency: isEmergency },
           });
@@ -477,18 +473,18 @@ export class CancellationServiceV2 {
         break;
       }
 
-      case 'cleaner_no_show': {
+      case "cleaner_no_show": {
         cleanerEvents.push({
           cleanerId,
           jobId,
-          eventType: 'cleaner_no_show',
+          eventType: "cleaner_no_show",
           weight: cfg.reliabilityWeights.cleanerNoShow,
           metadata: { cancellationEventId },
         });
         break;
       }
 
-      case 'system_cancel': {
+      case "system_cancel": {
         // No risk or reliability events for system cancellations
         break;
       }
@@ -548,18 +544,17 @@ export class CancellationServiceV2 {
     );
 
     // Also record in grace_cancellations table
-    await query(
-      `INSERT INTO grace_cancellations (client_id) VALUES ($1)`,
-      [String(clientId)]
-    );
+    await query(`INSERT INTO grace_cancellations (client_id) VALUES ($1)`, [String(clientId)]);
 
     logger.info("grace_cancellation_used", { clientId, newUsed });
   }
 
-  private static async persistCancellationEvent(event: Partial<CancellationEvent> & { 
-    type?: CancellationType;
-    bonusCreditsToClient?: number;
-  }): Promise<{ id: number }> {
+  private static async persistCancellationEvent(
+    event: Partial<CancellationEvent> & {
+      type?: CancellationType;
+      bonusCreditsToClient?: number;
+    }
+  ): Promise<{ id: number }> {
     const result = await query<{ id: string }>(
       `INSERT INTO cancellation_events (
         job_id, cancelled_by, type, t_cancel, hours_before_start,
@@ -671,15 +666,24 @@ export class CancellationServiceV2 {
  * Simple cancellation function for backwards compatibility
  */
 export async function cancelJobSimple(
-  job: { id: number; clientId: number; cleanerId: number; startTime: Date; heldCredits: number; status: string },
+  job: {
+    id: number;
+    clientId: number;
+    cleanerId: number;
+    startTime: Date;
+    heldCredits: number;
+    status: string;
+  },
   cancelledBy: CancellationActor,
   reasonCode: string | null,
   opts: CancelOptions = {}
 ): Promise<CancellationResult> {
-  const type: CancellationType = 
-    cancelledBy === 'client' ? 'client_cancel_normal' :
-    cancelledBy === 'cleaner' ? 'cleaner_cancel_normal' :
-    'system_cancel';
+  const type: CancellationType =
+    cancelledBy === "client"
+      ? "client_cancel_normal"
+      : cancelledBy === "cleaner"
+        ? "cleaner_cancel_normal"
+        : "system_cancel";
 
   return CancellationServiceV2.processCancellation({
     jobId: job.id,
@@ -696,4 +700,3 @@ export async function cancelJobSimple(
     isEmergency: false,
   });
 }
-

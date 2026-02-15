@@ -63,15 +63,20 @@ async function sendNoShowWarning(job: NoShowJob): Promise<void> {
   const checkInUrl = buildCheckInUrl(job.id);
   const supportUrl = buildSupportUrl();
 
-  await sendNotificationToUser(job.cleaner_id, "job.no_show_warning", {
-    jobId: job.id,
-    address: job.address,
-    scheduledTime,
-    checkInUrl,
-    supportUrl,
-    timeZoneLabel: "local time", // TODO: Get actual timezone from job
-    // TODO: Generate shortUrl for SMS (when short link service is implemented)
-  }, ["sms", "push"]);
+  await sendNotificationToUser(
+    job.cleaner_id,
+    "job.no_show_warning",
+    {
+      jobId: job.id,
+      address: job.address,
+      scheduledTime,
+      checkInUrl,
+      supportUrl,
+      timeZoneLabel: "local time", // TODO: Get actual timezone from job
+      // TODO: Generate shortUrl for SMS (when short link service is implemented)
+    },
+    ["sms", "push"]
+  );
 
   // Mark warning as sent
   await query(

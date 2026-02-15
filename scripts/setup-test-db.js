@@ -57,11 +57,12 @@ function runMigration(file) {
 }
 
 function main() {
-  const dbUrl = process.env.DATABASE_URL;
+  const dbUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
   if (!dbUrl) {
-    console.error("❌ DATABASE_URL is not set");
+    console.error("❌ TEST_DATABASE_URL or DATABASE_URL is not set");
     process.exit(1);
   }
+  process.env.DATABASE_URL = dbUrl;
 
   console.log("📄 Setting up test database...\n");
 
@@ -72,6 +73,12 @@ function main() {
   for (const m of GAMIFICATION_MIGRATIONS) {
     runMigration(m);
   }
+
+  console.log("\n3. Applying NEON patches (cleaner_profiles, is_cleaner_available, job_status, etc.)");
+  runMigration("DB/migrations/000_NEON_PATCH_existing_db.sql");
+  runMigration("DB/migrations/000_NEON_PATCH_job_status_disputed.sql");
+  runMigration("DB/migrations/000_NEON_PATCH_cleaner_availability.sql");
+  runMigration("DB/migrations/000_NEON_PATCH_test_db_align.sql");
 
   console.log("\n✅ Test database ready.");
 }

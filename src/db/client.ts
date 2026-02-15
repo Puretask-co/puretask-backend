@@ -3,9 +3,10 @@ import { env } from "../config/env";
 import { logger } from "../lib/logger";
 
 // Detect test environment
-const isTestEnv = process.env.RUNNING_TESTS === 'true' ||
-                  process.env.NODE_ENV === 'test' ||
-                  process.env.VITEST === 'true';
+const isTestEnv =
+  process.env.RUNNING_TESTS === "true" ||
+  process.env.NODE_ENV === "test" ||
+  process.env.VITEST === "true";
 
 const SLOW_QUERY_MS = parseInt(process.env.SLOW_QUERY_MS || "1000", 10);
 
@@ -19,7 +20,10 @@ export const pool = new Pool({
   allowExitOnIdle: true, // Allow process to exit when pool is idle
 });
 
-export async function query<T extends Record<string, any> = any>(text: string, params?: any[]): Promise<{ rows: T[]; rowCount: number | null }> {
+export async function query<T extends Record<string, any> = any>(
+  text: string,
+  params?: any[]
+): Promise<{ rows: T[]; rowCount: number | null }> {
   const start = Date.now();
   const res = await pool.query<T>(text, params);
   const durationMs = Date.now() - start;
@@ -38,9 +42,7 @@ export async function query<T extends Record<string, any> = any>(text: string, p
 /**
  * Execute a function within a database transaction
  */
-export async function withTransaction<T>(
-  callback: (client: PoolClient) => Promise<T>
-): Promise<T> {
+export async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");

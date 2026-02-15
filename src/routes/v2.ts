@@ -39,10 +39,7 @@ import {
   generateICSFeedUrl,
   generateICSContent,
 } from "../services/calendarService";
-import {
-  generateChecklist,
-  generateDisputeSuggestion,
-} from "../services/aiService";
+import { generateChecklist, generateDisputeSuggestion } from "../services/aiService";
 import {
   getCleanerGoals,
   createDefaultMonthlyGoals,
@@ -118,20 +115,26 @@ const createPropertySchema = z.object({
   has_kids: z.boolean().optional(),
 });
 
-v2Router.post("/properties", validateBody(createPropertySchema), async (req: AuthedRequest, res: Response) => {
-  try {
-    if (req.user?.role !== "client") {
-      return res.status(403).json({ error: { code: "FORBIDDEN", message: "Clients only" } });
-    }
+v2Router.post(
+  "/properties",
+  validateBody(createPropertySchema),
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      if (req.user?.role !== "client") {
+        return res.status(403).json({ error: { code: "FORBIDDEN", message: "Clients only" } });
+      }
 
-    const property = await createProperty(req.user.id, req.body);
-    res.status(201).json({ property });
-  } catch (error) {
-    const err = error as Error & { statusCode?: number };
-    logger.error("create_property_failed", { error: err.message });
-    res.status(err.statusCode || 500).json({ error: { code: "CREATE_PROPERTY_FAILED", message: err.message } });
+      const property = await createProperty(req.user.id, req.body);
+      res.status(201).json({ property });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      logger.error("create_property_failed", { error: err.message });
+      res
+        .status(err.statusCode || 500)
+        .json({ error: { code: "CREATE_PROPERTY_FAILED", message: err.message } });
+    }
   }
-});
+);
 
 /**
  * @swagger
@@ -158,7 +161,9 @@ v2Router.get("/properties", async (req: AuthedRequest, res: Response) => {
     res.json({ properties });
   } catch (error) {
     logger.error("get_properties_failed", { error: (error as Error).message });
-    res.status(500).json({ error: { code: "GET_PROPERTIES_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_PROPERTIES_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -185,14 +190,19 @@ v2Router.get("/properties", async (req: AuthedRequest, res: Response) => {
  */
 v2Router.get("/properties/:id", async (req: AuthedRequest, res: Response) => {
   try {
-    const property = await getPropertyById(Number(req.params.id), req.user?.role === "client" ? req.user.id : undefined);
+    const property = await getPropertyById(
+      Number(req.params.id),
+      req.user?.role === "client" ? req.user.id : undefined
+    );
     if (!property) {
       return res.status(404).json({ error: { code: "NOT_FOUND", message: "Property not found" } });
     }
     res.json({ property });
   } catch (error) {
     logger.error("get_property_failed", { error: (error as Error).message });
-    res.status(500).json({ error: { code: "GET_PROPERTY_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_PROPERTY_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -221,7 +231,9 @@ v2Router.get("/properties/:id/suggestions", async (req: AuthedRequest, res: Resp
     res.json({ suggestions });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "GET_SUGGESTIONS_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "GET_SUGGESTIONS_FAILED", message: err.message } });
   }
 });
 
@@ -275,7 +287,9 @@ v2Router.patch("/properties/:id", async (req: AuthedRequest, res: Response) => {
     res.json({ property });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "UPDATE_PROPERTY_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "UPDATE_PROPERTY_FAILED", message: err.message } });
   }
 });
 
@@ -310,7 +324,9 @@ v2Router.delete("/properties/:id", async (req: AuthedRequest, res: Response) => 
     res.json({ deleted: true });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "DELETE_PROPERTY_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "DELETE_PROPERTY_FAILED", message: err.message } });
   }
 });
 
@@ -350,7 +366,9 @@ v2Router.get("/jobs/:id/rebook-data", async (req: AuthedRequest, res: Response) 
     res.json(data);
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "GET_REBOOK_DATA_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "GET_REBOOK_DATA_FAILED", message: err.message } });
   }
 });
 
@@ -389,19 +407,25 @@ const createTeamSchema = z.object({
   description: z.string().optional(),
 });
 
-v2Router.post("/teams", validateBody(createTeamSchema), async (req: AuthedRequest, res: Response) => {
-  try {
-    if (req.user?.role !== "cleaner") {
-      return res.status(403).json({ error: { code: "FORBIDDEN", message: "Cleaners only" } });
-    }
+v2Router.post(
+  "/teams",
+  validateBody(createTeamSchema),
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      if (req.user?.role !== "cleaner") {
+        return res.status(403).json({ error: { code: "FORBIDDEN", message: "Cleaners only" } });
+      }
 
-    const team = await createTeam(req.user.id, req.body.name, req.body.description);
-    res.status(201).json({ team });
-  } catch (error) {
-    const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "CREATE_TEAM_FAILED", message: err.message } });
+      const team = await createTeam(req.user.id, req.body.name, req.body.description);
+      res.status(201).json({ team });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      res
+        .status(err.statusCode || 500)
+        .json({ error: { code: "CREATE_TEAM_FAILED", message: err.message } });
+    }
   }
-});
+);
 
 /**
  * @swagger
@@ -455,7 +479,9 @@ v2Router.get("/teams/memberships", async (req: AuthedRequest, res: Response) => 
     const memberships = await getCleanerMemberships(req.user.id);
     res.json({ memberships });
   } catch (error) {
-    res.status(500).json({ error: { code: "GET_MEMBERSHIPS_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_MEMBERSHIPS_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -505,20 +531,26 @@ const inviteMemberSchema = z.object({
  *       403:
  *         description: Forbidden
  */
-v2Router.post("/teams/:id/members", validateBody(inviteMemberSchema), async (req: AuthedRequest, res: Response) => {
-  try {
-    const member = await inviteTeamMember(
-      Number(req.params.id),
-      req.user!.id,
-      req.body.cleanerId,
-      req.body.role
-    );
-    res.status(201).json({ member });
-  } catch (error) {
-    const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "INVITE_FAILED", message: err.message } });
+v2Router.post(
+  "/teams/:id/members",
+  validateBody(inviteMemberSchema),
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const member = await inviteTeamMember(
+        Number(req.params.id),
+        req.user!.id,
+        req.body.cleanerId,
+        req.body.role
+      );
+      res.status(201).json({ member });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      res
+        .status(err.statusCode || 500)
+        .json({ error: { code: "INVITE_FAILED", message: err.message } });
+    }
   }
-});
+);
 
 /**
  * @swagger
@@ -547,7 +579,9 @@ v2Router.post("/teams/:id/accept", async (req: AuthedRequest, res: Response) => 
     res.json({ member });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "ACCEPT_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "ACCEPT_FAILED", message: err.message } });
   }
 });
 
@@ -614,7 +648,9 @@ v2Router.delete("/teams/:id/members/:memberId", async (req: AuthedRequest, res: 
     res.json({ removed: true });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "REMOVE_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "REMOVE_FAILED", message: err.message } });
   }
 });
 
@@ -645,7 +681,9 @@ v2Router.post("/teams/:id/leave", async (req: AuthedRequest, res: Response) => {
     res.json({ left: true });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "LEAVE_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "LEAVE_FAILED", message: err.message } });
   }
 });
 
@@ -673,7 +711,9 @@ v2Router.get("/teams/:id/stats", async (req: AuthedRequest, res: Response) => {
     const stats = await getTeamStats(Number(req.params.id));
     res.json({ stats });
   } catch (error) {
-    res.status(500).json({ error: { code: "GET_STATS_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_STATS_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -741,14 +781,18 @@ v2Router.get("/calendar/google/callback", async (req: AuthedRequest, res: Respon
   try {
     const { code, state } = req.query;
     if (!code || !state) {
-      return res.status(400).json({ error: { code: "INVALID_CALLBACK", message: "Missing code or state" } });
+      return res
+        .status(400)
+        .json({ error: { code: "INVALID_CALLBACK", message: "Missing code or state" } });
     }
 
     const connection = await handleGoogleCallback(code as string, state as string);
     res.json({ connected: true, email: connection.email });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "CALLBACK_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "CALLBACK_FAILED", message: err.message } });
   }
 });
 
@@ -778,7 +822,9 @@ v2Router.get("/calendar/connection", async (req: AuthedRequest, res: Response) =
     const connection = await getUserCalendarConnection(req.user!.id);
     res.json({ connection });
   } catch (error) {
-    res.status(500).json({ error: { code: "GET_CONNECTION_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_CONNECTION_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -800,7 +846,9 @@ v2Router.delete("/calendar/connection", async (req: AuthedRequest, res: Response
     await disconnectCalendar(req.user!.id);
     res.json({ disconnected: true });
   } catch (error) {
-    res.status(500).json({ error: { code: "DISCONNECT_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "DISCONNECT_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -830,7 +878,9 @@ v2Router.get("/calendar/ics-url", async (req: AuthedRequest, res: Response) => {
     const url = generateICSFeedUrl(req.user!.id);
     res.json({ url });
   } catch (error) {
-    res.status(500).json({ error: { code: "GET_ICS_URL_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_ICS_URL_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -893,14 +943,20 @@ const checklistSchema = z.object({
   special_notes: z.string().optional(),
 });
 
-v2Router.post("/ai/checklist", validateBody(checklistSchema), async (req: AuthedRequest, res: Response) => {
-  try {
-    const checklist = await generateChecklist(req.body);
-    res.json({ checklist });
-  } catch (error) {
-    res.status(500).json({ error: { code: "GENERATE_CHECKLIST_FAILED", message: (error as Error).message } });
+v2Router.post(
+  "/ai/checklist",
+  validateBody(checklistSchema),
+  async (req: AuthedRequest, res: Response) => {
+    try {
+      const checklist = await generateChecklist(req.body);
+      res.json({ checklist });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ error: { code: "GENERATE_CHECKLIST_FAILED", message: (error as Error).message } });
+    }
   }
-});
+);
 
 /**
  * @swagger
@@ -932,7 +988,9 @@ v2Router.post("/ai/dispute-suggestion", async (req: AuthedRequest, res: Response
     const suggestion = await generateDisputeSuggestion(req.body);
     res.json({ suggestion });
   } catch (error) {
-    res.status(500).json({ error: { code: "GENERATE_SUGGESTION_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GENERATE_SUGGESTION_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -964,7 +1022,7 @@ v2Router.get("/cleaner/goals", async (req: AuthedRequest, res: Response) => {
     }
 
     let goals = await getCleanerGoals(req.user.id);
-    
+
     // Auto-create default goals if none exist
     if (goals.length === 0) {
       goals = await createDefaultMonthlyGoals(req.user.id);
@@ -972,7 +1030,9 @@ v2Router.get("/cleaner/goals", async (req: AuthedRequest, res: Response) => {
 
     res.json({ goals });
   } catch (error) {
-    res.status(500).json({ error: { code: "GET_GOALS_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_GOALS_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -999,7 +1059,9 @@ v2Router.get("/cleaner/route-suggestions", async (req: AuthedRequest, res: Respo
     const suggestions = await getRouteSuggestions(req.user.id, date);
     res.json({ suggestions });
   } catch (error) {
-    res.status(500).json({ error: { code: "GET_ROUTE_SUGGESTIONS_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_ROUTE_SUGGESTIONS_FAILED", message: (error as Error).message } });
   }
 });
 
@@ -1025,9 +1087,10 @@ v2Router.get("/cleaner/reliability-breakdown", async (req: AuthedRequest, res: R
     const breakdown = await getReliabilityBreakdown(req.user.id);
     res.json({ breakdown });
   } catch (error) {
-    res.status(500).json({ error: { code: "GET_BREAKDOWN_FAILED", message: (error as Error).message } });
+    res
+      .status(500)
+      .json({ error: { code: "GET_BREAKDOWN_FAILED", message: (error as Error).message } });
   }
 });
 
 export default v2Router;
-

@@ -27,9 +27,7 @@ describe("Gamification API smoke", () => {
     });
 
     it("GET /governor/state with region_id query", async () => {
-      const res = await request(app)
-        .get(`${BASE}/governor/state`)
-        .query({ region_id: "sf_ca" });
+      const res = await request(app).get(`${BASE}/governor/state`).query({ region_id: "sf_ca" });
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
     });

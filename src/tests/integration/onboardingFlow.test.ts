@@ -1,34 +1,35 @@
 // src/tests/integration/onboardingFlow.test.ts
 // Integration test for complete onboarding flow
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { jest } from '@jest/globals';
-import request from 'supertest';
-import app from '../../index';
-import { query } from '../../db/client';
-import * as onboardingService from '../../services/cleanerOnboardingService';
-import * as phoneService from '../../services/phoneVerificationService';
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import request from "supertest";
+import app from "../../index";
+import { query } from "../../db/client";
+import * as onboardingService from "../../services/cleanerOnboardingService";
+import * as phoneService from "../../services/phoneVerificationService";
 
-jest.mock('../../db/client');
-jest.mock('../../services/cleanerOnboardingService');
-jest.mock('../../services/phoneVerificationService');
-jest.mock('../../lib/logger', () => ({
+vi.mock("../../db/client");
+vi.mock("../../services/cleanerOnboardingService");
+vi.mock("../../services/phoneVerificationService");
+vi.mock("../../lib/logger", () => ({
   logger: {
-    info: jest.fn(),
-    error: jest.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
-describe('Complete Onboarding Flow Integration', () => {
+describe("Complete Onboarding Flow Integration", () => {
   let authToken: string;
   let cleanerId: string;
 
   beforeEach(() => {
-    cleanerId = 'cleaner-123';
-    authToken = 'mock-jwt-token';
+    cleanerId = "cleaner-123";
+    authToken = "mock-jwt-token";
   });
 
-  it('completes full 10-step onboarding flow', async () => {
+  it("completes full 10-step onboarding flow", async () => {
     const mockQuery = query as any;
 
     // Step 1: Save agreements
@@ -36,8 +37,8 @@ describe('Complete Onboarding Flow Integration', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] }); // Update current step
 
     let res = await request(app)
-      .post('/cleaner/onboarding/agreements')
-      .set('Authorization', `Bearer ${authToken}`)
+      .post("/cleaner/onboarding/agreements")
+      .set("Authorization", `Bearer ${authToken}`)
       .send({
         terms_of_service: true,
         independent_contractor: true,
@@ -49,13 +50,13 @@ describe('Complete Onboarding Flow Integration', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
     res = await request(app)
-      .post('/cleaner/onboarding/basic-info')
-      .set('Authorization', `Bearer ${authToken}`)
+      .post("/cleaner/onboarding/basic-info")
+      .set("Authorization", `Bearer ${authToken}`)
       .send({
-        first_name: 'John',
-        last_name: 'Doe',
-        bio: 'Experienced cleaner',
-        professional_headline: 'Professional Cleaner',
+        first_name: "John",
+        last_name: "Doe",
+        bio: "Experienced cleaner",
+        professional_headline: "Professional Cleaner",
       });
     expect(res.status).toBe(200);
 
@@ -64,9 +65,9 @@ describe('Complete Onboarding Flow Integration', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
     res = await request(app)
-      .post('/cleaner/onboarding/send-otp')
-      .set('Authorization', `Bearer ${authToken}`)
-      .send({ phone_number: '+11234567890' });
+      .post("/cleaner/onboarding/send-otp")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ phone_number: "+11234567890" });
     expect(res.status).toBe(200);
 
     // Step 4: Verify OTP
@@ -77,43 +78,43 @@ describe('Complete Onboarding Flow Integration', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
     res = await request(app)
-      .post('/cleaner/onboarding/verify-otp')
-      .set('Authorization', `Bearer ${authToken}`)
+      .post("/cleaner/onboarding/verify-otp")
+      .set("Authorization", `Bearer ${authToken}`)
       .send({
-        phone_number: '+11234567890',
-        otp_code: '123456',
+        phone_number: "+11234567890",
+        otp_code: "123456",
       });
     expect(res.status).toBe(200);
 
     // Step 5: Upload face photo
     (onboardingService.uploadFacePhoto as any).mockResolvedValueOnce({
       success: true,
-      profile_photo_url: '/uploads/profile-photos/user-123/face.jpg',
+      profile_photo_url: "/uploads/profile-photos/user-123/face.jpg",
     });
     mockQuery
-      .mockResolvedValueOnce({ rows: [{ user_id: 'user-123' }] })
+      .mockResolvedValueOnce({ rows: [{ user_id: "user-123" }] })
       .mockResolvedValueOnce({ rows: [] });
 
     res = await request(app)
-      .post('/cleaner/onboarding/face-photo')
-      .set('Authorization', `Bearer ${authToken}`)
-      .attach('file', Buffer.from('fake-image'), 'face.jpg');
+      .post("/cleaner/onboarding/face-photo")
+      .set("Authorization", `Bearer ${authToken}`)
+      .attach("file", Buffer.from("fake-image"), "face.jpg");
     expect(res.status).toBe(200);
 
     // Step 6: Upload ID
     (onboardingService.uploadIDVerification as any).mockResolvedValueOnce({
       success: true,
-      id_verification_id: 'id-verification-123',
+      id_verification_id: "id-verification-123",
     });
     mockQuery
-      .mockResolvedValueOnce({ rows: [{ user_id: 'user-123' }] })
-      .mockResolvedValueOnce({ rows: [{ id: 'id-verification-123' }] });
+      .mockResolvedValueOnce({ rows: [{ user_id: "user-123" }] })
+      .mockResolvedValueOnce({ rows: [{ id: "id-verification-123" }] });
 
     res = await request(app)
-      .post('/cleaner/onboarding/id-verification')
-      .set('Authorization', `Bearer ${authToken}`)
-      .field('document_type', 'drivers_license')
-      .attach('file', Buffer.from('fake-pdf'), 'id.pdf');
+      .post("/cleaner/onboarding/id-verification")
+      .set("Authorization", `Bearer ${authToken}`)
+      .field("document_type", "drivers_license")
+      .attach("file", Buffer.from("fake-pdf"), "id.pdf");
     expect(res.status).toBe(200);
 
     // Step 7: Background check consent
@@ -123,8 +124,8 @@ describe('Complete Onboarding Flow Integration', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
     res = await request(app)
-      .post('/cleaner/onboarding/background-consent')
-      .set('Authorization', `Bearer ${authToken}`)
+      .post("/cleaner/onboarding/background-consent")
+      .set("Authorization", `Bearer ${authToken}`)
       .send({
         fcra_consent: true,
         accuracy_consent: true,
@@ -136,10 +137,10 @@ describe('Complete Onboarding Flow Integration', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
     res = await request(app)
-      .post('/cleaner/onboarding/service-areas')
-      .set('Authorization', `Bearer ${authToken}`)
+      .post("/cleaner/onboarding/service-areas")
+      .set("Authorization", `Bearer ${authToken}`)
       .send({
-        zip_codes: ['10001', '10002'],
+        zip_codes: ["10001", "10002"],
         travel_radius_km: 25,
       });
     expect(res.status).toBe(200);
@@ -149,11 +150,9 @@ describe('Complete Onboarding Flow Integration', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
     res = await request(app)
-      .post('/cleaner/onboarding/availability')
-      .set('Authorization', `Bearer ${authToken}`)
-      .send([
-        { day_of_week: 1, start_time: '09:00', end_time: '17:00' },
-      ]);
+      .post("/cleaner/onboarding/availability")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send([{ day_of_week: 1, start_time: "09:00", end_time: "17:00" }]);
     expect(res.status).toBe(200);
 
     // Step 10: Rates
@@ -161,8 +160,8 @@ describe('Complete Onboarding Flow Integration', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
     res = await request(app)
-      .post('/cleaner/onboarding/rates')
-      .set('Authorization', `Bearer ${authToken}`)
+      .post("/cleaner/onboarding/rates")
+      .set("Authorization", `Bearer ${authToken}`)
       .send({
         hourly_rate_credits: 300,
         travel_radius_km: 20,
@@ -175,7 +174,7 @@ describe('Complete Onboarding Flow Integration', () => {
         completed: 10,
         total: 10,
         percentage: 100,
-        current_step: 'review',
+        current_step: "review",
         steps: {
           agreements: true,
           basic_info: true,
@@ -193,8 +192,8 @@ describe('Complete Onboarding Flow Integration', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
     res = await request(app)
-      .post('/cleaner/onboarding/complete')
-      .set('Authorization', `Bearer ${authToken}`);
+      .post("/cleaner/onboarding/complete")
+      .set("Authorization", `Bearer ${authToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);

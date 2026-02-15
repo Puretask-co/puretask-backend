@@ -2,7 +2,7 @@
 // Comprehensive integration tests for job state machine
 // Tests all transitions, permissions, and edge cases
 
-import { describe, it, expect } from "@jest/globals";
+import { describe, it, expect } from "vitest";
 import {
   getNextStatus,
   canTransition,
@@ -88,19 +88,19 @@ describe("Job State Machine Tests", () => {
     describe("Invalid transitions", () => {
       it("should throw error for invalid transition from completed", () => {
         expect(() => getNextStatus("completed", "job_cancelled")).toThrow(
-          "Invalid transition: cannot apply \"job_cancelled\" when status is \"completed\""
+          'Invalid transition: cannot apply "job_cancelled" when status is "completed"'
         );
       });
 
       it("should throw error for invalid transition from cancelled", () => {
         expect(() => getNextStatus("cancelled", "job_started")).toThrow(
-          "Invalid transition: cannot apply \"job_started\" when status is \"cancelled\""
+          'Invalid transition: cannot apply "job_started" when status is "cancelled"'
         );
       });
 
       it("should throw error for invalid transition from requested", () => {
         expect(() => getNextStatus("requested", "job_completed")).toThrow(
-          "Invalid transition: cannot apply \"job_completed\" when status is \"requested\""
+          'Invalid transition: cannot apply "job_completed" when status is "requested"'
         );
       });
 

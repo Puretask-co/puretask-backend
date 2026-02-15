@@ -1,6 +1,6 @@
 /**
  * Advanced Cleaner AI Assistant API Endpoints
- * 
+ *
  * Additional features: export/import, preview, share, duplicate, reset
  */
 
@@ -17,55 +17,58 @@ router.use(requireAuth);
 // EXPORT ALL SETTINGS
 // ============================================
 
-router.get("/export", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
+router.get(
+  "/export",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
 
-    // Get all data
-    const [settings, templates, responses, preferences] = await Promise.all([
-      query(
-        `SELECT setting_category, setting_key, setting_value, is_enabled, description
+      // Get all data
+      const [settings, templates, responses, preferences] = await Promise.all([
+        query(
+          `SELECT setting_category, setting_key, setting_value, is_enabled, description
          FROM cleaner_ai_settings WHERE cleaner_id = $1`,
-        [cleanerId]
-      ),
-      query(
-        `SELECT template_type, template_name, template_content, variables, is_default, is_active
+          [cleanerId]
+        ),
+        query(
+          `SELECT template_type, template_name, template_content, variables, is_default, is_active
          FROM cleaner_ai_templates WHERE cleaner_id = $1`,
-        [cleanerId]
-      ),
-      query(
-        `SELECT response_category, trigger_keywords, response_text, is_favorite
+          [cleanerId]
+        ),
+        query(
+          `SELECT response_category, trigger_keywords, response_text, is_favorite
          FROM cleaner_quick_responses WHERE cleaner_id = $1`,
-        [cleanerId]
-      ),
-      query(
-        `SELECT * FROM cleaner_ai_preferences WHERE cleaner_id = $1`,
-        [cleanerId]
-      )
-    ]);
+          [cleanerId]
+        ),
+        query(`SELECT * FROM cleaner_ai_preferences WHERE cleaner_id = $1`, [cleanerId]),
+      ]);
 
-    const exportData = {
-      version: "1.0",
-      exportedAt: new Date().toISOString(),
-      cleanerId: cleanerId,
-      settings: settings.rows,
-      templates: templates.rows,
-      quickResponses: responses.rows,
-      preferences: preferences.rows[0] || null,
-    };
+      const exportData = {
+        version: "1.0",
+        exportedAt: new Date().toISOString(),
+        cleanerId: cleanerId,
+        settings: settings.rows,
+        templates: templates.rows,
+        quickResponses: responses.rows,
+        preferences: preferences.rows[0] || null,
+      };
 
-    // Set headers for file download
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="ai-settings-${cleanerId}-${Date.now()}.json"`);
-    
-    res.json(exportData);
-  } catch (error: any) {
-    console.error("Error exporting settings:", error);
-    res.status(500).json({
-      error: { code: "EXPORT_ERROR", message: "Failed to export settings" },
-    });
-  }
-}));
+      // Set headers for file download
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="ai-settings-${cleanerId}-${Date.now()}.json"`
+      );
+
+      res.json(exportData);
+    } catch (error: any) {
+      console.error("Error exporting settings:", error);
+      res.status(500).json({
+        error: { code: "EXPORT_ERROR", message: "Failed to export settings" },
+      });
+    }
+  })
+);
 
 // ============================================
 // IMPORT SETTINGS
@@ -79,113 +82,116 @@ const importSchema = z.object({
   replaceExisting: z.boolean().default(false),
 });
 
-router.post("/import", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const validated = importSchema.parse(req.body);
+router.post(
+  "/import",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const validated = importSchema.parse(req.body);
 
-    await withTransaction(async (client: PoolClient) => {
-      let imported = { settings: 0, templates: 0, responses: 0, preferences: 0 };
+      await withTransaction(async (client: PoolClient) => {
+        let imported = { settings: 0, templates: 0, responses: 0, preferences: 0 };
 
-      // Import settings
-      if (validated.settings && validated.settings.length > 0) {
-        for (const setting of validated.settings) {
-          const query = validated.replaceExisting
-            ? `INSERT INTO cleaner_ai_settings (cleaner_id, setting_category, setting_key, setting_value, is_enabled, description)
+        // Import settings
+        if (validated.settings && validated.settings.length > 0) {
+          for (const setting of validated.settings) {
+            const query = validated.replaceExisting
+              ? `INSERT INTO cleaner_ai_settings (cleaner_id, setting_category, setting_key, setting_value, is_enabled, description)
                VALUES ($1, $2, $3, $4, $5, $6)
                ON CONFLICT (cleaner_id, setting_key) 
                DO UPDATE SET setting_value = EXCLUDED.setting_value, is_enabled = EXCLUDED.is_enabled`
-            : `INSERT INTO cleaner_ai_settings (cleaner_id, setting_category, setting_key, setting_value, is_enabled, description)
+              : `INSERT INTO cleaner_ai_settings (cleaner_id, setting_category, setting_key, setting_value, is_enabled, description)
                VALUES ($1, $2, $3, $4, $5, $6)
                ON CONFLICT (cleaner_id, setting_key) DO NOTHING`;
 
-          await client.query(query, [
-            cleanerId,
-            setting.setting_category,
-            setting.setting_key,
-            setting.setting_value,
-            setting.is_enabled,
-            setting.description
-          ]);
-          imported.settings++;
+            await client.query(query, [
+              cleanerId,
+              setting.setting_category,
+              setting.setting_key,
+              setting.setting_value,
+              setting.is_enabled,
+              setting.description,
+            ]);
+            imported.settings++;
+          }
         }
-      }
 
-      // Import templates
-      if (validated.templates && validated.templates.length > 0) {
-        for (const template of validated.templates) {
-          await client.query(
-            `INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_active)
+        // Import templates
+        if (validated.templates && validated.templates.length > 0) {
+          for (const template of validated.templates) {
+            await client.query(
+              `INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_active)
              VALUES ($1, $2, $3, $4, $5, $6)`,
-            [
-              cleanerId,
-              template.template_type,
-              template.template_name,
-              template.template_content,
-              template.variables,
-              template.is_active ?? true
-            ]
-          );
-          imported.templates++;
+              [
+                cleanerId,
+                template.template_type,
+                template.template_name,
+                template.template_content,
+                template.variables,
+                template.is_active ?? true,
+              ]
+            );
+            imported.templates++;
+          }
         }
-      }
 
-      // Import quick responses
-      if (validated.quickResponses && validated.quickResponses.length > 0) {
-        for (const response of validated.quickResponses) {
-          await client.query(
-            `INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text, is_favorite)
+        // Import quick responses
+        if (validated.quickResponses && validated.quickResponses.length > 0) {
+          for (const response of validated.quickResponses) {
+            await client.query(
+              `INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text, is_favorite)
              VALUES ($1, $2, $3, $4, $5)`,
-            [
-              cleanerId,
-              response.response_category,
-              response.trigger_keywords,
-              response.response_text,
-              response.is_favorite ?? false
-            ]
-          );
-          imported.responses++;
+              [
+                cleanerId,
+                response.response_category,
+                response.trigger_keywords,
+                response.response_text,
+                response.is_favorite ?? false,
+              ]
+            );
+            imported.responses++;
+          }
         }
-      }
 
-      // Import preferences
-      if (validated.preferences && validated.replaceExisting) {
-        await client.query(
-          `INSERT INTO cleaner_ai_preferences (cleaner_id, communication_tone, formality_level, emoji_usage)
+        // Import preferences
+        if (validated.preferences && validated.replaceExisting) {
+          await client.query(
+            `INSERT INTO cleaner_ai_preferences (cleaner_id, communication_tone, formality_level, emoji_usage)
            VALUES ($1, $2, $3, $4)
            ON CONFLICT (cleaner_id) 
            DO UPDATE SET 
              communication_tone = EXCLUDED.communication_tone,
              formality_level = EXCLUDED.formality_level,
              emoji_usage = EXCLUDED.emoji_usage`,
-          [
-            cleanerId,
-            validated.preferences.communication_tone,
-            validated.preferences.formality_level,
-            validated.preferences.emoji_usage
-          ]
-        );
-        imported.preferences = 1;
-      }
+            [
+              cleanerId,
+              validated.preferences.communication_tone,
+              validated.preferences.formality_level,
+              validated.preferences.emoji_usage,
+            ]
+          );
+          imported.preferences = 1;
+        }
 
-      res.json({
-        message: "Settings imported successfully",
-        imported,
+        res.json({
+          message: "Settings imported successfully",
+          imported,
+        });
       });
-    });
-  } catch (error: any) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        error: { code: "VALIDATION_ERROR", details: error.errors },
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          error: { code: "VALIDATION_ERROR", details: error.errors },
+        });
+        return;
+      }
+      console.error("Error importing settings:", error);
+      res.status(500).json({
+        error: { code: "IMPORT_ERROR", message: "Failed to import settings" },
       });
-      return;
     }
-    console.error("Error importing settings:", error);
-    res.status(500).json({
-      error: { code: "IMPORT_ERROR", message: "Failed to import settings" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // PREVIEW TEMPLATE WITH SAMPLE DATA
@@ -196,149 +202,157 @@ const previewSchema = z.object({
   sampleData: z.record(z.string()),
 });
 
-router.post("/preview-template", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const validated = previewSchema.parse(req.body);
-    
-    let preview = validated.templateContent;
-    
-    // Replace variables with sample data
-    for (const [key, value] of Object.entries(validated.sampleData)) {
-      const regex = new RegExp(`\\{${key}\\}`, 'g');
-      preview = preview.replace(regex, value);
-    }
+router.post(
+  "/preview-template",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const validated = previewSchema.parse(req.body);
 
-    // Find any unreplaced variables
-    const unreplacedVariables = preview.match(/\{([^}]+)\}/g) || [];
+      let preview = validated.templateContent;
 
-    res.json({
-      preview,
-      unreplacedVariables: unreplacedVariables.map(v => v.slice(1, -1)),
-      charactersUsed: preview.length,
-    });
-  } catch (error: any) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        error: { code: "VALIDATION_ERROR", details: error.errors },
+      // Replace variables with sample data
+      for (const [key, value] of Object.entries(validated.sampleData)) {
+        const regex = new RegExp(`\\{${key}\\}`, "g");
+        preview = preview.replace(regex, value);
+      }
+
+      // Find any unreplaced variables
+      const unreplacedVariables = preview.match(/\{([^}]+)\}/g) || [];
+
+      res.json({
+        preview,
+        unreplacedVariables: unreplacedVariables.map((v) => v.slice(1, -1)),
+        charactersUsed: preview.length,
       });
-      return;
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          error: { code: "VALIDATION_ERROR", details: error.errors },
+        });
+        return;
+      }
+      res.status(500).json({
+        error: { code: "PREVIEW_ERROR", message: "Failed to preview template" },
+      });
     }
-    res.status(500).json({
-      error: { code: "PREVIEW_ERROR", message: "Failed to preview template" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // DUPLICATE TEMPLATE
 // ============================================
 
-router.post("/templates/:templateId/duplicate", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { templateId } = req.params;
-    const { newName } = req.body;
+router.post(
+  "/templates/:templateId/duplicate",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { templateId } = req.params;
+      const { newName } = req.body;
 
-    // Get original template
-    const original = await query(
-      `SELECT * FROM cleaner_ai_templates 
+      // Get original template
+      const original = await query(
+        `SELECT * FROM cleaner_ai_templates 
        WHERE id = $1 AND cleaner_id = $2`,
-      [templateId, cleanerId]
-    );
+        [templateId, cleanerId]
+      );
 
-    if (original.rows.length === 0) {
-      res.status(404).json({
-        error: { code: "NOT_FOUND", message: "Template not found" },
-      });
-      return;
-    }
+      if (original.rows.length === 0) {
+        res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Template not found" },
+        });
+        return;
+      }
 
-    const template = original.rows[0];
+      const template = original.rows[0];
 
-    // Create duplicate
-    const result = await query(
-      `INSERT INTO cleaner_ai_templates 
+      // Create duplicate
+      const result = await query(
+        `INSERT INTO cleaner_ai_templates 
         (cleaner_id, template_type, template_name, template_content, variables, is_active)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, template_name as name, template_type as type`,
-      [
-        cleanerId,
-        template.template_type,
-        newName || `${template.template_name} (Copy)`,
-        template.template_content,
-        template.variables,
-        true
-      ]
-    );
+        [
+          cleanerId,
+          template.template_type,
+          newName || `${template.template_name} (Copy)`,
+          template.template_content,
+          template.variables,
+          true,
+        ]
+      );
 
-    res.status(201).json({
-      message: "Template duplicated successfully",
-      template: result.rows[0],
-    });
-  } catch (error: any) {
-    console.error("Error duplicating template:", error);
-    res.status(500).json({
-      error: { code: "DUPLICATE_ERROR", message: "Failed to duplicate template" },
-    });
-  }
-}));
+      res.status(201).json({
+        message: "Template duplicated successfully",
+        template: result.rows[0],
+      });
+    } catch (error: any) {
+      console.error("Error duplicating template:", error);
+      res.status(500).json({
+        error: { code: "DUPLICATE_ERROR", message: "Failed to duplicate template" },
+      });
+    }
+  })
+);
 
 // ============================================
 // RESET TO DEFAULTS
 // ============================================
 
-router.post("/reset-to-defaults", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { resetType } = req.body; // 'settings', 'templates', 'responses', 'preferences', 'all'
+router.post(
+  "/reset-to-defaults",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { resetType } = req.body; // 'settings', 'templates', 'responses', 'preferences', 'all'
 
-    await withTransaction(async (client: PoolClient) => {
-      let reset = { settings: 0, templates: 0, responses: 0, preferences: 0 };
+      await withTransaction(async (client: PoolClient) => {
+        let reset = { settings: 0, templates: 0, responses: 0, preferences: 0 };
 
-      if (resetType === 'settings' || resetType === 'all') {
-        // Reset all settings to enabled state
-        const result = await client.query(
-          `UPDATE cleaner_ai_settings 
+        if (resetType === "settings" || resetType === "all") {
+          // Reset all settings to enabled state
+          const result = await client.query(
+            `UPDATE cleaner_ai_settings 
            SET is_enabled = true, last_updated_at = NOW()
            WHERE cleaner_id = $1`,
-          [cleanerId]
-        );
-        reset.settings = result.rowCount || 0;
-      }
+            [cleanerId]
+          );
+          reset.settings = result.rowCount || 0;
+        }
 
-      if (resetType === 'templates' || resetType === 'all') {
-        // Delete non-default templates
-        const result = await client.query(
-          `DELETE FROM cleaner_ai_templates 
+        if (resetType === "templates" || resetType === "all") {
+          // Delete non-default templates
+          const result = await client.query(
+            `DELETE FROM cleaner_ai_templates 
            WHERE cleaner_id = $1 AND is_default = false`,
-          [cleanerId]
-        );
-        reset.templates = result.rowCount || 0;
+            [cleanerId]
+          );
+          reset.templates = result.rowCount || 0;
 
-        // Reactivate all default templates
-        await client.query(
-          `UPDATE cleaner_ai_templates 
+          // Reactivate all default templates
+          await client.query(
+            `UPDATE cleaner_ai_templates 
            SET is_active = true 
            WHERE cleaner_id = $1 AND is_default = true`,
-          [cleanerId]
-        );
-      }
+            [cleanerId]
+          );
+        }
 
-      if (resetType === 'responses' || resetType === 'all') {
-        // Reset usage counts and unfavorite all
-        const result = await client.query(
-          `UPDATE cleaner_quick_responses 
+        if (resetType === "responses" || resetType === "all") {
+          // Reset usage counts and unfavorite all
+          const result = await client.query(
+            `UPDATE cleaner_quick_responses 
            SET is_favorite = false, usage_count = 0
            WHERE cleaner_id = $1`,
-          [cleanerId]
-        );
-        reset.responses = result.rowCount || 0;
-      }
+            [cleanerId]
+          );
+          reset.responses = result.rowCount || 0;
+        }
 
-      if (resetType === 'preferences' || resetType === 'all') {
-        // Reset preferences to defaults
-        const result = await client.query(
-          `UPDATE cleaner_ai_preferences 
+        if (resetType === "preferences" || resetType === "all") {
+          // Reset preferences to defaults
+          const result = await client.query(
+            `UPDATE cleaner_ai_preferences 
            SET 
              communication_tone = 'professional_friendly',
              formality_level = 3,
@@ -349,70 +363,76 @@ router.post("/reset-to-defaults", authedHandler(async (req: AuthedRequest, res) 
              priority_goal = 'balanced',
              updated_at = NOW()
            WHERE cleaner_id = $1`,
-          [cleanerId]
-        );
-        reset.preferences = result.rowCount || 0;
-      }
+            [cleanerId]
+          );
+          reset.preferences = result.rowCount || 0;
+        }
 
-      res.json({
-        message: "Settings reset to defaults successfully",
-        reset,
+        res.json({
+          message: "Settings reset to defaults successfully",
+          reset,
+        });
       });
-    });
-  } catch (error: any) {
-    console.error("Error resetting to defaults:", error);
-    res.status(500).json({
-      error: { code: "RESET_ERROR", message: "Failed to reset to defaults" },
-    });
-  }
-}));
+    } catch (error: any) {
+      console.error("Error resetting to defaults:", error);
+      res.status(500).json({
+        error: { code: "RESET_ERROR", message: "Failed to reset to defaults" },
+      });
+    }
+  })
+);
 
 // ============================================
 // BATCH ACTIVATE/DEACTIVATE TEMPLATES
 // ============================================
 
-router.post("/templates/batch-toggle", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { templateIds, active } = req.body;
+router.post(
+  "/templates/batch-toggle",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { templateIds, active } = req.body;
 
-    if (!Array.isArray(templateIds) || typeof active !== 'boolean') {
-      res.status(400).json({
-        error: { code: "VALIDATION_ERROR", message: "Invalid request format" },
-      });
-      return;
-    }
+      if (!Array.isArray(templateIds) || typeof active !== "boolean") {
+        res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: "Invalid request format" },
+        });
+        return;
+      }
 
-    const result = await query(
-      `UPDATE cleaner_ai_templates 
+      const result = await query(
+        `UPDATE cleaner_ai_templates 
        SET is_active = $1, updated_at = NOW()
        WHERE id = ANY($2) AND cleaner_id = $3
        RETURNING id`,
-      [active, templateIds, cleanerId]
-    );
+        [active, templateIds, cleanerId]
+      );
 
-    res.json({
-      message: `Templates ${active ? 'activated' : 'deactivated'} successfully`,
-      updated: result.rowCount,
-    });
-  } catch (error: any) {
-    console.error("Error batch toggling templates:", error);
-    res.status(500).json({
-      error: { code: "BATCH_ERROR", message: "Failed to update templates" },
-    });
-  }
-}));
+      res.json({
+        message: `Templates ${active ? "activated" : "deactivated"} successfully`,
+        updated: result.rowCount,
+      });
+    } catch (error: any) {
+      console.error("Error batch toggling templates:", error);
+      res.status(500).json({
+        error: { code: "BATCH_ERROR", message: "Failed to update templates" },
+      });
+    }
+  })
+);
 
 // ============================================
 // SEARCH TEMPLATES
 // ============================================
 
-router.get("/templates/search", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { q, type } = req.query;
+router.get(
+  "/templates/search",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { q, type } = req.query;
 
-    let sql = `
+      let sql = `
       SELECT 
         id, template_type as type, template_name as name, 
         template_content as content, variables, is_active as active,
@@ -420,125 +440,134 @@ router.get("/templates/search", authedHandler(async (req: AuthedRequest, res) =>
       FROM cleaner_ai_templates
       WHERE cleaner_id = $1
     `;
-    const params: any[] = [cleanerId];
+      const params: any[] = [cleanerId];
 
-    if (q) {
-      sql += ` AND (template_name ILIKE $${params.length + 1} OR template_content ILIKE $${params.length + 1})`;
-      params.push(`%${q}%`);
+      if (q) {
+        sql += ` AND (template_name ILIKE $${params.length + 1} OR template_content ILIKE $${params.length + 1})`;
+        params.push(`%${q}%`);
+      }
+
+      if (type) {
+        sql += ` AND template_type = $${params.length + 1}`;
+        params.push(type);
+      }
+
+      sql += ` ORDER BY usage_count DESC, template_name`;
+
+      const result = await query(sql, params);
+
+      res.json({
+        templates: result.rows,
+        count: result.rows.length,
+        searchQuery: q || null,
+      });
+    } catch (error: any) {
+      console.error("Error searching templates:", error);
+      res.status(500).json({
+        error: { code: "SEARCH_ERROR", message: "Failed to search templates" },
+      });
     }
-
-    if (type) {
-      sql += ` AND template_type = $${params.length + 1}`;
-      params.push(type);
-    }
-
-    sql += ` ORDER BY usage_count DESC, template_name`;
-
-    const result = await query(sql, params);
-
-    res.json({
-      templates: result.rows,
-      count: result.rows.length,
-      searchQuery: q || null,
-    });
-  } catch (error: any) {
-    console.error("Error searching templates:", error);
-    res.status(500).json({
-      error: { code: "SEARCH_ERROR", message: "Failed to search templates" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // SEARCH QUICK RESPONSES
 // ============================================
 
-router.get("/quick-responses/search", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { q, category } = req.query;
+router.get(
+  "/quick-responses/search",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { q, category } = req.query;
 
-    let sql = `
+      let sql = `
       SELECT 
         id, response_category as category, trigger_keywords as "triggerKeywords",
         response_text as text, is_favorite as favorite, usage_count as "usageCount"
       FROM cleaner_quick_responses
       WHERE cleaner_id = $1
     `;
-    const params: any[] = [cleanerId];
+      const params: any[] = [cleanerId];
 
-    if (q) {
-      sql += ` AND (response_text ILIKE $${params.length + 1} OR $${params.length + 1} = ANY(trigger_keywords))`;
-      params.push(`%${q}%`);
+      if (q) {
+        sql += ` AND (response_text ILIKE $${params.length + 1} OR $${params.length + 1} = ANY(trigger_keywords))`;
+        params.push(`%${q}%`);
+      }
+
+      if (category) {
+        sql += ` AND response_category = $${params.length + 1}`;
+        params.push(category);
+      }
+
+      sql += ` ORDER BY is_favorite DESC, usage_count DESC`;
+
+      const result = await query(sql, params);
+
+      res.json({
+        responses: result.rows,
+        count: result.rows.length,
+        searchQuery: q || null,
+      });
+    } catch (error: any) {
+      console.error("Error searching quick responses:", error);
+      res.status(500).json({
+        error: { code: "SEARCH_ERROR", message: "Failed to search responses" },
+      });
     }
-
-    if (category) {
-      sql += ` AND response_category = $${params.length + 1}`;
-      params.push(category);
-    }
-
-    sql += ` ORDER BY is_favorite DESC, usage_count DESC`;
-
-    const result = await query(sql, params);
-
-    res.json({
-      responses: result.rows,
-      count: result.rows.length,
-      searchQuery: q || null,
-    });
-  } catch (error: any) {
-    console.error("Error searching quick responses:", error);
-    res.status(500).json({
-      error: { code: "SEARCH_ERROR", message: "Failed to search responses" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // INCREMENT USAGE COUNT
 // ============================================
 
-router.post("/templates/:templateId/use", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { templateId } = req.params;
+router.post(
+  "/templates/:templateId/use",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { templateId } = req.params;
 
-    await query(
-      `UPDATE cleaner_ai_templates 
+      await query(
+        `UPDATE cleaner_ai_templates 
        SET usage_count = usage_count + 1
        WHERE id = $1 AND cleaner_id = $2`,
-      [templateId, cleanerId]
-    );
+        [templateId, cleanerId]
+      );
 
-    res.json({ message: "Usage recorded" });
-  } catch (error: any) {
-    console.error("Error recording usage:", error);
-    res.status(500).json({
-      error: { code: "USAGE_ERROR", message: "Failed to record usage" },
-    });
-  }
-}));
+      res.json({ message: "Usage recorded" });
+    } catch (error: any) {
+      console.error("Error recording usage:", error);
+      res.status(500).json({
+        error: { code: "USAGE_ERROR", message: "Failed to record usage" },
+      });
+    }
+  })
+);
 
-router.post("/quick-responses/:responseId/use", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { responseId } = req.params;
+router.post(
+  "/quick-responses/:responseId/use",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { responseId } = req.params;
 
-    await query(
-      `UPDATE cleaner_quick_responses 
+      await query(
+        `UPDATE cleaner_quick_responses 
        SET usage_count = usage_count + 1
        WHERE id = $1 AND cleaner_id = $2`,
-      [responseId, cleanerId]
-    );
+        [responseId, cleanerId]
+      );
 
-    res.json({ message: "Usage recorded" });
-  } catch (error: any) {
-    console.error("Error recording usage:", error);
-    res.status(500).json({
-      error: { code: "USAGE_ERROR", message: "Failed to record usage" },
-    });
-  }
-}));
+      res.json({ message: "Usage recorded" });
+    } catch (error: any) {
+      console.error("Error recording usage:", error);
+      res.status(500).json({
+        error: { code: "USAGE_ERROR", message: "Failed to record usage" },
+      });
+    }
+  })
+);
 
 export default router;
-

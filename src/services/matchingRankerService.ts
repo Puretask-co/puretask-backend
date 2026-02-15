@@ -53,10 +53,9 @@ export class MatchingRankerService {
       if (requestHasAddons) {
         score *= eff.addon_job_multiplier;
       }
-      const effectiveEarlyMins =
-        requestHasAddons
-          ? eff.early_exposure_minutes + eff.early_exposure_addon_minutes
-          : eff.early_exposure_minutes;
+      const effectiveEarlyMins = requestHasAddons
+        ? eff.early_exposure_minutes + eff.early_exposure_addon_minutes
+        : eff.early_exposure_minutes;
       if (requestAge <= effectiveEarlyMins && effectiveEarlyMins > 0) {
         score *= EARLY_EXPOSURE_BUMP;
       }
@@ -91,7 +90,10 @@ export class MatchingRankerService {
       region_id: params.region_id,
     });
     if (eff.paused) return params.base_score;
-    if (params.request_age_minutes <= eff.early_exposure_minutes && eff.early_exposure_minutes > 0) {
+    if (
+      params.request_age_minutes <= eff.early_exposure_minutes &&
+      eff.early_exposure_minutes > 0
+    ) {
       return params.base_score * EARLY_EXPOSURE_BUMP;
     }
     return params.base_score;

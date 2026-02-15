@@ -120,10 +120,7 @@ export async function getJobPhotosByType(
  * Get a single photo by ID
  */
 export async function getPhotoById(photoId: string): Promise<JobPhoto | null> {
-  const result = await query<JobPhoto>(
-    `SELECT * FROM job_photos WHERE id = $1`,
-    [photoId]
-  );
+  const result = await query<JobPhoto>(`SELECT * FROM job_photos WHERE id = $1`, [photoId]);
 
   return result.rows[0] ?? null;
 }
@@ -137,16 +134,11 @@ export async function deleteJobPhoto(
   isAdmin = false
 ): Promise<boolean> {
   // Admin can delete any photo, users can only delete their own
-  const whereClause = isAdmin
-    ? `WHERE id = $1`
-    : `WHERE id = $1 AND uploaded_by = $2`;
+  const whereClause = isAdmin ? `WHERE id = $1` : `WHERE id = $1 AND uploaded_by = $2`;
 
   const params = isAdmin ? [photoId] : [photoId, userId];
 
-  const result = await query(
-    `DELETE FROM job_photos ${whereClause} RETURNING id`,
-    params
-  );
+  const result = await query(`DELETE FROM job_photos ${whereClause} RETURNING id`, params);
 
   if (result.rows.length > 0) {
     logger.info("job_photo_deleted", {
@@ -218,10 +210,7 @@ export async function getJobPhotoCounts(jobId: string): Promise<{
 /**
  * Get recent photos uploaded by a cleaner
  */
-export async function getCleanerRecentPhotos(
-  cleanerId: string,
-  limit = 20
-): Promise<JobPhoto[]> {
+export async function getCleanerRecentPhotos(cleanerId: string, limit = 20): Promise<JobPhoto[]> {
   const result = await query<JobPhoto>(
     `
       SELECT *
@@ -235,4 +224,3 @@ export async function getCleanerRecentPhotos(
 
   return result.rows;
 }
-

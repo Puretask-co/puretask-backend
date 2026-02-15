@@ -25,7 +25,7 @@ interface ExpiredPhoto {
  */
 async function findExpiredPhotos(): Promise<ExpiredPhoto[]> {
   const retentionDays = env.PHOTO_RETENTION_DAYS;
-  
+
   const result = await query<ExpiredPhoto>(
     `
       SELECT jp.id, jp.job_id, jp.url, jp.type, jp.created_at
@@ -50,10 +50,7 @@ async function findExpiredPhotos(): Promise<ExpiredPhoto[]> {
  */
 async function deletePhotoRecord(photo: ExpiredPhoto): Promise<void> {
   try {
-    await query(
-      `DELETE FROM job_photos WHERE id = $1`,
-      [photo.id]
-    );
+    await query(`DELETE FROM job_photos WHERE id = $1`, [photo.id]);
 
     logger.info("photo_record_deleted", {
       photoId: photo.id,
@@ -89,7 +86,7 @@ export async function runPhotoRetentionCleanup(): Promise<{
 
   while (hasMore) {
     const expiredPhotos = await findExpiredPhotos();
-    
+
     if (expiredPhotos.length === 0) {
       hasMore = false;
       break;
@@ -127,7 +124,7 @@ export async function getPhotoRetentionStats(): Promise<{
   protectedByDispute: number;
 }> {
   const retentionDays = env.PHOTO_RETENTION_DAYS;
-  
+
   const result = await query<{
     total: string;
     expiring_7: string;
@@ -163,7 +160,3 @@ export async function getPhotoRetentionStats(): Promise<{
     protectedByDispute: Number(row?.protected || 0),
   };
 }
-
-
-
-

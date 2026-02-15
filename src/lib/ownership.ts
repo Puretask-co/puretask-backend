@@ -1,9 +1,11 @@
 // src/lib/ownership.ts
 // Ownership check utilities for authorization
 
+import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { AppError, ErrorCode } from "./errors";
 import { query } from "../db/client";
 import { UserRole } from "./auth";
+import type { AuthedRequest } from "../middleware/authCanonical";
 
 /**
  * Ensure a user owns a resource or has the required role
@@ -14,17 +16,18 @@ export async function ensureOwnership(
   userId: string,
   role: UserRole
 ): Promise<void> {
-  // Admins can access everything
-  if (role === "admin") {
+  // Admins and super_admin can access everything
+  if (role === "admin" || role === "super_admin") {
     return;
   }
 
   switch (resourceType) {
     case "job": {
-      const result = await query<{ client_id: string; cleaner_id: string | null }>(
-        `SELECT client_id, cleaner_id FROM jobs WHERE id = $1`,
-        [resourceId]
-      );
+      const result = await query<{
+        client_id: string;
+        cleaner_id: string | null;
+        status: string;
+      }>(`SELECT client_id, cleaner_id, status FROM jobs WHERE id = $1`, [resourceId]);
 
       if (result.rows.length === 0) {
         throw new AppError(ErrorCode.NOT_FOUND, "Job not found", 404);
@@ -34,7 +37,12 @@ export async function ensureOwnership(
       if (role === "client" && job.client_id !== userId) {
         throw new AppError(ErrorCode.FORBIDDEN, "You do not own this job", 403);
       }
-      if (role === "cleaner" && job.cleaner_id !== userId) {
+      // Cleaners can view requested (available) jobs or jobs they're assigned to
+      if (
+        role === "cleaner" &&
+        job.cleaner_id !== userId &&
+        job.status !== "requested"
+      ) {
         throw new AppError(ErrorCode.FORBIDDEN, "You are not assigned to this job", 403);
       }
       break;
@@ -111,6 +119,47 @@ export async function ensureOwnership(
       break;
     }
   }
+}
+
+/**
+ * Express middleware factory: enforce ownership before handler.
+ * Use after requireAuth. Param name = key in req.params (e.g. "jobId", "photoId").
+ */
+export function requireOwnership(
+  resourceType: "job" | "user" | "payout" | "invoice" | "photo",
+  paramName: string
+): RequestHandler {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const authed = req as AuthedRequest;
+    if (!authed.user?.id) {
+      res.status(401).json({
+        error: { code: "UNAUTHENTICATED", message: "Authentication required" },
+      });
+      return;
+    }
+    const resourceId = (req.params as Record<string, string>)[paramName];
+    if (!resourceId) {
+      res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: `Missing param: ${paramName}` },
+      });
+      return;
+    }
+    try {
+      await ensureOwnership(
+        resourceType,
+        resourceId,
+        authed.user.id,
+        authed.user.role as UserRole
+      );
+      next();
+    } catch (err: any) {
+      const code = err?.code ?? "FORBIDDEN";
+      const status = err?.statusCode ?? 403;
+      res.status(status).json({
+        error: { code, message: err?.message ?? "Access denied" },
+      });
+    }
+  };
 }
 
 /**

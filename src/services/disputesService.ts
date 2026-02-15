@@ -20,10 +20,7 @@ export async function createDispute(options: {
   const { jobId, clientId, clientNotes } = options;
 
   // Verify job exists and is in awaiting_approval status
-  const jobResult = await query<Job>(
-    `SELECT * FROM jobs WHERE id = $1`,
-    [jobId]
-  );
+  const jobResult = await query<Job>(`SELECT * FROM jobs WHERE id = $1`, [jobId]);
 
   if (jobResult.rows.length === 0) {
     throw new Error("Job not found");
@@ -42,16 +39,18 @@ export async function createDispute(options: {
   // Per policy: Check 48-hour dispute window
   const disputeWindowHours = env.DISPUTE_WINDOW_HOURS;
   let withinWindow = true;
-  
+
   if (job.actual_end_at) {
     const completedAt = new Date(job.actual_end_at);
     const now = new Date();
     const hoursSinceCompletion = (now.getTime() - completedAt.getTime()) / (1000 * 60 * 60);
-    
+
     if (hoursSinceCompletion > disputeWindowHours) {
       withinWindow = false;
       throw Object.assign(
-        new Error(`Dispute window has expired. Disputes must be filed within ${disputeWindowHours} hours of job completion. This job was completed ${Math.round(hoursSinceCompletion)} hours ago.`),
+        new Error(
+          `Dispute window has expired. Disputes must be filed within ${disputeWindowHours} hours of job completion. This job was completed ${Math.round(hoursSinceCompletion)} hours ago.`
+        ),
         { statusCode: 400, code: "DISPUTE_WINDOW_EXPIRED" }
       );
     }
@@ -77,10 +76,7 @@ export async function createDispute(options: {
   const dispute = result.rows[0];
 
   // Update job status to disputed
-  await query(
-    `UPDATE jobs SET status = 'disputed', updated_at = NOW() WHERE id = $1`,
-    [jobId]
-  );
+  await query(`UPDATE jobs SET status = 'disputed', updated_at = NOW() WHERE id = $1`, [jobId]);
 
   // Publish event
   await publishEvent({
@@ -109,10 +105,7 @@ export async function createDispute(options: {
  * Get dispute by job ID
  */
 export async function getDisputeByJobId(jobId: string): Promise<Dispute | null> {
-  const result = await query<Dispute>(
-    `SELECT * FROM disputes WHERE job_id = $1`,
-    [jobId]
-  );
+  const result = await query<Dispute>(`SELECT * FROM disputes WHERE job_id = $1`, [jobId]);
 
   return result.rows[0] ?? null;
 }
@@ -180,10 +173,7 @@ export async function updateDisputeNotes(
  * Get dispute by ID
  */
 export async function getDisputeById(disputeId: string): Promise<Dispute | null> {
-  const result = await query<Dispute>(
-    `SELECT * FROM disputes WHERE id = $1`,
-    [disputeId]
-  );
+  const result = await query<Dispute>(`SELECT * FROM disputes WHERE id = $1`, [disputeId]);
   return result.rows[0] ?? null;
 }
 
@@ -228,10 +218,7 @@ export async function resolveDisputeWithRefund(
   }
 
   // Get job
-  const jobResult = await query<Job>(
-    `SELECT * FROM jobs WHERE id = $1`,
-    [dispute.job_id]
-  );
+  const jobResult = await query<Job>(`SELECT * FROM jobs WHERE id = $1`, [dispute.job_id]);
   const job = jobResult.rows[0];
 
   if (!job) {
@@ -255,10 +242,7 @@ export async function resolveDisputeWithRefund(
   );
 
   // Update job status to cancelled
-  await query(
-    `UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1`,
-    [job.id]
-  );
+  await query(`UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [job.id]);
 
   // Publish event
   await publishEvent({
@@ -321,10 +305,7 @@ export async function resolveDisputeWithoutRefund(
   }
 
   // Get job
-  const jobResult = await query<Job>(
-    `SELECT * FROM jobs WHERE id = $1`,
-    [dispute.job_id]
-  );
+  const jobResult = await query<Job>(`SELECT * FROM jobs WHERE id = $1`, [dispute.job_id]);
   const job = jobResult.rows[0];
 
   if (!job) {
@@ -351,10 +332,7 @@ export async function resolveDisputeWithoutRefund(
   );
 
   // Update job status to completed
-  await query(
-    `UPDATE jobs SET status = 'completed', updated_at = NOW() WHERE id = $1`,
-    [job.id]
-  );
+  await query(`UPDATE jobs SET status = 'completed', updated_at = NOW() WHERE id = $1`, [job.id]);
 
   // Publish event
   await publishEvent({
@@ -404,4 +382,3 @@ export async function resolveDispute(
     return resolveDisputeWithoutRefund(disputeId, adminNotes);
   }
 }
-

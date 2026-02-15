@@ -36,7 +36,7 @@ export class OneSignalProvider implements NotificationProvider {
       const response = await fetch(ONESIGNAL_API_URL, {
         method: "POST",
         headers: {
-          "Authorization": `Basic ${env.ONESIGNAL_API_KEY}`,
+          Authorization: `Basic ${env.ONESIGNAL_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -111,7 +111,7 @@ export class OneSignalProvider implements NotificationProvider {
       const response = await fetch(ONESIGNAL_API_URL, {
         method: "POST",
         headers: {
-          "Authorization": `Basic ${env.ONESIGNAL_API_KEY}`,
+          Authorization: `Basic ${env.ONESIGNAL_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -149,4 +149,3 @@ export class OneSignalProvider implements NotificationProvider {
 }
 
 export const oneSignalProvider = new OneSignalProvider();
-

@@ -113,11 +113,15 @@ export function rateLimit(options: RateLimitOptions) {
     if (skipSuccessfulRequests) {
       const originalEnd = res.end.bind(res);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (res as any).end = function (chunk?: any, encoding?: BufferEncoding | (() => void), callback?: () => void) {
+      (res as any).end = function (
+        chunk?: any,
+        encoding?: BufferEncoding | (() => void),
+        callback?: () => void
+      ) {
         if (res.statusCode < 400) {
           store[key].count--;
         }
-        if (typeof encoding === 'function') {
+        if (typeof encoding === "function") {
           return originalEnd(chunk, encoding);
         }
         if (encoding) {
@@ -194,4 +198,3 @@ export const expensiveRateLimit = rateLimit({
   keyGenerator: userKeyGenerator,
   message: "This operation is rate limited, please try again later",
 });
-

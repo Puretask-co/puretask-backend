@@ -3,6 +3,7 @@
 // Run from scheduler or cron; handlers register by job_type.
 
 import { logger } from "../lib/logger";
+import { recordMetric, incrementCounter } from "../lib/metrics";
 import {
   claim,
   complete,
@@ -41,7 +42,11 @@ function defaultHandler(payload: Record<string, unknown> | null): Promise<void> 
 /**
  * Run one worker cycle: release stale locks, claim jobs, run each handler, complete or fail.
  */
-export async function runDurableJobWorkerCycle(): Promise<{ claimed: number; completed: number; failed: number }> {
+export async function runDurableJobWorkerCycle(): Promise<{
+  claimed: number;
+  completed: number;
+  failed: number;
+}> {
   const released = await releaseStaleLocks(LOCK_TIMEOUT_MS);
   if (released > 0) {
     logger.info("durable_job_stale_locks_released", { count: released });
@@ -64,6 +69,11 @@ export async function runDurableJobWorkerCycle(): Promise<{ claimed: number; com
   let completed = 0;
   let failed = 0;
 
+  const startTimes = new Map<string, number>();
+  for (const job of jobs) {
+    startTimes.set(job.id, Date.now());
+  }
+
   for (const job of jobs) {
     const handler = handlers.get(job.job_type) ?? defaultHandler;
     const payload = job.payload_json ?? {};
@@ -71,13 +81,34 @@ export async function runDurableJobWorkerCycle(): Promise<{ claimed: number; com
       await handler(payload);
       await complete(job.id);
       completed++;
-      logger.info("durable_job_completed", { jobId: job.id, job_type: job.job_type });
+      const durationMs = Date.now() - (startTimes.get(job.id) ?? Date.now());
+      recordMetric("durable_job.duration_ms", durationMs, {
+        job_type: job.job_type,
+        outcome: "completed",
+      });
+      incrementCounter("durable_job.completed", { job_type: job.job_type });
+      logger.info("durable_job_completed", {
+        jobId: job.id,
+        job_type: job.job_type,
+        attempt: job.attempt_count,
+        durationMs,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await fail(job.id, message, true);
       failed++;
-      logger.warn("durable_job_failed", { jobId: job.id, job_type: job.job_type, error: message });
+      incrementCounter("durable_job.failed", { job_type: job.job_type });
+      logger.warn("durable_job_failed", {
+        jobId: job.id,
+        job_type: job.job_type,
+        attempt: job.attempt_count,
+        error: message,
+      });
     }
+  }
+
+  if (deadCount > 0) {
+    recordMetric("durable_job.dead_count", deadCount, {});
   }
 
   return { claimed: jobs.length, completed, failed };

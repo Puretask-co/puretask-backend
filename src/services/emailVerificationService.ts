@@ -87,10 +87,11 @@ export async function verifyEmail(token: string): Promise<{ success: boolean; us
   const updatedUser = updateResult.rows[0];
 
   // Log security event
-  await query(
-    `SELECT log_security_event($1, $2, $3, NULL, NULL, '{}'::JSONB)`,
-    [user.id, "email_verified", "success"]
-  );
+  await query(`SELECT log_security_event($1, $2, $3, NULL, NULL, '{}'::JSONB)`, [
+    user.id,
+    "email_verified",
+    "success",
+  ]);
 
   logger.info("email_verified", { userId: user.id, email: user.email });
 
@@ -113,10 +114,7 @@ export async function isEmailVerified(userId: string): Promise<boolean> {
  * Resend verification email
  */
 export async function resendVerificationEmail(userId: string): Promise<void> {
-  const result = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const result = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
 
   const user = result.rows[0];
 
@@ -135,7 +133,7 @@ export async function resendVerificationEmail(userId: string): Promise<void> {
   if (user.email_verification_token_expires_at) {
     const tokenExpiry = new Date(user.email_verification_token_expires_at);
     const hoursRemaining = (tokenExpiry.getTime() - Date.now()) / (1000 * 60 * 60);
-    
+
     if (hoursRemaining > 23) {
       throw Object.assign(
         new Error("Verification email was sent recently. Please check your inbox."),
@@ -150,15 +148,12 @@ export async function resendVerificationEmail(userId: string): Promise<void> {
 /**
  * Request email change (sends verification to new email)
  */
-export async function requestEmailChange(
-  userId: string,
-  newEmail: string
-): Promise<void> {
+export async function requestEmailChange(userId: string, newEmail: string): Promise<void> {
   // Check if new email already exists
-  const existing = await query<User>(
-    `SELECT id FROM users WHERE email = $1 AND id != $2`,
-    [newEmail, userId]
-  );
+  const existing = await query<User>(`SELECT id FROM users WHERE email = $1 AND id != $2`, [
+    newEmail,
+    userId,
+  ]);
 
   if (existing.rows.length > 0) {
     throw Object.assign(new Error("Email already in use"), {
@@ -168,10 +163,7 @@ export async function requestEmailChange(
   }
 
   // Get current user
-  const userResult = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
 
   const user = userResult.rows[0];
   if (!user) {
@@ -244,15 +236,12 @@ export async function verifyEmailChange(token: string): Promise<{ success: boole
   );
 
   // Log security event
-  await query(
-    `SELECT log_security_event($1, $2, $3, NULL, NULL, $4::JSONB)`,
-    [
-      request.user_id,
-      "email_changed",
-      "success",
-      JSON.stringify({ old_email: request.old_email, new_email: request.new_email }),
-    ]
-  );
+  await query(`SELECT log_security_event($1, $2, $3, NULL, NULL, $4::JSONB)`, [
+    request.user_id,
+    "email_changed",
+    "success",
+    JSON.stringify({ old_email: request.old_email, new_email: request.new_email }),
+  ]);
 
   logger.info("email_changed", {
     userId: request.user_id,
@@ -262,4 +251,3 @@ export async function verifyEmailChange(token: string): Promise<{ success: boole
 
   return { success: true };
 }
-

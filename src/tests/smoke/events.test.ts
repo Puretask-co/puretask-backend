@@ -1,7 +1,7 @@
 // src/tests/smoke/events.test.ts
 // Smoke tests for events endpoint
 
-import { describe, it, expect } from "@jest/globals";
+import { describe, it, expect } from "vitest";
 import request from "supertest";
 import app from "../../index";
 import { computeN8nSignature } from "../../lib/auth";
@@ -33,7 +33,7 @@ describe("Events API - Smoke Tests", () => {
     it("should reject invalid webhook secret", async () => {
       const body = { event_type: "test_event" };
       const invalidSignature = "invalid_signature";
-      
+
       const response = await request(app)
         .post("/events")
         .set("x-n8n-signature", invalidSignature)
@@ -46,10 +46,8 @@ describe("Events API - Smoke Tests", () => {
 
     it("should reject request without signature header", async () => {
       const body = { event_type: "test_event" };
-      
-      const response = await request(app)
-        .post("/events")
-        .send(body);
+
+      const response = await request(app).post("/events").send(body);
 
       expect(response.status).toBe(401);
       expect(response.body).toHaveProperty("error");
@@ -62,7 +60,7 @@ describe("Events API - Smoke Tests", () => {
         payload: { test: true },
       };
       const signature = computeN8nSignature(body);
-      
+
       const response = await request(app)
         .post("/events")
         .set("x-n8n-signature", signature)
@@ -74,7 +72,7 @@ describe("Events API - Smoke Tests", () => {
     it("should require event_type", async () => {
       const body = {}; // Missing event_type
       const signature = computeN8nSignature(body);
-      
+
       const response = await request(app)
         .post("/events")
         .set("x-n8n-signature", signature)
@@ -93,7 +91,7 @@ describe("Events API - Smoke Tests", () => {
         payload: { action: "test" },
       };
       const signature = computeN8nSignature(body);
-      
+
       const response = await request(app)
         .post("/events")
         .set("x-n8n-signature", signature)
@@ -103,4 +101,3 @@ describe("Events API - Smoke Tests", () => {
     });
   });
 });
-

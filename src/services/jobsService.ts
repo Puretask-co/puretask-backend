@@ -13,6 +13,7 @@ import {
 } from "./creditsService";
 import { recordEarningsForCompletedJob } from "./payoutsService";
 import { logger } from "../lib/logger";
+import { metrics } from "../lib/metrics";
 import { Job, JobStatus, ActorType } from "../types/db";
 import { AuthUser } from "../lib/auth";
 import { env } from "../config/env";
@@ -27,10 +28,7 @@ export type { Job, JobStatus };
  * Get a job by ID (no ACL check - use for internal/admin operations)
  */
 export async function getJobById(jobId: string): Promise<Job> {
-  const result = await query<Job>(
-    `SELECT * FROM jobs WHERE id = $1`,
-    [jobId]
-  );
+  const result = await query<Job>(`SELECT * FROM jobs WHERE id = $1`, [jobId]);
   const job = result.rows[0];
   if (!job) {
     throw Object.assign(new Error("Job not found"), { statusCode: 404 });
@@ -117,10 +115,10 @@ export async function createJob(options: {
 }): Promise<Job> {
   // V1 HARDENING: Check bookings guard flag
   if (!env.BOOKINGS_ENABLED) {
-    throw Object.assign(
-      new Error("Bookings are currently disabled"),
-      { statusCode: 503, code: "BOOKINGS_DISABLED" }
-    );
+    throw Object.assign(new Error("Bookings are currently disabled"), {
+      statusCode: 503,
+      code: "BOOKINGS_DISABLED",
+    });
   }
 
   const {
@@ -169,9 +167,10 @@ export async function createJob(options: {
         latitude,
         longitude,
         credit_amount,
-        client_notes
+        client_notes,
+        cleaning_type
       )
-      VALUES ($1, 'requested', $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, 'requested', $2, $3, $4, $5, $6, $7, $8, $9, 'basic'::cleaning_type)
       RETURNING *
     `,
     [
@@ -217,7 +216,6 @@ export async function createJob(options: {
   });
 
   // Record metrics
-  const { metrics } = require("../lib/metrics");
   metrics.jobCreated(job.id);
 
   return job;
@@ -227,10 +225,7 @@ export async function createJob(options: {
  * Get a job by ID
  */
 export async function getJob(jobId: string): Promise<Job | null> {
-  const result = await query<Job>(
-    `SELECT * FROM jobs WHERE id = $1`,
-    [jobId]
-  );
+  const result = await query<Job>(`SELECT * FROM jobs WHERE id = $1`, [jobId]);
   return result.rows[0] ?? null;
 }
 
@@ -291,7 +286,16 @@ export async function updateJob(options: {
   longitude?: number;
   clientNotes?: string;
 }): Promise<Job | null> {
-  const { jobId, clientId, scheduledStartAt, scheduledEndAt, address, latitude, longitude, clientNotes } = options;
+  const {
+    jobId,
+    clientId,
+    scheduledStartAt,
+    scheduledEndAt,
+    address,
+    latitude,
+    longitude,
+    clientNotes,
+  } = options;
 
   const result = await query<Job>(
     `
@@ -393,7 +397,10 @@ export async function applyStatusTransition(options: {
   });
 
   if (!validation.valid) {
-    throw new Error(validation.error);
+    throw Object.assign(new Error(validation.error ?? "Invalid state transition"), {
+      statusCode: 400,
+      code: "BAD_TRANSITION",
+    });
   }
 
   const nextStatus = validation.nextStatus;
@@ -472,13 +479,13 @@ export async function applyStatusTransition(options: {
         `SELECT tier FROM cleaner_profiles WHERE user_id = $1`,
         [requesterId]
       );
-      
+
       // Get job estimated_hours from database (job type might not have it loaded)
       const jobHoursResult = await query<{ estimated_hours: number | null }>(
         `SELECT estimated_hours FROM jobs WHERE id = $1`,
         [jobId]
       );
-      
+
       const cleanerTier = cleanerTierResult.rows[0]?.tier || "bronze";
       const estimatedHours = jobHoursResult.rows[0]?.estimated_hours || 2;
 
@@ -740,15 +747,15 @@ export async function listAllJobs(filters?: {
  */
 export async function getJobForClient(jobId: string, clientId: string): Promise<Job> {
   const job = await getJob(jobId);
-  
+
   if (!job) {
     throw Object.assign(new Error("Job not found"), { statusCode: 404 });
   }
-  
+
   if (job.client_id !== clientId) {
     throw Object.assign(new Error("Not your job"), { statusCode: 403 });
   }
-  
+
   return job;
 }
 
@@ -757,15 +764,15 @@ export async function getJobForClient(jobId: string, clientId: string): Promise<
  */
 export async function getJobForCleaner(jobId: string, cleanerId: string): Promise<Job> {
   const job = await getJob(jobId);
-  
+
   if (!job) {
     throw Object.assign(new Error("Job not found"), { statusCode: 404 });
   }
-  
+
   // Cleaners can view jobs assigned to them, or available jobs (for accepting)
   if (job.cleaner_id && job.cleaner_id !== cleanerId) {
     throw Object.assign(new Error("Not your job"), { statusCode: 403 });
   }
-  
+
   return job;
 }

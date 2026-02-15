@@ -18,12 +18,12 @@ export async function sendSMS(params: SMSParams): Promise<void> {
   // Check if Twilio is configured
   if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN || !env.TWILIO_FROM_NUMBER) {
     logger.warn("twilio_not_configured", { to });
-    
+
     if (env.NODE_ENV === "development") {
       logger.info("sms_would_send_dev", { to, message });
       return;
     }
-    
+
     throw new Error("Twilio SMS is not configured");
   }
 
@@ -35,8 +35,10 @@ export async function sendSMS(params: SMSParams): Promise<void> {
     }
 
     // Send via Twilio (using fetch since twilio SDK adds dependencies)
-    const auth = Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString("base64");
-    
+    const auth = Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString(
+      "base64"
+    );
+
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`,
       {
@@ -78,7 +80,7 @@ export async function sendSMSTemplate(
 ): Promise<void> {
   // Simple template replacement
   let message = getTemplate(templateKey);
-  
+
   Object.entries(data).forEach(([key, value]) => {
     message = message.replace(new RegExp(`{{${key}}}`, "g"), value);
   });
@@ -98,4 +100,3 @@ function getTemplate(key: string): string {
 
   return templates[key] || "{{message}}";
 }
-

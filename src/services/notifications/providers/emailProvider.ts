@@ -51,4 +51,3 @@ export async function sendEmail(params: EmailParams): Promise<void> {
 
 // Re-export for convenience
 export { sendgrid };
-

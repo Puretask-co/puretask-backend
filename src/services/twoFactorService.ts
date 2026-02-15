@@ -19,10 +19,7 @@ export async function enableTOTP(userId: string): Promise<{
   backupCodes: string[];
 }> {
   // Get user
-  const userResult = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
 
   const user = userResult.rows[0];
   if (!user) {
@@ -79,10 +76,7 @@ export async function verifyAndEnableTOTP(
   code: string
 ): Promise<{ success: boolean }> {
   // Get user with secret
-  const userResult = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
 
   const user = userResult.rows[0];
   if (!user || !user.two_factor_secret) {
@@ -114,10 +108,12 @@ export async function verifyAndEnableTOTP(
   );
 
   // Log security event
-  await query(
-    `SELECT log_security_event($1, $2, $3, NULL, NULL, $4::JSONB)`,
-    [userId, "2fa_enabled", "success", JSON.stringify({ method: "totp" })]
-  );
+  await query(`SELECT log_security_event($1, $2, $3, NULL, NULL, $4::JSONB)`, [
+    userId,
+    "2fa_enabled",
+    "success",
+    JSON.stringify({ method: "totp" }),
+  ]);
 
   logger.info("totp_enabled", { userId });
 
@@ -129,10 +125,7 @@ export async function verifyAndEnableTOTP(
  */
 export async function enableSMS2FA(userId: string, phoneNumber: string): Promise<void> {
   // Get user
-  const userResult = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
 
   const user = userResult.rows[0];
   if (!user) {
@@ -173,10 +166,7 @@ export async function enableSMS2FA(userId: string, phoneNumber: string): Promise
  */
 export async function sendSMS2FACode(userId: string): Promise<void> {
   // Get user
-  const userResult = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
 
   const user = userResult.rows[0];
   if (!user || !user.two_factor_phone) {
@@ -260,10 +250,12 @@ export async function verifyAndEnableSMS2FA(
   );
 
   // Log security event
-  await query(
-    `SELECT log_security_event($1, $2, $3, NULL, NULL, $4::JSONB)`,
-    [userId, "2fa_enabled", "success", JSON.stringify({ method: "sms" })]
-  );
+  await query(`SELECT log_security_event($1, $2, $3, NULL, NULL, $4::JSONB)`, [
+    userId,
+    "2fa_enabled",
+    "success",
+    JSON.stringify({ method: "sms" }),
+  ]);
 
   logger.info("sms_2fa_enabled", { userId });
 
@@ -278,10 +270,7 @@ export async function verify2FACode(
   code: string
 ): Promise<{ success: boolean; method?: string }> {
   // Get user
-  const userResult = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
 
   const user = userResult.rows[0];
   if (!user || !user.two_factor_enabled) {
@@ -291,9 +280,7 @@ export async function verify2FACode(
   // Check if it's a backup code first
   if (user.two_factor_backup_codes && user.two_factor_backup_codes.includes(code.toUpperCase())) {
     // Remove used backup code
-    const newBackupCodes = user.two_factor_backup_codes.filter(
-      (bc) => bc !== code.toUpperCase()
-    );
+    const newBackupCodes = user.two_factor_backup_codes.filter((bc) => bc !== code.toUpperCase());
 
     await query(
       `UPDATE users 
@@ -360,10 +347,7 @@ export async function verify2FACode(
  */
 export async function disable2FA(userId: string, password: string): Promise<void> {
   // Verify password first
-  const userResult = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
 
   const user = userResult.rows[0];
   if (!user) {
@@ -393,10 +377,11 @@ export async function disable2FA(userId: string, password: string): Promise<void
   );
 
   // Log security event
-  await query(
-    `SELECT log_security_event($1, $2, $3, NULL, NULL, '{}'::JSONB)`,
-    [userId, "2fa_disabled", "success"]
-  );
+  await query(`SELECT log_security_event($1, $2, $3, NULL, NULL, '{}'::JSONB)`, [
+    userId,
+    "2fa_disabled",
+    "success",
+  ]);
 
   logger.info("2fa_disabled", { userId });
 }
@@ -448,4 +433,3 @@ export async function regenerateBackupCodes(userId: string): Promise<string[]> {
 
   return backupCodes;
 }
-

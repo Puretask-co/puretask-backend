@@ -1,7 +1,7 @@
 // src/tests/integration/auth.test.ts
 // Integration tests for authentication flow
 
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";
@@ -121,12 +121,10 @@ describe("Authentication Integration Tests", () => {
     let authToken: string;
 
     beforeAll(async () => {
-      const response = await request(app)
-        .post("/auth/login")
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        });
+      const response = await request(app).post("/auth/login").send({
+        email: testUser.email,
+        password: testUser.password,
+      });
       authToken = response.body.token;
     });
 
@@ -141,9 +139,7 @@ describe("Authentication Integration Tests", () => {
     });
 
     it("should reject request without token", async () => {
-      const response = await request(app)
-        .get("/auth/me")
-        .expect(401);
+      const response = await request(app).get("/auth/me").expect(401);
 
       expect(response.body.error).toBeDefined();
     });

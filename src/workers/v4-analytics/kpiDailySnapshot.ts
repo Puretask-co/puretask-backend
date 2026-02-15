@@ -3,7 +3,7 @@
 //
 // Run on a schedule (e.g., daily at 01:00 UTC):
 // node dist/workers/kpiDailySnapshot.js
-// 
+//
 // Cron example: 0 1 * * * node /app/dist/workers/kpiDailySnapshot.js
 
 import { pool } from "../../db/client";
@@ -63,4 +63,3 @@ if (require.main === module) {
 }
 
 export { main as runKpiDailySnapshot };
-

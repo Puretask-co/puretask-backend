@@ -52,7 +52,7 @@ export interface SupplyDemandHeatmap {
   dayOfWeek: number;
   demand: number; // Jobs requested
   supply: number; // Cleaners available
-  ratio: number;  // demand/supply
+  ratio: number; // demand/supply
   fillRate: number;
 }
 
@@ -490,12 +490,14 @@ export async function getRetentionCohorts(): Promise<RetentionCohort[]> {
 /**
  * Get active alerts that need attention
  */
-export async function getActiveAlerts(): Promise<Array<{
-  type: string;
-  severity: "info" | "warning" | "critical";
-  message: string;
-  count: number;
-}>> {
+export async function getActiveAlerts(): Promise<
+  Array<{
+    type: string;
+    severity: "info" | "warning" | "critical";
+    message: string;
+    count: number;
+  }>
+> {
   const alerts: Array<{
     type: string;
     severity: "info" | "warning" | "critical";
@@ -561,4 +563,3 @@ export async function getActiveAlerts(): Promise<Array<{
 
   return alerts;
 }
-

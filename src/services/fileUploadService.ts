@@ -101,28 +101,27 @@ export function validateFile(
   }
 
   if (!allowedTypes.includes(file.mimetype)) {
-    return { valid: false, error: `File type not allowed. Allowed types: ${allowedTypes.join(", ")}` };
+    return {
+      valid: false,
+      error: `File type not allowed. Allowed types: ${allowedTypes.join(", ")}`,
+    };
   }
 
   return { valid: true };
 }
 
 /**
- * Allowed MIME types for profile photos
+ * Allowed MIME types for profile photos (Section 8: MIME allowlist; no raw binary)
  */
 export const PROFILE_PHOTO_TYPES = [
   "image/jpeg",
   "image/jpg",
   "image/png",
   "image/webp",
+  "image/heic", // iPhone photos
 ];
 
 /**
  * Allowed MIME types for ID documents
  */
-export const ID_DOCUMENT_TYPES = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "application/pdf",
-];
+export const ID_DOCUMENT_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];

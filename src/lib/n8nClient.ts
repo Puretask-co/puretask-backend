@@ -38,10 +38,7 @@ interface N8nApiOptions {
 /**
  * Make authenticated request to n8n API
  */
-async function n8nApiRequest(
-  endpoint: string,
-  options: N8nApiOptions = {}
-): Promise<any> {
+async function n8nApiRequest(endpoint: string, options: N8nApiOptions = {}): Promise<any> {
   const { method = "GET", body } = options;
 
   if (!env.N8N_API_KEY) {
@@ -121,9 +118,7 @@ export async function getWorkflowExecutions(
   });
 
   try {
-    const result = await n8nApiRequest(
-      `/workflows/${workflowId}/executions?${params}`
-    );
+    const result = await n8nApiRequest(`/workflows/${workflowId}/executions?${params}`);
 
     return result.data || [];
   } catch (error) {
@@ -175,10 +170,7 @@ export async function listWorkflows(): Promise<any[]> {
 /**
  * Activate/Deactivate workflow
  */
-export async function setWorkflowActive(
-  workflowId: string,
-  active: boolean
-): Promise<void> {
+export async function setWorkflowActive(workflowId: string, active: boolean): Promise<void> {
   try {
     await n8nApiRequest(`/workflows/${workflowId}`, {
       method: "PUT",
@@ -293,10 +285,7 @@ export async function forwardEventToN8nWebhook(payload: N8nEventPayload): Promis
 /**
  * Send a generic JSON body to a webhook URL (e.g. custom n8n webhook trigger).
  */
-export async function sendN8nWebhook(
-  url: string,
-  body: Record<string, unknown>
-): Promise<void> {
+export async function sendN8nWebhook(url: string, body: Record<string, unknown>): Promise<void> {
   await postJson(url, body);
 }
 
@@ -329,4 +318,3 @@ export async function testN8nConnection(): Promise<{
     };
   }
 }
-

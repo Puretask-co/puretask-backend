@@ -3,7 +3,7 @@
 
 import { query } from "../../db/client";
 import { logger } from "../../lib/logger";
-import { ReliabilityTier } from '../scoring';
+import { ReliabilityTier } from "../scoring";
 
 // ============================================
 // Types
@@ -35,7 +35,7 @@ export interface JobMatchingContext {
   clientId: number;
   jobLat: number;
   jobLng: number;
-  jobType: 'basic' | 'deep' | 'move_out' | 'recurring';
+  jobType: "basic" | "deep" | "move_out" | "recurring";
   requestedStart: Date;
   requestedEnd: Date;
 }
@@ -46,7 +46,7 @@ export interface JobMatchingContext {
 
 /**
  * Task 5.1: db.cleaners.getCandidatesForJob(jobLat, jobLng, requestedStart, jobType)
- * 
+ *
  * Retrieves candidate cleaners filtered by:
  * - Location (within travel radius)
  * - Availability (no conflicts, within working hours)
@@ -58,18 +58,12 @@ export async function getCandidatesForJob(
   context: JobMatchingContext,
   clientId: number
 ): Promise<CleanerCandidate[]> {
-  const {
-    jobLat,
-    jobLng,
-    jobType,
-    requestedStart,
-    requestedEnd,
-  } = context;
+  const { jobLat, jobLng, jobType, requestedStart, requestedEnd } = context;
 
   const dayOfWeek = requestedStart.getDay();
   const startTimeStr = requestedStart.toTimeString().substring(0, 5);
   const endTimeStr = requestedEnd.toTimeString().substring(0, 5);
-  const dateStr = requestedStart.toISOString().split('T')[0];
+  const dateStr = requestedStart.toISOString().split("T")[0];
 
   // This is a complex query that:
   // 1. Filters by active status
@@ -161,19 +155,19 @@ export async function getCandidatesForJob(
     WHERE (max_jobs_per_day IS NULL OR jobs_count_for_day < max_jobs_per_day)
     ORDER BY reliability_score DESC`,
     [
-      jobLat,                         // $1
-      jobLng,                         // $2
-      dayOfWeek,                      // $3
-      startTimeStr,                   // $4
-      endTimeStr,                     // $5
-      requestedStart.toISOString(),   // $6
-      requestedEnd.toISOString(),     // $7
-      dateStr,                        // $8
-      String(clientId),               // $9
+      jobLat, // $1
+      jobLng, // $2
+      dayOfWeek, // $3
+      startTimeStr, // $4
+      endTimeStr, // $5
+      requestedStart.toISOString(), // $6
+      requestedEnd.toISOString(), // $7
+      dateStr, // $8
+      String(clientId), // $9
     ]
   );
 
-  return result.rows.map(row => ({
+  return result.rows.map((row) => ({
     id: Number(row.id),
     tier: mapTierFromDb(row.tier),
     reliabilityScore: Number(row.reliability_score || 70),
@@ -186,7 +180,7 @@ export async function getCandidatesForJob(
     maxJobsPerDay: row.max_jobs_per_day ? Number(row.max_jobs_per_day) : null,
     jobsCountForDay: Number(row.jobs_count_for_day || 0),
     availableAtTime: true, // Already filtered
-    supportsBasic: true,   // TODO: Add job type support columns
+    supportsBasic: true, // TODO: Add job type support columns
     supportsDeep: true,
     supportsMoveOut: true,
     supportsRecurring: true,
@@ -199,12 +193,17 @@ export async function getCandidatesForJob(
  * Map database tier string to ReliabilityTier type
  */
 function mapTierFromDb(tier: string | null): ReliabilityTier {
-  if (!tier) return 'Developing';
-  switch (tier.toLowerCase().replace('_', ' ')) {
-    case 'elite': return 'Elite';
-    case 'pro': return 'Pro';
-    case 'semi pro': case 'semi_pro': return 'Semi Pro';
-    default: return 'Developing';
+  if (!tier) return "Developing";
+  switch (tier.toLowerCase().replace("_", " ")) {
+    case "elite":
+      return "Elite";
+    case "pro":
+      return "Pro";
+    case "semi pro":
+    case "semi_pro":
+      return "Semi Pro";
+    default:
+      return "Developing";
   }
 }
 
@@ -241,12 +240,14 @@ export async function logMatchRecommendation(data: {
 /**
  * Get match history for a job
  */
-export async function getMatchHistoryForJob(jobId: number): Promise<Array<{
-  cleanerId: number;
-  matchScore: number;
-  rank: number;
-  generatedAt: Date;
-}>> {
+export async function getMatchHistoryForJob(jobId: number): Promise<
+  Array<{
+    cleanerId: number;
+    matchScore: number;
+    rank: number;
+    generatedAt: Date;
+  }>
+> {
   const result = await query<any>(
     `SELECT cleaner_id, match_score, rank, generated_at
      FROM match_recommendations
@@ -255,7 +256,7 @@ export async function getMatchHistoryForJob(jobId: number): Promise<Array<{
     [String(jobId)]
   );
 
-  return result.rows.map(row => ({
+  return result.rows.map((row) => ({
     cleanerId: Number(row.cleaner_id),
     matchScore: Number(row.match_score),
     rank: Number(row.rank),
@@ -297,7 +298,7 @@ export async function getJobWithClientProfile(jobId: number): Promise<{
   clientId: number;
   jobLat: number;
   jobLng: number;
-  jobType: 'basic' | 'deep' | 'move_out' | 'recurring';
+  jobType: "basic" | "deep" | "move_out" | "recurring";
   requestedStart: Date;
   requestedEnd: Date;
   clientRiskScore: number;
@@ -339,4 +340,3 @@ export async function getJobWithClientProfile(jobId: number): Promise<{
     clientFlexScore: Number(row.client_flex_score),
   };
 }
-

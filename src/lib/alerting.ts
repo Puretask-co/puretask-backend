@@ -30,7 +30,12 @@ export async function sendAlert(params: AlertParams): Promise<void> {
 
 // Convenience templates
 export const alertTemplates = {
-  payoutHold: (payoutId: string, cleanerId: string | null, jobId: string | null, amountCents: number) => ({
+  payoutHold: (
+    payoutId: string,
+    cleanerId: string | null,
+    jobId: string | null,
+    amountCents: number
+  ) => ({
     level: "warning" as const,
     title: "Payout held",
     message: `Payout ${payoutId} placed on hold`,
@@ -48,7 +53,12 @@ export const alertTemplates = {
     message: `Reconciliation flag for payout ${payoutId} marked ${status}`,
     details: { payoutId, status, note },
   }),
-  disputeRouted: (disputeId: string, routeTo: string, note?: string, queues?: readonly string[]) => ({
+  disputeRouted: (
+    disputeId: string,
+    routeTo: string,
+    note?: string,
+    queues?: readonly string[]
+  ) => ({
     level: "info" as const,
     title: "Dispute routed",
     message: `Dispute ${disputeId} routed to ${routeTo}`,
@@ -107,4 +117,3 @@ async function sendEmailAlert(payload: Record<string, unknown>): Promise<void> {
     logger.error("email_alert_failed", { error: (err as Error).message });
   }
 }
-

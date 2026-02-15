@@ -1,4 +1,4 @@
-﻿// src/services/creditsService.ts
+// src/services/creditsService.ts
 // Complete credit system matching 001_init.sql + 003_credit_views.sql
 //
 // Credit Model:
@@ -21,11 +21,11 @@ export { CreditLedgerEntry };
 
 /**
  * Get user's current credit balance
- * Balance = SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END) from credit_ledger
+ * Balance = SUM(delta_credits) from credit_ledger (matches 001_init.sql schema)
  */
 export async function getUserBalance(userId: string): Promise<number> {
   const result = await query<{ balance: string }>(
-    `SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0) AS balance FROM credit_ledger WHERE user_id = $1`,
+    `SELECT COALESCE(SUM(delta_credits), 0) AS balance FROM credit_ledger WHERE user_id = $1`,
     [userId]
   );
   return Number(result.rows[0]?.balance ?? 0);
@@ -40,7 +40,7 @@ export const getUserCreditBalance = getUserBalance;
  * Record a ledger entry
  * Positive deltaCredits = add credits (direction = 'credit')
  * Negative deltaCredits = remove credits (direction = 'debit')
- * 
+ *
  * V1 HARDENING: For idempotent operations (escrow, refund, etc.), uses ON CONFLICT
  * to prevent duplicates via unique constraints.
  */
@@ -53,31 +53,27 @@ export async function addLedgerEntry(input: {
   const { userId, jobId = null, deltaCredits, reason } = input;
 
   // V1 HARDENING: Check credits guard flag
-  if (!env.CREDITS_ENABLED && reason !== 'refund') {
-    throw Object.assign(
-      new Error("Credits are currently disabled"),
-      { statusCode: 503, code: "CREDITS_DISABLED" }
-    );
+  if (!env.CREDITS_ENABLED && reason !== "refund") {
+    throw Object.assign(new Error("Credits are currently disabled"), {
+      statusCode: 503,
+      code: "CREDITS_DISABLED",
+    });
   }
 
   // V1 HARDENING: Check refunds guard flag
-  if (reason === 'refund' && !env.REFUNDS_ENABLED) {
-    throw Object.assign(
-      new Error("Refunds are currently disabled"),
-      { statusCode: 503, code: "REFUNDS_DISABLED" }
-    );
+  if (reason === "refund" && !env.REFUNDS_ENABLED) {
+    throw Object.assign(new Error("Refunds are currently disabled"), {
+      statusCode: 503,
+      code: "REFUNDS_DISABLED",
+    });
   }
 
-  // Convert deltaCredits to amount and direction
-  const amount = Math.abs(deltaCredits);
-  const direction = deltaCredits >= 0 ? 'credit' : 'debit';
-
   // Check if this is an idempotent operation (has unique constraint)
-  const isIdempotentOperation = 
-    reason === 'job_escrow' || 
-    reason === 'job_release' || 
-    reason === 'refund' ||
-    reason === 'purchase';
+  const isIdempotentOperation =
+    reason === "job_escrow" ||
+    reason === "job_release" ||
+    reason === "refund" ||
+    reason === "purchase";
 
   if (isIdempotentOperation && jobId) {
     // For idempotent operations, check for existing entry first
@@ -103,22 +99,20 @@ export async function addLedgerEntry(input: {
     }
   }
 
-  // Non-idempotent operation or no jobId - insert normally
+  // Non-idempotent operation or no jobId - insert normally (schema: delta_credits)
   const result = await query<CreditLedgerEntry>(
     `
-      INSERT INTO credit_ledger (user_id, job_id, amount, direction, reason)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason)
+      VALUES ($1, $2, $3, $4)
       RETURNING *
     `,
-    [userId, jobId, amount, direction, reason]
+    [userId, jobId, deltaCredits, reason]
   );
 
   logger.info("credit_ledger_entry", {
     userId,
     jobId,
     deltaCredits,
-    amount,
-    direction,
     reason,
   });
 
@@ -129,10 +123,7 @@ export async function addLedgerEntry(input: {
  * Ensure a client has at least `requiredCredits` balance.
  * Throws if insufficient.
  */
-export async function ensureUserHasCredits(
-  userId: string,
-  requiredCredits: number
-): Promise<void> {
+export async function ensureUserHasCredits(userId: string, requiredCredits: number): Promise<void> {
   const balance = await getUserBalance(userId);
   if (balance < requiredCredits) {
     throw Object.assign(
@@ -293,9 +284,7 @@ export async function getCreditHistoryWithBalance(
 /**
  * Get credit ledger entries for a specific job
  */
-export async function getJobCreditEntries(
-  jobId: string
-): Promise<CreditLedgerEntry[]> {
+export async function getJobCreditEntries(jobId: string): Promise<CreditLedgerEntry[]> {
   const result = await query<CreditLedgerEntry>(
     `
       SELECT *
@@ -330,12 +319,12 @@ export async function getBalanceWithSummary(userId: string): Promise<{
   }>(
     `
       SELECT 
-        COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0) as balance,
-        COALESCE(SUM(CASE WHEN reason = 'purchase' AND direction = 'credit' THEN amount ELSE 0 END), 0) as total_purchased,
-        COALESCE(SUM(CASE WHEN reason = 'job_escrow' AND direction = 'debit' THEN amount ELSE 0 END), 0) as total_escrowed,
-        COALESCE(SUM(CASE WHEN reason = 'job_release' AND direction = 'credit' THEN amount ELSE 0 END), 0) as total_released,
-        COALESCE(SUM(CASE WHEN reason = 'refund' AND direction = 'credit' THEN amount ELSE 0 END), 0) as total_refunded,
-        COALESCE(SUM(CASE WHEN reason = 'adjustment' THEN CASE WHEN direction = 'credit' THEN amount ELSE -amount END ELSE 0 END), 0) as total_adjusted
+        COALESCE(SUM(delta_credits), 0) as balance,
+        COALESCE(SUM(CASE WHEN reason = 'purchase' AND delta_credits > 0 THEN delta_credits ELSE 0 END), 0) as total_purchased,
+        COALESCE(SUM(CASE WHEN reason = 'job_escrow' AND delta_credits < 0 THEN ABS(delta_credits) ELSE 0 END), 0) as total_escrowed,
+        COALESCE(SUM(CASE WHEN reason = 'job_release' AND delta_credits > 0 THEN delta_credits ELSE 0 END), 0) as total_released,
+        COALESCE(SUM(CASE WHEN reason = 'refund' AND delta_credits > 0 THEN delta_credits ELSE 0 END), 0) as total_refunded,
+        COALESCE(SUM(CASE WHEN reason = 'adjustment' THEN delta_credits ELSE 0 END), 0) as total_adjusted
       FROM credit_ledger
       WHERE user_id = $1
     `,
@@ -397,7 +386,7 @@ export async function escrowCreditsWithTransaction(options: {
         WITH locked_rows AS (
           SELECT * FROM credit_ledger WHERE user_id = $1 FOR UPDATE
         )
-        SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0) AS balance
+        SELECT COALESCE(SUM(delta_credits), 0) AS balance
         FROM locked_rows
       `,
       [clientId]
@@ -412,16 +401,16 @@ export async function escrowCreditsWithTransaction(options: {
       );
     }
 
-    // Insert escrow entry (debit = remove credits)
+    // Insert escrow entry (negative delta = remove credits)
     // Note: Pre-check above handles idempotency. If a race condition occurs,
     // the unique index will throw an error (better than silent duplicate).
     const result = await client.query<CreditLedgerEntry>(
       `
-        INSERT INTO credit_ledger (user_id, job_id, amount, direction, reason)
-        VALUES ($1, $2, $3, 'debit', 'job_escrow')
+        INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason)
+        VALUES ($1, $2, $3, 'job_escrow')
         RETURNING *
       `,
-      [clientId, jobId, creditAmount]
+      [clientId, jobId, -creditAmount]
     );
 
     logger.info("credits_escrowed", {
@@ -447,11 +436,12 @@ export const refundCredits = async (options: {
   userId: string;
   jobId?: string;
   creditAmount: number;
-}) => addLedgerEntry({
-  userId: options.userId,
-  jobId: options.jobId,
-  deltaCredits: options.creditAmount,
-  reason: "refund",
-});
+}) =>
+  addLedgerEntry({
+    userId: options.userId,
+    jobId: options.jobId,
+    deltaCredits: options.creditAmount,
+    reason: "refund",
+  });
 
 export const escrowCreditsForJob = escrowJobCredits;

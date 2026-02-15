@@ -76,4 +76,3 @@ export function setupGracefulShutdown(server: Server): void {
 export function isShuttingDown(): boolean {
   return shuttingDown;
 }
-

@@ -106,7 +106,7 @@ router.post(
 
 ### Before Submitting
 1. **Run linting**: `npm run lint`
-2. **Run formatting**: `npm run format`
+2. **Run formatting**: `npm run format` (or `npm run format:check` to verify)
 3. **Run tests**: `npm test`
 4. **Type check**: `npm run typecheck`
 

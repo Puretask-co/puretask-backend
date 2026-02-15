@@ -20,7 +20,9 @@ export async function isGamificationEnabled(ctx: GamificationFlagContext = {}): 
 /**
  * Check if cash rewards are enabled (still subject to budget caps + governor).
  */
-export async function isGamificationCashEnabled(ctx: GamificationFlagContext = {}): Promise<boolean> {
+export async function isGamificationCashEnabled(
+  ctx: GamificationFlagContext = {}
+): Promise<boolean> {
   const flag = await getEffectiveFeatureFlag("gamification_cash_enabled", ctx.region_id ?? null);
   return flag?.enabled === true;
 }
@@ -28,7 +30,9 @@ export async function isGamificationCashEnabled(ctx: GamificationFlagContext = {
 /**
  * Check if seasonal multipliers/challenges are enabled.
  */
-export async function isGamificationSeasonsEnabled(ctx: GamificationFlagContext = {}): Promise<boolean> {
+export async function isGamificationSeasonsEnabled(
+  ctx: GamificationFlagContext = {}
+): Promise<boolean> {
   const flag = await getEffectiveFeatureFlag("gamification_seasons_enabled", ctx.region_id ?? null);
   return flag?.enabled === true;
 }
@@ -36,7 +40,9 @@ export async function isGamificationSeasonsEnabled(ctx: GamificationFlagContext 
 /**
  * Check if badge awarding is enabled.
  */
-export async function isGamificationBadgesEnabled(ctx: GamificationFlagContext = {}): Promise<boolean> {
+export async function isGamificationBadgesEnabled(
+  ctx: GamificationFlagContext = {}
+): Promise<boolean> {
   const flag = await getEffectiveFeatureFlag("gamification_badges_enabled", ctx.region_id ?? null);
   return flag?.enabled === true;
 }
@@ -45,7 +51,10 @@ export async function isGamificationBadgesEnabled(ctx: GamificationFlagContext =
  * Check if Next Best Action is enabled.
  */
 export async function isNextBestActionEnabled(ctx: GamificationFlagContext = {}): Promise<boolean> {
-  const flag = await getEffectiveFeatureFlag("gamification_next_best_action_enabled", ctx.region_id ?? null);
+  const flag = await getEffectiveFeatureFlag(
+    "gamification_next_best_action_enabled",
+    ctx.region_id ?? null
+  );
   return flag?.enabled === true;
 }
 

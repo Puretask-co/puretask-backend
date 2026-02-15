@@ -78,25 +78,39 @@ export interface TopPerformer {
 
 function getDateRangeCondition(timeRange: TimeRange, column: string = "created_at"): string {
   switch (timeRange) {
-    case "day": return `${column} >= NOW() - INTERVAL '1 day'`;
-    case "week": return `${column} >= NOW() - INTERVAL '7 days'`;
-    case "month": return `${column} >= NOW() - INTERVAL '30 days'`;
-    case "quarter": return `${column} >= NOW() - INTERVAL '90 days'`;
-    case "year": return `${column} >= NOW() - INTERVAL '365 days'`;
-    case "all": return "1=1";
-    default: return `${column} >= NOW() - INTERVAL '30 days'`;
+    case "day":
+      return `${column} >= NOW() - INTERVAL '1 day'`;
+    case "week":
+      return `${column} >= NOW() - INTERVAL '7 days'`;
+    case "month":
+      return `${column} >= NOW() - INTERVAL '30 days'`;
+    case "quarter":
+      return `${column} >= NOW() - INTERVAL '90 days'`;
+    case "year":
+      return `${column} >= NOW() - INTERVAL '365 days'`;
+    case "all":
+      return "1=1";
+    default:
+      return `${column} >= NOW() - INTERVAL '30 days'`;
   }
 }
 
 function getDateTrunc(timeRange: TimeRange): string {
   switch (timeRange) {
-    case "day": return "hour";
-    case "week": return "day";
-    case "month": return "day";
-    case "quarter": return "week";
-    case "year": return "month";
-    case "all": return "month";
-    default: return "day";
+    case "day":
+      return "hour";
+    case "week":
+      return "day";
+    case "month":
+      return "day";
+    case "quarter":
+      return "week";
+    case "year":
+      return "month";
+    case "all":
+      return "month";
+    default:
+      return "day";
   }
 }
 
@@ -107,7 +121,9 @@ function getDateTrunc(timeRange: TimeRange): string {
 /**
  * Get comprehensive dashboard metrics
  */
-export async function getDashboardMetrics(timeRange: TimeRange = "month"): Promise<DashboardMetrics> {
+export async function getDashboardMetrics(
+  timeRange: TimeRange = "month"
+): Promise<DashboardMetrics> {
   const dateCondition = getDateRangeCondition(timeRange);
 
   // Revenue metrics
@@ -324,7 +340,7 @@ export async function getRevenueByPeriod(
         COALESCE(SUM(p.amount_cents), 0)::text as payouts
       FROM jobs j
       LEFT JOIN payouts p ON p.job_id = j.id AND p.status = 'paid'
-      WHERE j.status = 'completed' AND ${dateCondition.replace('created_at', 'j.created_at')}
+      WHERE j.status = 'completed' AND ${dateCondition.replace("created_at", "j.created_at")}
       GROUP BY period
       ORDER BY period ASC
     `
@@ -380,7 +396,9 @@ export async function getJobTrend(timeRange: TimeRange = "month"): Promise<Trend
 /**
  * Get job status breakdown
  */
-export async function getJobStatusBreakdown(timeRange: TimeRange = "month"): Promise<Record<string, number>> {
+export async function getJobStatusBreakdown(
+  timeRange: TimeRange = "month"
+): Promise<Record<string, number>> {
   const dateCondition = getDateRangeCondition(timeRange);
 
   const result = await query<{ status: string; count: string }>(
@@ -440,7 +458,10 @@ export async function getUserSignupTrend(
 /**
  * Get top clients by spending
  */
-export async function getTopClients(limit: number = 10, timeRange: TimeRange = "month"): Promise<TopPerformer[]> {
+export async function getTopClients(
+  limit: number = 10,
+  timeRange: TimeRange = "month"
+): Promise<TopPerformer[]> {
   const dateCondition = getDateRangeCondition(timeRange);
 
   const result = await query<{
@@ -454,7 +475,7 @@ export async function getTopClients(limit: number = 10, timeRange: TimeRange = "
         u.email,
         COALESCE(ABS(SUM(cl.delta_credits)), 0)::text as total_spent
       FROM users u
-      LEFT JOIN credit_ledger cl ON cl.user_id = u.id AND cl.reason = 'job_escrow' AND ${dateCondition.replace('created_at', 'cl.created_at')}
+      LEFT JOIN credit_ledger cl ON cl.user_id = u.id AND cl.reason = 'job_escrow' AND ${dateCondition.replace("created_at", "cl.created_at")}
       WHERE u.role = 'client'
       GROUP BY u.id, u.email
       ORDER BY total_spent DESC
@@ -474,7 +495,10 @@ export async function getTopClients(limit: number = 10, timeRange: TimeRange = "
 /**
  * Get top cleaners by earnings
  */
-export async function getTopCleaners(limit: number = 10, timeRange: TimeRange = "month"): Promise<TopPerformer[]> {
+export async function getTopCleaners(
+  limit: number = 10,
+  timeRange: TimeRange = "month"
+): Promise<TopPerformer[]> {
   const dateCondition = getDateRangeCondition(timeRange);
 
   const result = await query<{
@@ -490,8 +514,8 @@ export async function getTopCleaners(limit: number = 10, timeRange: TimeRange = 
         COALESCE(SUM(cl.delta_credits), 0)::text as total_earned,
         COUNT(DISTINCT j.id)::text as job_count
       FROM users u
-      LEFT JOIN credit_ledger cl ON cl.user_id = u.id AND cl.reason = 'job_release' AND ${dateCondition.replace('created_at', 'cl.created_at')}
-      LEFT JOIN jobs j ON j.cleaner_id = u.id AND j.status = 'completed' AND ${dateCondition.replace('created_at', 'j.created_at')}
+      LEFT JOIN credit_ledger cl ON cl.user_id = u.id AND cl.reason = 'job_release' AND ${dateCondition.replace("created_at", "cl.created_at")}
+      LEFT JOIN jobs j ON j.cleaner_id = u.id AND j.status = 'completed' AND ${dateCondition.replace("created_at", "j.created_at")}
       WHERE u.role = 'cleaner'
       GROUP BY u.id, u.email
       ORDER BY total_earned DESC
@@ -585,8 +609,12 @@ export async function getCreditEconomyHealth(): Promise<{
     totalSupply,
     circulatingCredits: totalSupply, // In a closed system, all credits are circulating
     weeklyVelocity: totalSupply > 0 ? usedThisWeek / totalSupply : 0,
-    inflationRate: purchasedLastWeek > 0 ? ((purchasedThisWeek - purchasedLastWeek) / purchasedLastWeek) * 100 : 0,
-    purchaseToRefundRatio: refundedThisWeek > 0 ? purchasedThisWeek / refundedThisWeek : purchasedThisWeek,
+    inflationRate:
+      purchasedLastWeek > 0
+        ? ((purchasedThisWeek - purchasedLastWeek) / purchasedLastWeek) * 100
+        : 0,
+    purchaseToRefundRatio:
+      refundedThisWeek > 0 ? purchasedThisWeek / refundedThisWeek : purchasedThisWeek,
   };
 }
 
@@ -640,4 +668,3 @@ export async function generateFullReport(timeRange: TimeRange = "month"): Promis
     creditHealth,
   };
 }
-

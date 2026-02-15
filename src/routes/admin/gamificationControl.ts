@@ -4,7 +4,12 @@
  */
 
 import { Router, Response } from "express";
-import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../../middleware/authCanonical";
+import {
+  requireAuth,
+  requireAdmin,
+  AuthedRequest,
+  authedHandler,
+} from "../../middleware/authCanonical";
 import { query } from "../../db/client";
 import * as adminConfig from "../../services/adminConfigService";
 import { ProgressDebugService } from "../../services/progressDebugService";
@@ -27,10 +32,9 @@ router.get(
   "/audit",
   authedHandler(async (req: AuthedRequest, res: Response) => {
     const limit = Math.min(Number(req.query.limit ?? 100), 500);
-    const r = await query(
-      `SELECT * FROM admin_audit_log ORDER BY created_at DESC LIMIT $1`,
-      [limit]
-    );
+    const r = await query(`SELECT * FROM admin_audit_log ORDER BY created_at DESC LIMIT $1`, [
+      limit,
+    ]);
     res.json({ ok: true, rows: r.rows });
   })
 );
@@ -139,7 +143,9 @@ router.post(
   authedHandler(async (req: AuthedRequest, res: Response) => {
     const row = req.body ?? {};
     if (!row.region_id || !row.window_start || !row.window_end) {
-      return res.status(400).json({ ok: false, error: "region_id, window_start, window_end required" });
+      return res
+        .status(400)
+        .json({ ok: false, error: "region_id, window_start, window_end required" });
     }
     const inserted = await marketplaceGovernor.insertMetricsRow(row);
     res.json({ ok: true, inserted });
@@ -239,7 +245,10 @@ router.get(
     const type = (req.query.type as string) || "goals";
     const regionId = (req.query.region_id as string) || undefined;
     const loader = getRuntimeConfigLoader();
-    const active = await loader.getActive(type as "goals" | "rewards" | "levels" | "governor" | "full_bundle", regionId || null);
+    const active = await loader.getActive(
+      type as "goals" | "rewards" | "levels" | "governor" | "full_bundle",
+      regionId || null
+    );
     res.json({ ok: true, active });
   })
 );

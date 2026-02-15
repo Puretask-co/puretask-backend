@@ -18,11 +18,11 @@ export interface MockTwilioMessage {
  */
 export function createMockTwilioSuccess(overrides?: Partial<MockTwilioMessage>): MockTwilioMessage {
   return {
-    sid: 'SM' + Math.random().toString(36).substring(2, 15),
-    status: 'sent',
-    to: '+1234567890',
-    from: '+15017122661',
-    body: 'Test message',
+    sid: "SM" + Math.random().toString(36).substring(2, 15),
+    status: "sent",
+    to: "+1234567890",
+    from: "+15017122661",
+    body: "Test message",
     dateCreated: new Date(),
     dateSent: new Date(),
     ...overrides,
@@ -34,14 +34,14 @@ export function createMockTwilioSuccess(overrides?: Partial<MockTwilioMessage>):
  */
 export function createMockTwilioError(
   errorCode: number = 21211,
-  errorMessage: string = 'Invalid phone number'
+  errorMessage: string = "Invalid phone number"
 ): MockTwilioMessage {
   return {
-    sid: '',
-    status: 'failed',
-    to: '+1234567890',
-    from: '+15017122661',
-    body: '',
+    sid: "",
+    status: "failed",
+    to: "+1234567890",
+    from: "+15017122661",
+    body: "",
     dateCreated: new Date(),
     errorCode,
     errorMessage,
@@ -53,19 +53,19 @@ export function createMockTwilioError(
  */
 export interface MockTwilioVerification {
   sid: string;
-  status: 'pending' | 'approved' | 'canceled';
+  status: "pending" | "approved" | "canceled";
   to: string;
-  channel: 'sms' | 'call' | 'email';
+  channel: "sms" | "call" | "email";
 }
 
 export function createMockTwilioVerification(
   overrides?: Partial<MockTwilioVerification>
 ): MockTwilioVerification {
   return {
-    sid: 'VE' + Math.random().toString(36).substring(2, 15),
-    status: 'pending',
-    to: '+1234567890',
-    channel: 'sms',
+    sid: "VE" + Math.random().toString(36).substring(2, 15),
+    status: "pending",
+    to: "+1234567890",
+    channel: "sms",
     ...overrides,
   };
 }

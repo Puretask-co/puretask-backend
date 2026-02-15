@@ -1,8 +1,8 @@
 // src/tests/fixtures/bookings.ts
 // Test booking/job fixtures for testing
 
-import { query } from '../../db/client';
-import { createTestClient, createTestCleaner } from './users';
+import { query } from "../../db/client";
+import { createTestClient, createTestCleaner } from "./users";
 
 export interface TestJob {
   id: string;
@@ -24,11 +24,11 @@ export async function createTestJob(overrides?: Partial<TestJob>): Promise<TestJ
   const job: TestJob = {
     id: `test-job-${Date.now()}-${Math.random().toString(36).substring(7)}`,
     client_id: client.id,
-    status: 'requested',
+    status: "requested",
     credit_amount: 100,
     scheduled_start_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
     scheduled_end_at: new Date(Date.now() + 26 * 60 * 60 * 1000), // 26 hours from now
-    address: '123 Test St, Test City, TS 12345',
+    address: "123 Test St, Test City, TS 12345",
     ...overrides,
   };
 
@@ -60,7 +60,7 @@ export async function createTestJobWithCleaner(): Promise<TestJob> {
   const cleaner = await createTestCleaner();
   return createTestJob({
     cleaner_id: cleaner.id,
-    status: 'accepted',
+    status: "accepted",
   });
 }
 

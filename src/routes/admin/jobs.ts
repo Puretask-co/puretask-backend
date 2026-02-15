@@ -2,12 +2,13 @@
 // Section 6 & 11: Durable job dead-letter viewer and manual retry
 
 import { Router, Response } from "express";
+import { getDeadJobs, retryDeadJob, countDeadJobs } from "../../services/durableJobService";
 import {
-  getDeadJobs,
-  retryDeadJob,
-  countDeadJobs,
-} from "../../services/durableJobService";
-import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../../middleware/authCanonical";
+  requireAuth,
+  requireAdmin,
+  AuthedRequest,
+  authedHandler,
+} from "../../middleware/authCanonical";
 import { requireAuditReason } from "../../middleware/requireAuditReason";
 import { z } from "zod";
 import { validateParams, validateQuery } from "../../lib/validation";

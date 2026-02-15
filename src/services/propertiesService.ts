@@ -225,10 +225,7 @@ export async function updateProperty(
 /**
  * Delete a property
  */
-export async function deleteProperty(
-  propertyId: number,
-  clientId: string
-): Promise<void> {
+export async function deleteProperty(propertyId: number, clientId: string): Promise<void> {
   // Check for active subscriptions or jobs
   const activeResult = await query<{ count: string }>(
     `
@@ -240,16 +237,12 @@ export async function deleteProperty(
   );
 
   if (Number(activeResult.rows[0]?.count || 0) > 0) {
-    throw Object.assign(
-      new Error("Cannot delete property with active subscriptions"),
-      { statusCode: 400 }
-    );
+    throw Object.assign(new Error("Cannot delete property with active subscriptions"), {
+      statusCode: 400,
+    });
   }
 
-  await query(
-    `DELETE FROM properties WHERE id = $1 AND client_id = $2`,
-    [propertyId, clientId]
-  );
+  await query(`DELETE FROM properties WHERE id = $1 AND client_id = $2`, [propertyId, clientId]);
 
   logger.info("property_deleted", { propertyId, clientId });
 }
@@ -267,13 +260,19 @@ export function calculateCleaningScore(property: Property): number {
 
   // Calculate days since each cleaning type
   const daysSinceBasic = property.last_basic_at
-    ? Math.floor((now.getTime() - new Date(property.last_basic_at).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor(
+        (now.getTime() - new Date(property.last_basic_at).getTime()) / (1000 * 60 * 60 * 24)
+      )
     : null;
   const daysSinceDeep = property.last_deep_at
-    ? Math.floor((now.getTime() - new Date(property.last_deep_at).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor(
+        (now.getTime() - new Date(property.last_deep_at).getTime()) / (1000 * 60 * 60 * 24)
+      )
     : null;
   const daysSinceMoveout = property.last_moveout_at
-    ? Math.floor((now.getTime() - new Date(property.last_moveout_at).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor(
+        (now.getTime() - new Date(property.last_moveout_at).getTime()) / (1000 * 60 * 60 * 24)
+      )
     : null;
 
   // Apply decay for each cleaning type
@@ -333,10 +332,10 @@ export async function updateCleaningScore(
   // Calculate and update score
   const newScore = calculateCleaningScore(property);
 
-  await query(
-    `UPDATE properties SET cleaning_score = $2, updated_at = NOW() WHERE id = $1`,
-    [propertyId, newScore]
-  );
+  await query(`UPDATE properties SET cleaning_score = $2, updated_at = NOW() WHERE id = $1`, [
+    propertyId,
+    newScore,
+  ]);
 
   logger.info("cleaning_score_updated", {
     propertyId,
@@ -357,10 +356,10 @@ export async function recalculateAllScores(): Promise<number> {
   for (const property of properties.rows) {
     const newScore = calculateCleaningScore(property);
     if (Math.abs(newScore - property.cleaning_score) > 0.1) {
-      await query(
-        `UPDATE properties SET cleaning_score = $2, updated_at = NOW() WHERE id = $1`,
-        [property.id, newScore]
-      );
+      await query(`UPDATE properties SET cleaning_score = $2, updated_at = NOW() WHERE id = $1`, [
+        property.id,
+        newScore,
+      ]);
       updated++;
     }
   }
@@ -377,9 +376,7 @@ export async function recalculateAllScores(): Promise<number> {
 /**
  * Get cleaning suggestions for a property
  */
-export async function getPropertySuggestions(
-  propertyId: number
-): Promise<CleaningSuggestion[]> {
+export async function getPropertySuggestions(propertyId: number): Promise<CleaningSuggestion[]> {
   const property = await getPropertyById(propertyId);
   if (!property) {
     throw Object.assign(new Error("Property not found"), { statusCode: 404 });
@@ -390,10 +387,14 @@ export async function getPropertySuggestions(
 
   // Calculate days since each cleaning type
   const daysSinceBasic = property.last_basic_at
-    ? Math.floor((now.getTime() - new Date(property.last_basic_at).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor(
+        (now.getTime() - new Date(property.last_basic_at).getTime()) / (1000 * 60 * 60 * 24)
+      )
     : null;
   const daysSinceDeep = property.last_deep_at
-    ? Math.floor((now.getTime() - new Date(property.last_deep_at).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor(
+        (now.getTime() - new Date(property.last_deep_at).getTime()) / (1000 * 60 * 60 * 24)
+      )
     : null;
 
   // Basic cleaning suggestions
@@ -401,7 +402,8 @@ export async function getPropertySuggestions(
     suggestions.push({
       type: "basic",
       urgency: "medium",
-      message: "You haven't had a basic cleaning yet. Start with a basic cleaning to maintain your home.",
+      message:
+        "You haven't had a basic cleaning yet. Start with a basic cleaning to maintain your home.",
       days_since_last: null,
     });
   } else if (daysSinceBasic >= SCORE_CONFIG.BASIC_SUGGEST_DAYS * 2) {
@@ -449,7 +451,8 @@ export async function getPropertySuggestions(
     suggestions.push({
       type: "basic",
       urgency: "medium",
-      message: "Homes with pets benefit from more frequent cleanings to manage pet hair and dander.",
+      message:
+        "Homes with pets benefit from more frequent cleanings to manage pet hair and dander.",
       days_since_last: daysSinceBasic,
     });
   }
@@ -480,10 +483,9 @@ export async function getRebookData(
     credit_amount: number;
     client_id: string;
     status: string;
-  }>(
-    `SELECT property_id, cleaner_id, credit_amount, client_id, status FROM jobs WHERE id = $1`,
-    [jobId]
-  );
+  }>(`SELECT property_id, cleaner_id, credit_amount, client_id, status FROM jobs WHERE id = $1`, [
+    jobId,
+  ]);
 
   const job = jobResult.rows[0];
   if (!job) {
@@ -530,4 +532,3 @@ export async function getRebookData(
     suggestedSlots,
   };
 }
-

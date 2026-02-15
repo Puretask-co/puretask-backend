@@ -112,7 +112,7 @@
 | 030 | onboarding_gamification_system, onboarding_gamification_NEON_FIX, performance_indexes | Same |
 | 031 | message_history_system, message_history_NEON_FIX | Same |
 
-**Note:** setup-test-db.js does NOT run these. It uses 000_CONSOLIDATED + 041–056. The NEON_FIX variants are for Neon-specific deployments.
+**Note:** setup-test-db.js does NOT run these. It uses 000_CONSOLIDATED + 041–056. The NEON_FIX variants are for Neon-specific deployments (e.g. admin_settings, cleaner_ai_settings). For a unified approach, use `npm run db:generate:neon-uuid` to emit a single UUID bundle; see TROUBLESHOOTING.md.
 
 ---
 

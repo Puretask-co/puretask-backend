@@ -35,7 +35,10 @@ export interface CleanerEarnings {
 // ============================================
 
 // Payout schedule configuration (can be moved to env/config)
-const PAYOUT_SCHEDULE = (process.env.CLEANER_PAYOUT_SCHEDULE || "weekly") as "weekly" | "biweekly" | "monthly";
+const PAYOUT_SCHEDULE = (process.env.CLEANER_PAYOUT_SCHEDULE || "weekly") as
+  | "weekly"
+  | "biweekly"
+  | "monthly";
 
 // Credits to USD conversion (1 credit = $0.10, or 10 credits = $1.00)
 const CENTS_PER_CREDIT = env.CENTS_PER_CREDIT || 10;
@@ -47,7 +50,7 @@ const CREDITS_PER_USD = 100 / CENTS_PER_CREDIT; // 10 credits per $1.00
 
 /**
  * Get cleaner earnings dashboard
- * 
+ *
  * V3 FEATURE: Simple, user-friendly earnings view
  * - Pending earnings: Not yet paid out
  * - Paid out: Already received
@@ -209,4 +212,3 @@ function calculateNextPayoutDate(
 
   return nextDate;
 }
-

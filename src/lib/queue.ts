@@ -205,7 +205,7 @@ class QueueService {
     for (const job of jobs.rows) {
       try {
         await handler(job.payload);
-        
+
         await query(
           `
             UPDATE job_queue 
@@ -219,12 +219,12 @@ class QueueService {
           [job.id]
         );
         succeeded++;
-        
+
         logger.debug("job_completed", { queueName, jobId: job.id });
       } catch (err) {
         const shouldRetry = job.attempts < job.max_attempts;
         const isDeadLetter = !shouldRetry;
-        
+
         await query(
           `
             UPDATE job_queue 
@@ -248,7 +248,7 @@ class QueueService {
           ]
         );
         failed++;
-        
+
         logger.error("job_failed", {
           queueName,
           jobId: job.id,
@@ -265,9 +265,7 @@ class QueueService {
   /**
    * Recover expired locks (jobs stuck in processing due to crashed workers)
    */
-  async recoverExpiredLocks(
-    lockTimeoutMinutes: number = 30
-  ): Promise<number> {
+  async recoverExpiredLocks(lockTimeoutMinutes: number = 30): Promise<number> {
     const result = await query<{ count: string }>(
       `
         SELECT recover_expired_job_locks($1)::text as count
@@ -439,4 +437,3 @@ export async function processQueue(
 ): Promise<{ processed: number; succeeded: number; failed: number }> {
   return queueService.processQueue(queueName, batchSize ?? 10);
 }
-

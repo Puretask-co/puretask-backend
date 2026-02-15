@@ -40,7 +40,13 @@ export async function upsertReconciliationFlag(params: {
 }
 
 export async function getPayoutReconciliationFlags(): Promise<
-  Array<{ payout_id: string; cleaner_id: string | null; delta_cents: number; status: string; note: string | null }>
+  Array<{
+    payout_id: string;
+    cleaner_id: string | null;
+    delta_cents: number;
+    status: string;
+    note: string | null;
+  }>
 > {
   await query(ensureTable);
   const result = await query<{
@@ -93,4 +99,3 @@ export async function resolvePayoutReconciliationFlag(params: {
     resolvedBy: params.resolvedBy,
   });
 }
-

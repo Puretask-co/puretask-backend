@@ -9,9 +9,10 @@ import { logger } from "../lib/logger";
  * Twilio client instance
  * Initialized once and reused across the application
  */
-export const twilioClient = env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN
-  ? twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN)
-  : null;
+export const twilioClient =
+  env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN
+    ? twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN)
+    : null;
 
 // Log Twilio initialization (without exposing credentials)
 logger.info("twilio_client_initialized", {

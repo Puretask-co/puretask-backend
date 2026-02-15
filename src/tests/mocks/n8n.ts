@@ -3,7 +3,7 @@
 
 export interface MockN8nWebhookRequest {
   url: string;
-  method: 'POST' | 'GET';
+  method: "POST" | "GET";
   headers: Record<string, string>;
   body: any;
   signature?: string;
@@ -26,7 +26,7 @@ export function createMockN8nSuccess(data?: any): MockN8nWebhookResponse {
       data: data || {},
     },
     headers: {
-      'content-type': 'application/json',
+      "content-type": "application/json",
     },
   };
 }
@@ -36,7 +36,7 @@ export function createMockN8nSuccess(data?: any): MockN8nWebhookResponse {
  */
 export function createMockN8nError(
   status: number = 500,
-  message: string = 'Internal server error'
+  message: string = "Internal server error"
 ): MockN8nWebhookResponse {
   return {
     status,
@@ -45,7 +45,7 @@ export function createMockN8nError(
       error: message,
     },
     headers: {
-      'content-type': 'application/json',
+      "content-type": "application/json",
     },
   };
 }
@@ -59,11 +59,11 @@ export function createMockN8nRequest(
   overrides?: Partial<MockN8nWebhookRequest>
 ): MockN8nWebhookRequest {
   return {
-    url: 'https://n8n.example.com/webhook/test',
-    method: 'POST',
+    url: "https://n8n.example.com/webhook/test",
+    method: "POST",
     headers: {
-      'content-type': 'application/json',
-      'x-webhook-signature': 'test-signature',
+      "content-type": "application/json",
+      "x-webhook-signature": "test-signature",
     },
     body: {
       event: eventName,
@@ -77,12 +77,8 @@ export function createMockN8nRequest(
 /**
  * Mock n8n webhook signature validation
  */
-export function validateN8nSignature(
-  signature: string,
-  body: string,
-  secret: string
-): boolean {
+export function validateN8nSignature(signature: string, body: string, secret: string): boolean {
   // In real implementation, this would validate the signature
   // For testing, we can mock this
-  return signature === 'test-signature' || signature === secret;
+  return signature === "test-signature" || signature === secret;
 }

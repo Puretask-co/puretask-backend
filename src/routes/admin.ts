@@ -2,7 +2,14 @@
 // Admin API routes matching 001_init.sql schema
 import { Router, Response } from "express";
 import { query } from "../db/client";
-import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import {
+  requireAuth,
+  requireAdmin,
+  requireSupportRole,
+  requireDisputeResolveRole,
+  AuthedRequest,
+  authedHandler,
+} from "../middleware/authCanonical";
 import { validateBody } from "../lib/validation";
 import { z } from "zod";
 import {
@@ -10,6 +17,7 @@ import {
   resolveDispute,
   overrideJobStatus,
   getDisputes,
+  getDisputeDetail,
   getAllPayouts,
   getJobEventsForAdmin,
   listJobsForAdmin,
@@ -107,27 +115,28 @@ adminRouter.use(requireAdmin);
  *       401:
  *         description: Unauthorized - admin only
  */
-adminRouter.get("/kpis", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { dateFrom, dateTo } = req.query;
-    const kpis = await getAdminKPIs(
-      dateFrom as string | undefined,
-      dateTo as string | undefined
-    );
-    res.json({ kpis });
-  } catch (error) {
-    logger.error("get_admin_kpis_failed", {
-      error: (error as Error).message,
-      adminId: req.user?.id,
-    });
-    res.status(500).json({
-      error: {
-        code: "GET_KPIS_FAILED",
-        message: (error as Error).message,
-      },
-    });
-  }
-}));
+adminRouter.get(
+  "/kpis",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { dateFrom, dateTo } = req.query;
+      const kpis = await getAdminKPIs(dateFrom as string | undefined, dateTo as string | undefined);
+      res.json({ kpis });
+    } catch (error) {
+      logger.error("get_admin_kpis_failed", {
+        error: (error as Error).message,
+        adminId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "GET_KPIS_FAILED",
+          message: (error as Error).message,
+        },
+      });
+    }
+  })
+);
 
 // V2 FEATURE — DISABLED FOR NOW (advanced KPIs)
 // adminRouter.get("/kpis/history", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
@@ -244,42 +253,46 @@ adminRouter.get("/kpis", requireAdmin, authedHandler(async (req: AuthedRequest, 
  *       401:
  *         description: Unauthorized - admin only
  */
-adminRouter.get("/jobs", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const {
-      status,
-      clientId,
-      cleanerId,
-      dateFrom,
-      dateTo,
-      limit = "50",
-      offset = "0",
-    } = req.query;
+adminRouter.get(
+  "/jobs",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const {
+        status,
+        clientId,
+        cleanerId,
+        dateFrom,
+        dateTo,
+        limit = "50",
+        offset = "0",
+      } = req.query;
 
-    const result = await listJobsForAdmin({
-      status: status as any,
-      clientId: clientId as string | undefined,
-      cleanerId: cleanerId as string | undefined,
-      dateFrom: dateFrom as string | undefined,
-      dateTo: dateTo as string | undefined,
-      limit: parseInt(limit as string, 10),
-      offset: parseInt(offset as string, 10),
-    });
+      const result = await listJobsForAdmin({
+        status: status as any,
+        clientId: clientId as string | undefined,
+        cleanerId: cleanerId as string | undefined,
+        dateFrom: dateFrom as string | undefined,
+        dateTo: dateTo as string | undefined,
+        limit: parseInt(limit as string, 10),
+        offset: parseInt(offset as string, 10),
+      });
 
-    res.json(result);
-  } catch (error) {
-    logger.error("list_admin_jobs_failed", {
-      error: (error as Error).message,
-      adminId: req.user?.id,
-    });
-    res.status(500).json({
-      error: {
-        code: "LIST_JOBS_FAILED",
-        message: (error as Error).message,
-      },
-    });
-  }
-}));
+      res.json(result);
+    } catch (error) {
+      logger.error("list_admin_jobs_failed", {
+        error: (error as Error).message,
+        adminId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "LIST_JOBS_FAILED",
+          message: (error as Error).message,
+        },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -473,32 +486,84 @@ adminRouter.post(
  *       200:
  *         description: List of disputes
  */
-adminRouter.get("/disputes", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { status, limit = "50" } = req.query;
+adminRouter.get(
+  "/disputes",
+  requireSupportRole,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { status, limit = "50" } = req.query;
 
-    const disputes = await getDisputes(
-      status as any,
-      parseInt(limit as string, 10)
-    );
+      const disputes = await getDisputes(status as any, parseInt(limit as string, 10));
 
-    res.json({
-      disputes,
-      count: disputes.length,
-    });
-  } catch (error) {
-    logger.error("get_disputes_failed", {
-      error: (error as Error).message,
-      adminId: req.user?.id,
-    });
-    res.status(500).json({
-      error: {
-        code: "GET_DISPUTES_FAILED",
-        message: (error as Error).message,
-      },
-    });
-  }
-}));
+      res.json({
+        disputes,
+        count: disputes.length,
+      });
+    } catch (error) {
+      logger.error("get_disputes_failed", {
+        error: (error as Error).message,
+        adminId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "GET_DISPUTES_FAILED",
+          message: (error as Error).message,
+        },
+      });
+    }
+  })
+);
+
+/**
+ * @swagger
+ * /admin/disputes/{disputeId}:
+ *   get:
+ *     summary: Get dispute detail
+ *     description: Full dispute detail with job, events, photos, timeline for admin resolution UI.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: disputeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Dispute detail with full timeline
+ *       404:
+ *         description: Dispute not found
+ */
+adminRouter.get(
+  "/disputes/:disputeId",
+  requireSupportRole,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { disputeId } = req.params;
+      const detail = await getDisputeDetail(disputeId);
+      if (!detail) {
+        res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Dispute not found" },
+        });
+        return;
+      }
+      res.json(detail);
+    } catch (error) {
+      logger.error("get_dispute_detail_failed", {
+        error: (error as Error).message,
+        disputeId: req.params.disputeId,
+      });
+      res.status(500).json({
+        error: {
+          code: "GET_DISPUTE_DETAIL_FAILED",
+          message: (error as Error).message,
+        },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -543,10 +608,15 @@ async function handleResolveDisputeById(req: AuthedRequest, res: Response): Prom
   try {
     const { disputeId } = req.params;
     const { resolution, admin_notes } = req.body;
-    const disputeResult = await query<{ id: string; job_id: string; client_id: string; status: string; amount_cents?: number | null }>(
-      `SELECT id, job_id, client_id, status, amount_cents FROM disputes WHERE id = $1`,
-      [disputeId]
-    );
+    const disputeResult = await query<{
+      id: string;
+      job_id: string;
+      client_id: string;
+      status: string;
+      amount_cents?: number | null;
+    }>(`SELECT id, job_id, client_id, status, amount_cents FROM disputes WHERE id = $1`, [
+      disputeId,
+    ]);
     const dispute = disputeResult.rows[0];
     if (!dispute) {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Dispute not found" } });
@@ -568,7 +638,7 @@ async function handleResolveDisputeById(req: AuthedRequest, res: Response): Prom
         paymentIntentId: null,
         jobId: job.id,
         clientId: dispute.client_id,
-        amount: (dispute.amount_cents ?? job.credit_amount * env.CENTS_PER_CREDIT),
+        amount: dispute.amount_cents ?? job.credit_amount * env.CENTS_PER_CREDIT,
         currency: env.PAYOUT_CURRENCY,
         status: "lost",
         eventType: "charge.dispute.closed",
@@ -605,7 +675,7 @@ async function handleResolveDisputeById(req: AuthedRequest, res: Response): Prom
 
 adminRouter.post(
   "/disputes/:disputeId/resolve",
-  requireAdmin,
+  requireDisputeResolveRole,
   validateBody(resolveDisputeSchema),
   authedHandler(handleResolveDisputeById)
 );
@@ -639,7 +709,7 @@ async function handleResolveDisputeByJobId(req: AuthedRequest, res: Response): P
 
 adminRouter.post(
   "/disputes/job/:jobId/resolve",
-  requireAdmin,
+  requireDisputeResolveRole,
   validateBody(resolveDisputeSchema),
   authedHandler(handleResolveDisputeByJobId)
 );
@@ -667,32 +737,33 @@ adminRouter.post(
  *       200:
  *         description: List of payouts
  */
-adminRouter.get("/payouts", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { status, limit = "100" } = req.query;
+adminRouter.get(
+  "/payouts",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { status, limit = "100" } = req.query;
 
-    const payouts = await getAllPayouts(
-      status as any,
-      parseInt(limit as string, 10)
-    );
+      const payouts = await getAllPayouts(status as any, parseInt(limit as string, 10));
 
-    res.json({
-      payouts,
-      count: payouts.length,
-    });
-  } catch (error) {
-    logger.error("get_admin_payouts_failed", {
-      error: (error as Error).message,
-      adminId: req.user?.id,
-    });
-    res.status(500).json({
-      error: {
-        code: "GET_PAYOUTS_FAILED",
-        message: (error as Error).message,
-      },
-    });
-  }
-}));
+      res.json({
+        payouts,
+        count: payouts.length,
+      });
+    } catch (error) {
+      logger.error("get_admin_payouts_failed", {
+        error: (error as Error).message,
+        adminId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "GET_PAYOUTS_FAILED",
+          message: (error as Error).message,
+        },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -717,37 +788,41 @@ adminRouter.get("/payouts", requireAdmin, authedHandler(async (req: AuthedReques
  *       200:
  *         description: List of job events
  */
-adminRouter.get("/job-events", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { limit = "200", eventType } = req.query;
+adminRouter.get(
+  "/job-events",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { limit = "200", eventType } = req.query;
 
-    let queryText = "SELECT * FROM job_events";
-    const params: unknown[] = [];
-    let paramIndex = 1;
+      let queryText = "SELECT * FROM job_events";
+      const params: unknown[] = [];
+      let paramIndex = 1;
 
-    if (eventType) {
-      queryText += ` WHERE event_type = $${paramIndex++}`;
-      params.push(eventType);
+      if (eventType) {
+        queryText += ` WHERE event_type = $${paramIndex++}`;
+        params.push(eventType);
+      }
+
+      queryText += ` ORDER BY created_at DESC LIMIT $${paramIndex++}`;
+      params.push(parseInt(limit as string, 10));
+
+      const result = await query(queryText, params);
+      res.json({ events: result.rows, count: result.rows.length });
+    } catch (error) {
+      logger.error("get_admin_job_events_failed", {
+        error: (error as Error).message,
+        adminId: req.user?.id,
+      });
+      res.status(500).json({
+        error: {
+          code: "GET_JOB_EVENTS_FAILED",
+          message: (error as Error).message,
+        },
+      });
     }
-
-    queryText += ` ORDER BY created_at DESC LIMIT $${paramIndex++}`;
-    params.push(parseInt(limit as string, 10));
-
-    const result = await query(queryText, params);
-    res.json({ events: result.rows, count: result.rows.length });
-  } catch (error) {
-    logger.error("get_admin_job_events_failed", {
-      error: (error as Error).message,
-      adminId: req.user?.id,
-    });
-    res.status(500).json({
-      error: {
-        code: "GET_JOB_EVENTS_FAILED",
-        message: (error as Error).message,
-      },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // User Management Routes
@@ -786,27 +861,31 @@ adminRouter.get("/job-events", requireAdmin, authedHandler(async (req: AuthedReq
  *       200:
  *         description: List of users
  */
-adminRouter.get("/users", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { role, search, limit = "50", offset = "0" } = req.query;
+adminRouter.get(
+  "/users",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { role, search, limit = "50", offset = "0" } = req.query;
 
-    const result = await listUsers({
-      role: role as any,
-      search: search as string,
-      limit: parseInt(limit as string, 10),
-      offset: parseInt(offset as string, 10),
-    });
+      const result = await listUsers({
+        role: role as any,
+        search: search as string,
+        limit: parseInt(limit as string, 10),
+        offset: parseInt(offset as string, 10),
+      });
 
-    // Sanitize users to exclude password_hash
-    const sanitizedUsers = result.users.map(user => sanitizeUserForAdmin(user));
-    res.json({ users: sanitizedUsers, total: result.total });
-  } catch (error) {
-    logger.error("list_users_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "LIST_USERS_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+      // Sanitize users to exclude password_hash
+      const sanitizedUsers = result.users.map((user) => sanitizeUserForAdmin(user));
+      res.json({ users: sanitizedUsers, total: result.total });
+    } catch (error) {
+      logger.error("list_users_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "LIST_USERS_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -821,17 +900,21 @@ adminRouter.get("/users", requireAdmin, authedHandler(async (req: AuthedRequest,
  *       200:
  *         description: User statistics
  */
-adminRouter.get("/users/stats", requireAdmin, authedHandler(async (_req: AuthedRequest, res: Response) => {
-  try {
-    const stats = await getUserStats();
-    res.json({ stats });
-  } catch (error) {
-    logger.error("get_user_stats_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_USER_STATS_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+adminRouter.get(
+  "/users/stats",
+  requireAdmin,
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    try {
+      const stats = await getUserStats();
+      res.json({ stats });
+    } catch (error) {
+      logger.error("get_user_stats_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_USER_STATS_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -855,27 +938,31 @@ adminRouter.get("/users/stats", requireAdmin, authedHandler(async (_req: AuthedR
  *       404:
  *         description: User not found
  */
-adminRouter.get("/users/:userId", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { userId } = req.params;
-    const user = await getUserById(userId);
+adminRouter.get(
+  "/users/:userId",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const user = await getUserById(userId);
 
-    if (!user) {
-      res.status(404).json({
-        error: { code: "USER_NOT_FOUND", message: "User not found" },
+      if (!user) {
+        res.status(404).json({
+          error: { code: "USER_NOT_FOUND", message: "User not found" },
+        });
+        return;
+      }
+
+      // Sanitize user to exclude password_hash
+      res.json({ user: sanitizeUserForAdmin(user) });
+    } catch (error) {
+      logger.error("get_user_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_USER_FAILED", message: (error as Error).message },
       });
-      return;
     }
-
-    // Sanitize user to exclude password_hash
-    res.json({ user: sanitizeUserForAdmin(user) });
-  } catch (error) {
-    logger.error("get_user_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_USER_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -929,7 +1016,12 @@ async function handleCreateUser(req: AuthedRequest, res: Response): Promise<void
   }
 }
 
-adminRouter.post("/users", requireAdmin, validateBody(createUserSchema), authedHandler(handleCreateUser));
+adminRouter.post(
+  "/users",
+  requireAdmin,
+  validateBody(createUserSchema),
+  authedHandler(handleCreateUser)
+);
 
 /**
  * @swagger
@@ -987,7 +1079,12 @@ async function handleUpdateUser(req: AuthedRequest, res: Response): Promise<void
   }
 }
 
-adminRouter.patch("/users/:userId", requireAdmin, validateBody(updateUserSchema), authedHandler(handleUpdateUser));
+adminRouter.patch(
+  "/users/:userId",
+  requireAdmin,
+  validateBody(updateUserSchema),
+  authedHandler(handleUpdateUser)
+);
 
 /**
  * @swagger
@@ -1014,21 +1111,25 @@ adminRouter.patch("/users/:userId", requireAdmin, validateBody(updateUserSchema)
  *       200:
  *         description: User deleted
  */
-adminRouter.delete("/users/:userId", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { userId } = req.params;
-    const { hard = "false" } = req.query;
+adminRouter.delete(
+  "/users/:userId",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { hard = "false" } = req.query;
 
-    await deleteUser(userId, hard === "true");
-    res.json({ deleted: true });
-  } catch (error) {
-    const err = error as Error & { statusCode?: number };
-    logger.error("delete_user_failed", { error: err.message, userId: req.params.userId });
-    res.status(err.statusCode || 500).json({
-      error: { code: "DELETE_USER_FAILED", message: err.message },
-    });
-  }
-}));
+      await deleteUser(userId, hard === "true");
+      res.json({ deleted: true });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      logger.error("delete_user_failed", { error: err.message, userId: req.params.userId });
+      res.status(err.statusCode || 500).json({
+        error: { code: "DELETE_USER_FAILED", message: err.message },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1079,7 +1180,12 @@ async function handleResetPassword(req: AuthedRequest, res: Response): Promise<v
   }
 }
 
-adminRouter.post("/users/:userId/reset-password", requireAdmin, validateBody(resetPasswordSchema), authedHandler(handleResetPassword));
+adminRouter.post(
+  "/users/:userId/reset-password",
+  requireAdmin,
+  validateBody(resetPasswordSchema),
+  authedHandler(handleResetPassword)
+);
 
 /**
  * @swagger
@@ -1133,7 +1239,12 @@ async function handleAdjustUserCredits(req: AuthedRequest, res: Response): Promi
   }
 }
 
-adminRouter.post("/users/:userId/adjust-credits", requireAdmin, validateBody(adjustCreditsSchema), authedHandler(handleAdjustUserCredits));
+adminRouter.post(
+  "/users/:userId/adjust-credits",
+  requireAdmin,
+  validateBody(adjustCreditsSchema),
+  authedHandler(handleAdjustUserCredits)
+);
 
 // ============================================
 // System Health & Repair Tools
@@ -1152,17 +1263,21 @@ adminRouter.post("/users/:userId/adjust-credits", requireAdmin, validateBody(adj
  *       200:
  *         description: System health status
  */
-adminRouter.get("/system/health", requireAdmin, authedHandler(async (_req: AuthedRequest, res: Response) => {
-  try {
-    const health = await runSystemHealthCheck();
-    res.json(health);
-  } catch (error) {
-    logger.error("system_health_check_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "HEALTH_CHECK_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+adminRouter.get(
+  "/system/health",
+  requireAdmin,
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    try {
+      const health = await runSystemHealthCheck();
+      res.json(health);
+    } catch (error) {
+      logger.error("system_health_check_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "HEALTH_CHECK_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1177,14 +1292,20 @@ adminRouter.get("/system/health", requireAdmin, authedHandler(async (_req: Authe
  *       200:
  *         description: List of fraud alerts
  */
-adminRouter.get("/fraud/alerts", requireAdmin, authedHandler(async (_req: AuthedRequest, res: Response) => {
-  try {
-    const alerts = await getOpenFraudAlerts();
-    res.json({ alerts, count: alerts.length });
-  } catch (error) {
-    res.status(500).json({ error: { code: "FRAUD_ALERTS_FAILED", message: (error as Error).message } });
-  }
-}));
+adminRouter.get(
+  "/fraud/alerts",
+  requireAdmin,
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    try {
+      const alerts = await getOpenFraudAlerts();
+      res.json({ alerts, count: alerts.length });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ error: { code: "FRAUD_ALERTS_FAILED", message: (error as Error).message } });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1220,20 +1341,31 @@ adminRouter.get("/fraud/alerts", requireAdmin, authedHandler(async (_req: Authed
  *       200:
  *         description: Fraud alert resolved
  */
-adminRouter.post("/fraud/alerts/:alertId/resolve", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { alertId } = req.params;
-    const { resolution, notes } = req.body as { resolution?: "resolved" | "false_positive"; notes?: string };
-    if (!resolution) {
-      res.status(400).json({ error: { code: "MISSING_RESOLUTION", message: "resolution required" } });
-      return;
+adminRouter.post(
+  "/fraud/alerts/:alertId/resolve",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { alertId } = req.params;
+      const { resolution, notes } = req.body as {
+        resolution?: "resolved" | "false_positive";
+        notes?: string;
+      };
+      if (!resolution) {
+        res
+          .status(400)
+          .json({ error: { code: "MISSING_RESOLUTION", message: "resolution required" } });
+        return;
+      }
+      await resolveFraudAlert(alertId, req.user!.id, resolution, notes);
+      res.json({ success: true });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ error: { code: "FRAUD_RESOLVE_FAILED", message: (error as Error).message } });
     }
-    await resolveFraudAlert(alertId, req.user!.id, resolution, notes);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: { code: "FRAUD_RESOLVE_FAILED", message: (error as Error).message } });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -1282,7 +1414,9 @@ async function handleReversePayout(req: AuthedRequest, res: Response): Promise<v
     res.json({ success: true, adjustment });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "PAYOUT_REVERSE_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "PAYOUT_REVERSE_FAILED", message: err.message } });
   }
 }
 
@@ -1307,11 +1441,15 @@ async function handleHoldPayout(req: AuthedRequest, res: Response): Promise<void
       amountCents: row.amount_cents,
       reason: reason || "Admin hold",
     });
-    await sendAlert(alertTemplates.payoutHold(payoutId, row.cleaner_id, row.job_id, row.amount_cents));
+    await sendAlert(
+      alertTemplates.payoutHold(payoutId, row.cleaner_id, row.job_id, row.amount_cents)
+    );
     res.json({ success: true, adjustment });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "PAYOUT_HOLD_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "PAYOUT_HOLD_FAILED", message: err.message } });
   }
 }
 
@@ -1382,7 +1520,9 @@ async function handleReleasePayoutHold(req: AuthedRequest, res: Response): Promi
     const { adjustmentId } = req.params;
     const { resolution } = req.body as { resolution?: "refund" | "release" };
     if (!resolution) {
-      res.status(400).json({ error: { code: "MISSING_RESOLUTION", message: "resolution required" } });
+      res
+        .status(400)
+        .json({ error: { code: "MISSING_RESOLUTION", message: "resolution required" } });
       return;
     }
     await releaseDisputeHold(adjustmentId, resolution);
@@ -1395,11 +1535,17 @@ async function handleReleasePayoutHold(req: AuthedRequest, res: Response): Promi
     res.json({ success: true });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "PAYOUT_HOLD_RELEASE_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "PAYOUT_HOLD_RELEASE_FAILED", message: err.message } });
   }
 }
 
-adminRouter.post("/payouts/hold/:adjustmentId/release", requireAdmin, authedHandler(handleReleasePayoutHold));
+adminRouter.post(
+  "/payouts/hold/:adjustmentId/release",
+  requireAdmin,
+  authedHandler(handleReleasePayoutHold)
+);
 
 async function handleGetReconFlags(_req: AuthedRequest, res: Response): Promise<void> {
   try {
@@ -1476,7 +1622,11 @@ async function handleResolveReconFlag(req: AuthedRequest, res: Response): Promis
   }
 }
 
-adminRouter.post("/payouts/reconciliation/:payoutId/resolve", requireAdmin, authedHandler(handleResolveReconFlag));
+adminRouter.post(
+  "/payouts/reconciliation/:payoutId/resolve",
+  requireAdmin,
+  authedHandler(handleResolveReconFlag)
+);
 
 /**
  * @swagger
@@ -1508,36 +1658,40 @@ adminRouter.post("/payouts/reconciliation/:payoutId/resolve", requireAdmin, auth
  *       200:
  *         description: Payout pause toggled
  */
-adminRouter.post("/payouts/:cleanerId/pause", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { cleanerId } = req.params;
-    const { paused } = req.body as { paused?: boolean };
-    if (paused === undefined) {
-      res.status(400).json({ error: { code: "MISSING_PARAM", message: "paused required" } });
-      return;
-    }
-    await updatePayoutPause(cleanerId, !!paused);
-    await query(
-      `
+adminRouter.post(
+  "/payouts/:cleanerId/pause",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { cleanerId } = req.params;
+      const { paused } = req.body as { paused?: boolean };
+      if (paused === undefined) {
+        res.status(400).json({ error: { code: "MISSING_PARAM", message: "paused required" } });
+        return;
+      }
+      await updatePayoutPause(cleanerId, !!paused);
+      await query(
+        `
         UPDATE cleaner_profiles
         SET payout_paused_at = CASE WHEN $2 THEN NOW() ELSE payout_paused_at END,
             payout_paused_by = CASE WHEN $2 THEN $3 ELSE payout_paused_by END
         WHERE user_id = $1
       `,
-      [cleanerId, !!paused, req.user!.id]
-    );
-    await sendAlert({
-      level: "info",
-      title: "Payout pause toggled",
-      message: `Cleaner ${cleanerId} payout pause set to ${!!paused}`,
-      details: { cleanerId, paused: !!paused },
-    });
-    res.json({ success: true, paused: !!paused });
-  } catch (error) {
-    const err = error as Error;
-    res.status(500).json({ error: { code: "PAYOUT_PAUSE_FAILED", message: err.message } });
-  }
-}));
+        [cleanerId, !!paused, req.user!.id]
+      );
+      await sendAlert({
+        level: "info",
+        title: "Payout pause toggled",
+        message: `Cleaner ${cleanerId} payout pause set to ${!!paused}`,
+        details: { cleanerId, paused: !!paused },
+      });
+      res.json({ success: true, paused: !!paused });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({ error: { code: "PAYOUT_PAUSE_FAILED", message: err.message } });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1605,11 +1759,18 @@ async function handleApproveRefund(req: AuthedRequest, res: Response): Promise<v
     res.json({ success: true, jobId, message: "Refund processed successfully" });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    res.status(err.statusCode || 500).json({ error: { code: "REFUND_APPROVAL_FAILED", message: err.message } });
+    res
+      .status(err.statusCode || 500)
+      .json({ error: { code: "REFUND_APPROVAL_FAILED", message: err.message } });
   }
 }
 
-adminRouter.post("/refunds/:jobId/approve", requireAdmin, validateBody(approveRefundSchema), authedHandler(handleApproveRefund));
+adminRouter.post(
+  "/refunds/:jobId/approve",
+  requireAdmin,
+  validateBody(approveRefundSchema),
+  authedHandler(handleApproveRefund)
+);
 
 /**
  * @swagger
@@ -1671,7 +1832,12 @@ async function handleRouteDispute(req: AuthedRequest, res: Response): Promise<vo
   }
 }
 
-adminRouter.post("/disputes/:disputeId/route", requireAdmin, validateBody(routeDisputeSchema), authedHandler(handleRouteDispute));
+adminRouter.post(
+  "/disputes/:disputeId/route",
+  requireAdmin,
+  validateBody(routeDisputeSchema),
+  authedHandler(handleRouteDispute)
+);
 
 /**
  * @swagger
@@ -1686,17 +1852,21 @@ adminRouter.post("/disputes/:disputeId/route", requireAdmin, validateBody(routeD
  *       200:
  *         description: List of stuck jobs
  */
-adminRouter.get("/system/stuck-jobs", requireAdmin, authedHandler(async (_req: AuthedRequest, res: Response) => {
-  try {
-    const stuckJobs = await findStuckJobs();
-    res.json({ stuckJobs, count: stuckJobs.length });
-  } catch (error) {
-    logger.error("find_stuck_jobs_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "FIND_STUCK_JOBS_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+adminRouter.get(
+  "/system/stuck-jobs",
+  requireAdmin,
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    try {
+      const stuckJobs = await findStuckJobs();
+      res.json({ stuckJobs, count: stuckJobs.length });
+    } catch (error) {
+      logger.error("find_stuck_jobs_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "FIND_STUCK_JOBS_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1711,17 +1881,21 @@ adminRouter.get("/system/stuck-jobs", requireAdmin, authedHandler(async (_req: A
  *       200:
  *         description: List of stuck payouts
  */
-adminRouter.get("/system/stuck-payouts", requireAdmin, authedHandler(async (_req: AuthedRequest, res: Response) => {
-  try {
-    const stuckPayouts = await findStuckPayouts();
-    res.json({ stuckPayouts, count: stuckPayouts.length });
-  } catch (error) {
-    logger.error("find_stuck_payouts_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "FIND_STUCK_PAYOUTS_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+adminRouter.get(
+  "/system/stuck-payouts",
+  requireAdmin,
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    try {
+      const stuckPayouts = await findStuckPayouts();
+      res.json({ stuckPayouts, count: stuckPayouts.length });
+    } catch (error) {
+      logger.error("find_stuck_payouts_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "FIND_STUCK_PAYOUTS_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1736,17 +1910,21 @@ adminRouter.get("/system/stuck-payouts", requireAdmin, authedHandler(async (_req
  *       200:
  *         description: List of ledger issues
  */
-adminRouter.get("/system/ledger-issues", requireAdmin, authedHandler(async (_req: AuthedRequest, res: Response) => {
-  try {
-    const issues = await findLedgerInconsistencies();
-    res.json({ issues, count: issues.length });
-  } catch (error) {
-    logger.error("find_ledger_issues_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "FIND_LEDGER_ISSUES_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+adminRouter.get(
+  "/system/ledger-issues",
+  requireAdmin,
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    try {
+      const issues = await findLedgerInconsistencies();
+      res.json({ issues, count: issues.length });
+    } catch (error) {
+      logger.error("find_ledger_issues_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "FIND_LEDGER_ISSUES_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1795,7 +1973,12 @@ async function handleForceCompleteJob(req: AuthedRequest, res: Response): Promis
   }
 }
 
-adminRouter.post("/repair/job/:jobId/force-complete", requireAdmin, validateBody(forceCompleteSchema), authedHandler(handleForceCompleteJob));
+adminRouter.post(
+  "/repair/job/:jobId/force-complete",
+  requireAdmin,
+  validateBody(forceCompleteSchema),
+  authedHandler(handleForceCompleteJob)
+);
 
 /**
  * @swagger
@@ -1913,7 +2096,12 @@ async function handleReassignJob(req: AuthedRequest, res: Response): Promise<voi
   }
 }
 
-adminRouter.post("/repair/job/:jobId/reassign", requireAdmin, validateBody(reassignSchema), authedHandler(handleReassignJob));
+adminRouter.post(
+  "/repair/job/:jobId/reassign",
+  requireAdmin,
+  validateBody(reassignSchema),
+  authedHandler(handleReassignJob)
+);
 
 async function handleForceProcessPayout(req: AuthedRequest, res: Response): Promise<void> {
   try {
@@ -1921,7 +2109,10 @@ async function handleForceProcessPayout(req: AuthedRequest, res: Response): Prom
     res.json(result);
   } catch (error) {
     const err = error as Error & { statusCode?: number };
-    logger.error("force_process_payout_failed", { error: err.message, payoutId: req.params.payoutId });
+    logger.error("force_process_payout_failed", {
+      error: err.message,
+      payoutId: req.params.payoutId,
+    });
     res.status(err.statusCode || 500).json({
       error: { code: "FORCE_PROCESS_FAILED", message: err.message },
     });
@@ -1948,7 +2139,11 @@ async function handleForceProcessPayout(req: AuthedRequest, res: Response): Prom
  *       200:
  *         description: Payout force processed
  */
-adminRouter.post("/repair/payout/:payoutId/force-process", requireAdmin, authedHandler(handleForceProcessPayout));
+adminRouter.post(
+  "/repair/payout/:payoutId/force-process",
+  requireAdmin,
+  authedHandler(handleForceProcessPayout)
+);
 
 /**
  * @swagger
@@ -2005,7 +2200,12 @@ async function handleRepairCredits(req: AuthedRequest, res: Response): Promise<v
   }
 }
 
-adminRouter.post("/repair/credits/:userId/adjust", requireAdmin, validateBody(repairCreditsSchema), authedHandler(handleRepairCredits));
+adminRouter.post(
+  "/repair/credits/:userId/adjust",
+  requireAdmin,
+  validateBody(repairCreditsSchema),
+  authedHandler(handleRepairCredits)
+);
 
 // ============================================
 // Fraud Alerts
@@ -2024,17 +2224,21 @@ adminRouter.post("/repair/credits/:userId/adjust", requireAdmin, validateBody(re
  *       200:
  *         description: List of fraud alerts
  */
-adminRouter.get("/fraud-alerts", requireAdmin, authedHandler(async (_req: AuthedRequest, res: Response) => {
-  try {
-    const alerts = await getOpenFraudAlerts();
-    res.json({ alerts, count: alerts.length });
-  } catch (error) {
-    logger.error("get_fraud_alerts_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_FRAUD_ALERTS_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+adminRouter.get(
+  "/fraud-alerts",
+  requireAdmin,
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    try {
+      const alerts = await getOpenFraudAlerts();
+      res.json({ alerts, count: alerts.length });
+    } catch (error) {
+      logger.error("get_fraud_alerts_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_FRAUD_ALERTS_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -2076,12 +2280,7 @@ const resolveFraudSchema = z.object({
 
 async function handleResolveFraudAlert(req: AuthedRequest, res: Response): Promise<void> {
   try {
-    await resolveFraudAlert(
-      req.params.alertId,
-      req.user!.id,
-      req.body.resolution,
-      req.body.notes
-    );
+    await resolveFraudAlert(req.params.alertId, req.user!.id, req.body.resolution, req.body.notes);
     res.json({ resolved: true });
   } catch (error) {
     logger.error("resolve_fraud_alert_failed", { error: (error as Error).message });
@@ -2091,7 +2290,12 @@ async function handleResolveFraudAlert(req: AuthedRequest, res: Response): Promi
   }
 }
 
-adminRouter.post("/fraud-alerts/:alertId/resolve", requireAdmin, validateBody(resolveFraudSchema), authedHandler(handleResolveFraudAlert));
+adminRouter.post(
+  "/fraud-alerts/:alertId/resolve",
+  requireAdmin,
+  validateBody(resolveFraudSchema),
+  authedHandler(handleResolveFraudAlert)
+);
 
 // ============================================
 // Invoice Management
@@ -2129,32 +2333,37 @@ adminRouter.post("/fraud-alerts/:alertId/resolve", requireAdmin, validateBody(re
  *       200:
  *         description: List of invoices
  */
-adminRouter.get("/invoices", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { status, requiresApproval, limit = "50", offset = "0" } = req.query;
+adminRouter.get(
+  "/invoices",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { status, requiresApproval, limit = "50", offset = "0" } = req.query;
 
-    const result = await getAdminInvoices({
-      status: status as InvoiceStatus | undefined,
-      requiresApproval: requiresApproval === "true" ? true : requiresApproval === "false" ? false : undefined,
-      limit: parseInt(limit as string, 10),
-      offset: parseInt(offset as string, 10),
-    });
-
-    res.json({
-      invoices: result.invoices,
-      pagination: {
-        total: result.total,
+      const result = await getAdminInvoices({
+        status: status as InvoiceStatus | undefined,
+        requiresApproval:
+          requiresApproval === "true" ? true : requiresApproval === "false" ? false : undefined,
         limit: parseInt(limit as string, 10),
         offset: parseInt(offset as string, 10),
-      },
-    });
-  } catch (error) {
-    logger.error("get_admin_invoices_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_INVOICES_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+      });
+
+      res.json({
+        invoices: result.invoices,
+        pagination: {
+          total: result.total,
+          limit: parseInt(limit as string, 10),
+          offset: parseInt(offset as string, 10),
+        },
+      });
+    } catch (error) {
+      logger.error("get_admin_invoices_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_INVOICES_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -2180,31 +2389,35 @@ adminRouter.get("/invoices", requireAdmin, authedHandler(async (req: AuthedReque
  *       200:
  *         description: List of pending invoices
  */
-adminRouter.get("/invoices/pending-approval", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { limit = "50", offset = "0" } = req.query;
+adminRouter.get(
+  "/invoices/pending-approval",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { limit = "50", offset = "0" } = req.query;
 
-    const result = await getAdminInvoices({
-      status: "pending_approval" as InvoiceStatus,
-      limit: parseInt(limit as string, 10),
-      offset: parseInt(offset as string, 10),
-    });
-
-    res.json({
-      invoices: result.invoices,
-      pagination: {
-        total: result.total,
+      const result = await getAdminInvoices({
+        status: "pending_approval" as InvoiceStatus,
         limit: parseInt(limit as string, 10),
         offset: parseInt(offset as string, 10),
-      },
-    });
-  } catch (error) {
-    logger.error("get_pending_invoices_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_PENDING_INVOICES_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+      });
+
+      res.json({
+        invoices: result.invoices,
+        pagination: {
+          total: result.total,
+          limit: parseInt(limit as string, 10),
+          offset: parseInt(offset as string, 10),
+        },
+      });
+    } catch (error) {
+      logger.error("get_pending_invoices_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_PENDING_INVOICES_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -2228,26 +2441,30 @@ adminRouter.get("/invoices/pending-approval", requireAdmin, authedHandler(async 
  *       404:
  *         description: Invoice not found
  */
-adminRouter.get("/invoices/:invoiceId", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { invoiceId } = req.params;
-    const invoice = await getInvoiceWithLineItems(invoiceId);
+adminRouter.get(
+  "/invoices/:invoiceId",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { invoiceId } = req.params;
+      const invoice = await getInvoiceWithLineItems(invoiceId);
 
-    if (!invoice) {
-      res.status(404).json({
-        error: { code: "NOT_FOUND", message: "Invoice not found" },
+      if (!invoice) {
+        res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Invoice not found" },
+        });
+        return;
+      }
+
+      res.json({ invoice });
+    } catch (error) {
+      logger.error("get_admin_invoice_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_INVOICE_FAILED", message: (error as Error).message },
       });
-      return;
     }
-
-    res.json({ invoice });
-  } catch (error) {
-    logger.error("get_admin_invoice_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_INVOICE_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -2310,7 +2527,12 @@ async function handleApproveInvoice(req: AuthedRequest, res: Response): Promise<
   }
 }
 
-adminRouter.patch("/invoices/:invoiceId/approve", requireAdmin, validateBody(approveInvoiceSchema), authedHandler(handleApproveInvoice));
+adminRouter.patch(
+  "/invoices/:invoiceId/approve",
+  requireAdmin,
+  validateBody(approveInvoiceSchema),
+  authedHandler(handleApproveInvoice)
+);
 
 /**
  * @swagger
@@ -2373,7 +2595,12 @@ async function handleDenyInvoice(req: AuthedRequest, res: Response): Promise<voi
   }
 }
 
-adminRouter.patch("/invoices/:invoiceId/deny", requireAdmin, validateBody(denyInvoiceSchema), authedHandler(handleDenyInvoice));
+adminRouter.patch(
+  "/invoices/:invoiceId/deny",
+  requireAdmin,
+  validateBody(denyInvoiceSchema),
+  authedHandler(handleDenyInvoice)
+);
 
 // ============================================
 // V4 FEATURE: Risk Review
@@ -2392,24 +2619,28 @@ adminRouter.patch("/invoices/:invoiceId/deny", requireAdmin, validateBody(denyIn
  *       200:
  *         description: Risk review queue
  */
-adminRouter.get("/risk/review", requireAdmin, authedHandler(async (_req: AuthedRequest, res: Response) => {
-  try {
-    // For MVP, return empty queue
-    // In production, this would query risk_flags table for active flags
-    const queue = await getRiskReviewQueue();
-    
-    res.json({
-      queue,
-      count: queue.length,
-      message: "Risk review queue. Query specific users for risk profiles.",
-    });
-  } catch (error) {
-    logger.error("get_risk_review_queue_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_RISK_QUEUE_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+adminRouter.get(
+  "/risk/review",
+  requireAdmin,
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    try {
+      // For MVP, return empty queue
+      // In production, this would query risk_flags table for active flags
+      const queue = await getRiskReviewQueue();
+
+      res.json({
+        queue,
+        count: queue.length,
+        message: "Risk review queue. Query specific users for risk profiles.",
+      });
+    } catch (error) {
+      logger.error("get_risk_review_queue_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_RISK_QUEUE_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -2437,26 +2668,30 @@ adminRouter.get("/risk/review", requireAdmin, authedHandler(async (_req: AuthedR
  *       200:
  *         description: User risk profile
  */
-adminRouter.get("/risk/:userId", requireAdmin, authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { userId } = req.params;
-    const role = (req.query.role as "client" | "cleaner") || "client";
+adminRouter.get(
+  "/risk/:userId",
+  requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const role = (req.query.role as "client" | "cleaner") || "client";
 
-    const profile = await getUserRiskProfile(userId, role);
-    
-    res.json({
-      profile,
-      message: "User risk profile",
-    });
-  } catch (error) {
-    logger.error("get_user_risk_profile_failed", {
-      userId: req.params.userId,
-      error: (error as Error).message,
-    });
-    res.status(500).json({
-      error: { code: "GET_RISK_PROFILE_FAILED", message: (error as Error).message },
-    });
-  }
-}));
+      const profile = await getUserRiskProfile(userId, role);
+
+      res.json({
+        profile,
+        message: "User risk profile",
+      });
+    } catch (error) {
+      logger.error("get_user_risk_profile_failed", {
+        userId: req.params.userId,
+        error: (error as Error).message,
+      });
+      res.status(500).json({
+        error: { code: "GET_RISK_PROFILE_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 export default adminRouter;

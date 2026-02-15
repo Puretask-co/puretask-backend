@@ -6,6 +6,7 @@ import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
 import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 import {
   sendMessage,
   getJobMessages,
@@ -38,23 +39,26 @@ messagesRouter.use(requireAuth);
  *               properties:
  *                 unreadCount: { type: 'integer' }
  */
-messagesRouter.get(
-  "/unread",
-  async (req: AuthedRequest, res: Response) => {
-    try {
-      const count = await getUnreadCount(req.user!.id);
-      res.json({ unreadCount: count });
-    } catch (error) {
-      logger.error("get_unread_count_failed", {
-        error: (error as Error).message,
-        userId: req.user?.id,
-      });
-      res.status(500).json({
-        error: { code: "GET_UNREAD_FAILED", message: "Failed to get unread count" },
-      });
-    }
+messagesRouter.get("/unread", async (req: AuthedRequest, res: Response) => {
+  try {
+    const count = await getUnreadCount(req.user!.id);
+    res.json({ unreadCount: count });
+  } catch (error) {
+    const err = error as Error;
+    logger.error("get_unread_count_failed", {
+      error: err.message,
+      userId: req.user?.id,
+    });
+    const isDev = process.env.NODE_ENV !== "production";
+    res.status(500).json({
+      error: {
+        code: "GET_UNREAD_FAILED",
+        message: "Failed to get unread count",
+        ...(isDev && { details: err.message }),
+      },
+    });
   }
-);
+});
 
 /**
  * @swagger
@@ -81,23 +85,20 @@ messagesRouter.get(
  *                       jobId: { type: 'string', format: 'uuid' }
  *                       count: { type: 'integer' }
  */
-messagesRouter.get(
-  "/unread/by-job",
-  async (req: AuthedRequest, res: Response) => {
-    try {
-      const counts = await getUnreadCountByJob(req.user!.id);
-      res.json({ unreadByJob: counts });
-    } catch (error) {
-      logger.error("get_unread_by_job_failed", {
-        error: (error as Error).message,
-        userId: req.user?.id,
-      });
-      res.status(500).json({
-        error: { code: "GET_UNREAD_FAILED", message: "Failed to get unread counts" },
-      });
-    }
+messagesRouter.get("/unread/by-job", async (req: AuthedRequest, res: Response) => {
+  try {
+    const counts = await getUnreadCountByJob(req.user!.id);
+    res.json({ unreadByJob: counts });
+  } catch (error) {
+    logger.error("get_unread_by_job_failed", {
+      error: (error as Error).message,
+      userId: req.user?.id,
+    });
+    res.status(500).json({
+      error: { code: "GET_UNREAD_FAILED", message: "Failed to get unread counts" },
+    });
   }
-);
+});
 
 /**
  * @swagger
@@ -128,27 +129,21 @@ messagesRouter.get(
  *                   items:
  *                     type: object
  */
-messagesRouter.get(
-  "/conversations",
-  async (req: AuthedRequest, res: Response) => {
-    try {
-      const { limit = "20" } = req.query;
-      const conversations = await getRecentConversations(
-        req.user!.id,
-        parseInt(limit as string, 10)
-      );
-      res.json({ conversations });
-    } catch (error) {
-      logger.error("get_conversations_failed", {
-        error: (error as Error).message,
-        userId: req.user?.id,
-      });
-      res.status(500).json({
-        error: { code: "GET_CONVERSATIONS_FAILED", message: "Failed to get conversations" },
-      });
-    }
+messagesRouter.get("/conversations", async (req: AuthedRequest, res: Response) => {
+  try {
+    const { limit = "20" } = req.query;
+    const conversations = await getRecentConversations(req.user!.id, parseInt(limit as string, 10));
+    res.json({ conversations });
+  } catch (error) {
+    logger.error("get_conversations_failed", {
+      error: (error as Error).message,
+      userId: req.user?.id,
+    });
+    res.status(500).json({
+      error: { code: "GET_CONVERSATIONS_FAILED", message: "Failed to get conversations" },
+    });
   }
-);
+});
 
 /**
  * @swagger
@@ -182,40 +177,37 @@ messagesRouter.get(
  *       403:
  *         description: Forbidden - not part of this job
  */
-messagesRouter.get(
-  "/job/:jobId",
-  async (req: AuthedRequest, res: Response) => {
-    try {
-      const { jobId } = req.params;
-      const { limit = "100", before } = req.query;
+messagesRouter.get("/job/:jobId", requireOwnership("job", "jobId"), async (req: AuthedRequest, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const { limit = "100", before } = req.query;
 
-      const messages = await getJobMessages(
-        jobId,
-        req.user!.id,
-        parseInt(limit as string, 10),
-        before as string | undefined
-      );
+    const messages = await getJobMessages(
+      jobId,
+      req.user!.id,
+      parseInt(limit as string, 10),
+      before as string | undefined
+    );
 
-      res.json({ messages });
-    } catch (error) {
-      logger.error("get_messages_failed", {
-        error: (error as Error).message,
-        jobId: req.params.jobId,
-        userId: req.user?.id,
-      });
+    res.json({ messages });
+  } catch (error) {
+    logger.error("get_messages_failed", {
+      error: (error as Error).message,
+      jobId: req.params.jobId,
+      userId: req.user?.id,
+    });
 
-      if ((error as Error).message.includes("don't have access")) {
-        return res.status(403).json({
-          error: { code: "FORBIDDEN", message: "You don't have access to this chat" },
-        });
-      }
-
-      res.status(500).json({
-        error: { code: "GET_MESSAGES_FAILED", message: "Failed to get messages" },
+    if ((error as Error).message.includes("don't have access")) {
+      return res.status(403).json({
+        error: { code: "FORBIDDEN", message: "You don't have access to this chat" },
       });
     }
+
+    res.status(500).json({
+      error: { code: "GET_MESSAGES_FAILED", message: "Failed to get messages" },
+    });
   }
-);
+});
 
 /**
  * @swagger
@@ -263,6 +255,7 @@ const sendMessageSchema = z.object({
 
 messagesRouter.post(
   "/job/:jobId",
+  requireOwnership("job", "jobId"),
   validateBody(sendMessageSchema),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -285,8 +278,10 @@ messagesRouter.post(
         userId: req.user?.id,
       });
 
-      if ((error as Error).message.includes("not part of") ||
-          (error as Error).message.includes("not assigned")) {
+      if (
+        (error as Error).message.includes("not part of") ||
+        (error as Error).message.includes("not assigned")
+      ) {
         return res.status(403).json({
           error: { code: "FORBIDDEN", message: (error as Error).message },
         });
@@ -325,25 +320,21 @@ messagesRouter.post(
  *               properties:
  *                 markedAsRead: { type: 'integer' }
  */
-messagesRouter.post(
-  "/job/:jobId/read",
-  async (req: AuthedRequest, res: Response) => {
-    try {
-      const { jobId } = req.params;
-      const count = await markMessagesAsRead(jobId, req.user!.id);
-      res.json({ markedAsRead: count });
-    } catch (error) {
-      logger.error("mark_read_failed", {
-        error: (error as Error).message,
-        jobId: req.params.jobId,
-        userId: req.user?.id,
-      });
-      res.status(500).json({
-        error: { code: "MARK_READ_FAILED", message: "Failed to mark messages as read" },
-      });
-    }
+messagesRouter.post("/job/:jobId/read", requireOwnership("job", "jobId"), async (req: AuthedRequest, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const count = await markMessagesAsRead(jobId, req.user!.id);
+    res.json({ markedAsRead: count });
+  } catch (error) {
+    logger.error("mark_read_failed", {
+      error: (error as Error).message,
+      jobId: req.params.jobId,
+      userId: req.user?.id,
+    });
+    res.status(500).json({
+      error: { code: "MARK_READ_FAILED", message: "Failed to mark messages as read" },
+    });
   }
-);
+});
 
 export default messagesRouter;
-

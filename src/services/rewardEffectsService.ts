@@ -151,9 +151,18 @@ export class RewardEffectsService {
     const waiverUses = await this.getInstantPayoutWaiverUses(ctx.cleaner_id);
     instantWaivers = waiverUses;
 
-    const visCap = Number((gov as Record<string, unknown>).visibility_cap_multiplier ?? GOVERNOR_DEFAULTS.visibility_cap_multiplier);
-    const earlyCap = Number((gov as Record<string, unknown>).early_exposure_cap_minutes ?? GOVERNOR_DEFAULTS.early_exposure_cap_minutes);
-    const feeCap = Number((gov as Record<string, unknown>).fee_discount_cap_percent ?? GOVERNOR_DEFAULTS.fee_discount_cap_percent);
+    const visCap = Number(
+      (gov as Record<string, unknown>).visibility_cap_multiplier ??
+        GOVERNOR_DEFAULTS.visibility_cap_multiplier
+    );
+    const earlyCap = Number(
+      (gov as Record<string, unknown>).early_exposure_cap_minutes ??
+        GOVERNOR_DEFAULTS.early_exposure_cap_minutes
+    );
+    const feeCap = Number(
+      (gov as Record<string, unknown>).fee_discount_cap_percent ??
+        GOVERNOR_DEFAULTS.fee_discount_cap_percent
+    );
 
     visibility = Math.min(visibility, visCap);
     early = Math.min(early, earlyCap);
@@ -194,8 +203,13 @@ export class RewardEffectsService {
     return (r.rows ?? []).map((row) => String(row.reward_id));
   }
 
-  private async getPauseStatus(cleanerId: string): Promise<{ paused: boolean; pause_reasons: string[] }> {
-    const r = await query<{ maintenance_paused: boolean; maintenance_paused_reason: string | null }>(
+  private async getPauseStatus(
+    cleanerId: string
+  ): Promise<{ paused: boolean; pause_reasons: string[] }> {
+    const r = await query<{
+      maintenance_paused: boolean;
+      maintenance_paused_reason: string | null;
+    }>(
       `SELECT maintenance_paused, maintenance_paused_reason
        FROM cleaner_level_progress
        WHERE cleaner_id = $1`,
@@ -204,7 +218,10 @@ export class RewardEffectsService {
     if (!r.rows?.length) return { paused: false, pause_reasons: [] };
     const row = r.rows[0];
     const reasons: string[] = row.maintenance_paused_reason
-      ? row.maintenance_paused_reason.split(";").map((s) => s.trim()).filter(Boolean)
+      ? row.maintenance_paused_reason
+          .split(";")
+          .map((s) => s.trim())
+          .filter(Boolean)
       : [];
     return { paused: Boolean(row.maintenance_paused), pause_reasons: reasons };
   }
@@ -212,7 +229,9 @@ export class RewardEffectsService {
   private async getInstantPayoutWaiverUses(cleanerId: string): Promise<number> {
     const allRewards = getRewards();
     const waiverRewardIds = allRewards
-      .filter((r) => r.kind === "payout_fee" && (r.params as { waive_fee?: boolean })?.waive_fee === true)
+      .filter(
+        (r) => r.kind === "payout_fee" && (r.params as { waive_fee?: boolean })?.waive_fee === true
+      )
       .map((r) => r.id);
     if (waiverRewardIds.length === 0) return 0;
     const placeholders = waiverRewardIds.map((_, i) => `$${i + 2}`).join(",");

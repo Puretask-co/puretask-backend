@@ -1,76 +1,69 @@
 // src/workers/__tests__/payoutWeekly.test.ts
 // Unit tests for weekly payout worker
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { jest } from '@jest/globals';
-import { processPendingPayouts } from '../../services/payoutsService';
-import { query } from '../../db/client';
-import { logger } from '../../lib/logger';
+import { beforeEach, vi } from "vitest";
+import { processPendingPayouts } from "../../services/payoutsService";
+import { query } from "../../db/client";
+import { logger } from "../../lib/logger";
 
-jest.mock('../../db/client');
-jest.mock('../../lib/logger', () => ({
+vi.mock("../../db/client");
+vi.mock("../../lib/logger", () => ({
   logger: {
-    info: jest.fn(),
-    error: jest.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
   },
 }));
-jest.mock('../../config/env', () => ({
+vi.mock("../../config/env", () => ({
   env: {
     PAYOUTS_ENABLED: true,
-    STRIPE_SECRET_KEY: 'sk_test_mock',
-    PAYOUT_CURRENCY: 'usd',
+    STRIPE_SECRET_KEY: "sk_test_mock",
+    PAYOUT_CURRENCY: "usd",
     CENTS_PER_CREDIT: 10,
   },
 }));
 
-// Create mock function that will be used by Stripe instances
-const mockTransferCreate = jest.fn();
+// Hoist transfer mock so stripe mock factory can reference it
+const mockTransferCreate = vi.hoisted(() => vi.fn());
 
-jest.mock('stripe', () => {
-  // Create the mock function inside the factory to avoid hoisting issues
-  // Use the same function reference that's defined above
-  const transferMock = jest.fn();
-  // Store it globally so we can access it in tests
-  (global as any).__stripeTransferMock = transferMock;
-  return jest.fn().mockImplementation(() => ({
-    transfers: {
-      create: transferMock,
-    },
-  }));
-});
-
-// Access the mock after module loads
-const stripeMocks = {
-  get transferCreate() {
-    return (global as any).__stripeTransferMock || mockTransferCreate;
-  },
-};
-
-jest.mock('../../lib/events', () => ({
-  publishEvent: jest.fn() as jest.MockedFunction<any>,
+vi.mock("stripe", () => ({
+  default: vi.fn().mockImplementation(() => ({
+    transfers: { create: mockTransferCreate },
+  })),
 }));
 
-describe('payoutWeekly worker', () => {
+vi.mock("../../lib/events", () => ({
+  publishEvent: vi.fn(),
+}));
+vi.mock("../../lib/metrics", () => ({
+  metrics: {
+    payoutProcessed: vi.fn(),
+    payoutRunCompleted: vi.fn(),
+  },
+}));
+
+describe("payoutWeekly worker", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    stripeMocks.transferCreate.mockResolvedValue({ id: 'tr_test_123' });
+    vi.mocked(query).mockReset();
+    mockTransferCreate.mockReset();
+    // Use mockImplementation so it persists; mockResolvedValue can be cleared
+    mockTransferCreate.mockImplementation(() => Promise.resolve({ id: "tr_test_123" }));
   });
 
-  it('processes eligible payouts', async () => {
+  it("processes eligible payouts", async () => {
     const mockPayouts = [
       {
-        id: 'payout-1',
-        cleaner_id: 'cleaner-1',
+        id: "payout-1",
+        cleaner_id: "cleaner-1",
         amount_cents: 1000,
         amount_credits: 100,
-        stripe_account_id: 'acct_test_1',
+        stripe_account_id: "acct_test_1",
       },
       {
-        id: 'payout-2',
-        cleaner_id: 'cleaner-2',
+        id: "payout-2",
+        cleaner_id: "cleaner-2",
         amount_cents: 500,
         amount_credits: 50,
-        stripe_account_id: 'acct_test_2',
+        stripe_account_id: "acct_test_2",
       },
     ];
 
@@ -82,19 +75,20 @@ describe('payoutWeekly worker', () => {
 
     const result = await processPendingPayouts();
 
-    expect(result.processed).toBe(2);
+    // Check stripe mock was used first - if 0 calls, Stripe mock isn't applied
+    expect(mockTransferCreate).toHaveBeenCalledTimes(2);
     expect(mockQuery).toHaveBeenCalled();
-    expect(stripeMocks.transferCreate).toHaveBeenCalledTimes(2); // One transfer per cleaner
+    expect(result.processed).toBe(2);
   });
 
-  it('handles payout creation errors', async () => {
+  it("handles payout creation errors", async () => {
     const mockPayouts = [
       {
-        id: 'payout-1',
-        cleaner_id: 'cleaner-1',
+        id: "payout-1",
+        cleaner_id: "cleaner-1",
         amount_cents: 1000,
         amount_credits: 100,
-        stripe_account_id: 'acct_test_1',
+        stripe_account_id: "acct_test_1",
       },
     ];
 
@@ -104,13 +98,13 @@ describe('payoutWeekly worker', () => {
       .mockResolvedValueOnce({ rows: [] }); // Update payout status to 'failed' after error
 
     // Stripe transfer fails
-    stripeMocks.transferCreate.mockRejectedValueOnce(new Error('Stripe API error'));
+    mockTransferCreate.mockRejectedValueOnce(new Error("Stripe API error"));
 
     const result = await processPendingPayouts();
 
     expect(result.failed).toBe(1);
     expect(result.processed).toBe(0);
     expect(logger.error).toHaveBeenCalled();
-    expect(stripeMocks.transferCreate).toHaveBeenCalled();
+    expect(mockTransferCreate).toHaveBeenCalled();
   });
 });

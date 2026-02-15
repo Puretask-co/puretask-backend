@@ -1,64 +1,63 @@
 // src/workers/__tests__/autoCancelJobs.test.ts
 // Unit tests for auto-cancel jobs worker
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { jest } from '@jest/globals';
-import { runAutoCancelWorker } from '../v1-core/autoCancelJobs';
-import { query } from '../../db/client';
-import { releaseEscrowedCredits } from '../../services/creditsService';
-import { publishEvent } from '../../lib/events';
-import { logger } from '../../lib/logger';
+import { beforeEach, vi } from "vitest";
+import { runAutoCancelWorker } from "../v1-core/autoCancelJobs";
+import { query } from "../../db/client";
+import { releaseEscrowedCredits } from "../../services/creditsService";
+import { publishEvent } from "../../lib/events";
+import { logger } from "../../lib/logger";
 
-jest.mock('../../db/client');
-jest.mock('../../services/creditsService', () => ({
-  releaseEscrowedCredits: jest.fn(),
+vi.mock("../../db/client");
+vi.mock("../../services/creditsService", () => ({
+  releaseEscrowedCredits: vi.fn(),
 }));
-jest.mock('../../lib/events', () => ({
-  publishEvent: jest.fn(),
+vi.mock("../../lib/events", () => ({
+  publishEvent: vi.fn(),
 }));
-jest.mock('../../lib/logger', () => ({
+vi.mock("../../lib/logger", () => ({
   logger: {
-    info: jest.fn(),
-    error: jest.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
-describe('autoCancelJobs worker', () => {
+describe("autoCancelJobs worker", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Set up default mocks that can be overridden in individual tests
-    (releaseEscrowedCredits as jest.MockedFunction<any>).mockResolvedValue({});
-    (publishEvent as jest.MockedFunction<any>).mockResolvedValue({});
+    (releaseEscrowedCredits as vi.MockedFunction<any>).mockResolvedValue({});
+    (publishEvent as vi.MockedFunction<any>).mockResolvedValue({});
     // Default query mock - will be overridden in each test
-    (query as jest.MockedFunction<any>).mockResolvedValue({ rows: [] });
+    (query as vi.MockedFunction<any>).mockResolvedValue({ rows: [] });
   });
 
-  it('finds and cancels jobs past deadline', async () => {
+  it("finds and cancels jobs past deadline", async () => {
     const mockJobs = [
       {
-        id: 'job-1',
-        client_id: 'client-1',
-        status: 'requested',
+        id: "job-1",
+        client_id: "client-1",
+        status: "requested",
         scheduled_start_at: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
         credit_amount: 50,
       },
       {
-        id: 'job-2',
-        client_id: 'client-2',
-        status: 'requested',
+        id: "job-2",
+        client_id: "client-2",
+        status: "requested",
         scheduled_start_at: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
         credit_amount: 75,
       },
     ];
 
-    const mockQuery = query as jest.MockedFunction<any>;
+    const mockQuery = query as vi.MockedFunction<any>;
     mockQuery
       .mockResolvedValueOnce({ rows: mockJobs }) // findJobsToCancel
       .mockResolvedValueOnce({ rows: [] }) // Update job 1
       .mockResolvedValueOnce({ rows: [] }); // Update job 2
 
-    (releaseEscrowedCredits as jest.MockedFunction<any>).mockResolvedValue({});
-    (publishEvent as jest.MockedFunction<any>).mockResolvedValue({});
+    (releaseEscrowedCredits as vi.MockedFunction<any>).mockResolvedValue({});
+    (publishEvent as vi.MockedFunction<any>).mockResolvedValue({});
 
     const result = await runAutoCancelWorker();
 
@@ -68,24 +67,24 @@ describe('autoCancelJobs worker', () => {
     expect(publishEvent).toHaveBeenCalledTimes(2);
   });
 
-  it('handles credit release failures', async () => {
+  it("handles credit release failures", async () => {
     const mockJobs = [
       {
-        id: 'job-1',
-        client_id: 'client-1',
-        status: 'requested',
+        id: "job-1",
+        client_id: "client-1",
+        status: "requested",
         scheduled_start_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
         credit_amount: 50,
       },
     ];
 
-    const mockQuery = query as jest.MockedFunction<any>;
-    const mockReleaseCredits = releaseEscrowedCredits as jest.MockedFunction<any>;
-    
+    const mockQuery = query as vi.MockedFunction<any>;
+    const mockReleaseCredits = releaseEscrowedCredits as vi.MockedFunction<any>;
+
     // Reset and set up fresh mocks for this test
     mockQuery.mockReset();
     mockReleaseCredits.mockReset();
-    
+
     // Set up query mocks
     let queryCallCount = 0;
     mockQuery.mockImplementation(async (sql: string) => {
@@ -100,7 +99,7 @@ describe('autoCancelJobs worker', () => {
 
     // Credit release fails - this should cause cancelJob to throw
     // The error is caught in cancelJob and re-thrown, then caught in runAutoCancelWorker
-    mockReleaseCredits.mockRejectedValueOnce(new Error('Credit service error'));
+    mockReleaseCredits.mockRejectedValueOnce(new Error("Credit service error"));
 
     const result = await runAutoCancelWorker();
 
@@ -111,14 +110,14 @@ describe('autoCancelJobs worker', () => {
     expect(mockReleaseCredits).toHaveBeenCalled();
   });
 
-  it('skips jobs that are not in requested status', async () => {
+  it("skips jobs that are not in requested status", async () => {
     // The query filters by status = 'requested', so jobs with other statuses won't be found
-    const mockQuery = query as jest.MockedFunction<any>;
+    const mockQuery = query as vi.MockedFunction<any>;
     // Reset and set up to return empty results
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockQuery.mockResolvedValue({ rows: [] }); // No jobs found
-    (releaseEscrowedCredits as jest.MockedFunction<any>).mockResolvedValue({});
-    (publishEvent as jest.MockedFunction<any>).mockResolvedValue({});
+    (releaseEscrowedCredits as vi.MockedFunction<any>).mockResolvedValue({});
+    (publishEvent as vi.MockedFunction<any>).mockResolvedValue({});
 
     const result = await runAutoCancelWorker();
 

@@ -30,10 +30,10 @@ export interface WebhookFailure {
 
 // Exponential backoff intervals (in milliseconds)
 const RETRY_INTERVALS = [
-  1 * 60 * 1000,      // 1 minute
-  5 * 60 * 1000,      // 5 minutes
-  15 * 60 * 1000,     // 15 minutes
-  60 * 60 * 1000,     // 1 hour
+  1 * 60 * 1000, // 1 minute
+  5 * 60 * 1000, // 5 minutes
+  15 * 60 * 1000, // 15 minutes
+  60 * 60 * 1000, // 1 hour
   4 * 60 * 60 * 1000, // 4 hours
 ];
 
@@ -52,14 +52,7 @@ export async function queueWebhookForRetry(params: {
   errorMessage: string;
   maxRetries?: number;
 }): Promise<WebhookFailure> {
-  const {
-    source,
-    eventId,
-    eventType,
-    payload,
-    errorMessage,
-    maxRetries = 5,
-  } = params;
+  const { source, eventId, eventType, payload, errorMessage, maxRetries = 5 } = params;
 
   // Check if already queued (by event_id for idempotency)
   if (eventId) {
@@ -67,7 +60,7 @@ export async function queueWebhookForRetry(params: {
       `SELECT * FROM webhook_failures WHERE event_id = $1 AND source = $2`,
       [eventId, source]
     );
-    
+
     if (existing.rows.length > 0) {
       logger.info("webhook_already_queued", { source, eventId });
       return existing.rows[0];
@@ -255,12 +248,7 @@ async function processWebhookRetry(failure: WebhookFailure): Promise<boolean> {
   } catch (err) {
     const error = err as Error;
 
-    await markAsFailed(
-      failure.id,
-      error.message,
-      failure.retry_count + 1,
-      failure.max_retries
-    );
+    await markAsFailed(failure.id, error.message, failure.retry_count + 1, failure.max_retries);
 
     logger.error("webhook_retry_failed", {
       id: failure.id,
@@ -378,11 +366,21 @@ export async function getWebhookStats(): Promise<{
   for (const row of statusResult.rows) {
     const count = Number(row.count);
     switch (row.status) {
-      case "pending": stats.pending = count; break;
-      case "processing": stats.processing = count; break;
-      case "succeeded": stats.succeeded = count; break;
-      case "failed": stats.failed = count; break;
-      case "dead": stats.dead = count; break;
+      case "pending":
+        stats.pending = count;
+        break;
+      case "processing":
+        stats.processing = count;
+        break;
+      case "succeeded":
+        stats.succeeded = count;
+        break;
+      case "failed":
+        stats.failed = count;
+        break;
+      case "dead":
+        stats.dead = count;
+        break;
     }
   }
 
@@ -415,10 +413,7 @@ export async function getRecentFailures(limit: number = 20): Promise<WebhookFail
  * Manually retry a specific webhook
  */
 export async function retryWebhook(id: string): Promise<boolean> {
-  const result = await query<WebhookFailure>(
-    `SELECT * FROM webhook_failures WHERE id = $1`,
-    [id]
-  );
+  const result = await query<WebhookFailure>(`SELECT * FROM webhook_failures WHERE id = $1`, [id]);
 
   if (result.rows.length === 0) {
     throw new Error("Webhook failure not found");
@@ -450,4 +445,3 @@ export async function markAsResolved(id: string, notes?: string): Promise<void> 
     [id, notes ?? ""]
   );
 }
-

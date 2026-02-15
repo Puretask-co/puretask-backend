@@ -10,9 +10,7 @@ export {
   getUserContactInfo,
 } from "./notificationService";
 
-export {
-  sendNotificationViaEvent,
-} from "./eventBasedNotificationService";
+export { sendNotificationViaEvent } from "./eventBasedNotificationService";
 
 // Notification preferences
 export {

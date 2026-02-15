@@ -12,7 +12,7 @@
 // - Encourages improving behavior
 
 import { query } from "../db/client";
-import { RollingWindowConfig, ClientRiskEvent, CleanerEvent } from './types';
+import { RollingWindowConfig, ClientRiskEvent, CleanerEvent } from "./types";
 
 // ============================================
 // Types
@@ -20,7 +20,7 @@ import { RollingWindowConfig, ClientRiskEvent, CleanerEvent } from './types';
 
 export interface RollingWindowResult<T> {
   events: T[];
-  windowMode: 'days' | 'jobs' | 'hybrid';
+  windowMode: "days" | "jobs" | "hybrid";
   since?: Date;
   jobIds?: number[];
 }
@@ -37,28 +37,28 @@ export class RollingWindowService {
     cleanerId: number,
     config: RollingWindowConfig
   ): Promise<RollingWindowResult<CleanerEvent>> {
-    if (config.mode === 'days') {
+    if (config.mode === "days") {
       const since = new Date();
       since.setDate(since.getDate() - (config.days ?? 60));
-      
+
       const events = await this.getCleanerEventsSince(cleanerId, since);
-      return { events, windowMode: 'days', since };
+      return { events, windowMode: "days", since };
     }
 
-    if (config.mode === 'jobs') {
+    if (config.mode === "jobs") {
       const jobs = await this.getRecentJobsForCleaner(cleanerId, config.maxJobs ?? 30);
-      const jobIds = jobs.map(j => j.id);
+      const jobIds = jobs.map((j) => j.id);
       const events = await this.getCleanerEventsForJobs(cleanerId, jobIds);
-      return { events, windowMode: 'jobs', jobIds };
+      return { events, windowMode: "jobs", jobIds };
     }
 
     // Hybrid mode: use both days and jobs
     const since = new Date();
     since.setDate(since.getDate() - (config.days ?? 60));
     const jobs = await this.getRecentJobsForCleaner(cleanerId, config.maxJobs ?? 30, since);
-    const jobIds = jobs.map(j => j.id);
+    const jobIds = jobs.map((j) => j.id);
     const events = await this.getCleanerEventsForJobs(cleanerId, jobIds);
-    return { events, windowMode: 'hybrid', jobIds, since };
+    return { events, windowMode: "hybrid", jobIds, since };
   }
 
   /**
@@ -68,28 +68,28 @@ export class RollingWindowService {
     clientId: number,
     config: RollingWindowConfig
   ): Promise<RollingWindowResult<ClientRiskEvent>> {
-    if (config.mode === 'days') {
+    if (config.mode === "days") {
       const since = new Date();
       since.setDate(since.getDate() - (config.days ?? 30));
-      
+
       const events = await this.getClientRiskEventsSince(clientId, since);
-      return { events, windowMode: 'days', since };
+      return { events, windowMode: "days", since };
     }
 
-    if (config.mode === 'jobs') {
+    if (config.mode === "jobs") {
       const jobs = await this.getRecentJobsForClient(clientId, config.maxJobs ?? 20);
-      const jobIds = jobs.map(j => j.id);
+      const jobIds = jobs.map((j) => j.id);
       const events = await this.getClientRiskEventsForJobs(clientId, jobIds);
-      return { events, windowMode: 'jobs', jobIds };
+      return { events, windowMode: "jobs", jobIds };
     }
 
     // Hybrid mode
     const since = new Date();
     since.setDate(since.getDate() - (config.days ?? 30));
     const jobs = await this.getRecentJobsForClient(clientId, config.maxJobs ?? 20, since);
-    const jobIds = jobs.map(j => j.id);
+    const jobIds = jobs.map((j) => j.id);
     const events = await this.getClientRiskEventsForJobs(clientId, jobIds);
-    return { events, windowMode: 'hybrid', jobIds, since };
+    return { events, windowMode: "hybrid", jobIds, since };
   }
 
   // ========================================
@@ -213,7 +213,7 @@ export class RollingWindowService {
     params.push(limit);
 
     const result = await query<{ id: string }>(queryStr, params);
-    return result.rows.map(row => ({ id: Number(row.id) }));
+    return result.rows.map((row) => ({ id: Number(row.id) }));
   }
 
   private static async getRecentJobsForClient(
@@ -236,7 +236,6 @@ export class RollingWindowService {
     params.push(limit);
 
     const result = await query<{ id: string }>(queryStr, params);
-    return result.rows.map(row => ({ id: Number(row.id) }));
+    return result.rows.map((row) => ({ id: Number(row.id) }));
   }
 }
-

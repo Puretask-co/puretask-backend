@@ -4,16 +4,8 @@
  */
 
 import { query, withTransaction } from "../db/client";
-import {
-  getRewards,
-  getChoiceRewardGroups,
-  getReward,
-} from "../config/cleanerLevels";
-import {
-  validateChoiceSelection,
-  makeGrant,
-  shouldGrant,
-} from "../lib/gamification";
+import { getRewards, getChoiceRewardGroups, getReward } from "../config/cleanerLevels";
+import { validateChoiceSelection, makeGrant, shouldGrant } from "../lib/gamification";
 import type { RewardDefinition, RewardGrant } from "../lib/gamification/types";
 import { CashBudgetService } from "./cashBudgetService";
 import { isCashReward } from "./rewardKindHelpers";

@@ -1,10 +1,10 @@
 // src/core/types.ts
 // Shared types across all core systems
 
-export type TimeBucket = 'gt48' | '24_48' | 'lt24' | 'no_show';
+export type TimeBucket = "gt48" | "24_48" | "lt24" | "no_show";
 
-export type ReasonActorType = 'client' | 'cleaner' | 'system' | 'both';
-export type ReasonCategory = 'reschedule' | 'cancel' | 'no_show' | 'issue';
+export type ReasonActorType = "client" | "cleaner" | "system" | "both";
+export type ReasonCategory = "reschedule" | "cancel" | "no_show" | "issue";
 
 // ============================================
 // Job Types
@@ -36,7 +36,7 @@ export interface Client {
 export interface ClientRiskScore {
   clientId: number;
   riskScore: number; // 0–100
-  riskBand: 'normal' | 'mild' | 'elevated' | 'high' | 'critical';
+  riskBand: "normal" | "mild" | "elevated" | "high" | "critical";
   lastRecomputedAt?: Date;
 }
 
@@ -70,8 +70,8 @@ export interface ClientFlexProfile {
 export interface Cleaner {
   id: number;
   reliabilityScore: number; // 0–100
-  reliabilityTier: 'Developing' | 'Semi Pro' | 'Pro' | 'Elite';
-  flexibilityStatus: 'normal' | 'low_flex';
+  reliabilityTier: "Developing" | "Semi Pro" | "Pro" | "Elite";
+  flexibilityStatus: "normal" | "low_flex";
   flexibilityBadgeActive: boolean;
 }
 
@@ -115,17 +115,17 @@ export interface RescheduleEvent {
   jobId: number;
   clientId: number;
   cleanerId: number;
-  requestedBy: 'client' | 'cleaner';
-  requestedTo: 'client' | 'cleaner';
+  requestedBy: "client" | "cleaner";
+  requestedTo: "client" | "cleaner";
   tRequest: Date;
   tStartOriginal: Date;
   tStartNew: Date;
   hoursBeforeOriginal: number;
   bucket: TimeBucket;
   reasonCode: string | null;
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  status: "pending" | "accepted" | "declined" | "expired";
   isReasonable: boolean;
-  declinedBy?: 'client' | 'cleaner' | null;
+  declinedBy?: "client" | "cleaner" | null;
   declineReasonCode?: string | null;
 }
 
@@ -133,17 +133,17 @@ export interface RescheduleEvent {
 // Cancellation Types
 // ============================================
 
-export type CancellationWindow = 'free' | '50%' | '100%';
-export type CancellationActor = 'client' | 'cleaner' | 'system';
+export type CancellationWindow = "free" | "50%" | "100%";
+export type CancellationActor = "client" | "cleaner" | "system";
 
 export type CancellationType =
-  | 'client_cancel_normal'
-  | 'client_cancel_after_reschedule_declined'
-  | 'cleaner_cancel_normal'
-  | 'cleaner_cancel_emergency'
-  | 'client_no_show'
-  | 'cleaner_no_show'
-  | 'system_cancel';
+  | "client_cancel_normal"
+  | "client_cancel_after_reschedule_declined"
+  | "cleaner_cancel_normal"
+  | "cleaner_cancel_emergency"
+  | "client_no_show"
+  | "cleaner_no_show"
+  | "system_cancel";
 
 export interface CancellationEvent {
   id?: number;
@@ -173,10 +173,10 @@ export interface InconvenienceLog {
   jobId: number;
   clientId: number;
   cleanerId: number;
-  causedBy: 'client' | 'cleaner' | 'system';
-  ratedBy: 'client' | 'cleaner';
+  causedBy: "client" | "cleaner" | "system";
+  ratedBy: "client" | "cleaner";
   score: 1 | 2 | 3 | 4;
-  relatedEventType: 'reschedule' | 'cancel' | 'no_show' | 'issue';
+  relatedEventType: "reschedule" | "cancel" | "no_show" | "issue";
   relatedEventId: number | null;
   reasonCode: string | null;
   note?: string | null;
@@ -192,7 +192,7 @@ export interface AvailabilityBlock {
   cleanerId: number;
   dayOfWeek: number; // 0–6
   startTime: string; // 'HH:MM'
-  endTime: string;   // 'HH:MM'
+  endTime: string; // 'HH:MM'
 }
 
 export interface BlackoutPeriod {
@@ -235,11 +235,10 @@ export interface MatchingInput {
 // Rolling Window Types
 // ============================================
 
-export type RollingWindowMode = 'days' | 'jobs' | 'hybrid';
+export type RollingWindowMode = "days" | "jobs" | "hybrid";
 
 export interface RollingWindowConfig {
   mode: RollingWindowMode;
-  days?: number;          // for 'days' or 'hybrid'
-  maxJobs?: number;       // for 'jobs' or 'hybrid'
+  days?: number; // for 'days' or 'hybrid'
+  maxJobs?: number; // for 'jobs' or 'hybrid'
 }
-

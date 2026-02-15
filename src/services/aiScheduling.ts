@@ -1,13 +1,13 @@
 // src/services/aiScheduling.ts
 // AI-Powered Scheduling Service
 
-import { query } from '../db/client';
-import { logger } from '../lib/logger';
-import { env } from '../config/env';
-import OpenAI from 'openai';
+import { query } from "../db/client";
+import { logger } from "../lib/logger";
+import { env } from "../config/env";
+import OpenAI from "openai";
 
 const openai = new OpenAI({
-  apiKey: env.OPENAI_API_KEY
+  apiKey: env.OPENAI_API_KEY,
 });
 
 interface BookingSlotSuggestion {
@@ -57,7 +57,7 @@ export class AISchedulingService {
       );
 
       if (cleanerResult.rows.length === 0) {
-        throw new Error('Cleaner not found');
+        throw new Error("Cleaner not found");
       }
 
       const cleaner = cleanerResult.rows[0];
@@ -66,7 +66,7 @@ export class AISchedulingService {
       if (!commSettings.ai_scheduling_enabled) {
         return {
           suggested_slots: [],
-          alternative_message: 'AI scheduling is not enabled for this cleaner'
+          alternative_message: "AI scheduling is not enabled for this cleaner",
         };
       }
 
@@ -100,46 +100,46 @@ export class AISchedulingService {
         preferredDates: preferred_dates || [],
         address,
         prioritizeGapFilling,
-        suggestDaysAhead
+        suggestDaysAhead,
       });
 
       // 5. Call OpenAI API
       const completion = await openai.chat.completions.create({
-        model: env.OPENAI_MODEL || 'gpt-4o-mini',
+        model: env.OPENAI_MODEL || "gpt-4o-mini",
         messages: [
           {
-            role: 'system',
-            content: 'You are an expert scheduling assistant for a cleaning service. Analyze availability and suggest optimal booking times.'
+            role: "system",
+            content:
+              "You are an expert scheduling assistant for a cleaning service. Analyze availability and suggest optimal booking times.",
           },
           {
-            role: 'user',
-            content: prompt
-          }
+            role: "user",
+            content: prompt,
+          },
         ],
-        response_format: { type: 'json_object' },
+        response_format: { type: "json_object" },
         temperature: 0.7,
-        max_tokens: 1500
+        max_tokens: 1500,
       });
 
-      const responseText = completion.choices[0].message.content || '{}';
+      const responseText = completion.choices[0].message.content || "{}";
       const aiResponse = JSON.parse(responseText);
 
       // 6. Validate and return suggestions
       const suggestedSlots = aiResponse.suggested_slots || [];
 
       // Log suggestion
-      await this.logAISuggestion(cleaner_id, 'booking_slot', { 
-        params, 
-        suggested_slots: suggestedSlots 
+      await this.logAISuggestion(cleaner_id, "booking_slot", {
+        params,
+        suggested_slots: suggestedSlots,
       });
 
       return {
         suggested_slots: suggestedSlots,
-        alternative_message: aiResponse.alternative_message
+        alternative_message: aiResponse.alternative_message,
       };
-
     } catch (error) {
-      logger.error('ai_scheduling_error', { error, params });
+      logger.error("ai_scheduling_error", { error, params });
       throw error;
     }
   }
@@ -167,7 +167,7 @@ export class AISchedulingService {
       preferredDates,
       address,
       prioritizeGapFilling,
-      suggestDaysAhead
+      suggestDaysAhead,
     } = data;
 
     return `
@@ -177,24 +177,31 @@ CLEANER INFO:
 - Name: ${cleaner.full_name}
 - Tier: ${cleaner.tier}
 - Reliability Score: ${cleaner.reliability_score}
-- Specialties: ${cleaner.specialty_tags?.join(', ') || 'General cleaning'}
+- Specialties: ${cleaner.specialty_tags?.join(", ") || "General cleaning"}
 
 CLIENT REQUEST:
 - Cleaning Type: ${cleaningType}
 - Estimated Hours: ${estimatedHours}
 - Location: ${address}
-- Preferred Dates: ${preferredDates.length > 0 ? preferredDates.join(', ') : 'Flexible'}
+- Preferred Dates: ${preferredDates.length > 0 ? preferredDates.join(", ") : "Flexible"}
 
 CLEANER'S AVAILABILITY:
 ${JSON.stringify(availabilitySlots, null, 2)}
 
 EXISTING BOOKINGS (Next ${suggestDaysAhead} days):
-${existingBookings.length > 0 
-  ? existingBookings.map(b => `${b.date} ${b.start_time}-${b.end_time} (${b.hours}h) at ${b.address.split(',')[0]}`).join('\n')
-  : 'No existing bookings'}
+${
+  existingBookings.length > 0
+    ? existingBookings
+        .map(
+          (b) =>
+            `${b.date} ${b.start_time}-${b.end_time} (${b.hours}h) at ${b.address.split(",")[0]}`
+        )
+        .join("\n")
+    : "No existing bookings"
+}
 
 INSTRUCTIONS:
-${prioritizeGapFilling ? '- PRIORITY: Fill gaps between existing bookings to maximize daily earnings' : '- Spread bookings evenly throughout the week'}
+${prioritizeGapFilling ? "- PRIORITY: Fill gaps between existing bookings to maximize daily earnings" : "- Spread bookings evenly throughout the week"}
 - Consider travel time between locations
 - Respect cleaner's availability windows
 - Match client's preferred dates when possible
@@ -225,13 +232,13 @@ Return ONLY valid JSON.
    */
   private static getDefaultAvailability() {
     return {
-      monday: { available: true, slots: [{ start: '09:00', end: '17:00' }] },
-      tuesday: { available: true, slots: [{ start: '09:00', end: '17:00' }] },
-      wednesday: { available: true, slots: [{ start: '09:00', end: '17:00' }] },
-      thursday: { available: true, slots: [{ start: '09:00', end: '17:00' }] },
-      friday: { available: true, slots: [{ start: '09:00', end: '17:00' }] },
+      monday: { available: true, slots: [{ start: "09:00", end: "17:00" }] },
+      tuesday: { available: true, slots: [{ start: "09:00", end: "17:00" }] },
+      wednesday: { available: true, slots: [{ start: "09:00", end: "17:00" }] },
+      thursday: { available: true, slots: [{ start: "09:00", end: "17:00" }] },
+      friday: { available: true, slots: [{ start: "09:00", end: "17:00" }] },
       saturday: { available: false, slots: [] },
-      sunday: { available: false, slots: [] }
+      sunday: { available: false, slots: [] },
     };
   }
 
@@ -251,7 +258,7 @@ Return ONLY valid JSON.
         [cleaner_id, suggestion_type, JSON.stringify(suggestion_data)]
       );
     } catch (error) {
-      logger.error('failed_to_log_ai_suggestion', { error });
+      logger.error("failed_to_log_ai_suggestion", { error });
     }
   }
 
@@ -262,12 +269,12 @@ Return ONLY valid JSON.
     booking_id: string;
     client_id: string;
     cleaner_id: string;
-    response_type: 'selected_slot' | 'suggest_other' | 'not_interested';
+    response_type: "selected_slot" | "suggest_other" | "not_interested";
     selected_slot?: BookingSlotSuggestion;
   }) {
     const { booking_id, client_id, cleaner_id, response_type, selected_slot } = params;
 
-    if (response_type === 'selected_slot' && selected_slot) {
+    if (response_type === "selected_slot" && selected_slot) {
       // Create provisional booking
       await query(
         `UPDATE jobs
@@ -275,10 +282,7 @@ Return ONLY valid JSON.
              scheduled_start_at = $1,
              provisional_slot_expires_at = NOW() + INTERVAL '48 hours'
          WHERE id = $2`,
-        [
-          `${selected_slot.date}T${selected_slot.start_time}`,
-          booking_id
-        ]
+        [`${selected_slot.date}T${selected_slot.start_time}`, booking_id]
       );
 
       // Notify cleaner
@@ -288,31 +292,30 @@ Return ONLY valid JSON.
         ) VALUES ($1, $2, $3, $4, $5, NOW())`,
         [
           cleaner_id,
-          'booking_requires_approval',
-          'New Booking Request',
-          'A client has selected a time slot. Please review and approve.',
+          "booking_requires_approval",
+          "New Booking Request",
+          "A client has selected a time slot. Please review and approve.",
           `/jobs/${booking_id}`,
         ]
       );
 
-      return { success: true, message: 'Booking pending cleaner approval' };
+      return { success: true, message: "Booking pending cleaner approval" };
     }
 
-    if (response_type === 'not_interested') {
+    if (response_type === "not_interested") {
       await query(
         `UPDATE jobs SET status = 'client_declined', request_status = 'declined' WHERE id = $1`,
         [booking_id]
       );
 
-      return { success: true, message: 'Booking declined' };
+      return { success: true, message: "Booking declined" };
     }
 
-    if (response_type === 'suggest_other') {
+    if (response_type === "suggest_other") {
       // Re-trigger suggestions with different parameters
-      return { success: true, message: 'Generating new suggestions...' };
+      return { success: true, message: "Generating new suggestions..." };
     }
 
-    return { success: false, message: 'Invalid response type' };
+    return { success: false, message: "Invalid response type" };
   }
 }
-

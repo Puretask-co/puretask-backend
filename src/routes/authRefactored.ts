@@ -49,7 +49,7 @@ const updatePasswordSchema = z.object({
 /**
  * POST /auth/register
  * Register a new user (client or cleaner)
- * 
+ *
  * ✅ Uses validateBody middleware for automatic validation
  * ✅ Uses asyncHandler for automatic error handling
  * ✅ Clean, readable code with no try/catch needed
@@ -83,7 +83,7 @@ router.post(
 /**
  * POST /auth/login
  * Authenticate user and return JWT token
- * 
+ *
  * ✅ Validation handled by middleware
  * ✅ Errors automatically caught and formatted
  */
@@ -115,7 +115,7 @@ router.post(
 /**
  * GET /auth/me
  * Get current authenticated user info
- * 
+ *
  * ✅ Auth handled by middleware
  * ✅ Standardized error responses using Errors factory
  */
@@ -141,7 +141,7 @@ router.get(
 /**
  * POST /auth/change-password
  * Change user password
- * 
+ *
  * ✅ Complete example with validation, auth, and error handling
  */
 router.post(
@@ -166,7 +166,7 @@ export default router;
 
 /**
  * MIGRATION GUIDE:
- * 
+ *
  * Old pattern (lots of boilerplate):
  * ```
  * router.post('/endpoint', async (req, res) => {
@@ -188,7 +188,7 @@ export default router;
  *   }
  * });
  * ```
- * 
+ *
  * New pattern (clean and concise):
  * ```
  * router.post('/endpoint',
@@ -199,7 +199,7 @@ export default router;
  *   })
  * );
  * ```
- * 
+ *
  * Benefits:
  * - 50% less code
  * - Consistent error responses
@@ -207,4 +207,3 @@ export default router;
  * - Automatic error logging with context
  * - Type-safe validated request body
  */
-

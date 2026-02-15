@@ -1,9 +1,9 @@
 // src/routes/admin/bookings.ts
-import { Router, Response, NextFunction, Request } from 'express';
-import { requireAuth, requireAdmin, AuthedRequest } from '../../middleware/authCanonical';
-import { query } from '../../db/client';
-import { logger } from '../../lib/logger';
-import { BookingConsoleFilters, BookingConsoleItem } from '../../types/admin';
+import { Router, Response, NextFunction, Request } from "express";
+import { requireAuth, requireAdmin, AuthedRequest } from "../../middleware/authCanonical";
+import { query } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { BookingConsoleFilters, BookingConsoleItem } from "../../types/admin";
 
 const router = Router();
 
@@ -72,7 +72,7 @@ router.use(requireAdmin);
  *       200:
  *         description: List of bookings
  */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;
   try {
     const {
@@ -82,16 +82,16 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       cleanerId,
       clientId,
       search,
-      page = '1',
-      limit = '50',
-      sortBy = 'date',
-      sortOrder = 'DESC'
+      page = "1",
+      limit = "50",
+      sortBy = "date",
+      sortOrder = "DESC",
     } = authedReq.query;
 
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
     // Build dynamic WHERE clause
-    const conditions: string[] = ['1=1'];
+    const conditions: string[] = ["1=1"];
     const params: any[] = [];
     let paramIndex = 1;
 
@@ -137,18 +137,18 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       paramIndex++;
     }
 
-    const whereClause = conditions.join(' AND ');
+    const whereClause = conditions.join(" AND ");
 
     // Valid sort columns
     const validSortColumns: Record<string, string> = {
-      date: 'j.date',
-      createdAt: 'j.created_at',
-      amount: 'j.total_price',
-      status: 'j.status'
+      date: "j.date",
+      createdAt: "j.created_at",
+      amount: "j.total_price",
+      status: "j.status",
     };
 
-    const sortColumn = validSortColumns[sortBy as string] || 'j.date';
-    const order = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    const sortColumn = validSortColumns[sortBy as string] || "j.date";
+    const order = sortOrder === "ASC" ? "ASC" : "DESC";
 
     // Get total count
     const countResult = await query(
@@ -193,7 +193,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       [...params, parseInt(limit as string), offset]
     );
 
-    const bookings: BookingConsoleItem[] = bookingsResult.rows.map(row => ({
+    const bookings: BookingConsoleItem[] = bookingsResult.rows.map((row) => ({
       id: row.id,
       date: row.date,
       startTime: row.start_time,
@@ -203,19 +203,19 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         id: row.client_id,
         name: row.client_name,
         email: row.client_email,
-        phone: row.client_phone
+        phone: row.client_phone,
       },
       cleaner: {
         id: row.cleaner_id,
         name: row.cleaner_name,
         email: row.cleaner_email,
-        tier: row.cleaner_tier
+        tier: row.cleaner_tier,
       },
       address: row.address,
       amount: parseFloat(row.total_price),
       paymentStatus: row.payment_status,
       createdAt: row.created_at,
-      updatedAt: row.updated_at
+      updatedAt: row.updated_at,
     }));
 
     res.json({
@@ -224,18 +224,18 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
         total: totalCount,
-        pages: Math.ceil(totalCount / parseInt(limit as string))
-      }
+        pages: Math.ceil(totalCount / parseInt(limit as string)),
+      },
     });
 
-    logger.info('Admin bookings list retrieved', {
+    logger.info("Admin bookings list retrieved", {
       adminId: authedReq.user?.id,
       filters: { status, dateFrom, dateTo, cleanerId, clientId, search },
-      count: bookings.length
+      count: bookings.length,
     });
   } catch (error) {
-    logger.error('Error fetching admin bookings', { error });
-    res.status(500).json({ error: 'Failed to fetch bookings' });
+    logger.error("Error fetching admin bookings", { error });
+    res.status(500).json({ error: "Failed to fetch bookings" });
   }
 });
 
@@ -243,7 +243,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  * GET /admin/bookings/:id
  * Get detailed booking information
  */
-router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;
   try {
     const { id } = authedReq.params;
@@ -273,13 +273,13 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Booking not found' });
+      return res.status(404).json({ error: "Booking not found" });
     }
 
     res.json(result.rows[0]);
   } catch (error) {
-    logger.error('Error fetching booking details', { error, bookingId: authedReq.params.id });
-    res.status(500).json({ error: 'Failed to fetch booking details' });
+    logger.error("Error fetching booking details", { error, bookingId: authedReq.params.id });
+    res.status(500).json({ error: "Failed to fetch booking details" });
   }
 });
 
@@ -287,23 +287,23 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
  * PATCH /admin/bookings/:id/status
  * Update booking status (admin override)
  */
-router.patch('/:id/status', async (req: Request, res: Response, next: NextFunction) => {
+router.patch("/:id/status", async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;
   try {
     const { id } = authedReq.params;
     const { status, reason } = authedReq.body;
 
     const validStatuses = [
-      'pending_acceptance',
-      'scheduled',
-      'in_progress',
-      'completed',
-      'cancelled',
-      'disputed'
+      "pending_acceptance",
+      "scheduled",
+      "in_progress",
+      "completed",
+      "cancelled",
+      "disputed",
     ];
 
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+      return res.status(400).json({ error: "Invalid status" });
     }
 
     // Update booking status
@@ -316,7 +316,7 @@ router.patch('/:id/status', async (req: Request, res: Response, next: NextFuncti
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Booking not found' });
+      return res.status(404).json({ error: "Booking not found" });
     }
 
     // Log admin action
@@ -325,25 +325,25 @@ router.patch('/:id/status', async (req: Request, res: Response, next: NextFuncti
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [
         req.user?.id,
-        'update_booking_status',
-        'booking',
+        "update_booking_status",
+        "booking",
         id,
         JSON.stringify({ oldStatus: result.rows[0].status, newStatus: status, reason }),
-        req.ip
+        req.ip,
       ]
     );
 
-    logger.info('Admin updated booking status', {
+    logger.info("Admin updated booking status", {
       adminId: authedReq.user?.id,
       bookingId: id,
       newStatus: status,
-      reason
+      reason,
     });
 
     res.json(result.rows[0]);
   } catch (error) {
-    logger.error('Error updating booking status', { error, bookingId: authedReq.params.id });
-    res.status(500).json({ error: 'Failed to update booking status' });
+    logger.error("Error updating booking status", { error, bookingId: authedReq.params.id });
+    res.status(500).json({ error: "Failed to update booking status" });
   }
 });
 
@@ -351,7 +351,7 @@ router.patch('/:id/status', async (req: Request, res: Response, next: NextFuncti
  * GET /admin/bookings/stats/summary
  * Get booking statistics summary
  */
-router.get('/stats/summary', async (req: Request, res: Response, next: NextFunction) => {
+router.get("/stats/summary", async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;
   try {
     const stats = await query(`
@@ -370,8 +370,8 @@ router.get('/stats/summary', async (req: Request, res: Response, next: NextFunct
 
     res.json(stats.rows[0]);
   } catch (error) {
-    logger.error('Error fetching booking stats', { error });
-    res.status(500).json({ error: 'Failed to fetch booking stats' });
+    logger.error("Error fetching booking stats", { error });
+    res.status(500).json({ error: "Failed to fetch booking stats" });
   }
 });
 
@@ -379,48 +379,47 @@ router.get('/stats/summary', async (req: Request, res: Response, next: NextFunct
  * POST /admin/bookings/bulk-update
  * Bulk update bookings
  */
-router.post('/bulk-update', async (req: Request, res: Response, next: NextFunction) => {
+router.post("/bulk-update", async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;
   try {
     const { bookingIds, action, value } = authedReq.body;
 
     if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
-      return res.status(400).json({ error: 'Invalid booking IDs' });
+      return res.status(400).json({ error: "Invalid booking IDs" });
     }
 
-    let query_text = '';
+    let query_text = "";
     let params: any[] = [];
 
     switch (action) {
-      case 'update_status':
+      case "update_status":
         query_text = `UPDATE jobs SET status = $1, updated_at = NOW() WHERE id = ANY($2)`;
         params = [value, bookingIds];
         break;
-      case 'cancel':
+      case "cancel":
         query_text = `UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = ANY($1)`;
         params = [bookingIds];
         break;
       default:
-        return res.status(400).json({ error: 'Invalid action' });
+        return res.status(400).json({ error: "Invalid action" });
     }
 
     const result = await query(query_text, params);
 
-    logger.info('Admin bulk updated bookings', {
+    logger.info("Admin bulk updated bookings", {
       adminId: authedReq.user?.id,
       action,
-      count: result.rowCount
+      count: result.rowCount,
     });
 
     res.json({
       success: true,
-      updatedCount: result.rowCount
+      updatedCount: result.rowCount,
     });
   } catch (error) {
-    logger.error('Error bulk updating bookings', { error });
-    res.status(500).json({ error: 'Failed to bulk update bookings' });
+    logger.error("Error bulk updating bookings", { error });
+    res.status(500).json({ error: "Failed to bulk update bookings" });
   }
 });
 
 export default router;
-

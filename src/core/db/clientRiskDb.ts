@@ -3,7 +3,7 @@
 
 import { query } from "../../db/client";
 import { logger } from "../../lib/logger";
-import { RiskBand } from '../scoring';
+import { RiskBand } from "../scoring";
 
 // ============================================
 // Types
@@ -32,7 +32,7 @@ export interface ClientRiskScoreRecord {
 
 /**
  * Task 2.1: db.clientRiskEvents.sumWeightsSince(clientId, days)
- * 
+ *
  * Returns sum of all risk event weights for a client within the last N days.
  */
 export async function sumClientRiskEventWeightsSince(
@@ -46,7 +46,7 @@ export async function sumClientRiskEventWeightsSince(
      AND created_at >= NOW() - INTERVAL '1 day' * $2`,
     [String(clientId), days]
   );
-  
+
   return Number(result.rows[0]?.sum || 0);
 }
 
@@ -56,14 +56,11 @@ export async function sumClientRiskEventWeightsSince(
 
 /**
  * Task 2.2: db.clientRiskEvents.existsSince(clientId, days)
- * 
+ *
  * Returns true if there are any risk events for the client within last N days.
  * Used for decay logic (-2 per week with no events).
  */
-export async function clientRiskEventsExistSince(
-  clientId: number,
-  days: number
-): Promise<boolean> {
+export async function clientRiskEventsExistSince(clientId: number, days: number): Promise<boolean> {
   const result = await query<{ exists: boolean }>(
     `SELECT EXISTS(
       SELECT 1 FROM client_risk_events
@@ -73,7 +70,7 @@ export async function clientRiskEventsExistSince(
     ) as exists`,
     [String(clientId), days]
   );
-  
+
   return result.rows[0]?.exists ?? false;
 }
 
@@ -83,7 +80,7 @@ export async function clientRiskEventsExistSince(
 
 /**
  * Task 2.3: db.clientRiskEvents.getClientsWithEventsSince(days)
- * 
+ *
  * Returns list of client IDs who have had risk events in the last N days.
  * Used for daily recompute job.
  */
@@ -94,8 +91,8 @@ export async function getClientsWithEventsSince(days: number): Promise<number[]>
      WHERE created_at >= NOW() - INTERVAL '1 day' * $1`,
     [days]
   );
-  
-  return result.rows.map(row => Number(row.client_id));
+
+  return result.rows.map((row) => Number(row.client_id));
 }
 
 // ============================================
@@ -104,7 +101,7 @@ export async function getClientsWithEventsSince(days: number): Promise<number[]>
 
 /**
  * Task 2.4: db.clientRiskScores.upsert({ clientId, riskScore, riskBand })
- * 
+ *
  * Updates or inserts the client's current risk score and band.
  */
 export async function upsertClientRiskScore(data: {
@@ -157,7 +154,7 @@ export async function getClientRiskScore(clientId: number): Promise<ClientRiskSc
 
 /**
  * Task 2.5: db.clientRiskEvents.insert({...})
- * 
+ *
  * Insert a single client risk event.
  */
 export async function insertClientRiskEvent(event: {
@@ -179,26 +176,28 @@ export async function insertClientRiskEvent(event: {
       JSON.stringify(event.metadata || {}),
     ]
   );
-  
+
   logger.info("client_risk_event_inserted", {
     clientId: event.clientId,
     eventType: event.eventType,
     weight: event.weight,
   });
-  
+
   return Number(result.rows[0].id);
 }
 
 /**
  * Log multiple client risk events at once
  */
-export async function logClientRiskEvents(events: Array<{
-  clientId: number;
-  jobId?: number | null;
-  eventType: string;
-  weight: number;
-  metadata?: Record<string, any>;
-}>): Promise<void> {
+export async function logClientRiskEvents(
+  events: Array<{
+    clientId: number;
+    jobId?: number | null;
+    eventType: string;
+    weight: number;
+    metadata?: Record<string, any>;
+  }>
+): Promise<void> {
   for (const event of events) {
     await insertClientRiskEvent(event);
   }
@@ -211,7 +210,7 @@ export async function logClientRiskEvents(events: Array<{
 export const CLIENT_RISK_EVENT_WEIGHTS = {
   // Reschedule events
   late_reschedule_lt24: 1,
-  late_reschedule_pattern: 10,  // 3+ in 14 days
+  late_reschedule_pattern: 10, // 3+ in 14 days
 
   // Cancellation events
   cancel_24_48: 3,
@@ -227,12 +226,12 @@ export const CLIENT_RISK_EVENT_WEIGHTS = {
   dispute_client_at_fault: 10,
 
   // Payment issues
-  card_decline: 1,  // capped at 3 total
+  card_decline: 1, // capped at 3 total
   chargeback: 20,
 
   // Inconvenience patterns
-  inconvenience_pattern_3: 5,   // 3+ high inconvenience
-  inconvenience_pattern_5: 5,   // 5+ (additional)
+  inconvenience_pattern_3: 5, // 3+ high inconvenience
+  inconvenience_pattern_5: 5, // 5+ (additional)
 
   // Manual flags
   abuse_flag: 20,
@@ -253,7 +252,7 @@ export async function logLateRescheduleEvent(
   await insertClientRiskEvent({
     clientId,
     jobId,
-    eventType: 'late_reschedule_lt24',
+    eventType: "late_reschedule_lt24",
     weight: CLIENT_RISK_EVENT_WEIGHTS.late_reschedule_lt24,
     metadata: { rescheduleId },
   });
@@ -270,7 +269,7 @@ export async function logLateReschedulePatternEvent(
   await insertClientRiskEvent({
     clientId,
     jobId,
-    eventType: 'late_reschedule_pattern',
+    eventType: "late_reschedule_pattern",
     weight: CLIENT_RISK_EVENT_WEIGHTS.late_reschedule_pattern,
     metadata: { count14d },
   });
@@ -282,24 +281,24 @@ export async function logLateReschedulePatternEvent(
 export async function logCancellationEvent(
   clientId: number,
   jobId: number,
-  bucket: 'gt48' | '24_48' | 'lt24',
+  bucket: "gt48" | "24_48" | "lt24",
   graceUsed: boolean,
   afterRescheduleDeclined: boolean
 ): Promise<void> {
   let eventType: string;
   let weight: number;
 
-  if (bucket === 'gt48') {
+  if (bucket === "gt48") {
     return; // No risk for early cancellations
-  } else if (bucket === '24_48') {
-    eventType = graceUsed ? 'cancel_24_48_grace' : 'cancel_24_48';
-    weight = graceUsed 
-      ? CLIENT_RISK_EVENT_WEIGHTS.cancel_24_48_with_grace 
+  } else if (bucket === "24_48") {
+    eventType = graceUsed ? "cancel_24_48_grace" : "cancel_24_48";
+    weight = graceUsed
+      ? CLIENT_RISK_EVENT_WEIGHTS.cancel_24_48_with_grace
       : CLIENT_RISK_EVENT_WEIGHTS.cancel_24_48;
   } else {
-    eventType = graceUsed ? 'cancel_lt24_grace' : 'cancel_lt24';
-    weight = graceUsed 
-      ? CLIENT_RISK_EVENT_WEIGHTS.cancel_lt24_with_grace 
+    eventType = graceUsed ? "cancel_lt24_grace" : "cancel_lt24";
+    weight = graceUsed
+      ? CLIENT_RISK_EVENT_WEIGHTS.cancel_lt24_with_grace
       : CLIENT_RISK_EVENT_WEIGHTS.cancel_lt24;
   }
 
@@ -316,7 +315,7 @@ export async function logCancellationEvent(
     await insertClientRiskEvent({
       clientId,
       jobId,
-      eventType: 'cancel_after_decline',
+      eventType: "cancel_after_decline",
       weight: CLIENT_RISK_EVENT_WEIGHTS.cancel_after_decline,
       metadata: {},
     });
@@ -326,14 +325,11 @@ export async function logCancellationEvent(
 /**
  * Log a client no-show event
  */
-export async function logClientNoShowEvent(
-  clientId: number,
-  jobId: number
-): Promise<void> {
+export async function logClientNoShowEvent(clientId: number, jobId: number): Promise<void> {
   await insertClientRiskEvent({
     clientId,
     jobId,
-    eventType: 'no_show',
+    eventType: "no_show",
     weight: CLIENT_RISK_EVENT_WEIGHTS.no_show,
     metadata: {},
   });
@@ -357,11 +353,11 @@ export async function logCardDeclineEvent(
   );
 
   const currentCount = Number(result.rows[0]?.count || 0);
-  
+
   if (currentCount < 3) {
     await insertClientRiskEvent({
       clientId,
-      eventType: 'card_decline',
+      eventType: "card_decline",
       weight: CLIENT_RISK_EVENT_WEIGHTS.card_decline,
       metadata: { paymentIntentId },
     });
@@ -379,7 +375,7 @@ export async function logChargebackEvent(
   await insertClientRiskEvent({
     clientId,
     jobId,
-    eventType: 'chargeback',
+    eventType: "chargeback",
     weight: CLIENT_RISK_EVENT_WEIGHTS.chargeback,
     metadata: { stripeDisputeId },
   });
@@ -395,7 +391,7 @@ export async function logAbuseFlagEvent(
 ): Promise<void> {
   await insertClientRiskEvent({
     clientId,
-    eventType: 'abuse_flag',
+    eventType: "abuse_flag",
     weight: CLIENT_RISK_EVENT_WEIGHTS.abuse_flag,
     metadata: { reason, supportUserId },
   });
@@ -417,7 +413,7 @@ export async function countLateReschedulesLast14Days(clientId: number): Promise<
      AND created_at >= NOW() - INTERVAL '14 days'`,
     [String(clientId)]
   );
-  
+
   return Number(result.rows[0]?.count || 0);
 }
 
@@ -435,6 +431,5 @@ export async function getActiveClients(): Promise<{ id: number }[]> {
      )`
   );
 
-  return result.rows.map(row => ({ id: Number(row.id) }));
+  return result.rows.map((row) => ({ id: Number(row.id) }));
 }
-

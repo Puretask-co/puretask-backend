@@ -87,4 +87,3 @@ if (require.main === module) {
 }
 
 export { main as runGoalChecker };
-

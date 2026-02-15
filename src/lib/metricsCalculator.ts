@@ -10,7 +10,10 @@
 
 import { query } from "../db/client";
 
-export type MetricWindow = { type: "days"; value: number } | { type: "last_jobs"; value: number } | null;
+export type MetricWindow =
+  | { type: "days"; value: number }
+  | { type: "last_jobs"; value: number }
+  | null;
 export type MetricFilters = {
   cleaning_type?: string | string[];
   time_slot?: string | string[];
@@ -374,7 +377,10 @@ async function computeOnTimeStreak(cleanerId: string): Promise<MetricResult> {
   return { value: r.rows[0]?.streak ?? 0, unit: "jobs" };
 }
 
-async function computeRescheduledCount(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeRescheduledCount(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   let sql = `SELECT COUNT(*)::int as v FROM job_events je
     JOIN jobs j ON j.id = je.job_id
     WHERE j.cleaner_id = $1 AND je.event_type::text ILIKE '%reschedule%'`;
@@ -391,7 +397,10 @@ async function computeRescheduledCount(cleanerId: string, window: MetricWindow |
   return { value: r.rows[0]?.v ?? 0, unit: "jobs" };
 }
 
-async function computeCancelledCount(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeCancelledCount(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   let sql = `SELECT COUNT(*)::int as v FROM jobs j
     WHERE j.cleaner_id = $1 AND j.status = 'cancelled'`;
   sql += jobWindowClause(window);
@@ -421,7 +430,10 @@ async function computeAvgStars(
   return { value: parseFloat(r.rows[0]?.v ?? "0"), unit: "stars" };
 }
 
-async function computeAvgPercent(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeAvgPercent(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   const stars = await computeAvgStars(cleanerId, window, {});
   return { value: Math.round((stars.value / 5) * 100), unit: "percent" };
 }
@@ -437,7 +449,10 @@ async function computeFiveStarCount(
   return { value: r.rows[0]?.v ?? 0, unit: "ratings" };
 }
 
-async function computeJobsAccepted(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeJobsAccepted(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   let sql = `SELECT COUNT(*)::int as v FROM jobs j
     WHERE j.cleaner_id = $1 AND j.status IN ('accepted','on_my_way','in_progress','awaiting_approval','completed')`;
   sql += jobWindowClause(window);
@@ -445,7 +460,10 @@ async function computeJobsAccepted(cleanerId: string, window: MetricWindow | nul
   return { value: r.rows[0]?.v ?? 0, unit: "jobs" };
 }
 
-async function computeAcceptanceRate(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeAcceptanceRate(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   // accepted / (accepted + declined). Good-faith declines excluded in goodFaithDeclines service.
   let sql = `SELECT
     COUNT(*) FILTER (WHERE status = 'accepted')::int as accepted,
@@ -463,7 +481,10 @@ async function computeAcceptanceRate(cleanerId: string, window: MetricWindow | n
   return { value: rate, unit: "percent" };
 }
 
-async function computeMessagesSent(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeMessagesSent(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   let sql = `SELECT COUNT(*)::int as v FROM messages m
     WHERE m.sender_id = $1 AND m.sender_type = 'cleaner'`;
   if (window?.type === "days") {
@@ -473,7 +494,10 @@ async function computeMessagesSent(cleanerId: string, window: MetricWindow | nul
   return { value: r.rows[0]?.v ?? 0, unit: "messages" };
 }
 
-async function computeMeaningfulLoginDays(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeMeaningfulLoginDays(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   let sql = `SELECT COUNT(DISTINCT login_date)::int as v FROM cleaner_login_days WHERE cleaner_id = $1`;
   if (window?.type === "days") {
     sql += ` AND login_date >= CURRENT_DATE - INTERVAL '${window.value} days'`;
@@ -497,7 +521,10 @@ async function computeLoginStreak(cleanerId: string): Promise<MetricResult> {
   return { value: r.rows[0]?.streak ?? 0, unit: "days" };
 }
 
-async function computeLoginsCount(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeLoginsCount(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   let sql = `SELECT COUNT(*)::int as v FROM cleaner_login_days WHERE cleaner_id = $1`;
   if (window?.type === "days") {
     sql += ` AND login_date >= CURRENT_DATE - INTERVAL '${window.value} days'`;
@@ -506,7 +533,10 @@ async function computeLoginsCount(cleanerId: string, window: MetricWindow | null
   return { value: r.rows[0]?.v ?? 0, unit: "logins" };
 }
 
-async function computeActiveWeeks(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeActiveWeeks(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   let sql = `SELECT COUNT(DISTINCT date_trunc('week', login_date))::int as v
     FROM cleaner_login_days WHERE cleaner_id = $1`;
   if (window?.type === "days") {
@@ -516,7 +546,10 @@ async function computeActiveWeeks(cleanerId: string, window: MetricWindow | null
   return { value: r.rows[0]?.v ?? 0, unit: "weeks" };
 }
 
-async function computeDisputesOpenOrLost(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeDisputesOpenOrLost(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   let sql = `SELECT COUNT(*)::int as v FROM disputes d
     JOIN jobs j ON j.id = d.job_id
     WHERE j.cleaner_id = $1 AND d.status IN ('open', 'resolved_refund')`;
@@ -532,7 +565,10 @@ async function computeDisputesOpenOrLost(cleanerId: string, window: MetricWindow
   return { value: r.rows[0]?.v ?? 0, unit: "disputes" };
 }
 
-async function computeDisputesLost(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeDisputesLost(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   let sql = `SELECT COUNT(*)::int as v FROM disputes d
     JOIN jobs j ON j.id = d.job_id
     WHERE j.cleaner_id = $1 AND d.status = 'resolved_refund'`;
@@ -548,7 +584,10 @@ async function computeDisputesLost(cleanerId: string, window: MetricWindow | nul
   return { value: r.rows[0]?.v ?? 0, unit: "disputes" };
 }
 
-async function computeDisputesOpened(cleanerId: string, window: MetricWindow | null): Promise<MetricResult> {
+async function computeDisputesOpened(
+  cleanerId: string,
+  window: MetricWindow | null
+): Promise<MetricResult> {
   let sql = `SELECT COUNT(*)::int as v FROM disputes d
     JOIN jobs j ON j.id = d.job_id
     WHERE j.cleaner_id = $1`;
@@ -625,8 +664,9 @@ async function computeCompositeReviewWhisperer(cleanerId: string): Promise<Metri
         WHERE cleaner_id = $1 AND status = 'completed' AND rating IS NOT NULL
           AND COALESCE(actual_end_at, updated_at, created_at) >= NOW() - INTERVAL '60 days'
        )
-       SELECT (SELECT c FROM tmpl) AS tmpl_c, (SELECT c FROM rev) AS rev_c`
-    , [cleanerId]);
+       SELECT (SELECT c FROM tmpl) AS tmpl_c, (SELECT c FROM rev) AS rev_c`,
+      [cleanerId]
+    );
     const row = r.rows[0];
     const ok = (row?.tmpl_c ?? 0) >= 15 && (row?.rev_c ?? 0) >= 5;
     return { value: ok ? 1 : 0, unit: "bool" };
@@ -649,8 +689,9 @@ async function computeCompositeTipJarEnergy(cleanerId: string): Promise<MetricRe
         WHERE cleaner_id = $1 AND event_type = 'tip.received'
           AND occurred_at >= NOW() - INTERVAL '90 days'
        )
-       SELECT (SELECT c FROM tmpl) AS tmpl_c, COALESCE((SELECT c FROM tips), 0) AS tip_c`
-    , [cleanerId]);
+       SELECT (SELECT c FROM tmpl) AS tmpl_c, COALESCE((SELECT c FROM tips), 0) AS tip_c`,
+      [cleanerId]
+    );
     const row = r.rows[0];
     const ok = (row?.tmpl_c ?? 0) >= 10 && (row?.tip_c ?? 0) >= 3;
     return { value: ok ? 1 : 0, unit: "bool" };
@@ -676,7 +717,10 @@ async function computeTipsReceivedCount(
   }
 }
 
-async function computeRepeatClients(cleanerId: string, filters: MetricFilters): Promise<MetricResult> {
+async function computeRepeatClients(
+  cleanerId: string,
+  filters: MetricFilters
+): Promise<MetricResult> {
   const minJobs = (filters.min_completed_jobs_per_client as number) ?? 2;
   const r = await query<{ v: number }>(
     `SELECT COUNT(*)::int as v FROM (

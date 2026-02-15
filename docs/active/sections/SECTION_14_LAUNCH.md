@@ -46,7 +46,7 @@
 | **Payout kill switch** | Pause payouts | Dispute surge; reconciliation failure |
 
 - **Implementation:** Env flag or admin toggle; checked in payment/booking/payout code; immediate effect (no deploy).  
-- **Deliverable:** All three switches implemented and documented; admin UI or runbook step to flip.
+- **Status (2026-02-02):** Implemented via `env.BOOKINGS_ENABLED`, `env.PAYOUTS_ENABLED`, `env.CREDITS_ENABLED` in `src/config/env.ts`. See `jobsService`, `payoutsService`, `creditsService`, `featureFlags.ts`. Set in Railway or .env.
 
 ---
 

@@ -6,9 +6,10 @@ import { logger } from "../lib/logger";
 import { env } from "../config/env";
 import twilio from "twilio";
 
-const twilioClient = env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN
-  ? twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN)
-  : null;
+const twilioClient =
+  env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN
+    ? twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN)
+    : null;
 
 /**
  * Generate a 6-digit OTP code
@@ -20,12 +21,18 @@ function generateOTP(): string {
 /**
  * Send OTP code via SMS
  */
-export async function sendOTP(userId: string, phoneNumber: string): Promise<{ success: boolean; error?: string }> {
+export async function sendOTP(
+  userId: string,
+  phoneNumber: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     // Validate phone number format (E.164)
     const phoneRegex = /^\+[1-9]\d{1,14}$/;
     if (!phoneRegex.test(phoneNumber)) {
-      return { success: false, error: "Invalid phone number format. Please use E.164 format (e.g., +1234567890)" };
+      return {
+        success: false,
+        error: "Invalid phone number format. Please use E.164 format (e.g., +1234567890)",
+      };
     }
 
     // Generate OTP
@@ -120,10 +127,9 @@ export async function verifyOTP(
     );
 
     // Update cleaner profile
-    const profileResult = await query(
-      `SELECT id FROM cleaner_profiles WHERE user_id = $1`,
-      [userId]
-    );
+    const profileResult = await query(`SELECT id FROM cleaner_profiles WHERE user_id = $1`, [
+      userId,
+    ]);
 
     if (profileResult.rows.length > 0) {
       await query(
@@ -135,10 +141,7 @@ export async function verifyOTP(
     }
 
     // Also update users table if needed
-    await query(
-      `UPDATE users SET phone_number = $1 WHERE id = $2`,
-      [phoneNumber, userId]
-    );
+    await query(`UPDATE users SET phone_number = $1 WHERE id = $2`, [phoneNumber, userId]);
 
     logger.info("otp_verified", { userId, phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, "*") });
 
@@ -158,10 +161,9 @@ export async function verifyOTP(
  */
 export async function isPhoneVerified(userId: string): Promise<boolean> {
   try {
-    const result = await query(
-      `SELECT phone_verified FROM cleaner_profiles WHERE user_id = $1`,
-      [userId]
-    );
+    const result = await query(`SELECT phone_verified FROM cleaner_profiles WHERE user_id = $1`, [
+      userId,
+    ]);
 
     if (result.rows.length === 0) {
       return false;

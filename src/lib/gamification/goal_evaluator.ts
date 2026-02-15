@@ -3,13 +3,7 @@
  * Evaluates goals against a metric provider with operators, windows, filters.
  */
 
-import {
-  GoalDefinition,
-  GoalProgressResult,
-  MetricProvider,
-  MetricValue,
-  Operator,
-} from "./types";
+import { GoalDefinition, GoalProgressResult, MetricProvider, MetricValue, Operator } from "./types";
 
 /**
  * Compare metric value to target using operator.

@@ -4,7 +4,12 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import { isTierLocked, createTierLock, createAuditLog, CREDIT_ECONOMY_CONFIG } from "./creditEconomyService";
+import {
+  isTierLocked,
+  createTierLock,
+  createAuditLog,
+  CREDIT_ECONOMY_CONFIG,
+} from "./creditEconomyService";
 
 // ============================================
 // Types
@@ -72,7 +77,7 @@ export async function computeCleanerStats(cleanerId: string): Promise<CleanerSta
 /**
  * Get photo compliance stats for a cleaner
  * Per Photo Proof policy: Photo compliance boosts reliability by +10 points
- * 
+ *
  * Note: Calculates compliance from job_photos table directly
  * (photo_compliance table/view may not exist in all environments)
  */
@@ -104,7 +109,7 @@ export async function getPhotoComplianceStats(cleanerId: string): Promise<{
     const total = Number(result.rows[0]?.total || 0);
     const compliant = Number(result.rows[0]?.compliant || 0);
     const complianceRate = total > 0 ? compliant / total : 0;
-    
+
     // Eligible for bonus if compliance rate >= 90%
     return {
       totalJobs: total,
@@ -114,12 +119,12 @@ export async function getPhotoComplianceStats(cleanerId: string): Promise<{
     };
   } catch (error: any) {
     // If photo_compliance table doesn't exist, calculate from job_photos directly
-    if (error?.code === '42P01' || error?.message?.includes('photo_compliance')) {
+    if (error?.code === "42P01" || error?.message?.includes("photo_compliance")) {
       logger.warn("photo_compliance_table_missing", {
         cleanerId,
         message: "photo_compliance table not found, calculating from job_photos",
       });
-      
+
       // Fallback: calculate compliance from job_photos table
       // A job is compliant if it has at least one 'after' photo
       const fallbackResult = await query<{
@@ -142,7 +147,7 @@ export async function getPhotoComplianceStats(cleanerId: string): Promise<{
       const total = Number(fallbackResult.rows[0]?.total || 0);
       const compliant = Number(fallbackResult.rows[0]?.compliant || 0);
       const complianceRate = total > 0 ? compliant / total : 0;
-      
+
       return {
         totalJobs: total,
         compliantJobs: compliant,
@@ -150,7 +155,7 @@ export async function getPhotoComplianceStats(cleanerId: string): Promise<{
         bonusEligible: complianceRate >= 0.9,
       };
     }
-    
+
     // Re-throw other errors
     throw error;
   }
@@ -158,7 +163,7 @@ export async function getPhotoComplianceStats(cleanerId: string): Promise<{
 
 /**
  * Compute reliability score from stats
- * 
+ *
  * Algorithm:
  * - Base score: 100
  * - Penalize cancellations: up to -40 points
@@ -169,7 +174,7 @@ export async function getPhotoComplianceStats(cleanerId: string): Promise<{
  * - Clamp final score between 0 and 100
  */
 export function computeReliabilityScoreFromStats(
-  stats: CleanerStats, 
+  stats: CleanerStats,
   photoComplianceBonus: boolean = false
 ): number {
   const totalJobs = stats.completed_jobs + stats.cancelled_jobs + stats.disputed_jobs;
@@ -223,7 +228,7 @@ export function getTierFromScore(score: number): string {
 
 /**
  * Update a single cleaner's reliability score
- * 
+ *
  * Features:
  * - Tier lock protection: can't demote tier within 7 days of promotion
  * - Records history for audit trail
@@ -238,17 +243,18 @@ export async function updateCleanerReliability(
   // Handle case where reliability_score column might not exist
   let previousScore = 100;
   let previousTier = "bronze";
-  
+
   try {
     const currentResult = await query<{ reliability_score: number; tier: string }>(
       `SELECT reliability_score, tier FROM cleaner_profiles WHERE user_id = $1`,
       [cleanerId]
     );
-    previousScore = currentResult.rows[0]?.reliability_score ?? 100;
+    // Coerce to number: pg returns NUMERIC as string (e.g. '65.00')
+    previousScore = Number(currentResult.rows[0]?.reliability_score ?? 100);
     previousTier = currentResult.rows[0]?.tier ?? "bronze";
   } catch (error: any) {
     // If column doesn't exist, use defaults
-    if (error?.code === '42703' && error?.message?.includes('reliability_score')) {
+    if (error?.code === "42703" && error?.message?.includes("reliability_score")) {
       logger.warn("reliability_score_column_missing_on_read", {
         cleanerId,
         message: "reliability_score column not found, using defaults",
@@ -266,11 +272,11 @@ export async function updateCleanerReliability(
 
   // Compute new stats and score
   const stats = await computeCleanerStats(cleanerId);
-  
+
   // Check photo compliance for bonus (per Photo Proof policy: +10 points)
   const photoStats = await getPhotoComplianceStats(cleanerId);
   const photoBonus = photoStats.bonusEligible;
-  
+
   const newScore = computeReliabilityScoreFromStats(stats, photoBonus);
   let newTier = getTierFromScore(newScore);
 
@@ -310,7 +316,7 @@ export async function updateCleanerReliability(
     );
   } catch (error: any) {
     // If column doesn't exist (error code 42703 = undefined column), try without reliability_score
-    if (error?.code === '42703' && error?.message?.includes('reliability_score')) {
+    if (error?.code === "42703" && error?.message?.includes("reliability_score")) {
       logger.warn("reliability_score_column_missing", {
         cleanerId,
         message: "reliability_score column not found, updating tier only",
@@ -377,9 +383,7 @@ export async function recalcAllCleanersReliability(): Promise<{
   failed: number;
   updates: ReliabilityUpdate[];
 }> {
-  const cleaners = await query<{ user_id: string }>(
-    `SELECT user_id FROM cleaner_profiles`
-  );
+  const cleaners = await query<{ user_id: string }>(`SELECT user_id FROM cleaner_profiles`);
 
   const updates: ReliabilityUpdate[] = [];
   let processed = 0;
@@ -428,9 +432,10 @@ export async function getCleanerReliabilityInfo(cleanerId: string): Promise<{
   const stats = await computeCleanerStats(cleanerId);
 
   // reliability_score may come back as string from DB, ensure it's a number
-  const score = typeof profileResult.rows[0].reliability_score === 'string' 
-    ? parseFloat(profileResult.rows[0].reliability_score) 
-    : profileResult.rows[0].reliability_score;
+  const score =
+    typeof profileResult.rows[0].reliability_score === "string"
+      ? parseFloat(profileResult.rows[0].reliability_score)
+      : profileResult.rows[0].reliability_score;
 
   return {
     score: score,
@@ -438,4 +443,3 @@ export async function getCleanerReliabilityInfo(cleanerId: string): Promise<{
     stats,
   };
 }
-

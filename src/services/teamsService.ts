@@ -90,10 +90,7 @@ export async function createTeam(
  * Get team by ID
  */
 export async function getTeamById(teamId: number): Promise<Team | null> {
-  const result = await query<Team>(
-    `SELECT * FROM cleaner_teams WHERE id = $1`,
-    [teamId]
-  );
+  const result = await query<Team>(`SELECT * FROM cleaner_teams WHERE id = $1`, [teamId]);
   return result.rows[0] ?? null;
 }
 
@@ -101,16 +98,15 @@ export async function getTeamById(teamId: number): Promise<Team | null> {
  * Get team with members
  */
 export async function getTeamWithMembers(teamId: number): Promise<TeamWithMembers | null> {
-  const teamResult = await query<Team>(
-    `SELECT * FROM cleaner_teams WHERE id = $1`,
-    [teamId]
-  );
+  const teamResult = await query<Team>(`SELECT * FROM cleaner_teams WHERE id = $1`, [teamId]);
 
   if (teamResult.rows.length === 0) return null;
 
   const team = teamResult.rows[0];
 
-  const membersResult = await query<TeamMember & { cleaner_email: string; reliability_score: number }>(
+  const membersResult = await query<
+    TeamMember & { cleaner_email: string; reliability_score: number }
+  >(
     `
       SELECT 
         tm.*,
@@ -154,11 +150,13 @@ export async function getCleanerTeam(cleanerId: string): Promise<TeamWithMembers
 /**
  * Get teams a cleaner belongs to
  */
-export async function getCleanerMemberships(cleanerId: string): Promise<Array<{
-  team: Team;
-  role: string;
-  status: string;
-}>> {
+export async function getCleanerMemberships(cleanerId: string): Promise<
+  Array<{
+    team: Team;
+    role: string;
+    status: string;
+  }>
+> {
   const result = await query<TeamMember & { team_name: string; team_owner: string }>(
     `
       SELECT 
@@ -241,10 +239,9 @@ export async function deactivateTeam(teamId: number, ownerId: string): Promise<v
     throw Object.assign(new Error("Not team owner"), { statusCode: 403 });
   }
 
-  await query(
-    `UPDATE cleaner_teams SET is_active = false, updated_at = NOW() WHERE id = $1`,
-    [teamId]
-  );
+  await query(`UPDATE cleaner_teams SET is_active = false, updated_at = NOW() WHERE id = $1`, [
+    teamId,
+  ]);
 
   logger.info("team_deactivated", { teamId });
 }
@@ -301,10 +298,7 @@ export async function inviteTeamMember(
 /**
  * Accept team invitation
  */
-export async function acceptTeamInvitation(
-  teamId: number,
-  cleanerId: string
-): Promise<TeamMember> {
+export async function acceptTeamInvitation(teamId: number, cleanerId: string): Promise<TeamMember> {
   const result = await query<TeamMember>(
     `
       UPDATE team_members
@@ -327,10 +321,7 @@ export async function acceptTeamInvitation(
 /**
  * Decline team invitation
  */
-export async function declineTeamInvitation(
-  teamId: number,
-  cleanerId: string
-): Promise<void> {
+export async function declineTeamInvitation(teamId: number, cleanerId: string): Promise<void> {
   await query(
     `DELETE FROM team_members WHERE team_id = $1 AND cleaner_id = $2 AND status = 'pending'`,
     [teamId, cleanerId]
@@ -360,10 +351,10 @@ export async function removeTeamMember(
     throw Object.assign(new Error("Cannot remove team owner"), { statusCode: 400 });
   }
 
-  await query(
-    `DELETE FROM team_members WHERE team_id = $1 AND cleaner_id = $2`,
-    [teamId, cleanerId]
-  );
+  await query(`DELETE FROM team_members WHERE team_id = $1 AND cleaner_id = $2`, [
+    teamId,
+    cleanerId,
+  ]);
 
   logger.info("team_member_removed", { teamId, cleanerId });
 }
@@ -410,16 +401,15 @@ export async function leaveTeam(teamId: number, cleanerId: string): Promise<void
 
   // Owner can't leave (must deactivate team)
   if (team.owner_cleaner_id === cleanerId) {
-    throw Object.assign(
-      new Error("Owner cannot leave team. Deactivate it instead."),
-      { statusCode: 400 }
-    );
+    throw Object.assign(new Error("Owner cannot leave team. Deactivate it instead."), {
+      statusCode: 400,
+    });
   }
 
-  await query(
-    `DELETE FROM team_members WHERE team_id = $1 AND cleaner_id = $2`,
-    [teamId, cleanerId]
-  );
+  await query(`DELETE FROM team_members WHERE team_id = $1 AND cleaner_id = $2`, [
+    teamId,
+    cleanerId,
+  ]);
 
   logger.info("team_member_left", { teamId, cleanerId });
 }
@@ -447,10 +437,7 @@ export async function assignJobToTeam(
     throw Object.assign(new Error("Not authorized to assign jobs"), { statusCode: 403 });
   }
 
-  await query(
-    `UPDATE jobs SET team_id = $2, updated_at = NOW() WHERE id = $1`,
-    [jobId, teamId]
-  );
+  await query(`UPDATE jobs SET team_id = $2, updated_at = NOW() WHERE id = $1`, [jobId, teamId]);
 
   logger.info("job_assigned_to_team", { jobId, teamId, assignerId });
 }
@@ -525,4 +512,3 @@ export async function getTeamStats(teamId: number): Promise<{
     })),
   };
 }
-

@@ -126,9 +126,9 @@ router.post("/send-verification", auth(), async (req, res: Response) => {
 
     await resendVerificationEmail(userId);
 
-    res.json({ 
-      success: true, 
-      message: "Verification email sent" 
+    res.json({
+      success: true,
+      message: "Verification email sent",
     });
   } catch (err) {
     const error = err as Error & { statusCode?: number; code?: string };
@@ -171,9 +171,9 @@ router.post("/verify-email", async (req, res: Response) => {
       });
     }
 
-    res.json({ 
-      success: true, 
-      message: "Email verified successfully" 
+    res.json({
+      success: true,
+      message: "Email verified successfully",
     });
   } catch (err) {
     const error = err as Error & { issues?: unknown };
@@ -215,9 +215,9 @@ router.post("/request-email-change", auth(), async (req, res: Response) => {
     const parsed = changeEmailSchema.parse(req.body);
     await requestEmailChange(req.user!.id, parsed.newEmail);
 
-    res.json({ 
-      success: true, 
-      message: "Verification email sent to new address" 
+    res.json({
+      success: true,
+      message: "Verification email sent to new address",
     });
   } catch (err) {
     const error = err as Error & { statusCode?: number; code?: string };
@@ -260,9 +260,9 @@ router.post("/verify-email-change", async (req, res: Response) => {
       });
     }
 
-    res.json({ 
-      success: true, 
-      message: "Email changed successfully" 
+    res.json({
+      success: true,
+      message: "Email changed successfully",
     });
   } catch (err) {
     const error = err as Error;
@@ -304,9 +304,9 @@ router.post("/forgot-password", async (req, res: Response) => {
     await requestPasswordReset(parsed.email, ipAddress);
 
     // Always return success to prevent email enumeration
-    res.json({ 
-      success: true, 
-      message: "If that email exists, a password reset link has been sent" 
+    res.json({
+      success: true,
+      message: "If that email exists, a password reset link has been sent",
     });
   } catch (err) {
     const error = err as Error & { statusCode?: number; code?: string };
@@ -386,9 +386,9 @@ router.post("/reset-password", async (req, res: Response) => {
       });
     }
 
-    res.json({ 
-      success: true, 
-      message: "Password reset successfully" 
+    res.json({
+      success: true,
+      message: "Password reset successfully",
     });
   } catch (err) {
     const error = err as Error;
@@ -469,9 +469,9 @@ router.post("/2fa/verify-totp", auth(), async (req, res: Response) => {
       });
     }
 
-    res.json({ 
-      success: true, 
-      message: "Two-factor authentication enabled successfully" 
+    res.json({
+      success: true,
+      message: "Two-factor authentication enabled successfully",
     });
   } catch (err) {
     const error = err as Error;
@@ -505,15 +505,17 @@ router.post("/2fa/verify-totp", auth(), async (req, res: Response) => {
  */
 router.post("/2fa/enable-sms", auth(), async (req, res: Response) => {
   try {
-    const parsed = z.object({
-      phoneNumber: z.string().min(10),
-    }).parse(req.body);
+    const parsed = z
+      .object({
+        phoneNumber: z.string().min(10),
+      })
+      .parse(req.body);
 
     await enableSMS2FA(req.user!.id, parsed.phoneNumber);
 
-    res.json({ 
-      success: true, 
-      message: "Verification code sent to your phone" 
+    res.json({
+      success: true,
+      message: "Verification code sent to your phone",
     });
   } catch (err) {
     const error = err as Error & { statusCode?: number; code?: string };
@@ -540,9 +542,9 @@ router.post("/2fa/send-sms-code", auth(), async (req, res: Response) => {
   try {
     await sendSMS2FACode(req.user!.id);
 
-    res.json({ 
-      success: true, 
-      message: "Verification code sent" 
+    res.json({
+      success: true,
+      message: "Verification code sent",
     });
   } catch (err) {
     const error = err as Error & { statusCode?: number; code?: string };
@@ -587,9 +589,9 @@ router.post("/2fa/verify-sms", auth(), async (req, res: Response) => {
       });
     }
 
-    res.json({ 
-      success: true, 
-      message: "Two-factor authentication enabled successfully" 
+    res.json({
+      success: true,
+      message: "Two-factor authentication enabled successfully",
     });
   } catch (err) {
     const error = err as Error;
@@ -624,10 +626,12 @@ router.post("/2fa/verify-sms", auth(), async (req, res: Response) => {
  */
 router.post("/2fa/verify", async (req, res: Response) => {
   try {
-    const parsed = z.object({
-      userId: z.string().uuid(),
-      code: z.string().min(6),
-    }).parse(req.body);
+    const parsed = z
+      .object({
+        userId: z.string().uuid(),
+        code: z.string().min(6),
+      })
+      .parse(req.body);
 
     const result = await verify2FACode(parsed.userId, parsed.code);
 
@@ -637,9 +641,9 @@ router.post("/2fa/verify", async (req, res: Response) => {
       });
     }
 
-    res.json({ 
-      success: true, 
-      method: result.method 
+    res.json({
+      success: true,
+      method: result.method,
     });
   } catch (err) {
     const error = err as Error;
@@ -676,9 +680,9 @@ router.post("/2fa/disable", auth(), async (req, res: Response) => {
     const parsed = disable2FASchema.parse(req.body);
     await disable2FA(req.user!.id, parsed.password);
 
-    res.json({ 
-      success: true, 
-      message: "Two-factor authentication disabled" 
+    res.json({
+      success: true,
+      message: "Two-factor authentication disabled",
     });
   } catch (err) {
     const error = err as Error & { statusCode?: number; code?: string };
@@ -730,10 +734,10 @@ router.post("/2fa/regenerate-backup-codes", auth(), async (req, res: Response) =
   try {
     const backupCodes = await regenerateBackupCodes(req.user!.id);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       backupCodes,
-      message: "New backup codes generated. Store them safely!" 
+      message: "New backup codes generated. Store them safely!",
     });
   } catch (err) {
     const error = err as Error;
@@ -819,9 +823,9 @@ router.delete("/sessions/:sessionId", auth(), async (req, res: Response) => {
   try {
     await revokeSession(req.params.sessionId);
 
-    res.json({ 
-      success: true, 
-      message: "Session revoked" 
+    res.json({
+      success: true,
+      message: "Session revoked",
     });
   } catch (err) {
     const error = err as Error;
@@ -848,9 +852,9 @@ router.post("/logout-all", auth(), async (req, res: Response) => {
   try {
     const count = await revokeAllUserSessions(req.user!.id);
 
-    res.json({ 
-      success: true, 
-      message: `Logged out from ${count} device(s)` 
+    res.json({
+      success: true,
+      message: `Logged out from ${count} device(s)`,
     });
   } catch (err) {
     const error = err as Error;
@@ -889,11 +893,11 @@ router.get("/oauth/google/start", (req, res: Response) => {
     const role = roleParam === "cleaner" ? "cleaner" : "client";
     const redirect = typeof req.query.redirect === "string" ? req.query.redirect : "";
 
-    const state = jwt.sign(
-      { role, redirect },
-      env.JWT_SECRET,
-      { expiresIn: "10m", audience: "oauth", issuer: "puretask" }
-    );
+    const state = jwt.sign({ role, redirect }, env.JWT_SECRET, {
+      expiresIn: "10m",
+      audience: "oauth",
+      issuer: "puretask",
+    });
 
     const params = new URLSearchParams({
       client_id: env.GOOGLE_CLIENT_ID,
@@ -1040,9 +1044,9 @@ router.get("/oauth/google/callback", async (req, res: Response) => {
 router.get("/oauth/accounts", auth(), async (req, res: Response) => {
   try {
     const accounts = await getUserOAuthAccounts(req.user!.id);
-    
+
     // Don't expose tokens
-    const safeAccounts = accounts.map(acc => ({
+    const safeAccounts = accounts.map((acc) => ({
       id: acc.id,
       provider: acc.provider,
       providerEmail: acc.provider_email,
@@ -1081,7 +1085,7 @@ router.get("/oauth/accounts", auth(), async (req, res: Response) => {
 router.delete("/oauth/:provider", auth(), async (req, res: Response) => {
   try {
     const provider = req.params.provider as any;
-    
+
     if (!["google", "facebook", "apple", "github"].includes(provider)) {
       return res.status(400).json({
         error: { code: "INVALID_PROVIDER", message: "Invalid OAuth provider" },
@@ -1090,9 +1094,9 @@ router.delete("/oauth/:provider", auth(), async (req, res: Response) => {
 
     await unlinkOAuthAccount(req.user!.id, provider);
 
-    res.json({ 
-      success: true, 
-      message: "OAuth account unlinked" 
+    res.json({
+      success: true,
+      message: "OAuth account unlinked",
     });
   } catch (err) {
     const error = err as Error & { statusCode?: number; code?: string };
@@ -1132,9 +1136,9 @@ router.post("/oauth/set-password", auth(), async (req, res: Response) => {
 
     await setPasswordForOAuthUser(req.user!.id, parsed.password);
 
-    res.json({ 
-      success: true, 
-      message: "Password set successfully" 
+    res.json({
+      success: true,
+      message: "Password set successfully",
     });
   } catch (err) {
     const error = err as Error & { statusCode?: number; code?: string };
@@ -1170,4 +1174,3 @@ router.get("/oauth/can-set-password", auth(), async (req, res: Response) => {
 });
 
 export default router;
-

@@ -1,9 +1,9 @@
 // src/routes/admin/analytics.ts
-import { Router, Response, NextFunction, Request } from 'express';
-import { requireAuth, requireAdmin, AuthedRequest } from '../../middleware/authCanonical';
-import { query } from '../../db/client';
-import { logger } from '../../lib/logger';
-import { AnalyticsData } from '../../types/admin';
+import { Router, Response, NextFunction, Request } from "express";
+import { requireAuth, requireAdmin, AuthedRequest } from "../../middleware/authCanonical";
+import { query } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { AnalyticsData } from "../../types/admin";
 
 const router = Router();
 
@@ -30,27 +30,31 @@ router.use(requireAdmin);
  *       200:
  *         description: Analytics overview
  */
-router.get('/overview', async (req: Request, res: Response, next: NextFunction) => {
+router.get("/overview", async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;
   try {
-    const { period = '30d' } = authedReq.query;
+    const { period = "30d" } = authedReq.query;
 
     // Calculate date range
-    const daysBack = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+    const daysBack = period === "7d" ? 7 : period === "30d" ? 30 : 90;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysBack);
 
     // Revenue analytics
-    const revenueResult = await query(`
+    const revenueResult = await query(
+      `
       SELECT 
         COUNT(*) as total_bookings,
         SUM(total_price) as total_revenue,
         AVG(total_price) as avg_booking_value
       FROM jobs
       WHERE created_at >= $1 AND status IN ('completed', 'paid')
-    `, [startDate]);
+    `,
+      [startDate]
+    );
 
-    const revenueByPeriod = await query(`
+    const revenueByPeriod = await query(
+      `
       SELECT 
         DATE(created_at) as date,
         SUM(total_price) as amount,
@@ -59,9 +63,12 @@ router.get('/overview', async (req: Request, res: Response, next: NextFunction) 
       WHERE created_at >= $1 AND status IN ('completed', 'paid')
       GROUP BY DATE(created_at)
       ORDER BY date ASC
-    `, [startDate]);
+    `,
+      [startDate]
+    );
 
-    const revenueByType = await query(`
+    const revenueByType = await query(
+      `
       SELECT 
         cleaning_type as type,
         SUM(total_price) as amount,
@@ -70,16 +77,21 @@ router.get('/overview', async (req: Request, res: Response, next: NextFunction) 
       WHERE created_at >= $1 AND status IN ('completed', 'paid')
       GROUP BY cleaning_type
       ORDER BY amount DESC
-    `, [startDate]);
+    `,
+      [startDate]
+    );
 
     // Booking analytics
-    const bookingsByStatus = await query(`
+    const bookingsByStatus = await query(
+      `
       SELECT status, COUNT(*) as count
       FROM jobs
       WHERE created_at >= $1
       GROUP BY status
       ORDER BY count DESC
-    `, [startDate]);
+    `,
+      [startDate]
+    );
 
     // Cleaner analytics
     const cleanerStats = await query(`
@@ -105,7 +117,8 @@ router.get('/overview', async (req: Request, res: Response, next: NextFunction) 
         END
     `);
 
-    const topPerformers = await query(`
+    const topPerformers = await query(
+      `
       SELECT 
         cp.user_id as id,
         cp.full_name as name,
@@ -117,7 +130,9 @@ router.get('/overview', async (req: Request, res: Response, next: NextFunction) 
       GROUP BY cp.user_id, cp.full_name, cp.average_rating
       ORDER BY earnings DESC
       LIMIT 10
-    `, [startDate]);
+    `,
+      [startDate]
+    );
 
     // Client analytics
     const clientStats = await query(`
@@ -131,7 +146,8 @@ router.get('/overview', async (req: Request, res: Response, next: NextFunction) 
     `);
 
     // Calculate retention rate
-    const retentionResult = await query(`
+    const retentionResult = await query(
+      `
       SELECT 
         COUNT(DISTINCT CASE WHEN booking_count >= 2 THEN client_email END)::float / 
         NULLIF(COUNT(DISTINCT client_email), 0) as retention_rate
@@ -141,66 +157,68 @@ router.get('/overview', async (req: Request, res: Response, next: NextFunction) 
         WHERE created_at >= $1
         GROUP BY client_email
       ) subquery
-    `, [startDate]);
+    `,
+      [startDate]
+    );
 
     const analyticsData: AnalyticsData = {
       revenue: {
         total: parseFloat(revenueResult.rows[0]?.total_revenue || 0),
-        byPeriod: revenueByPeriod.rows.map(r => ({
+        byPeriod: revenueByPeriod.rows.map((r) => ({
           date: r.date,
-          amount: parseFloat(r.amount)
+          amount: parseFloat(r.amount),
         })),
-        byCleaningType: revenueByType.rows.map(r => ({
+        byCleaningType: revenueByType.rows.map((r) => ({
           type: r.type,
           amount: parseFloat(r.amount),
-          count: parseInt(r.count)
+          count: parseInt(r.count),
         })),
-        change: 0 // TODO: Calculate period-over-period change
+        change: 0, // TODO: Calculate period-over-period change
       },
       bookings: {
         total: parseInt(revenueResult.rows[0]?.total_bookings || 0),
-        byStatus: bookingsByStatus.rows.map(r => ({
+        byStatus: bookingsByStatus.rows.map((r) => ({
           status: r.status,
-          count: parseInt(r.count)
+          count: parseInt(r.count),
         })),
-        byPeriod: revenueByPeriod.rows.map(r => ({
+        byPeriod: revenueByPeriod.rows.map((r) => ({
           date: r.date,
-          count: parseInt(r.count)
+          count: parseInt(r.count),
         })),
-        avgValue: parseFloat(revenueResult.rows[0]?.avg_booking_value || 0)
+        avgValue: parseFloat(revenueResult.rows[0]?.avg_booking_value || 0),
       },
       cleaners: {
         total: parseInt(cleanerStats.rows[0]?.total || 0),
         active: parseInt(cleanerStats.rows[0]?.active || 0),
-        byTier: cleanersByTier.rows.map(r => ({
+        byTier: cleanersByTier.rows.map((r) => ({
           tier: r.tier,
-          count: parseInt(r.count)
+          count: parseInt(r.count),
         })),
-        topPerformers: topPerformers.rows.map(r => ({
+        topPerformers: topPerformers.rows.map((r) => ({
           id: r.id,
           name: r.name,
           earnings: parseFloat(r.earnings),
           rating: parseFloat(r.rating || 0),
-          jobCount: parseInt(r.job_count)
-        }))
+          jobCount: parseInt(r.job_count),
+        })),
       },
       clients: {
         total: parseInt(clientStats.rows[0]?.total || 0),
         active: parseInt(clientStats.rows[0]?.active || 0),
         newThisMonth: parseInt(clientStats.rows[0]?.new_this_month || 0),
-        retentionRate: parseFloat(retentionResult.rows[0]?.retention_rate || 0) * 100
-      }
+        retentionRate: parseFloat(retentionResult.rows[0]?.retention_rate || 0) * 100,
+      },
     };
 
-    logger.info('Admin analytics retrieved', {
+    logger.info("Admin analytics retrieved", {
       adminId: authedReq.user?.id,
-      period
+      period,
     });
 
     res.json(analyticsData);
   } catch (error) {
-    logger.error('Error fetching analytics', { error });
-    res.status(500).json({ error: 'Failed to fetch analytics' });
+    logger.error("Error fetching analytics", { error });
+    res.status(500).json({ error: "Failed to fetch analytics" });
   }
 });
 
@@ -208,20 +226,21 @@ router.get('/overview', async (req: Request, res: Response, next: NextFunction) 
  * GET /admin/analytics/revenue
  * Get detailed revenue analytics
  */
-router.get('/revenue', async (req: Request, res: Response, next: NextFunction) => {
+router.get("/revenue", async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;
   try {
-    const { period = '30d', groupBy = 'day' } = authedReq.query;
+    const { period = "30d", groupBy = "day" } = authedReq.query;
 
-    const daysBack = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+    const daysBack = period === "7d" ? 7 : period === "30d" ? 30 : 90;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysBack);
 
-    let dateFormat = 'YYYY-MM-DD';
-    if (groupBy === 'week') dateFormat = 'IYYY-IW';
-    if (groupBy === 'month') dateFormat = 'YYYY-MM';
+    let dateFormat = "YYYY-MM-DD";
+    if (groupBy === "week") dateFormat = "IYYY-IW";
+    if (groupBy === "month") dateFormat = "YYYY-MM";
 
-    const revenueData = await query(`
+    const revenueData = await query(
+      `
       SELECT 
         TO_CHAR(created_at, $1) as period,
         SUM(total_price) as revenue,
@@ -231,19 +250,21 @@ router.get('/revenue', async (req: Request, res: Response, next: NextFunction) =
       WHERE created_at >= $2 AND status IN ('completed', 'paid')
       GROUP BY TO_CHAR(created_at, $1)
       ORDER BY period ASC
-    `, [dateFormat, startDate]);
+    `,
+      [dateFormat, startDate]
+    );
 
     res.json({
-      data: revenueData.rows.map(r => ({
+      data: revenueData.rows.map((r) => ({
         period: r.period,
         revenue: parseFloat(r.revenue),
         bookingCount: parseInt(r.booking_count),
-        avgBookingValue: parseFloat(r.avg_booking_value)
-      }))
+        avgBookingValue: parseFloat(r.avg_booking_value),
+      })),
     });
   } catch (error) {
-    logger.error('Error fetching revenue analytics', { error });
-    res.status(500).json({ error: 'Failed to fetch revenue analytics' });
+    logger.error("Error fetching revenue analytics", { error });
+    res.status(500).json({ error: "Failed to fetch revenue analytics" });
   }
 });
 
@@ -251,7 +272,7 @@ router.get('/revenue', async (req: Request, res: Response, next: NextFunction) =
  * GET /admin/analytics/platform-metrics
  * Get platform health metrics
  */
-router.get('/platform-metrics', async (req: Request, res: Response, next: NextFunction) => {
+router.get("/platform-metrics", async (req: Request, res: Response, next: NextFunction) => {
   const authedReq = req as AuthedRequest;
   try {
     const metrics = await query(`
@@ -273,13 +294,12 @@ router.get('/platform-metrics', async (req: Request, res: Response, next: NextFu
       totalBookings: parseInt(metrics.rows[0].total_bookings),
       upcomingBookings: parseInt(metrics.rows[0].upcoming_bookings),
       completedBookings: parseInt(metrics.rows[0].completed_bookings),
-      avgCleanerRating: parseFloat(metrics.rows[0].avg_cleaner_rating || 0).toFixed(2)
+      avgCleanerRating: parseFloat(metrics.rows[0].avg_cleaner_rating || 0).toFixed(2),
     });
   } catch (error) {
-    logger.error('Error fetching platform metrics', { error });
-    res.status(500).json({ error: 'Failed to fetch platform metrics' });
+    logger.error("Error fetching platform metrics", { error });
+    res.status(500).json({ error: "Failed to fetch platform metrics" });
   }
 });
 
 export default router;
-

@@ -27,13 +27,11 @@ const DEFAULT_CONFIG: Required<RetryConfig> = {
  */
 function isRetryableError(error: any, retryableErrors: string[]): boolean {
   if (!error) return false;
-  
+
   const errorCode = error.code || error.message || "";
   const errorString = String(errorCode).toUpperCase();
-  
-  return retryableErrors.some((retryable) => 
-    errorString.includes(retryable.toUpperCase())
-  );
+
+  return retryableErrors.some((retryable) => errorString.includes(retryable.toUpperCase()));
 }
 
 /**
@@ -63,13 +61,10 @@ export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   config: RetryConfig = {}
 ): Promise<T> {
-  const {
-    maxRetries,
-    initialDelay,
-    maxDelay,
-    backoffMultiplier,
-    retryableErrors,
-  } = { ...DEFAULT_CONFIG, ...config };
+  const { maxRetries, initialDelay, maxDelay, backoffMultiplier, retryableErrors } = {
+    ...DEFAULT_CONFIG,
+    ...config,
+  };
 
   let lastError: any;
 
@@ -98,7 +93,7 @@ export async function retryWithBackoff<T>(
       }
 
       const delay = calculateDelay(attempt, initialDelay, maxDelay, backoffMultiplier);
-      
+
       logger.warn("retry_attempt", {
         attempt: attempt + 1,
         maxRetries,
@@ -118,7 +113,7 @@ export async function retryWithBackoff<T>(
  */
 export function isNetworkError(error: any): boolean {
   if (!error) return false;
-  
+
   const networkErrorCodes = [
     "ECONNRESET",
     "ETIMEDOUT",
@@ -127,7 +122,7 @@ export function isNetworkError(error: any): boolean {
     "ENETUNREACH",
     "EHOSTUNREACH",
   ];
-  
+
   const errorCode = error.code || "";
   return networkErrorCodes.includes(errorCode);
 }
@@ -146,14 +141,14 @@ export function isOffline(): boolean {
 export function getUserFriendlyError(error: any): string {
   if (!error) return "An unexpected error occurred";
 
+  // Timeout errors (check before generic network)
+  if (error.code === "ETIMEDOUT" || error.message?.includes("timeout")) {
+    return "Request timed out. Please try again.";
+  }
+
   // Network errors
   if (isNetworkError(error)) {
     return "Network connection failed. Please check your internet connection and try again.";
-  }
-
-  // Timeout errors
-  if (error.code === "ETIMEDOUT" || error.message?.includes("timeout")) {
-    return "Request timed out. Please try again.";
   }
 
   // Server errors

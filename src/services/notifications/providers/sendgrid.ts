@@ -30,7 +30,7 @@ export class SendGridProvider implements NotificationProvider {
       const response = await fetch(SENDGRID_API_URL, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${env.SENDGRID_API_KEY}`,
+          Authorization: `Bearer ${env.SENDGRID_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -105,4 +105,3 @@ export class SendGridProvider implements NotificationProvider {
 }
 
 export const sendGridProvider = new SendGridProvider();
-

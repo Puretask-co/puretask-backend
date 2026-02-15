@@ -20,10 +20,7 @@ export interface SeasonRule {
 }
 
 export class SeasonService {
-  async getActiveSeasons(params: {
-    region_id?: string | null;
-    at?: Date;
-  }): Promise<SeasonRule[]> {
+  async getActiveSeasons(params: { region_id?: string | null; at?: Date }): Promise<SeasonRule[]> {
     const regionId = params.region_id ?? null;
     const at = params.at ?? new Date();
 
@@ -64,10 +61,7 @@ export class SeasonService {
    * Apply seasonal multipliers to a metric snapshot.
    * Does not mutate stored truth; only affects progress counting.
    */
-  applyMultipliers(params: {
-    metric_snapshot: Record<string, unknown>;
-    seasons: SeasonRule[];
-  }): {
+  applyMultipliers(params: { metric_snapshot: Record<string, unknown>; seasons: SeasonRule[] }): {
     snapshot: Record<string, unknown>;
     applied: Array<{ season_id: string; metric_key: string; multiplier: number }>;
   } {

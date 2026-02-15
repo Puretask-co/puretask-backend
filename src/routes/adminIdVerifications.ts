@@ -3,7 +3,12 @@
 
 import { Router, Response } from "express";
 import { z } from "zod";
-import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import {
+  requireAuth,
+  requireAdmin,
+  AuthedRequest,
+  authedHandler,
+} from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import { query } from "../db/client";
 
@@ -39,12 +44,14 @@ adminIdVerificationsRouter.use(requireAdmin);
  *       403:
  *         description: Forbidden - admin only
  */
-adminIdVerificationsRouter.get("/", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const statusFilter = req.query.status as string | undefined;
-    const search = req.query.search as string | undefined;
+adminIdVerificationsRouter.get(
+  "/",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const statusFilter = req.query.status as string | undefined;
+      const search = req.query.search as string | undefined;
 
-    let sql = `
+      let sql = `
       SELECT 
         iv.*,
         json_build_object(
@@ -59,42 +66,43 @@ adminIdVerificationsRouter.get("/", authedHandler(async (req: AuthedRequest, res
       WHERE 1=1
     `;
 
-    const params: any[] = [];
-    let paramIndex = 1;
+      const params: any[] = [];
+      let paramIndex = 1;
 
-    if (statusFilter && statusFilter !== "all") {
-      sql += ` AND iv.status = $${paramIndex}`;
-      params.push(statusFilter);
-      paramIndex++;
-    }
+      if (statusFilter && statusFilter !== "all") {
+        sql += ` AND iv.status = $${paramIndex}`;
+        params.push(statusFilter);
+        paramIndex++;
+      }
 
-    if (search) {
-      sql += ` AND (
+      if (search) {
+        sql += ` AND (
         cp.first_name ILIKE $${paramIndex} OR
         cp.last_name ILIKE $${paramIndex} OR
         iv.document_type ILIKE $${paramIndex}
       )`;
-      params.push(`%${search}%`);
-      paramIndex++;
+        params.push(`%${search}%`);
+        paramIndex++;
+      }
+
+      sql += ` ORDER BY iv.created_at DESC`;
+
+      const result = await query(sql, params);
+
+      const verifications = result.rows.map((row) => ({
+        ...row,
+        cleaner_profile: row.cleaner_profile,
+      }));
+
+      res.json({ verifications, count: verifications.length });
+    } catch (error: any) {
+      logger.error("get_id_verifications_failed", { error: error.message });
+      res.status(500).json({
+        error: { code: "GET_VERIFICATIONS_FAILED", message: "Failed to get ID verifications" },
+      });
     }
-
-    sql += ` ORDER BY iv.created_at DESC`;
-
-    const result = await query(sql, params);
-
-    const verifications = result.rows.map((row) => ({
-      ...row,
-      cleaner_profile: row.cleaner_profile,
-    }));
-
-    res.json({ verifications, count: verifications.length });
-  } catch (error: any) {
-    logger.error("get_id_verifications_failed", { error: error.message });
-    res.status(500).json({
-      error: { code: "GET_VERIFICATIONS_FAILED", message: "Failed to get ID verifications" },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -119,12 +127,14 @@ adminIdVerificationsRouter.get("/", authedHandler(async (req: AuthedRequest, res
  *       403:
  *         description: Forbidden - admin only
  */
-adminIdVerificationsRouter.get("/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
+adminIdVerificationsRouter.get(
+  "/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
 
-    const result = await query(
-      `SELECT 
+      const result = await query(
+        `SELECT 
         iv.*,
         json_build_object(
           'id', cp.id,
@@ -136,29 +146,30 @@ adminIdVerificationsRouter.get("/:id", authedHandler(async (req: AuthedRequest, 
       FROM id_verifications iv
       JOIN cleaner_profiles cp ON cp.id = iv.cleaner_id
       WHERE iv.id = $1`,
-      [id]
-    );
+        [id]
+      );
 
-    if (result.rows.length === 0) {
-      res.status(404).json({
-        error: { code: "NOT_FOUND", message: "ID verification not found" },
+      if (result.rows.length === 0) {
+        res.status(404).json({
+          error: { code: "NOT_FOUND", message: "ID verification not found" },
+        });
+        return;
+      }
+
+      res.json({
+        verification: {
+          ...result.rows[0],
+          cleaner_profile: result.rows[0].cleaner_profile,
+        },
       });
-      return;
+    } catch (error: any) {
+      logger.error("get_id_verification_failed", { error: error.message });
+      res.status(500).json({
+        error: { code: "GET_VERIFICATION_FAILED", message: "Failed to get ID verification" },
+      });
     }
-
-    res.json({
-      verification: {
-        ...result.rows[0],
-        cleaner_profile: result.rows[0].cleaner_profile,
-      },
-    });
-  } catch (error: any) {
-    logger.error("get_id_verification_failed", { error: error.message });
-    res.status(500).json({
-      error: { code: "GET_VERIFICATION_FAILED", message: "Failed to get ID verification" },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -217,43 +228,43 @@ adminIdVerificationsRouter.get("/:id", authedHandler(async (req: AuthedRequest, 
  *       403:
  *         description: Forbidden - admin only
  */
-adminIdVerificationsRouter.patch("/:id/status", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const schema = z.object({
-      status: z.enum(["pending", "verified", "failed"]),
-      notes: z.string().optional(),
-    });
+adminIdVerificationsRouter.patch(
+  "/:id/status",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const schema = z.object({
+        status: z.enum(["pending", "verified", "failed"]),
+        notes: z.string().optional(),
+      });
 
-    const body = schema.parse(req.body);
-    const { id } = req.params;
-    const adminId = req.user!.id;
+      const body = schema.parse(req.body);
+      const { id } = req.params;
+      const adminId = req.user!.id;
 
-    const updateData: any = {
-      status: body.status,
-      reviewed_by: adminId,
-      reviewed_at: new Date().toISOString(),
-    };
+      const updateData: any = {
+        status: body.status,
+        reviewed_by: adminId,
+        reviewed_at: new Date().toISOString(),
+      };
 
-    if (body.notes) {
-      updateData.notes = body.notes;
-    }
+      if (body.notes) {
+        updateData.notes = body.notes;
+      }
 
-    // If verified, set expiry to 5 years from now
-    if (body.status === "verified") {
-      updateData.verified_at = new Date().toISOString();
-      updateData.expires_at = new Date(
-        Date.now() + 5 * 365 * 24 * 60 * 60 * 1000
-      ).toISOString();
-    }
+      // If verified, set expiry to 5 years from now
+      if (body.status === "verified") {
+        updateData.verified_at = new Date().toISOString();
+        updateData.expires_at = new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000).toISOString();
+      }
 
-    // If failed, clear verified_at and expires_at
-    if (body.status === "failed") {
-      updateData.verified_at = null;
-      updateData.expires_at = null;
-    }
+      // If failed, clear verified_at and expires_at
+      if (body.status === "failed") {
+        updateData.verified_at = null;
+        updateData.expires_at = null;
+      }
 
-    await query(
-      `UPDATE id_verifications
+      await query(
+        `UPDATE id_verifications
        SET status = $1,
            reviewed_by = $2,
            reviewed_at = $3,
@@ -262,38 +273,39 @@ adminIdVerificationsRouter.patch("/:id/status", authedHandler(async (req: Authed
            expires_at = $6,
            updated_at = NOW()
        WHERE id = $7`,
-      [
-        updateData.status,
-        updateData.reviewed_by,
-        updateData.reviewed_at,
-        updateData.notes || null,
-        updateData.verified_at || null,
-        updateData.expires_at || null,
-        id,
-      ]
-    );
+        [
+          updateData.status,
+          updateData.reviewed_by,
+          updateData.reviewed_at,
+          updateData.notes || null,
+          updateData.verified_at || null,
+          updateData.expires_at || null,
+          id,
+        ]
+      );
 
-    logger.info("id_verification_status_updated", {
-      verificationId: id,
-      status: body.status,
-      adminId,
-    });
-
-    res.json({ success: true, status: body.status });
-  } catch (error: any) {
-    if (error.issues) {
-      res.status(400).json({
-        error: { code: "VALIDATION_ERROR", message: "Invalid input", details: error.issues },
+      logger.info("id_verification_status_updated", {
+        verificationId: id,
+        status: body.status,
+        adminId,
       });
-      return;
-    }
 
-    logger.error("update_id_verification_status_failed", { error: error.message });
-    res.status(500).json({
-      error: { code: "UPDATE_STATUS_FAILED", message: "Failed to update status" },
-    });
-  }
-}));
+      res.json({ success: true, status: body.status });
+    } catch (error: any) {
+      if (error.issues) {
+        res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: "Invalid input", details: error.issues },
+        });
+        return;
+      }
+
+      logger.error("update_id_verification_status_failed", { error: error.message });
+      res.status(500).json({
+        error: { code: "UPDATE_STATUS_FAILED", message: "Failed to update status" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -318,44 +330,44 @@ adminIdVerificationsRouter.patch("/:id/status", authedHandler(async (req: Authed
  *       403:
  *         description: Forbidden - admin only
  */
-adminIdVerificationsRouter.get("/:id/document-url", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
+adminIdVerificationsRouter.get(
+  "/:id/document-url",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
 
-    const result = await query(
-      `SELECT document_url FROM id_verifications WHERE id = $1`,
-      [id]
-    );
+      const result = await query(`SELECT document_url FROM id_verifications WHERE id = $1`, [id]);
 
-    if (result.rows.length === 0) {
-      res.status(404).json({
-        error: { code: "NOT_FOUND", message: "ID verification not found" },
+      if (result.rows.length === 0) {
+        res.status(404).json({
+          error: { code: "NOT_FOUND", message: "ID verification not found" },
+        });
+        return;
+      }
+
+      const documentUrl = result.rows[0].document_url;
+
+      if (!documentUrl) {
+        res.status(404).json({
+          error: { code: "NO_DOCUMENT", message: "Document URL not found" },
+        });
+        return;
+      }
+
+      // For now, return the URL directly
+      // In production with S3/Cloudinary, generate a signed URL here
+      // For local storage, we can serve it directly or create a signed URL
+      res.json({
+        document_url: documentUrl,
+        expires_in: 300, // 5 minutes
       });
-      return;
-    }
-
-    const documentUrl = result.rows[0].document_url;
-
-    if (!documentUrl) {
-      res.status(404).json({
-        error: { code: "NO_DOCUMENT", message: "Document URL not found" },
+    } catch (error: any) {
+      logger.error("get_document_url_failed", { error: error.message });
+      res.status(500).json({
+        error: { code: "GET_DOCUMENT_URL_FAILED", message: "Failed to get document URL" },
       });
-      return;
     }
-
-    // For now, return the URL directly
-    // In production with S3/Cloudinary, generate a signed URL here
-    // For local storage, we can serve it directly or create a signed URL
-    res.json({
-      document_url: documentUrl,
-      expires_in: 300, // 5 minutes
-    });
-  } catch (error: any) {
-    logger.error("get_document_url_failed", { error: error.message });
-    res.status(500).json({
-      error: { code: "GET_DOCUMENT_URL_FAILED", message: "Failed to get document URL" },
-    });
-  }
-}));
+  })
+);
 
 export default adminIdVerificationsRouter;

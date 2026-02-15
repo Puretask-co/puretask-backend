@@ -82,8 +82,7 @@ rescheduleRouter.post("/job/:jobId", async (req: AuthedRequest, res) => {
     }
 
     // Determine requestedBy based on user role
-    const requestedBy: 'client' | 'cleaner' = 
-      userRole === 'cleaner' ? 'cleaner' : 'client';
+    const requestedBy: "client" | "cleaner" = userRole === "cleaner" ? "cleaner" : "client";
 
     // Verify user owns this job
     const job = await getJobForUser(jobId, Number(userId), requestedBy);
@@ -94,8 +93,8 @@ rescheduleRouter.post("/job/:jobId", async (req: AuthedRequest, res) => {
     // Check if reschedule limit reached
     const existingCount = await coreDb.rescheduleEvents.countForJob(jobId);
     if (existingCount >= RESCHEDULE_CONFIG.reasonable.maxPreviousReschedules + 1) {
-      return res.status(400).json({ 
-        error: "Maximum reschedules reached for this job. Please cancel and create a new booking." 
+      return res.status(400).json({
+        error: "Maximum reschedules reached for this job. Please cancel and create a new booking.",
       });
     }
 
@@ -118,8 +117,8 @@ rescheduleRouter.post("/job/:jobId", async (req: AuthedRequest, res) => {
       cleaner: {
         id: job.cleanerId,
         reliabilityScore: 70,
-        reliabilityTier: 'Semi Pro',
-        flexibilityStatus: 'normal',
+        reliabilityTier: "Semi Pro",
+        flexibilityStatus: "normal",
         flexibilityBadgeActive: false,
       },
       requestedBy,
@@ -148,7 +147,6 @@ rescheduleRouter.post("/job/:jobId", async (req: AuthedRequest, res) => {
         tStartNew: result.tStartNew.toISOString(),
       },
     });
-
   } catch (err) {
     logger.error("reschedule_request_error", {
       jobId,
@@ -211,7 +209,7 @@ rescheduleRouter.post("/:id/accept", async (req: AuthedRequest, res) => {
     }
 
     // Determine actor
-    const actor: 'client' | 'cleaner' = userRole === 'cleaner' ? 'cleaner' : 'client';
+    const actor: "client" | "cleaner" = userRole === "cleaner" ? "cleaner" : "client";
 
     // Verify this user is the requestedTo party
     if (actor !== reschedule.requestedTo) {
@@ -221,7 +219,7 @@ rescheduleRouter.post("/:id/accept", async (req: AuthedRequest, res) => {
     // Accept the reschedule
     const result = await RescheduleServiceV2.respond({
       rescheduleEvent: reschedule,
-      action: 'accept',
+      action: "accept",
       actor,
     });
 
@@ -239,7 +237,6 @@ rescheduleRouter.post("/:id/accept", async (req: AuthedRequest, res) => {
         newStartTime: result.tStartNew.toISOString(),
       },
     });
-
   } catch (err) {
     logger.error("reschedule_accept_error", {
       rescheduleId,
@@ -303,7 +300,7 @@ rescheduleRouter.post("/:id/decline", async (req: AuthedRequest, res) => {
     }
 
     // Determine actor
-    const actor: 'client' | 'cleaner' = userRole === 'cleaner' ? 'cleaner' : 'client';
+    const actor: "client" | "cleaner" = userRole === "cleaner" ? "cleaner" : "client";
 
     // Verify this user is the requestedTo party
     if (actor !== reschedule.requestedTo) {
@@ -313,7 +310,7 @@ rescheduleRouter.post("/:id/decline", async (req: AuthedRequest, res) => {
     // Decline the reschedule
     const result = await RescheduleServiceV2.respond({
       rescheduleEvent: reschedule,
-      action: 'decline',
+      action: "decline",
       actor,
       declineReasonCode: body.declineReasonCode || null,
     });
@@ -334,7 +331,6 @@ rescheduleRouter.post("/:id/decline", async (req: AuthedRequest, res) => {
         message: "The original booking time remains in effect.",
       },
     });
-
   } catch (err) {
     logger.error("reschedule_decline_error", {
       rescheduleId,
@@ -388,7 +384,6 @@ rescheduleRouter.get("/:id", async (req: AuthedRequest, res) => {
       declinedBy: reschedule.declinedBy,
       declineReasonCode: reschedule.declineReasonCode,
     });
-
   } catch (err) {
     logger.error("reschedule_get_error", {
       rescheduleId,
@@ -435,7 +430,7 @@ rescheduleRouter.get("/job/:jobId", async (req: AuthedRequest, res) => {
 
     return res.json({
       jobId,
-      reschedules: reschedules.map(r => ({
+      reschedules: reschedules.map((r) => ({
         id: r.id,
         requestedBy: r.requestedBy,
         requestedTo: r.requestedTo,
@@ -446,7 +441,6 @@ rescheduleRouter.get("/job/:jobId", async (req: AuthedRequest, res) => {
         tStartNew: r.tStartNew.toISOString(),
       })),
     });
-
   } catch (err) {
     logger.error("reschedules_list_error", {
       jobId,
@@ -463,9 +457,9 @@ rescheduleRouter.get("/job/:jobId", async (req: AuthedRequest, res) => {
 async function getJobForUser(
   jobId: number,
   userId: number,
-  role: 'client' | 'cleaner'
+  role: "client" | "cleaner"
 ): Promise<{ cleanerId: number; status: string; heldCredits: number } | null> {
-  const field = role === 'client' ? 'client_id' : 'cleaner_id';
+  const field = role === "client" ? "client_id" : "cleaner_id";
   const result = await query<{ cleaner_id: string; status: string; credit_amount: string }>(
     `SELECT cleaner_id, status, credit_amount
      FROM jobs WHERE id = $1 AND ${field} = $2`,

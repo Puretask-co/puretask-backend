@@ -63,10 +63,9 @@ export async function createCreditCheckoutSession(options: {
   }
 
   // Get user email for Stripe
-  const userResult = await query<{ email: string }>(
-    `SELECT email FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<{ email: string }>(`SELECT email FROM users WHERE id = $1`, [
+    userId,
+  ]);
 
   if (userResult.rows.length === 0) {
     throw new Error("User not found");
@@ -132,9 +131,7 @@ export async function createCreditCheckoutSession(options: {
 /**
  * Handle successful checkout (called from webhook)
  */
-export async function handleCheckoutCompleted(
-  session: Stripe.Checkout.Session
-): Promise<void> {
+export async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
   const metadata = session.metadata;
 
   if (metadata?.type !== "credit_purchase") {

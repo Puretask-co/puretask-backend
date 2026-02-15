@@ -10,9 +10,9 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import { CleanerFlexProfile, ClientFlexProfile } from './types';
-import { clampScore } from './scoring';
-import { FLEXIBILITY_CONFIG as cfg } from './config';
+import { CleanerFlexProfile, ClientFlexProfile } from "./types";
+import { clampScore } from "./scoring";
+import { FLEXIBILITY_CONFIG as cfg } from "./config";
 
 // ============================================
 // Main Service
@@ -141,11 +141,12 @@ export class FlexibilityService {
     };
   }
 
-  private static async getCleanerFlexProfile(cleanerId: number): Promise<CleanerFlexProfile | null> {
-    const result = await query<any>(
-      `SELECT * FROM cleaner_flex_profiles WHERE cleaner_id = $1`,
-      [String(cleanerId)]
-    );
+  private static async getCleanerFlexProfile(
+    cleanerId: number
+  ): Promise<CleanerFlexProfile | null> {
+    const result = await query<any>(`SELECT * FROM cleaner_flex_profiles WHERE cleaner_id = $1`, [
+      String(cleanerId),
+    ]);
 
     if (result.rows.length === 0) return null;
 
@@ -277,14 +278,8 @@ export class FlexibilityService {
     graceTotal: number;
     paymentIssues: number;
   }): number {
-    const {
-      lateCancels,
-      noShows,
-      highInconvenience,
-      graceUsed,
-      graceTotal,
-      paymentIssues,
-    } = params;
+    const { lateCancels, noShows, highInconvenience, graceUsed, graceTotal, paymentIssues } =
+      params;
 
     const weights = cfg.client.weights;
     const maxPenalties = cfg.client.maxPenalties;
@@ -311,7 +306,10 @@ export class FlexibilityService {
     return clampScore(score, 0, 1);
   }
 
-  private static async getClientRescheduleStats(clientId: number, since: Date): Promise<{
+  private static async getClientRescheduleStats(
+    clientId: number,
+    since: Date
+  ): Promise<{
     rescheduleCount: number;
   }> {
     const result = await query<{ count: string }>(
@@ -324,7 +322,10 @@ export class FlexibilityService {
     return { rescheduleCount: Number(result.rows[0]?.count || 0) };
   }
 
-  private static async getClientCancelStats(clientId: number, since: Date): Promise<{
+  private static async getClientCancelStats(
+    clientId: number,
+    since: Date
+  ): Promise<{
     lateCancelCount: number;
     noShowCount: number;
   }> {
@@ -351,7 +352,10 @@ export class FlexibilityService {
     };
   }
 
-  private static async getClientInconvenienceStats(clientId: number, since: Date): Promise<{
+  private static async getClientInconvenienceStats(
+    clientId: number,
+    since: Date
+  ): Promise<{
     highInconvenienceCount: number;
   }> {
     const result = await query<{ count: string }>(
@@ -365,7 +369,10 @@ export class FlexibilityService {
     return { highInconvenienceCount: Number(result.rows[0]?.count || 0) };
   }
 
-  private static async getClientPaymentStats(clientId: number, since: Date): Promise<{
+  private static async getClientPaymentStats(
+    clientId: number,
+    since: Date
+  ): Promise<{
     paymentIssues: number;
   }> {
     const result = await query<{ count: string }>(
@@ -382,7 +389,10 @@ export class FlexibilityService {
     used: number;
     total: number;
   }> {
-    const result = await query<{ grace_cancellations_used: number; grace_cancellations_total: number }>(
+    const result = await query<{
+      grace_cancellations_used: number;
+      grace_cancellations_total: number;
+    }>(
       `SELECT 
         COALESCE(grace_cancellations_used, 0) as grace_cancellations_used,
         COALESCE(grace_cancellations_total, 2) as grace_cancellations_total
@@ -437,10 +447,8 @@ export class FlexibilityService {
   // ========================================
 
   private static async getActiveCleaners(): Promise<{ id: number }[]> {
-    const result = await query<{ user_id: string }>(
-      `SELECT user_id FROM cleaner_profiles`
-    );
-    return result.rows.map(row => ({ id: Number(row.user_id) }));
+    const result = await query<{ user_id: string }>(`SELECT user_id FROM cleaner_profiles`);
+    return result.rows.map((row) => ({ id: Number(row.user_id) }));
   }
 
   private static async getActiveClients(): Promise<{ id: number }[]> {
@@ -449,7 +457,6 @@ export class FlexibilityService {
        WHERE u.role = 'client'
        AND EXISTS (SELECT 1 FROM jobs j WHERE j.client_id = u.id AND j.created_at > NOW() - INTERVAL '60 days')`
     );
-    return result.rows.map(row => ({ id: Number(row.id) }));
+    return result.rows.map((row) => ({ id: Number(row.id) }));
   }
 }
-

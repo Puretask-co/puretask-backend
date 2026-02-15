@@ -66,7 +66,7 @@ export class BadgeService {
         try {
           const result = await computeMetric(cleanerId, key, {});
           const v = result?.value;
-          snapshot[key] = typeof v === "number" ? v : typeof v === "boolean" ? v : Number(v) ?? 0;
+          snapshot[key] = typeof v === "number" ? v : typeof v === "boolean" ? v : (Number(v) ?? 0);
         } catch {
           snapshot[key] = 0;
         }

@@ -121,4 +121,3 @@ export function sanitizeFilterKeys(
   }
   return out;
 }
-

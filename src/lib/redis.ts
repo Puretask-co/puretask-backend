@@ -83,4 +83,3 @@ export async function closeRedis(): Promise<void> {
 export function isRedisAvailable(): boolean {
   return redisClient !== null && redisClient.isOpen;
 }
-

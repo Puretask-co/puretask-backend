@@ -25,7 +25,7 @@ interface NightlyRecomputeResult {
 
 export async function runNightlyScoreRecompute(): Promise<NightlyRecomputeResult> {
   const startTime = Date.now();
-  
+
   logger.info("nightly_score_recompute_started");
 
   const result: NightlyRecomputeResult = {
@@ -58,7 +58,6 @@ export async function runNightlyScoreRecompute(): Promise<NightlyRecomputeResult
     // 5. Recompute client flexibility profiles
     logger.info("running_client_flexibility_recompute");
     result.clientFlexibility = await FlexibilityService.recomputeClientFlexProfiles();
-
   } catch (err) {
     logger.error("nightly_score_recompute_error", {
       error: (err as Error).message,
@@ -89,4 +88,3 @@ if (require.main === module) {
       process.exit(1);
     });
 }
-

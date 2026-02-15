@@ -4,17 +4,18 @@
 
 ## Quick Start (Fresh Database)
 
-For a **fresh Neon database**, run these two files in order:
+For a **fresh Neon database**, run these files in order:
 
 ```bash
 # 1. Run the COMPLETE consolidated schema (creates all tables, functions, views)
+#    Includes: core, V2–V4, migrations 026–056 (AI assistant, gamification, etc.), hardening 901–906
 psql $DATABASE_URL -f DB/migrations/000_COMPLETE_CONSOLIDATED_SCHEMA.sql
 
 # 2. (Optional) Run the test seed data
 psql $DATABASE_URL -f DB/migrations/000_SEED_TEST_DATA.sql
 ```
 
-That's it! Your database is ready.
+That's it! Your database is ready. The consolidated schema includes migrations 001–056 and hardening 901–906.
 
 ---
 
@@ -22,8 +23,9 @@ That's it! Your database is ready.
 
 | File | Purpose |
 |------|---------|
-| `000_COMPLETE_CONSOLIDATED_SCHEMA.sql` | **Complete schema** - migrations 001–025 + hardening 901–905 |
+| `000_COMPLETE_CONSOLIDATED_SCHEMA.sql` | **Complete schema** - migrations 001–056 + hardening 901–906 |
 | `000_CONSOLIDATED_SCHEMA.sql` | Legacy schema (001–019 only) |
+| `000_NEON_PATCH_test_db_align.sql` | **Schema alignment** - FKs, columns, enums for existing Neon DBs (test + production). Run via `npm run db:patch:production` for prod. |
 | `000_SEED_TEST_DATA.sql` | Test data for development |
 | `001_init.sql` → `025_...` | Historical incremental migrations (for reference) |
 

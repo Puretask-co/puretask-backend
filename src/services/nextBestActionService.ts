@@ -52,22 +52,25 @@ export class NextBestActionService {
 
     const loader = getRuntimeConfigLoader();
     const bundle = await loader.getBundle(region_id);
-    const goalsRaw = Array.isArray(bundle.goals) ? bundle.goals : (bundle.goals as { goals?: unknown[] })?.goals ?? [];
+    const goalsRaw = Array.isArray(bundle.goals)
+      ? bundle.goals
+      : ((bundle.goals as { goals?: unknown[] })?.goals ?? []);
     const rewardsRaw = Array.isArray(bundle.rewards)
       ? bundle.rewards
-      : (bundle.rewards as { rewards?: unknown[] })?.rewards ?? [];
+      : ((bundle.rewards as { rewards?: unknown[] })?.rewards ?? []);
 
     const goals = (goalsRaw as AnyJson[]).filter((g) => g && g.id);
-    const rewards = (rewardsRaw as AnyJson[]) as AnyJson[];
+    const rewards = rewardsRaw as AnyJson[] as AnyJson[];
     const rewardsById = new Map<string, AnyJson>();
     for (const r of rewards) rewardsById.set(String(r.id), r);
 
     const metricSnapshot = await this.badgeService.buildMetricSnapshot(cleaner_id);
     const seasons = await this.seasonService.getActiveSeasons({ region_id, at: new Date() });
-    const { snapshot: multipliedSnapshot, applied: seasonBoosts } = this.seasonService.applyMultipliers({
-      metric_snapshot: metricSnapshot as Record<string, unknown>,
-      seasons,
-    });
+    const { snapshot: multipliedSnapshot, applied: seasonBoosts } =
+      this.seasonService.applyMultipliers({
+        metric_snapshot: metricSnapshot as Record<string, unknown>,
+        seasons,
+      });
 
     const completedGoalIds = await this.getCompletedGoalIds(cleaner_id);
 
@@ -107,7 +110,8 @@ export class NextBestActionService {
     const target = Number(goal.target ?? 0);
     const current = Number(snapshot[metricKey] ?? 0);
     const remaining = Math.max(target - current, 0);
-    const percent = target > 0 ? Math.min((current / target) * 100, 100) : remaining === 0 ? 100 : 0;
+    const percent =
+      target > 0 ? Math.min((current / target) * 100, 100) : remaining === 0 ? 100 : 0;
 
     const rewardIds = (goal.reward_ids as string[]) ?? [];
     const reward_preview = rewardIds.map((rid) => {
@@ -156,7 +160,11 @@ export class NextBestActionService {
     }
     if (kind === "visibility_boost" || kind === "visibility_multiplier") {
       const m = Number(params.multiplier ?? 1.0);
-      const d = params.duration_days ? ` for ${params.duration_days} days` : params.duration_hours ? ` for ${params.duration_hours}h` : "";
+      const d = params.duration_days
+        ? ` for ${params.duration_days} days`
+        : params.duration_hours
+          ? ` for ${params.duration_hours}h`
+          : "";
       return `Visibility boost x${m}${d}`;
     }
     if (kind === "exposure_window" || kind === "early_exposure_minutes") {
@@ -173,7 +181,7 @@ export class NextBestActionService {
       const uses = Number(params.uses ?? 1);
       return `Instant payout fee waived (${uses} uses)`;
     }
-    return String(r.name ?? r.label ?? kind || "Reward");
+    return String((r.name ?? r.label ?? kind) || "Reward");
   }
 
   private rewardAmountCents(r: AnyJson): number | null {
@@ -184,7 +192,10 @@ export class NextBestActionService {
     return usd > 0 ? Math.round(usd * 100) : null;
   }
 
-  private earningsHint(metricKey: string, preview: NextBestAction["reward_preview"]): string | null {
+  private earningsHint(
+    metricKey: string,
+    preview: NextBestAction["reward_preview"]
+  ): string | null {
     const hasVisibility = preview.some(
       (p) => p.kind.includes("visibility") || p.kind.includes("exposure")
     );
@@ -198,9 +209,14 @@ export class NextBestActionService {
     return null;
   }
 
-  private async getPauseStatus(cleaner_id: string): Promise<{ paused: boolean; pause_reasons: string[] }> {
+  private async getPauseStatus(
+    cleaner_id: string
+  ): Promise<{ paused: boolean; pause_reasons: string[] }> {
     try {
-      const r = await query<{ maintenance_paused: boolean; maintenance_paused_reason: string | null }>(
+      const r = await query<{
+        maintenance_paused: boolean;
+        maintenance_paused_reason: string | null;
+      }>(
         `SELECT maintenance_paused, maintenance_paused_reason
          FROM cleaner_level_progress WHERE cleaner_id = $1`,
         [cleaner_id]
@@ -208,7 +224,10 @@ export class NextBestActionService {
       const row = r.rows[0];
       if (!row) return { paused: false, pause_reasons: [] };
       const reasons =
-        row.maintenance_paused_reason?.split(";").map((s) => s.trim()).filter(Boolean) ?? [];
+        row.maintenance_paused_reason
+          ?.split(";")
+          .map((s) => s.trim())
+          .filter(Boolean) ?? [];
       return { paused: Boolean(row.maintenance_paused), pause_reasons: reasons };
     } catch {
       return { paused: false, pause_reasons: [] };

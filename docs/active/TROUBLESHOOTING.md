@@ -97,6 +97,32 @@ echo $DATABASE_URL
 - Check token is not expired
 - Verify user still exists
 
+## CI / Pre-commit Failures
+
+### Format Check Fails (`npm run format:check`)
+
+**Cause:** Code doesn't match Prettier formatting.
+
+**Fix:**
+```bash
+npm run format
+```
+
+Then commit the formatted changes.
+
+### Lint Fails
+
+**Cause:** ESLint errors or warnings (depending on config).
+
+**Fix:**
+```bash
+npm run lint
+# Fix reported issues; some auto-fixable with:
+npm run lint -- --fix
+```
+
+---
+
 ## Rate Limiting Issues
 
 ### Symptoms
@@ -290,6 +316,30 @@ Then paste `DB/neon/gamification_uuid.sql` into Neon SQL Editor (run after your 
 **Option B: Manual edits**
 
 When running migrations 043–056 on Neon where `users.id` is UUID, replace all `cleaner_id TEXT` with `cleaner_id UUID` (and `created_by`/`updated_by`/`actor_admin_user_id` in 051). Remove `BEGIN;`/`COMMIT;` to avoid rollback issues.
+
+### Test DB with Neon (users.id UUID)
+
+For integration tests against a Neon test DB with `users.id` UUID, run `000_NEON_PATCH_test_db_align.sql` after schema setup. It fixes FKs (payouts, cleaner_availability → users), `is_cleaner_available` (uuid/text cast), and adds `job_event_type` values. See `scripts/setup-test-db.js` for the full patch sequence.
+
+### Production schema alignment
+
+Same patch applies to production Neon DBs with schema drift. Run `npm run db:patch:production` with `PRODUCTION_DATABASE_URL` set. Back up first. See [RUNBOOK.md](./RUNBOOK.md) section 1.1.
+
+### 500 errors: Admin KPIs, Messages unread, Job transitions
+
+**Root cause:** Schema/code mismatches. Common fixes:
+
+1. **Admin KPIs (GET /admin/kpis)** — `getAdminKPIs` previously queried `credit_ledger` with `amount`/`direction`; schema uses `delta_credits`. Fixed in `adminService.ts` to use `SUM(ABS(delta_credits))` for job_escrow.
+
+2. **Messages unread (GET /messages/unread)** — Requires `messages` table with `job_id`, `sender_id`, `is_read`. Verify via `npm run db:verify:production` that `messages` exists.
+
+3. **Job transitions (POST /jobs/:id/transition)** — Error `column "pricing_snapshot" of relation "jobs" does not exist` means the patch hasn't been applied. The `000_NEON_PATCH_test_db_align.sql` adds `jobs.pricing_snapshot`. Run it against your test DB: `DATABASE_URL=... node scripts/run-migration.js "DB/migrations/000_NEON_PATCH_test_db_align.sql"`.
+
+**Verify schema:** `PRODUCTION_DATABASE_URL=... npm run db:verify:production`
+
+## Document Execution
+
+For a consolidated view of all canonical docs (ARCHITECTURE, SETUP, CONTRIBUTING, GAP_ANALYSIS, MASTER_CHECKLIST, EXECUTION_PLAN, CI_CD, PRODUCTION_READINESS, TROUBLESHOOTING) and implementation status, see [DOCUMENT_EXECUTION_TRACKER.md](./DOCUMENT_EXECUTION_TRACKER.md).
 
 ## Prevention
 

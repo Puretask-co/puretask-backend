@@ -13,11 +13,7 @@ const auditReasonSchema = z.object({
  * Middleware: Require audit reason in body or X-Audit-Reason header for sensitive admin actions.
  * Use on admin routes that modify financial data, user status, or dispute outcomes.
  */
-export function requireAuditReason(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function requireAuditReason(req: Request, res: Response, next: NextFunction): void {
   const headerReason = req.headers["x-audit-reason"] as string | undefined;
   const bodyCheck = auditReasonSchema.safeParse({
     auditReason: req.body?.auditReason,

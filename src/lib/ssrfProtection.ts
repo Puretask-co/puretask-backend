@@ -6,24 +6,24 @@ import { logger } from "./logger";
 
 /**
  * Private/reserved IP ranges and hostnames that must be blocked for SSRF protection.
- * Includes: localhost, loopback, link-local, private (10.x, 172.16-31.x, 192.168.x), 
+ * Includes: localhost, loopback, link-local, private (10.x, 172.16-31.x, 192.168.x),
  * cloud metadata (169.254.169.254), etc.
  */
 const BLOCKED_PATTERNS = [
-  /^127\./,                    // Loopback
-  /^10\./,                     // Private class A
+  /^127\./, // Loopback
+  /^10\./, // Private class A
   /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // Private class B
-  /^192\.168\./,               // Private class C
-  /^169\.254\./,               // Link-local / cloud metadata
-  /^0\./,                      // Current network
+  /^192\.168\./, // Private class C
+  /^169\.254\./, // Link-local / cloud metadata
+  /^0\./, // Current network
   /^100\.(6[4-9]|[7-9][0-9]|1[0-2][0-9])\./, // Carrier-grade NAT
-  /^224\./,                    // Multicast
-  /^240\./,                    // Reserved
+  /^224\./, // Multicast
+  /^240\./, // Reserved
   /^localhost$/i,
-  /^::1$/,                     // IPv6 loopback
-  /^fe80:/i,                   // IPv6 link-local
-  /^fc00:/i,                   // IPv6 unique local
-  /^fd[0-9a-f]{2}:/i,          // IPv6 ULA
+  /^::1$/, // IPv6 loopback
+  /^fe80:/i, // IPv6 link-local
+  /^fc00:/i, // IPv6 unique local
+  /^fd[0-9a-f]{2}:/i, // IPv6 ULA
 ];
 
 /**
@@ -33,7 +33,10 @@ const BLOCKED_PATTERNS = [
 function getAllowedHosts(): string[] {
   const env = process.env.OUTBOUND_ALLOWED_HOSTS;
   if (!env) return [];
-  return env.split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
+  return env
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 /**
@@ -78,9 +81,7 @@ export function validateOutboundUrl(urlStr: string): void {
 
   // If allowlist is set, host must be in it
   if (allowedHosts.length > 0) {
-    const allowed = allowedHosts.some(
-      (h) => hostname === h || hostname.endsWith("." + h)
-    );
+    const allowed = allowedHosts.some((h) => hostname === h || hostname.endsWith("." + h));
     if (!allowed) {
       logger.warn("ssrf_blocked_host_not_allowed", { hostname, url: urlStr });
       throw new Error("SSRF: Host not in allowlist");

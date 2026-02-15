@@ -118,19 +118,19 @@ async function rateLimitWithRedis(
   }
 
   const windowSeconds = Math.ceil(windowMs / 1000);
-  
+
   // Use Redis pipeline for atomic operations
   const multi = redis.multi();
   multi.incr(key);
   multi.expire(key, windowSeconds);
-  
+
   const results = await multi.exec();
   const rawCount = results?.[0];
   const count = typeof rawCount === "number" ? rawCount : Number(rawCount ?? 0);
-  
+
   // Get TTL to calculate reset time
   const ttl = await redis.ttl(key);
-  const resetTime = ttl > 0 ? now + (ttl * 1000) : now + windowMs;
+  const resetTime = ttl > 0 ? now + ttl * 1000 : now + windowMs;
 
   return { count, resetTime };
 }
@@ -236,4 +236,3 @@ export const strictRateLimiter = productionRateLimit({
   maxRequests: 10,
   message: "Too many requests. Please try again later.",
 });
-

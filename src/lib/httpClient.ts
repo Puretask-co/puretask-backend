@@ -19,11 +19,7 @@ export interface HttpClientOptions {
  * Returns a promise that resolves when the request completes
  * Section 8: SSRF protection applied before request
  */
-export function postJson(
-  url: string,
-  body: any,
-  options?: HttpClientOptions
-): Promise<void> {
+export function postJson(url: string, body: any, options?: HttpClientOptions): Promise<void> {
   if (!options?.skipSsrfCheck) {
     validateOutboundUrl(url);
   }
@@ -53,11 +49,7 @@ export function postJson(
         if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
           resolve();
         } else {
-          reject(
-            new Error(
-              `HTTP ${res.statusCode}: ${res.statusMessage || "Request failed"}`
-            )
-          );
+          reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage || "Request failed"}`));
         }
       });
     });
@@ -120,4 +112,3 @@ export function request(
     req.end();
   });
 }
-

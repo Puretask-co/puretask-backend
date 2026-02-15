@@ -6,16 +6,18 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import {
+  requireAuth,
+  requireRole,
+  AuthedRequest,
+  authedHandler,
+} from "../middleware/authCanonical";
 import {
   getCreditPackages,
   createCreditCheckoutSession,
   getPurchaseHistory,
 } from "../services/creditsPurchaseService";
-import {
-  getUserBalance,
-  getCreditHistory,
-} from "../services/creditsService";
+import { getUserBalance, getCreditHistory } from "../services/creditsService";
 
 const creditsRouter = Router();
 
@@ -230,10 +232,7 @@ creditsRouter.get(
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { limit = "50" } = req.query;
-      const history = await getCreditHistory(
-        req.user!.id,
-        parseInt(limit as string, 10)
-      );
+      const history = await getCreditHistory(req.user!.id, parseInt(limit as string, 10));
       res.json({ transactions: history });
     } catch (error) {
       logger.error("get_history_failed", {
@@ -291,10 +290,7 @@ creditsRouter.get(
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { limit = "50" } = req.query;
-      const purchases = await getPurchaseHistory(
-        req.user!.id,
-        parseInt(limit as string, 10)
-      );
+      const purchases = await getPurchaseHistory(req.user!.id, parseInt(limit as string, 10));
       res.json({ purchases });
     } catch (error) {
       logger.error("get_purchases_failed", {

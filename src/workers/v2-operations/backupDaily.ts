@@ -8,7 +8,12 @@
 
 import { pool } from "../../db/client";
 import { logger } from "../../lib/logger";
-import { runBackupJob, cleanupOldBackups, getLatestBackup, compareBackups } from "../../services/backupService";
+import {
+  runBackupJob,
+  cleanupOldBackups,
+  getLatestBackup,
+  compareBackups,
+} from "../../services/backupService";
 
 /**
  * Main worker function
@@ -28,7 +33,7 @@ async function main(): Promise<void> {
     // Log comparison if we have a previous backup
     if (previousBackup) {
       const comparison = compareBackups(previousBackup, snapshot);
-      
+
       logger.info("backup_comparison", {
         previous_date: previousBackup.created_at,
         current_date: snapshot.created_at,
@@ -78,4 +83,3 @@ if (require.main === module) {
 }
 
 export { main as runBackupDaily };
-

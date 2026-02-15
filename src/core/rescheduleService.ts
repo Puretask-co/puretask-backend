@@ -18,9 +18,9 @@ import {
   ClientRiskEvent,
   CleanerEvent,
   TimeBucket,
-} from './types';
-import { hoursDiff, getTimeBucket } from './timeBuckets';
-import { RESCHEDULE_CONFIG, CLIENT_RISK_CONFIG, RELIABILITY_CONFIG } from './config';
+} from "./types";
+import { hoursDiff, getTimeBucket } from "./timeBuckets";
+import { RESCHEDULE_CONFIG, CLIENT_RISK_CONFIG, RELIABILITY_CONFIG } from "./config";
 
 // ============================================
 // Types
@@ -30,15 +30,15 @@ export interface RescheduleRequestInput {
   job: Job;
   client: Client;
   cleaner: Cleaner;
-  requestedBy: 'client' | 'cleaner';
+  requestedBy: "client" | "cleaner";
   newStartTime: Date;
   reasonCode: string | null;
 }
 
 export interface RescheduleResponseInput {
   rescheduleEvent: RescheduleEvent;
-  action: 'accept' | 'decline';
-  actor: 'client' | 'cleaner';
+  action: "accept" | "decline";
+  actor: "client" | "cleaner";
   declineReasonCode?: string | null;
 }
 
@@ -65,8 +65,7 @@ export class RescheduleServiceV2 {
     const hoursBeforeOriginal = hoursDiff(tRequest, tStartOriginal);
     const bucket = getTimeBucket(hoursBeforeOriginal);
 
-    const requestedTo: 'client' | 'cleaner' =
-      requestedBy === 'client' ? 'cleaner' : 'client';
+    const requestedTo: "client" | "cleaner" = requestedBy === "client" ? "cleaner" : "client";
 
     // Check cleaner availability for new time
     const newEndTime = new Date(
@@ -102,7 +101,7 @@ export class RescheduleServiceV2 {
       hoursBeforeOriginal,
       bucket,
       reasonCode,
-      status: 'pending',
+      status: "pending",
       isReasonable,
     };
 
@@ -113,8 +112,8 @@ export class RescheduleServiceV2 {
     await publishEvent({
       jobId: String(job.id),
       actorType: requestedBy,
-      actorId: requestedBy === 'client' ? String(job.clientId) : String(job.cleanerId),
-      eventName: 'reschedule.request_created',
+      actorId: requestedBy === "client" ? String(job.clientId) : String(job.cleanerId),
+      eventName: "reschedule.request_created",
       payload: {
         rescheduleEventId: inserted.id,
         requestedBy,
@@ -144,15 +143,15 @@ export class RescheduleServiceV2 {
   static async respond(input: RescheduleResponseInput): Promise<RescheduleEvent> {
     const { rescheduleEvent, action, actor, declineReasonCode } = input;
 
-    if (rescheduleEvent.status !== 'pending') {
-      throw new Error('Reschedule already handled');
+    if (rescheduleEvent.status !== "pending") {
+      throw new Error("Reschedule already handled");
     }
 
     if (actor !== rescheduleEvent.requestedTo) {
-      throw new Error('Only the receiving party can respond');
+      throw new Error("Only the receiving party can respond");
     }
 
-    if (action === 'accept') {
+    if (action === "accept") {
       return this.acceptReschedule(rescheduleEvent);
     } else {
       return this.declineReschedule(rescheduleEvent, actor, declineReasonCode ?? null);
@@ -168,7 +167,7 @@ export class RescheduleServiceV2 {
 
     // Update reschedule event status
     const updatedEvent = await this.updateRescheduleStatus(event.id!, {
-      status: 'accepted',
+      status: "accepted",
       declinedBy: null,
       declineReasonCode: null,
     });
@@ -176,24 +175,24 @@ export class RescheduleServiceV2 {
     // Log scoring events for late reschedules
     const scoringEvents: (ClientRiskEvent | CleanerEvent)[] = [];
 
-    if (event.bucket === 'lt24') {
-      if (event.requestedBy === 'client') {
+    if (event.bucket === "lt24") {
+      if (event.requestedBy === "client") {
         // Client late reschedule: +1 risk
         scoringEvents.push({
           clientId: event.clientId,
           jobId: event.jobId,
-          eventType: 'late_reschedule_lt24',
+          eventType: "late_reschedule_lt24",
           weight: CLIENT_RISK_CONFIG.weights.lateRescheduleLt24,
-          metadata: { source: 'reschedule_accept', rescheduleEventId: event.id },
+          metadata: { source: "reschedule_accept", rescheduleEventId: event.id },
         } as ClientRiskEvent);
-      } else if (event.requestedBy === 'cleaner') {
+      } else if (event.requestedBy === "cleaner") {
         // Cleaner late reschedule: -3 reliability
         scoringEvents.push({
           cleanerId: event.cleanerId,
           jobId: event.jobId,
-          eventType: 'late_reschedule',
+          eventType: "late_reschedule",
           weight: RESCHEDULE_CONFIG.reliability.cleanerLateReschedulePenalty,
-          metadata: { source: 'reschedule_accept', rescheduleEventId: event.id },
+          metadata: { source: "reschedule_accept", rescheduleEventId: event.id },
         } as CleanerEvent);
       }
     }
@@ -206,8 +205,8 @@ export class RescheduleServiceV2 {
     await publishEvent({
       jobId: String(event.jobId),
       actorType: event.requestedTo,
-      actorId: event.requestedTo === 'client' ? String(event.clientId) : String(event.cleanerId),
-      eventName: 'reschedule.accepted',
+      actorId: event.requestedTo === "client" ? String(event.clientId) : String(event.cleanerId),
+      eventName: "reschedule.accepted",
       payload: {
         rescheduleEventId: event.id,
         newStartTime: event.tStartNew.toISOString(),
@@ -228,21 +227,17 @@ export class RescheduleServiceV2 {
    */
   private static async declineReschedule(
     event: RescheduleEvent,
-    actor: 'client' | 'cleaner',
+    actor: "client" | "cleaner",
     declineReasonCode: string | null
   ): Promise<RescheduleEvent> {
     const updatedEvent = await this.updateRescheduleStatus(event.id!, {
-      status: 'declined',
+      status: "declined",
       declinedBy: actor,
       declineReasonCode,
     });
 
     // Low Flexibility tracking: cleaner declines reasonable client requests
-    if (
-      actor === 'cleaner' &&
-      event.requestedBy === 'client' &&
-      event.isReasonable
-    ) {
+    if (actor === "cleaner" && event.requestedBy === "client" && event.isReasonable) {
       await this.logCleanerReasonableDecline(event.cleanerId, event.id!);
     }
 
@@ -250,8 +245,8 @@ export class RescheduleServiceV2 {
     await publishEvent({
       jobId: String(event.jobId),
       actorType: actor,
-      actorId: actor === 'client' ? String(event.clientId) : String(event.cleanerId),
-      eventName: 'reschedule.declined',
+      actorId: actor === "client" ? String(event.clientId) : String(event.cleanerId),
+      eventName: "reschedule.declined",
       payload: {
         rescheduleEventId: event.id,
         declinedBy: actor,
@@ -276,7 +271,7 @@ export class RescheduleServiceV2 {
 
   /**
    * Evaluate if a reschedule request is "reasonable"
-   * 
+   *
    * Reasonable if ALL of:
    * 1. Inside cleaner's availability (new time)
    * 2. Within 7 days of original booking
@@ -342,7 +337,7 @@ export class RescheduleServiceV2 {
     if (conflictResult.rows.length > 0) {
       return {
         available: false,
-        reason: 'job_conflict',
+        reason: "job_conflict",
         conflictJobId: Number(conflictResult.rows[0].id),
       };
     }
@@ -360,7 +355,7 @@ export class RescheduleServiceV2 {
     if (blackoutResult.rows.length > 0) {
       return {
         available: false,
-        reason: 'blackout_period',
+        reason: "blackout_period",
       };
     }
 
@@ -382,7 +377,7 @@ export class RescheduleServiceV2 {
     if (availabilityResult.rows.length === 0) {
       return {
         available: false,
-        reason: 'outside_availability',
+        reason: "outside_availability",
       };
     }
 
@@ -435,8 +430,8 @@ export class RescheduleServiceV2 {
   private static async updateRescheduleStatus(
     id: number,
     updates: {
-      status: 'accepted' | 'declined';
-      declinedBy: 'client' | 'cleaner' | null;
+      status: "accepted" | "declined";
+      declinedBy: "client" | "cleaner" | null;
       declineReasonCode: string | null;
     }
   ): Promise<RescheduleEvent> {
@@ -477,7 +472,7 @@ export class RescheduleServiceV2 {
     );
 
     if (jobResult.rows.length === 0) {
-      throw new Error('Job not found');
+      throw new Error("Job not found");
     }
 
     const originalStart = new Date(jobResult.rows[0].scheduled_start_at);
@@ -493,7 +488,10 @@ export class RescheduleServiceV2 {
     );
   }
 
-  private static async logCleanerReasonableDecline(cleanerId: number, rescheduleEventId: number): Promise<void> {
+  private static async logCleanerReasonableDecline(
+    cleanerId: number,
+    rescheduleEventId: number
+  ): Promise<void> {
     await query(
       `INSERT INTO flexibility_decline_events (cleaner_id, reschedule_event_id, created_at)
        VALUES ($1, $2, NOW())`,
@@ -508,7 +506,7 @@ export class RescheduleServiceV2 {
 
   private static async logScoringEvents(events: (ClientRiskEvent | CleanerEvent)[]): Promise<void> {
     for (const event of events) {
-      if ('clientId' in event) {
+      if ("clientId" in event) {
         await query(
           `INSERT INTO client_risk_events (client_id, job_id, event_type, weight, metadata, created_at)
            VALUES ($1, $2, $3, $4, $5::jsonb, NOW())`,
@@ -520,7 +518,7 @@ export class RescheduleServiceV2 {
             JSON.stringify(event.metadata || {}),
           ]
         );
-      } else if ('cleanerId' in event) {
+      } else if ("cleanerId" in event) {
         await query(
           `INSERT INTO cleaner_events (cleaner_id, job_id, event_type, weight, metadata, created_at)
            VALUES ($1, $2, $3, $4, $5::jsonb, NOW())`,
@@ -540,10 +538,7 @@ export class RescheduleServiceV2 {
    * Get a reschedule event by ID
    */
   static async getById(id: number): Promise<RescheduleEvent | null> {
-    const result = await query<any>(
-      `SELECT * FROM reschedule_events WHERE id = $1`,
-      [id]
-    );
+    const result = await query<any>(`SELECT * FROM reschedule_events WHERE id = $1`, [id]);
 
     if (result.rows.length === 0) {
       return null;
@@ -570,4 +565,3 @@ export class RescheduleServiceV2 {
     };
   }
 }
-

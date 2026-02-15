@@ -17,6 +17,20 @@ jobs:
     runs-on: ubuntu-latest
     name: Typecheck, Lint & Test
 
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: puretask_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -35,13 +49,18 @@ jobs:
       - name: ESLint
         run: npm run lint
 
+      - name: Setup test database
+        env:
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || secrets.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/puretask_test' }}
+        run: npm run db:setup:test
+
       - name: Run tests
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || secrets.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/puretask_test' }}
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-jwt-secret-min-32-chars-for-ci' }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'sk_test_placeholder' }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder' }}
           N8N_WEBHOOK_SECRET: ${{ secrets.N8N_WEBHOOK_SECRET || 'test-n8n-secret' }}
           NODE_ENV: test
         run: npm run test
-        # Add DATABASE_URL to repo secrets for test runs. Without it, tests will fail.
+        # Add TEST_DATABASE_URL or DATABASE_URL to repo secrets for integration/smoke tests.

@@ -1,7 +1,7 @@
 // src/tests/unit/security.test.ts
 // Unit tests for security features
 
-import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   sanitizeText,
   sanitizeHtml,
@@ -15,17 +15,14 @@ import {
   generateCsrfToken,
   storeCsrfToken,
   validateCsrfToken,
+  csrfTokens,
 } from "../../middleware/csrf";
-import {
-  retryWithBackoff,
-  isNetworkError,
-  getUserFriendlyError,
-} from "../../lib/errorRecovery";
+import { retryWithBackoff, isNetworkError, getUserFriendlyError } from "../../lib/errorRecovery";
 
 describe("Security - Sanitization", () => {
   describe("sanitizeText", () => {
     it("should remove HTML tags", () => {
-      expect(sanitizeText("<script>alert('xss')</script>")).toBe("alert&#x27;xss&#x27;");
+      expect(sanitizeText("<script>alert('xss')</script>")).toBe("alert(&#x27;xss&#x27;)");
       expect(sanitizeText("<div>Hello</div>")).toBe("Hello");
     });
 
@@ -118,8 +115,6 @@ describe("Security - CSRF", () => {
   const sessionId = "test-session-123";
 
   beforeEach(() => {
-    // Clear any existing tokens
-    const { csrfTokens } = require("../../middleware/csrf");
     csrfTokens.clear();
   });
 
@@ -136,7 +131,7 @@ describe("Security - CSRF", () => {
     it("should store token for session", () => {
       const token = generateCsrfToken();
       storeCsrfToken(sessionId, token);
-      
+
       const isValid = validateCsrfToken(sessionId, token);
       expect(isValid).toBe(true);
     });
@@ -146,14 +141,14 @@ describe("Security - CSRF", () => {
     it("should validate correct token", () => {
       const token = generateCsrfToken();
       storeCsrfToken(sessionId, token);
-      
+
       expect(validateCsrfToken(sessionId, token)).toBe(true);
     });
 
     it("should reject incorrect token", () => {
       const token = generateCsrfToken();
       storeCsrfToken(sessionId, token);
-      
+
       expect(validateCsrfToken(sessionId, "wrong-token")).toBe(false);
     });
 
@@ -221,7 +216,10 @@ describe("Error Recovery", () => {
         throw { code: "VALIDATION_ERROR" };
       };
 
-      await expect(retryWithBackoff(fn, { maxRetries: 3 })).rejects.toHaveProperty("code", "VALIDATION_ERROR");
+      await expect(retryWithBackoff(fn, { maxRetries: 3 })).rejects.toHaveProperty(
+        "code",
+        "VALIDATION_ERROR"
+      );
     });
 
     it("should throw after max retries", async () => {
@@ -229,7 +227,9 @@ describe("Error Recovery", () => {
         throw { code: "ECONNRESET" };
       };
 
-      await expect(retryWithBackoff(fn, { maxRetries: 2, initialDelay: 10 })).rejects.toHaveProperty("code", "ECONNRESET");
+      await expect(
+        retryWithBackoff(fn, { maxRetries: 2, initialDelay: 10 })
+      ).rejects.toHaveProperty("code", "ECONNRESET");
     });
   });
 });

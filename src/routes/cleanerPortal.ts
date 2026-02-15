@@ -3,7 +3,13 @@
 
 import { Router, Response } from "express";
 import { z } from "zod";
-import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import {
+  requireAuth,
+  requireRole,
+  AuthedRequest,
+  authedHandler,
+} from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 import {
   getCleanerClients,
   getCleanerClientProfile,
@@ -144,8 +150,8 @@ router.get(
         error: err.message || "Failed to get clients",
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -199,8 +205,8 @@ router.get(
         error: err.message || "Failed to get client profile",
       });
     }
-  }
-));
+  })
+);
 
 /**
  * GET /cleaner/clients/:clientId/jobs
@@ -236,8 +242,8 @@ router.get(
         error: err.message || "Failed to get job history",
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -292,8 +298,8 @@ router.put(
         error: err.message || "Failed to update notes",
       });
     }
-  }
-));
+  })
+);
 
 /**
  * POST /cleaner/clients/:clientId/favorite
@@ -322,8 +328,8 @@ router.post(
         error: err.message || "Failed to toggle favorite",
       });
     }
-  }
-));
+  })
+);
 
 // ============================================
 // INVOICE ENDPOINTS (Cleaner)
@@ -404,8 +410,8 @@ router.post(
         error: err.message || "Failed to create invoice",
       });
     }
-  }
-));
+  })
+);
 
 /**
  * GET /cleaner/invoices
@@ -443,8 +449,8 @@ router.get(
         error: err.message || "Failed to get invoices",
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -472,6 +478,7 @@ router.get(
   "/invoices/:invoiceId",
   requireAuth,
   requireRole("cleaner"),
+  requireOwnership("invoice", "invoiceId"),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
@@ -510,8 +517,8 @@ router.get(
         error: err.message || "Failed to get invoice",
       });
     }
-  }
-));
+  })
+);
 
 /**
  * POST /cleaner/invoices/:invoiceId/send
@@ -521,6 +528,7 @@ router.post(
   "/invoices/:invoiceId/send",
   requireAuth,
   requireRole("cleaner"),
+  requireOwnership("invoice", "invoiceId"),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
@@ -555,8 +563,8 @@ router.post(
         error: err.message || "Failed to send invoice",
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -589,6 +597,7 @@ router.post(
   "/invoices/:invoiceId/cancel",
   requireAuth,
   requireRole("cleaner"),
+  requireOwnership("invoice", "invoiceId"),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
@@ -609,8 +618,7 @@ router.post(
         error: err.message || "Failed to cancel invoice",
       });
     }
-  }
-));
+  })
+);
 
 export default router;
-

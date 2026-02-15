@@ -18,8 +18,8 @@ export interface CleanerCandidate {
   reliabilityScore: number;
   hourlyRateCredits: number;
   distanceMiles: number | null;
-  score: number;  // Computed match score
-  reasons: string[];  // Why this score
+  score: number; // Computed match score
+  reasons: string[]; // Why this score
 }
 
 export interface MatchResult {
@@ -41,12 +41,12 @@ export interface MatchingWeights {
 
 // Default weights for scoring
 const DEFAULT_WEIGHTS: MatchingWeights = {
-  reliability: 0.30,    // 30% weight on reliability
-  tier: 0.20,          // 20% weight on tier
-  distance: 0.15,      // 15% weight on distance
-  priceMatch: 0.15,    // 15% weight on price match
-  pastJobs: 0.10,      // 10% weight on past jobs with client
-  responseRate: 0.10,  // 10% weight on response rate
+  reliability: 0.3, // 30% weight on reliability
+  tier: 0.2, // 20% weight on tier
+  distance: 0.15, // 15% weight on distance
+  priceMatch: 0.15, // 15% weight on price match
+  pastJobs: 0.1, // 10% weight on past jobs with client
+  responseRate: 0.1, // 10% weight on response rate
 };
 
 // Tier rankings for scoring
@@ -81,12 +81,7 @@ export async function findMatchingCleaners(
     autoAssign?: boolean;
   } = {}
 ): Promise<MatchResult> {
-  const {
-    limit = 10,
-    minReliability = 50,
-    weights = {},
-    autoAssign = false,
-  } = options;
+  const { limit = 10, minReliability = 50, weights = {}, autoAssign = false } = options;
 
   const finalWeights = { ...DEFAULT_WEIGHTS, ...weights };
 
@@ -192,7 +187,7 @@ export async function findMatchingCleaners(
     const boostMultiplier = await getBoostMultiplier(cleaner.user_id);
     const cappedBoost = Math.min(boostMultiplier, 1.5); // Cap at 1.5x
     const finalScore = Math.round(baseScore * cappedBoost);
-    
+
     // Add boost info to reasons if active
     const finalReasons = [...reasons];
     if (boostMultiplier > 1.0) {
@@ -203,8 +198,8 @@ export async function findMatchingCleaners(
       cleanerId: cleaner.user_id,
       email: cleaner.email,
       tier: cleaner.tier,
-      reliabilityScore: cleaner.reliability_score,
-      hourlyRateCredits: cleaner.hourly_rate_credits,
+      reliabilityScore: Number(cleaner.reliability_score),
+      hourlyRateCredits: Number(cleaner.hourly_rate_credits),
       distanceMiles,
       score: finalScore,
       reasons: finalReasons,
@@ -265,11 +260,12 @@ function calculateMatchScore(params: {
   responseRate: number;
   weights: MatchingWeights;
 }): { score: number; reasons: string[] } {
-  const { reliability, tier, distance, hourlyRate, jobRate, pastJobs, responseRate, weights } = params;
+  const { reliability, tier, distance, hourlyRate, jobRate, pastJobs, responseRate, weights } =
+    params;
   const reasons: string[] = [];
 
-  // Reliability score (0-100)
-  const reliabilityScore = reliability;
+  // Reliability score (0-100) - coerce to number (pg returns NUMERIC as string)
+  const reliabilityScore = Number(reliability);
   reasons.push(`Reliability: ${reliabilityScore.toFixed(0)}%`);
 
   // Tier score (0-100)
@@ -279,15 +275,15 @@ function calculateMatchScore(params: {
   // Distance score (0-100, closer is better)
   let distanceScore = 100;
   if (distance !== null) {
-    distanceScore = Math.max(0, 100 - (distance * 5)); // -5 points per mile
+    distanceScore = Math.max(0, 100 - distance * 5); // -5 points per mile
     reasons.push(`Distance: ${distance.toFixed(1)} miles`);
   }
 
   // Price match score (0-100, closer to job rate is better)
   let priceMatchScore = 100;
   if (hourlyRate > 0 && jobRate > 0) {
-    const priceDiff = Math.abs(hourlyRate - (jobRate / 2)); // Assume 2-hour avg job
-    priceMatchScore = Math.max(0, 100 - (priceDiff * 2));
+    const priceDiff = Math.abs(hourlyRate - jobRate / 2); // Assume 2-hour avg job
+    priceMatchScore = Math.max(0, 100 - priceDiff * 2);
     reasons.push(`Rate match: ${priceMatchScore.toFixed(0)}%`);
   }
 
@@ -352,7 +348,7 @@ export async function assignCleanerToJob(jobId: string, cleanerId: string): Prom
       estimated_hours: number;
       credit_amount: number;
     }>(`SELECT estimated_hours, credit_amount FROM jobs WHERE id = $1`, [jobId]);
-    
+
     const cleanerResult = await query<{ tier: string }>(
       `SELECT tier FROM cleaner_profiles WHERE user_id = $1`,
       [cleanerId]
@@ -364,7 +360,8 @@ export async function assignCleanerToJob(jobId: string, cleanerId: string): Prom
       const baseHours = job.estimated_hours || 2; // Default 2 hours if not set
 
       // Calculate tier-aware pricing
-      const { calculateJobPricing, createPricingSnapshot } = await import("../services/pricingService");
+      const { calculateJobPricing, createPricingSnapshot } =
+        await import("../services/pricingService");
       const pricingBreakdown = calculateJobPricing({
         cleanerTier,
         baseHours,
@@ -433,10 +430,7 @@ export async function reassignCleanerWithPenalty(options: {
   const jobResult = await query<{
     cleaner_id: string | null;
     scheduled_start_at: string | null;
-  }>(
-    `SELECT cleaner_id, scheduled_start_at FROM jobs WHERE id = $1`,
-    [jobId]
-  );
+  }>(`SELECT cleaner_id, scheduled_start_at FROM jobs WHERE id = $1`, [jobId]);
 
   const current = jobResult.rows[0];
   if (!current) {
@@ -505,7 +499,8 @@ export async function reassignCleanerWithPenalty(options: {
       const cleanerTier = cleanerTierResult.rows[0].tier || "bronze";
       const estimatedHours = jobDetailsResult.rows[0].estimated_hours || 2;
 
-      const { calculateJobPricing, createPricingSnapshot } = await import("../services/pricingService");
+      const { calculateJobPricing, createPricingSnapshot } =
+        await import("../services/pricingService");
       const pricingBreakdown = calculateJobPricing({
         cleanerTier,
         baseHours: estimatedHours,
@@ -644,10 +639,10 @@ export async function acceptJobOffer(
   await assignCleanerToJob(jobId, cleanerId);
 
   // Update offer status
-  await query(
-    `UPDATE job_offers SET status = 'accepted' WHERE job_id = $1 AND cleaner_id = $2`,
-    [jobId, cleanerId]
-  );
+  await query(`UPDATE job_offers SET status = 'accepted' WHERE job_id = $1 AND cleaner_id = $2`, [
+    jobId,
+    cleanerId,
+  ]);
 
   // Decline all other offers for this job
   await query(
@@ -762,4 +757,3 @@ export async function processUnassignedJobs(): Promise<{
     failed,
   };
 }
-

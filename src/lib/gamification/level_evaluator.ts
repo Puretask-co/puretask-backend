@@ -4,12 +4,7 @@
  * Maintenance failure pauses progression (level remains).
  */
 
-import {
-  GoalDefinition,
-  LevelDefinition,
-  LevelEvaluationResult,
-  MetricProvider,
-} from "./types";
+import { GoalDefinition, LevelDefinition, LevelEvaluationResult, MetricProvider } from "./types";
 import { evaluateGoals } from "./goal_evaluator";
 
 export async function evaluateLevels(params: {
@@ -39,9 +34,7 @@ export async function evaluateLevels(params: {
   const maintenanceRequired = levelDef?.requirements.maintenance_require_all ?? true;
 
   const paused = maintenanceRequired && maintenanceFailed.length > 0;
-  const pause_reasons = paused
-    ? maintenanceFailed.map((id) => `maintenance_failed:${id}`)
-    : [];
+  const pause_reasons = paused ? maintenanceFailed.map((id) => `maintenance_failed:${id}`) : [];
 
   let eligible_for_level = current_level;
 
@@ -69,9 +62,7 @@ export async function evaluateLevels(params: {
       maintRes.every((r) => r.complete);
 
     const eligible =
-      coreComplete &&
-      stretchCompleteCount >= ld.requirements.stretch_required_count &&
-      maintOk;
+      coreComplete && stretchCompleteCount >= ld.requirements.stretch_required_count && maintOk;
 
     if (eligible && ld.level > eligible_for_level) {
       eligible_for_level = ld.level;

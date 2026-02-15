@@ -7,7 +7,7 @@ import { findPayoutEarningMismatches } from "../../services/adminRepairService";
 import { upsertReconciliationFlag } from "../../services/reconciliationService";
 import { sendAlert } from "../../lib/alerting";
 
-async function main(): Promise<void> {
+export async function runPayoutReconciliation(): Promise<void> {
   logger.info("payout_reconciliation_worker_started");
   try {
     const mismatches = await findPayoutEarningMismatches();
@@ -43,9 +43,8 @@ async function main(): Promise<void> {
 }
 
 if (require.main === module) {
-  main().catch((err) => {
+  runPayoutReconciliation().catch((err) => {
     logger.error("payout_reconciliation_worker_unhandled", { error: err.message });
     process.exit(1);
   });
 }
-

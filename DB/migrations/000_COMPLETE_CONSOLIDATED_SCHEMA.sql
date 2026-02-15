@@ -3,8 +3,11 @@
 -- Run this on a FRESH database to set up everything correctly
 -- ============================================================
 -- Generated: January 2026
--- Combines ALL migrations (001-025) + hardening (901-905)
--- Includes: Core system, V2 features, V3 pricing, V4 auth, invoicing, and production hardening
+-- Combines ALL migrations (001-056) + hardening (901-906)
+-- Includes: Core system, V2-V4 features, AI assistant, admin settings,
+-- cleaner AI, onboarding gamification, message history, federal holidays,
+-- worker hardening, idempotency, n8n/webhook events, gamification,
+-- cleaner levels, badges, marketplace governor, durable jobs
 -- ============================================================
 
 -- ============================================
@@ -130,14 +133,28 @@ CREATE TABLE IF NOT EXISTS cleaner_profiles (
   background_check_status   TEXT DEFAULT 'not_started',
   -- Tokens
   push_token               TEXT,
+  -- Onboarding (from 034, 035)
+  onboarding_current_step  TEXT DEFAULT 'terms',
+  onboarding_reminder_sent_at TIMESTAMPTZ,
+  onboarding_started_at     TIMESTAMPTZ DEFAULT now(),
+  onboarding_completed_at   TIMESTAMPTZ,
   created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Ensure critical columns exist for existing DBs BEFORE creating indexes that reference them (idempotent patch)
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS onboarding_current_step TEXT DEFAULT 'terms';
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS onboarding_reminder_sent_at TIMESTAMPTZ;
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS onboarding_started_at TIMESTAMPTZ DEFAULT now();
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS onboarding_completed_at TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS idx_cleaner_profiles_reliability ON cleaner_profiles (reliability_score DESC);
 CREATE INDEX IF NOT EXISTS idx_cleaner_profiles_tier ON cleaner_profiles (tier);
 CREATE INDEX IF NOT EXISTS idx_cleaner_profiles_user_id ON cleaner_profiles (user_id);
 CREATE INDEX IF NOT EXISTS idx_cleaner_profiles_stripe_account_id ON cleaner_profiles (stripe_account_id) WHERE stripe_account_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_cleaner_profiles_abandoned_onboarding ON cleaner_profiles (onboarding_completed_at, onboarding_started_at, onboarding_reminder_sent_at) WHERE onboarding_completed_at IS NULL;
 
 -- ============================================
 -- STEP 3: CITIES & SERVICE AREAS (before properties)
@@ -1456,9 +1473,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
--- Cleaner availability check
+-- Cleaner availability check (cleaner_id is TEXT to match users.id)
 CREATE OR REPLACE FUNCTION is_cleaner_available(
-  p_cleaner_id UUID,
+  p_cleaner_id TEXT,
   p_datetime TIMESTAMPTZ
 ) RETURNS BOOLEAN AS $$
 DECLARE
@@ -2341,22 +2358,1532 @@ CREATE INDEX IF NOT EXISTS idx_worker_runs_status
 COMMENT ON COLUMN users.id IS 'Canonical: users.id is TEXT. All FKs to users(id) must also be TEXT. No UUID columns should reference this.';
 
 -- ============================================
+-- MIGRATION 026: AI Assistant Schema
+-- ============================================
+
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS communication_settings JSONB DEFAULT '{
+  "ai_scheduling_enabled": false,
+  "suggest_days_in_advance": 14,
+  "prioritize_gap_filling": true,
+  "notify_client_not_interested": true,
+  "booking_confirmation": {"enabled": true, "channels": ["email", "in_app"], "custom_template": "Hi {client_name}! Your cleaning is confirmed for {date} at {time}. Looking forward to making your space sparkle! - {cleaner_name}"},
+  "pre_cleaning_reminder": {"enabled": true, "days_before": 1, "channels": ["sms", "email"], "custom_template": "Hi {client_name}! Just a reminder that I''ll be cleaning your place tomorrow at {time}. Please ensure access is available. Thanks! - {cleaner_name}"},
+  "on_my_way": {"enabled": true, "channels": ["sms", "in_app"], "include_eta": true, "custom_template": "Hi {client_name}! I''m on my way to your place. ETA: {eta} minutes. See you soon! - {cleaner_name}"},
+  "post_cleaning_summary": {"enabled": true, "channels": ["email", "in_app"], "custom_template": "Hi {client_name}! Your cleaning is complete. Thanks for having me! - {cleaner_name}"},
+  "review_request": {"enabled": true, "hours_after_completion": 24, "channels": ["email", "in_app"], "custom_template": "Hi {client_name}! I hope you love your clean space! If you have a moment, I''d really appreciate a review. {review_link}"},
+  "reengagement": {"enabled": false, "inactive_after_weeks": 8, "target_booking_count": 3, "discount_percentage": 15, "channels": ["email"], "custom_template": "Hi {client_name}! It''s been a while! I''d love to help make your home sparkle again. {discount_text} - {cleaner_name}"}
+}'::jsonb;
+
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS ai_onboarding_completed BOOLEAN DEFAULT false;
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS ai_features_active_count INTEGER DEFAULT 0;
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS last_ai_interaction_at TIMESTAMPTZ;
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS offers_additional_services TEXT[] DEFAULT '{}';
+
+CREATE TABLE IF NOT EXISTS message_delivery_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_type TEXT NOT NULL,
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  client_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  booking_id UUID REFERENCES jobs(id) ON DELETE SET NULL,
+  channels TEXT[] NOT NULL,
+  delivery_results JSONB NOT NULL,
+  sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  opened_at TIMESTAMPTZ,
+  clicked_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_message_delivery_cleaner ON message_delivery_log(cleaner_id, sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_message_delivery_client ON message_delivery_log(client_id, sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_message_delivery_type ON message_delivery_log(message_type, sent_at DESC);
+
+CREATE TABLE IF NOT EXISTS ai_suggestions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  suggestion_type TEXT NOT NULL,
+  suggestion_data JSONB NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  feedback_rating INTEGER,
+  feedback_comment TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  responded_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_ai_suggestions_cleaner ON ai_suggestions(cleaner_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_suggestions_status ON ai_suggestions(status);
+CREATE INDEX IF NOT EXISTS idx_ai_suggestions_type ON ai_suggestions(suggestion_type);
+
+CREATE TABLE IF NOT EXISTS ai_activity_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  activity_type TEXT NOT NULL,
+  activity_description TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  success BOOLEAN DEFAULT true,
+  error_message TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_activity_actor ON ai_activity_log(actor_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_activity_type ON ai_activity_log(activity_type, created_at DESC);
+
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS ai_suggested_slots JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS ai_match_score INTEGER;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS ai_match_reasoning TEXT;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS request_expires_at TIMESTAMPTZ;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS provisional_slot_expires_at TIMESTAMPTZ;
+
+ALTER TABLE client_profiles ADD COLUMN IF NOT EXISTS communication_preferences JSONB DEFAULT '{"preferred_channels": ["email", "in_app"], "quiet_hours_start": "21:00", "quiet_hours_end": "08:00", "language": "en"}'::jsonb;
+ALTER TABLE client_profiles ADD COLUMN IF NOT EXISTS preferred_cleaner_attributes JSONB DEFAULT '{"specialties": [], "must_have_services": [], "preferred_gender": null, "eco_friendly_required": false, "pet_experience_required": false}'::jsonb;
+
+CREATE TABLE IF NOT EXISTS ai_performance_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  metric_date DATE NOT NULL,
+  metric_type TEXT NOT NULL,
+  cleaner_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  metric_value NUMERIC NOT NULL,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(metric_date, metric_type, cleaner_id)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_metrics_date ON ai_performance_metrics(metric_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_metrics_cleaner ON ai_performance_metrics(cleaner_id, metric_date DESC);
+
+CREATE OR REPLACE FUNCTION count_active_ai_features(p_cleaner_id TEXT)
+RETURNS INTEGER AS $$
+DECLARE settings JSONB; feature_count INTEGER := 0;
+BEGIN
+  SELECT communication_settings INTO settings FROM cleaner_profiles WHERE user_id = p_cleaner_id;
+  IF settings IS NULL THEN RETURN 0; END IF;
+  IF (settings->'booking_confirmation'->>'enabled')::boolean THEN feature_count := feature_count + 1; END IF;
+  IF (settings->'pre_cleaning_reminder'->>'enabled')::boolean THEN feature_count := feature_count + 1; END IF;
+  IF (settings->'on_my_way'->>'enabled')::boolean THEN feature_count := feature_count + 1; END IF;
+  IF (settings->'post_cleaning_summary'->>'enabled')::boolean THEN feature_count := feature_count + 1; END IF;
+  IF (settings->'review_request'->>'enabled')::boolean THEN feature_count := feature_count + 1; END IF;
+  IF (settings->'reengagement'->>'enabled')::boolean THEN feature_count := feature_count + 1; END IF;
+  IF (settings->>'ai_scheduling_enabled')::boolean THEN feature_count := feature_count + 1; END IF;
+  RETURN feature_count;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION update_ai_features_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.ai_features_active_count := count_active_ai_features(NEW.user_id);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_ai_features_count ON cleaner_profiles;
+CREATE TRIGGER trg_update_ai_features_count
+BEFORE UPDATE OF communication_settings ON cleaner_profiles
+FOR EACH ROW
+EXECUTE FUNCTION update_ai_features_count();
+
+-- ============================================
+-- MIGRATION 027: Admin Settings System
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS admin_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  setting_key TEXT NOT NULL UNIQUE,
+  setting_value JSONB NOT NULL,
+  setting_type TEXT NOT NULL,
+  description TEXT,
+  is_sensitive BOOLEAN DEFAULT false,
+  requires_restart BOOLEAN DEFAULT false,
+  last_updated_by TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_admin_settings_type ON admin_settings(setting_type);
+CREATE INDEX IF NOT EXISTS idx_admin_settings_key ON admin_settings(setting_key);
+
+CREATE TABLE IF NOT EXISTS admin_settings_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  setting_key TEXT NOT NULL,
+  old_value JSONB,
+  new_value JSONB,
+  changed_by TEXT,
+  change_reason TEXT,
+  ip_address TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_settings_history_key ON admin_settings_history(setting_key, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_settings_history_user ON admin_settings_history(changed_by, created_at DESC);
+
+INSERT INTO admin_settings (setting_key, setting_value, setting_type, description) VALUES
+('platform.name', '"PureTask"'::jsonb, 'platform', 'Platform name displayed to users'),
+('platform.maintenance_mode', 'false'::jsonb, 'platform', 'Enable maintenance mode'),
+('platform.maintenance_message', '"We are currently performing maintenance. Please check back soon."'::jsonb, 'platform', 'Message shown during maintenance'),
+('platform.support_email', '"support@puretask.com"'::jsonb, 'platform', 'Support email address'),
+('platform.support_phone', '"+1 (555) 123-4567"'::jsonb, 'platform', 'Support phone number'),
+('pricing.commission_rate', '0.15'::jsonb, 'pricing', 'Platform commission rate (0.15 = 15%)'),
+('pricing.minimum_booking_amount', '50.00'::jsonb, 'pricing', 'Minimum booking amount in dollars'),
+('features.ai_assistant_enabled', 'true'::jsonb, 'features', 'Enable AI Assistant for cleaners'),
+('features.gamification_enabled', 'true'::jsonb, 'features', 'Enable gamification system'),
+('security.max_login_attempts', '5'::jsonb, 'security', 'Maximum failed login attempts before lockout')
+ON CONFLICT (setting_key) DO NOTHING;
+
+-- ============================================
+-- MIGRATION 028: Cleaner AI Settings Suite
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS cleaner_ai_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL,
+  setting_category TEXT NOT NULL,
+  setting_key TEXT NOT NULL,
+  setting_value JSONB NOT NULL,
+  description TEXT,
+  is_enabled BOOLEAN DEFAULT true,
+  last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(cleaner_id, setting_key)
+);
+CREATE INDEX IF NOT EXISTS idx_cleaner_ai_settings_cleaner ON cleaner_ai_settings(cleaner_id);
+CREATE INDEX IF NOT EXISTS idx_cleaner_ai_settings_category ON cleaner_ai_settings(cleaner_id, setting_category);
+
+CREATE TABLE IF NOT EXISTS cleaner_ai_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL,
+  template_type TEXT NOT NULL,
+  template_name TEXT NOT NULL,
+  template_content TEXT NOT NULL,
+  variables JSONB DEFAULT '[]'::jsonb,
+  is_default BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  usage_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cleaner_ai_templates_cleaner ON cleaner_ai_templates(cleaner_id);
+CREATE INDEX IF NOT EXISTS idx_cleaner_ai_templates_type ON cleaner_ai_templates(cleaner_id, template_type);
+
+CREATE TABLE IF NOT EXISTS cleaner_quick_responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL,
+  response_category TEXT NOT NULL,
+  trigger_keywords TEXT[],
+  response_text TEXT NOT NULL,
+  is_favorite BOOLEAN DEFAULT false,
+  usage_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cleaner_quick_responses_cleaner ON cleaner_quick_responses(cleaner_id);
+CREATE INDEX IF NOT EXISTS idx_cleaner_quick_responses_category ON cleaner_quick_responses(cleaner_id, response_category);
+
+CREATE TABLE IF NOT EXISTS cleaner_ai_preferences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL UNIQUE,
+  communication_tone TEXT DEFAULT 'professional_friendly',
+  formality_level INTEGER DEFAULT 3,
+  emoji_usage TEXT DEFAULT 'moderate',
+  response_speed TEXT DEFAULT 'balanced',
+  business_hours_only BOOLEAN DEFAULT false,
+  quiet_hours_start TIME,
+  quiet_hours_end TIME,
+  full_automation_enabled BOOLEAN DEFAULT false,
+  require_approval_for_bookings BOOLEAN DEFAULT true,
+  auto_accept_instant_book BOOLEAN DEFAULT true,
+  auto_decline_outside_hours BOOLEAN DEFAULT false,
+  learn_from_responses BOOLEAN DEFAULT true,
+  suggest_better_responses BOOLEAN DEFAULT true,
+  auto_improve_templates BOOLEAN DEFAULT false,
+  share_anonymized_data BOOLEAN DEFAULT true,
+  allow_ai_training BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cleaner_ai_preferences_cleaner ON cleaner_ai_preferences(cleaner_id);
+
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active) VALUES
+('DEFAULT', 'booking_confirmation', 'Standard Booking Confirmation', 'Hi {client_name}! Thank you for booking with me. Your {service_type} is confirmed for {date} at {time}. I''ll see you at {property_address}!', '["client_name", "service_type", "date", "time", "property_address"]'::jsonb, true, true),
+('DEFAULT', 'on_my_way', 'On My Way Message', 'Hi {client_name}! I''m on my way and should arrive in about {eta_minutes} minutes. See you soon!', '["client_name", "eta_minutes"]'::jsonb, true, true),
+('DEFAULT', 'running_late', 'Running Late Notification', 'Hi {client_name}, I''m running a bit late due to {reason}. I should be there in about {eta_minutes} minutes. Sorry for the inconvenience!', '["client_name", "reason", "eta_minutes"]'::jsonb, true, true),
+('DEFAULT', 'job_complete', 'Job Completion Message', 'Hi {client_name}! All done! Your {property_type} is sparkling clean. Please let me know if you need anything else!', '["client_name", "property_type"]'::jsonb, true, true),
+('DEFAULT', 'review_request', 'Review Request', 'Hi {client_name}! I hope you''re happy with the cleaning! If you have a moment, I''d really appreciate a review. Thank you!', '["client_name"]'::jsonb, true, true)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text, is_favorite) VALUES
+('DEFAULT', 'pricing', ARRAY['how much', 'price', 'cost', 'rate'], 'My standard cleaning rate is $X per hour. Deep cleaning starts at $Y. Would you like a custom quote for your space?', true),
+('DEFAULT', 'availability', ARRAY['available', 'when', 'schedule'], 'I typically have availability on weekdays and some weekends. What day works best for you?', true),
+('DEFAULT', 'services', ARRAY['what do you clean', 'services', 'include'], 'I offer standard cleaning, deep cleaning, and move-in/move-out services. Each includes all rooms, surfaces, and floors!', true),
+('DEFAULT', 'supplies', ARRAY['supplies', 'products', 'bring'], 'I bring all my own professional-grade supplies and equipment. If you prefer specific products, just let me know!', false),
+('DEFAULT', 'pets', ARRAY['pet', 'dog', 'cat'], 'I love pets! I''m comfortable cleaning around friendly animals. Just let me know about any special considerations!', false)
+ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- MIGRATION 029: Enhanced Cleaner AI Templates
+-- ============================================
+
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active)
+SELECT user_id, 'job_complete', 'Professional Completion', 'Hi {client_name}! ✨ I''ve just finished cleaning your {property_type}. Everything has been cleaned and organized according to your specifications. {rooms_cleaned} rooms completed. Please let me know if you need anything adjusted. Thank you for trusting me with your home! - {cleaner_name}', '["client_name", "property_type", "rooms_cleaned", "cleaner_name"]'::jsonb, true, true
+FROM cleaner_profiles
+ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active)
+SELECT user_id, 'review_request', 'Review Request', 'Hi {client_name}! I hope you''re enjoying your freshly cleaned space! 🌟 If you were happy with my service, I would really appreciate it if you could leave a quick review. It helps me grow my business and helps other clients find great cleaning services. Thank you so much! - {cleaner_name}', '["client_name", "cleaner_name"]'::jsonb, true, true
+FROM cleaner_profiles
+ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active)
+SELECT user_id, 'rescheduling', 'Rescheduling Request', 'Hi {client_name}, I need to reschedule our appointment originally set for {original_date} at {original_time}. {reason}. I have availability on {alternative_dates}. Would any of these work for you? I apologize for any inconvenience! - {cleaner_name}', '["client_name", "original_date", "original_time", "reason", "alternative_dates", "cleaner_name"]'::jsonb, true, true
+FROM cleaner_profiles
+ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active)
+SELECT user_id, 'running_late', 'Running Late Alert', 'Hi {client_name}, I''m running about {minutes} minutes late due to {reason}. My new ETA is {new_eta}. I apologize for the delay and appreciate your patience! I''ll still complete the full cleaning as scheduled. - {cleaner_name}', '["client_name", "minutes", "reason", "new_eta", "cleaner_name"]'::jsonb, true, true
+FROM cleaner_profiles
+ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active)
+SELECT user_id, 'special_instructions', 'Special Instructions', 'Hi {client_name}! Quick reminder about your cleaning tomorrow at {time}. I have noted your special instructions: {instructions}. If you need to add or change anything, please let me know before I arrive. Looking forward to it! 🧹 - {cleaner_name}', '["client_name", "time", "instructions", "cleaner_name"]'::jsonb, true, true
+FROM cleaner_profiles
+ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active)
+SELECT user_id, 'payment_thanks', 'Payment Thank You', 'Hi {client_name}! Thank you so much for your payment of {amount}! 💰 It was a pleasure cleaning your {property_type}. I look forward to serving you again soon. Have a wonderful day! - {cleaner_name}', '["client_name", "amount", "property_type", "cleaner_name"]'::jsonb, true, true
+FROM cleaner_profiles
+ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active)
+SELECT user_id, 'vacation_reply', 'Vacation Auto-Reply', 'Hi {client_name}! Thank you for reaching out. I''m currently on vacation from {start_date} to {end_date} and will have limited availability. I''ll respond to your message as soon as I return. For urgent matters, please contact {backup_contact}. Thank you for your understanding! 🌴 - {cleaner_name}', '["client_name", "start_date", "end_date", "backup_contact", "cleaner_name"]'::jsonb, false, false
+FROM cleaner_profiles
+ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active)
+SELECT user_id, 'weather_delay', 'Weather Delay', 'Hi {client_name}, Due to {weather_condition}, I may experience some delays today. I''m still planning to clean your property at {scheduled_time}, but wanted to give you a heads up that I might be {delay_minutes} minutes late. I''ll keep you updated! Stay safe! 🌧️ - {cleaner_name}', '["client_name", "weather_condition", "scheduled_time", "delay_minutes", "cleaner_name"]'::jsonb, false, true
+FROM cleaner_profiles
+ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active)
+SELECT user_id, 'first_client_welcome', 'First Time Welcome', 'Hi {client_name}! 👋 Welcome! I''m so excited to clean your {property_type} for the first time on {date} at {time}. I''ll arrive with all necessary supplies and equipment. If you have any specific preferences or areas you''d like me to focus on, please let me know! I can''t wait to make your space sparkle! ✨ - {cleaner_name}', '["client_name", "property_type", "date", "time", "cleaner_name"]'::jsonb, true, true
+FROM cleaner_profiles
+ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active)
+SELECT user_id, 'issue_resolution', 'Issue Resolution', 'Hi {client_name}, Thank you for bringing {issue} to my attention. I take pride in my work and I''m sorry this didn''t meet your expectations. I''d like to make this right - I can {solution}. Your satisfaction is my top priority. Please let me know how you''d like to proceed. - {cleaner_name}', '["client_name", "issue", "solution", "cleaner_name"]'::jsonb, true, true
+FROM cleaner_profiles
+ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_ai_templates (cleaner_id, template_type, template_name, template_content, variables, is_default, is_active)
+SELECT user_id, 'referral_thanks', 'Referral Thank You', 'Hi {client_name}! 🎉 Thank you so much for referring {referred_name} to my services! I really appreciate you spreading the word. As a token of my gratitude, I''d like to offer you {referral_discount} off your next cleaning. You''re amazing! - {cleaner_name}', '["client_name", "referred_name", "referral_discount", "cleaner_name"]'::jsonb, false, true
+FROM cleaner_profiles
+ON CONFLICT DO NOTHING;
+
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'payment', ARRAY['payment', 'pay', 'card', 'cash', 'venmo', 'paypal', 'zelle'], 'I accept multiple payment methods for your convenience: credit/debit cards through the platform, Venmo, Zelle, PayPal, or cash. Payment is due immediately after service completion. All transactions are secure and you''ll receive a receipt. Which method works best for you?'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'cancellation', ARRAY['cancel', 'cancellation', 'refund', 'policy'], 'My cancellation policy: FREE cancellation up to 48 hours before your appointment. Cancellations 24-48 hours in advance incur a 50% fee. Cancellations within 24 hours or no-shows are charged the full amount. This helps me manage my schedule and serve all my clients fairly. Need to reschedule? Just let me know ASAP!'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'pets', ARRAY['pet', 'dog', 'cat', 'animal', 'puppy'], 'I love pets! 🐾 I''m comfortable cleaning homes with pets and have experience with dogs, cats, and other animals. For safety and efficiency, I do ask that pets be secured in a separate room during cleaning if possible. Please let me know about any pets so I can plan accordingly. Also, please inform me of any aggressive behaviors or special considerations.'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'supplies', ARRAY['supplies', 'products', 'bring', 'provide', 'cleaning products', 'equipment'], 'I bring all necessary cleaning supplies and equipment including eco-friendly products, vacuum, mop, and microfiber cloths. All supplies are professional-grade and safe for most surfaces. If you prefer I use your specific products (due to allergies or preferences), I''m happy to do so! Just let me know beforehand. My supplies are included in the service price.'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'special_requests', ARRAY['special', 'extra', 'additional', 'custom', 'specific'], 'I''m happy to accommodate special requests! Common add-ons include: interior windows, inside fridge/oven, laundry, organizing, and deep cleaning specific areas. Some requests may require additional time and cost. Please describe what you need, and I''ll let you know if it''s included in the standard service or provide a quote for the add-on.'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'access', ARRAY['parking', 'access', 'key', 'gate', 'code', 'enter', 'lockbox'], 'Please provide access information before my arrival: parking location (street/driveway/garage), building entry codes, gate codes, lockbox combinations, or key pickup location. If you''ll be home, just let me know! For security, I can also work with electronic locks or key exchange apps. Clear access instructions help me arrive and start on time.'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'issues', ARRAY['issue', 'problem', 'concern', 'complaint', 'not satisfied', 'disappointed'], 'I''m sorry to hear you''re not completely satisfied! Your happiness is my priority. Please let me know specifically what didn''t meet your expectations, and I''ll make it right. I offer a satisfaction guarantee - if something was missed or not cleaned to your standards, I''ll return within 24 hours to address it at no extra charge. Thank you for giving me the opportunity to fix this!'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'tipping', ARRAY['tip', 'gratuity', 'extra', 'appreciation'], 'Tips are never expected but always appreciated! 😊 If you''re happy with my service and would like to leave a tip, you can add it through the platform, Venmo, Zelle, or cash. The industry standard is 15-20% for exceptional service, but any amount is gratefully received. Your positive reviews and referrals also mean the world to me!'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'frequency', ARRAY['weekly', 'biweekly', 'monthly', 'recurring', 'regular', 'schedule'], 'I offer flexible scheduling options: Weekly (most popular for busy families), Bi-weekly (great balance of clean home and budget), Monthly (perfect for light maintenance), or One-time cleanings. Recurring clients receive priority scheduling and discounted rates! Regular cleaning also means each session is faster since we maintain consistent cleanliness. What frequency works best for your lifestyle?'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'eco_friendly', ARRAY['eco', 'green', 'natural', 'organic', 'chemical', 'safe', 'toxic'], 'I use eco-friendly, non-toxic cleaning products that are safe for children, pets, and the environment! 🌱 All products are EPA-approved and free from harsh chemicals. They''re highly effective while being gentle on surfaces and safe for your family. If you have specific allergies or sensitivities, please let me know and I can accommodate with specialized products.'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'time_estimate', ARRAY['how long', 'duration', 'time', 'hours', 'minutes'], 'Cleaning time depends on home size, condition, and service type. Typical estimates: Studio/1BR (1.5-2 hours), 2BR (2-3 hours), 3BR (3-4 hours), 4BR+ (4-6 hours). Deep cleaning takes 50% longer than standard cleaning. First-time cleanings are usually longer. I work efficiently but thoroughly - quality is never rushed! I''ll provide a specific time estimate once I know your home details.'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'background', ARRAY['background', 'check', 'verified', 'insured', 'bonded', 'trust'], 'Your safety and peace of mind are paramount! ✅ I am fully background-checked, insured, and bonded through PureTask. All cleaners on this platform undergo thorough vetting including criminal background checks and reference verification. I also carry liability insurance to protect your property. You can view my verification status, reviews, and ratings on my profile.'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'move_cleaning', ARRAY['move', 'moving', 'move-in', 'move-out', 'empty', 'vacant'], 'I specialize in move-in/move-out cleanings! These are deep cleans of empty properties including: all surfaces, inside cabinets/drawers, appliances (inside/out), baseboards, windows, and more. Perfect for getting your deposit back or preparing your new home! These cleanings are priced by square footage and condition. I can provide a quote with photos or details of the property.'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'same_day', ARRAY['same day', 'today', 'urgent', 'emergency', 'asap', 'last minute'], 'I occasionally have same-day availability for urgent cleanings! 🚨 Same-day bookings are subject to availability and typically require a rush fee. Please message me with your location, home size, and timeframe, and I''ll let you know if I can accommodate you today. For best availability, I recommend booking at least 48 hours in advance.'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+INSERT INTO cleaner_quick_responses (cleaner_id, response_category, trigger_keywords, response_text)
+SELECT user_id, 'whats_included', ARRAY['include', 'included', 'standard', 'basic', 'what do you clean', 'service'], 'My standard cleaning includes: Kitchen (counters, sink, appliances exterior, floors), Bathrooms (toilet, shower/tub, sink, mirrors, floors), Living areas (dusting, vacuuming, mopping), Bedrooms (dusting, vacuuming, making beds), General (trash removal, surface cleaning). NOT included: inside oven/fridge, windows, laundry, dishes, organizing. These can be added for an additional fee!'
+FROM cleaner_profiles ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- MIGRATION 030: Onboarding Gamification
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS cleaner_onboarding_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL UNIQUE,
+  setup_wizard_completed BOOLEAN DEFAULT false,
+  setup_wizard_step INTEGER DEFAULT 0,
+  setup_wizard_completed_at TIMESTAMPTZ,
+  profile_completion_percentage INTEGER DEFAULT 0,
+  profile_photo_uploaded BOOLEAN DEFAULT false,
+  bio_completed BOOLEAN DEFAULT false,
+  services_defined BOOLEAN DEFAULT false,
+  availability_set BOOLEAN DEFAULT false,
+  pricing_configured BOOLEAN DEFAULT false,
+  ai_personality_set BOOLEAN DEFAULT false,
+  templates_customized INTEGER DEFAULT 0,
+  quick_responses_added INTEGER DEFAULT 0,
+  first_template_used BOOLEAN DEFAULT false,
+  viewed_insights_dashboard BOOLEAN DEFAULT false,
+  exported_settings BOOLEAN DEFAULT false,
+  created_custom_template BOOLEAN DEFAULT false,
+  marked_favorite_response BOOLEAN DEFAULT false,
+  tooltip_dismissed_count INTEGER DEFAULT 0,
+  tutorial_videos_watched JSONB DEFAULT '[]'::jsonb,
+  help_articles_read JSONB DEFAULT '[]'::jsonb,
+  days_since_signup INTEGER DEFAULT 0,
+  total_logins INTEGER DEFAULT 1,
+  last_active_at TIMESTAMPTZ DEFAULT NOW(),
+  onboarding_abandoned BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_onboarding_cleaner ON cleaner_onboarding_progress(cleaner_id);
+
+CREATE TABLE IF NOT EXISTS achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  achievement_key TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  category TEXT NOT NULL,
+  tier TEXT NOT NULL DEFAULT 'bronze',
+  icon TEXT,
+  points INTEGER NOT NULL DEFAULT 10,
+  criteria JSONB NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  display_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS cleaner_achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL,
+  achievement_id UUID NOT NULL,
+  earned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  seen BOOLEAN DEFAULT false,
+  progress_percentage INTEGER DEFAULT 100,
+  UNIQUE(cleaner_id, achievement_id)
+);
+CREATE TABLE IF NOT EXISTS certifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  certification_key TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  level INTEGER NOT NULL,
+  icon TEXT,
+  badge_color TEXT DEFAULT '#3B82F6',
+  requirements JSONB NOT NULL,
+  benefits JSONB,
+  is_active BOOLEAN DEFAULT true,
+  display_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS cleaner_certifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL,
+  certification_id UUID NOT NULL,
+  earned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ,
+  certificate_url TEXT,
+  is_active BOOLEAN DEFAULT true,
+  UNIQUE(cleaner_id, certification_id)
+);
+CREATE TABLE IF NOT EXISTS template_library (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_type TEXT NOT NULL,
+  template_name TEXT NOT NULL,
+  template_content TEXT NOT NULL,
+  variables JSONB DEFAULT '[]'::jsonb,
+  category TEXT NOT NULL,
+  subcategory TEXT,
+  description TEXT,
+  author_id TEXT,
+  rating_average DECIMAL(3,2) DEFAULT 0.0,
+  rating_count INTEGER DEFAULT 0,
+  usage_count INTEGER DEFAULT 0,
+  favorite_count INTEGER DEFAULT 0,
+  is_featured BOOLEAN DEFAULT false,
+  is_verified BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  tags TEXT[] DEFAULT ARRAY[]::TEXT[],
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS cleaner_saved_library_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL,
+  library_template_id UUID NOT NULL,
+  customized_content TEXT,
+  saved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(cleaner_id, library_template_id)
+);
+CREATE TABLE IF NOT EXISTS template_ratings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id UUID NOT NULL,
+  cleaner_id TEXT NOT NULL,
+  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  review TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(template_id, cleaner_id)
+);
+CREATE TABLE IF NOT EXISTS onboarding_tooltips (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tooltip_key TEXT NOT NULL UNIQUE,
+  page_url TEXT NOT NULL,
+  element_selector TEXT,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  position TEXT DEFAULT 'bottom',
+  sequence_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  display_conditions JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO achievements (achievement_key, name, description, category, tier, icon, points, criteria, display_order) VALUES
+('first_login', 'Welcome Aboard! 👋', 'Completed your first login', 'onboarding', 'bronze', '👋', 10, '{"action": "login", "count": 1}', 1),
+('profile_complete', 'Profile Pro ⭐', 'Completed your profile 100%', 'onboarding', 'silver', '⭐', 25, '{"profile_completion": 100}', 2),
+('setup_wizard', 'Quick Starter 🚀', 'Completed the setup wizard', 'onboarding', 'bronze', '🚀', 15, '{"setup_wizard_completed": true}', 3),
+('first_template', 'Template Explorer 📝', 'Used your first message template', 'activity', 'bronze', '📝', 10, '{"first_template_used": true}', 4),
+('template_creator', 'Content Creator ✨', 'Created your first custom template', 'activity', 'silver', '✨', 20, '{"created_custom_template": true}', 5),
+('quick_response_master', 'Quick Responder ⚡', 'Added 5+ quick responses', 'activity', 'silver', '⚡', 20, '{"quick_responses_added": 5}', 6),
+('template_customizer', 'Customization Expert 🎨', 'Customized 10+ templates', 'activity', 'gold', '🎨', 30, '{"templates_customized": 10}', 7),
+('week_warrior', '7-Day Streak 🔥', 'Active for 7 consecutive days', 'engagement', 'silver', '🔥', 25, '{"days_since_signup": 7}', 8),
+('month_master', '30-Day Champion 🏆', 'Active for 30 days', 'engagement', 'gold', '🏆', 50, '{"days_since_signup": 30}', 9),
+('insights_explorer', 'Data Detective 🔍', 'Viewed the insights dashboard', 'discovery', 'bronze', '🔍', 10, '{"viewed_insights_dashboard": true}', 10),
+('settings_exporter', 'Backup Pro 💾', 'Exported your AI settings', 'discovery', 'bronze', '💾', 10, '{"exported_settings": true}', 11),
+('favorite_picker', 'Favorites Fan 💖', 'Marked a quick response as favorite', 'discovery', 'bronze', '💖', 10, '{"marked_favorite_response": true}', 12),
+('ai_personality', 'AI Personality Set 🤖', 'Configured your AI personality', 'onboarding', 'silver', '🤖', 20, '{"ai_personality_set": true}', 13),
+('power_user', 'Power User 💪', 'Completed all onboarding steps', 'milestone', 'platinum', '💪', 100, '{"profile_completion": 100, "setup_wizard_completed": true, "templates_customized": 5}', 14)
+ON CONFLICT (achievement_key) DO NOTHING;
+
+INSERT INTO certifications (certification_key, name, description, level, icon, badge_color, requirements, benefits, display_order) VALUES
+('ai_assistant_basic', 'AI Assistant Basics', 'Master the fundamentals of the AI Assistant', 1, '🎓', '#3B82F6', '{"profile_completion": 50, "templates_customized": 3, "quick_responses_added": 5}', '["Access to basic templates", "Community forum access"]', 1),
+('ai_assistant_intermediate', 'AI Assistant Intermediate', 'Advanced AI configuration skills', 2, '📚', '#8B5CF6', '{"profile_completion": 75, "templates_customized": 10, "quick_responses_added": 15, "created_custom_template": true}', '["Priority support", "Advanced template library", "Analytics dashboard"]', 2),
+('ai_assistant_advanced', 'AI Assistant Advanced', 'Expert-level AI customization', 3, '🏅', '#F59E0B', '{"profile_completion": 90, "templates_customized": 20, "quick_responses_added": 25, "viewed_insights_dashboard": true, "exported_settings": true}', '["1-on-1 coaching session", "Featured in marketplace", "Beta features access"]', 3),
+('ai_assistant_master', 'AI Assistant Master', 'Absolute mastery of all AI features', 4, '👑', '#EF4444', '{"profile_completion": 100, "templates_customized": 50, "quick_responses_added": 50, "days_since_signup": 30}', '["Lifetime priority support", "Exclusive webinars", "Revenue sharing on templates", "Master badge on profile"]', 4)
+ON CONFLICT (certification_key) DO NOTHING;
+
+INSERT INTO template_library (template_type, template_name, template_content, variables, category, description, is_featured, is_verified, tags) VALUES
+('booking_confirmation', 'Professional Booking Confirmation', 'Hi {client_name}! 🎉 Your {service_type} is confirmed for {date} at {time}. I''ll arrive at {property_address} with all professional supplies. Looking forward to making your space sparkle! - {cleaner_name}', '["client_name", "service_type", "date", "time", "property_address", "cleaner_name"]', 'general', 'Professional and friendly booking confirmation', true, true, ARRAY['professional', 'friendly', 'detailed']),
+('running_late', 'Apologetic Running Late', 'Hi {client_name}, I sincerely apologize but I''m running about {delay_minutes} minutes late due to {reason}. I''ll be there as soon as possible. Thank you so much for your patience and understanding!', '["client_name", "delay_minutes", "reason"]', 'general', 'Polite delay notification with apology', true, true, ARRAY['apologetic', 'professional', 'delay']),
+('job_complete', 'Detailed Job Complete', 'Hi {client_name}! ✨ Your cleaning is complete! Today I cleaned: {services_performed}. Total time: {duration}. Your {property_type} looks amazing! Please let me know if you need anything adjusted. Thank you!', '["client_name", "services_performed", "duration", "property_type"]', 'general', 'Detailed completion message with summary', true, true, ARRAY['professional', 'detailed', 'friendly']),
+('review_request', 'Warm Review Request', 'Hi {client_name}! ❤️ I hope you''re loving your freshly cleaned space! If you were happy with my service, would you mind leaving a quick review? It really helps my small business grow. Thank you so much! 🙏', '["client_name"]', 'general', 'Friendly review request that converts', true, true, ARRAY['review', 'friendly', 'growth'])
+ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- MIGRATION 031: Message History
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS cleaner_message_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL,
+  message_content TEXT NOT NULL,
+  recipient_type VARCHAR(50),
+  recipient_id TEXT,
+  recipient_name VARCHAR(255),
+  template_id UUID,
+  template_name VARCHAR(255),
+  variables_used JSONB,
+  booking_id UUID,
+  message_type VARCHAR(100),
+  channel VARCHAR(50),
+  character_count INTEGER,
+  word_count INTEGER,
+  sent_at TIMESTAMP DEFAULT NOW(),
+  was_ai_generated BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_message_history_cleaner ON cleaner_message_history(cleaner_id);
+CREATE INDEX IF NOT EXISTS idx_message_history_sent_at ON cleaner_message_history(sent_at);
+CREATE INDEX IF NOT EXISTS idx_message_history_booking ON cleaner_message_history(booking_id);
+
+CREATE TABLE IF NOT EXISTS cleaner_saved_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  category VARCHAR(100),
+  tags TEXT[],
+  times_used INTEGER DEFAULT 0,
+  last_used_at TIMESTAMP,
+  is_favorite BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_saved_messages_cleaner ON cleaner_saved_messages(cleaner_id);
+
+-- ============================================
+-- MIGRATION 032: Federal Holidays Policy
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS holidays (
+  holiday_date DATE PRIMARY KEY,
+  name TEXT NOT NULL,
+  is_federal BOOLEAN NOT NULL DEFAULT true,
+  bank_holiday BOOLEAN NOT NULL DEFAULT true,
+  support_limited BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_holidays_is_federal ON holidays (is_federal);
+
+CREATE TABLE IF NOT EXISTS cleaner_holiday_settings (
+  cleaner_id TEXT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+  available_on_federal_holidays BOOLEAN NOT NULL DEFAULT false,
+  holiday_rate_enabled BOOLEAN NOT NULL DEFAULT false,
+  holiday_rate_multiplier NUMERIC(6,3) NOT NULL DEFAULT 1.150,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_holiday_rate_multiplier CHECK (holiday_rate_multiplier >= 1.000 AND holiday_rate_multiplier <= 2.000)
+);
+
+CREATE TABLE IF NOT EXISTS cleaner_holiday_overrides (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  holiday_date DATE NOT NULL REFERENCES holidays (holiday_date) ON DELETE CASCADE,
+  available BOOLEAN NOT NULL DEFAULT false,
+  start_time_local TIME,
+  end_time_local TIME,
+  use_holiday_rate BOOLEAN,
+  min_job_hours NUMERIC(4,2),
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_cleaner_holiday_override UNIQUE (cleaner_id, holiday_date)
+);
+CREATE INDEX IF NOT EXISTS idx_cleaner_holiday_overrides_cleaner_date ON cleaner_holiday_overrides (cleaner_id, holiday_date);
+
+CREATE TABLE IF NOT EXISTS payout_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  scheduled_for_date DATE NOT NULL,
+  initiate_on_date DATE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'queued',
+  initiated_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_payout_runs_status CHECK (status IN ('queued','processing','submitted','failed','completed'))
+);
+CREATE INDEX IF NOT EXISTS idx_payout_runs_initiate_on_date ON payout_runs (initiate_on_date);
+
+CREATE OR REPLACE FUNCTION is_bank_holiday(d DATE)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (SELECT 1 FROM holidays h WHERE h.holiday_date = d AND h.bank_holiday = true);
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION previous_business_day(d DATE)
+RETURNS DATE AS $$
+DECLARE x DATE := d - 1;
+BEGIN
+  WHILE (EXTRACT(ISODOW FROM x) IN (6,7)) OR is_bank_holiday(x) LOOP
+    x := x - 1;
+  END LOOP;
+  RETURN x;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+CREATE OR REPLACE FUNCTION payout_initiate_date(scheduled DATE)
+RETURNS DATE AS $$
+BEGIN
+  IF EXTRACT(ISODOW FROM scheduled) IN (6,7) THEN
+    scheduled := previous_business_day(scheduled + 1);
+  END IF;
+  IF is_bank_holiday(scheduled) THEN
+    RETURN previous_business_day(scheduled);
+  END IF;
+  RETURN scheduled;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ============================================
+-- MIGRATION 033: Federal Holidays Seed
+-- ============================================
+
+INSERT INTO holidays (holiday_date, name, is_federal, bank_holiday, support_limited)
+VALUES
+  ('2026-01-01', 'New Year''s Day', true, true, false),
+  ('2026-01-19', 'Martin Luther King Jr. Day', true, true, false),
+  ('2026-02-16', 'Washington''s Birthday', true, true, false),
+  ('2026-05-25', 'Memorial Day', true, true, false),
+  ('2026-06-19', 'Juneteenth National Independence Day', true, true, false),
+  ('2026-07-03', 'Independence Day (Observed)', true, true, false),
+  ('2026-09-07', 'Labor Day', true, true, false),
+  ('2026-10-12', 'Columbus Day', true, true, false),
+  ('2026-11-11', 'Veterans Day', true, true, false),
+  ('2026-11-26', 'Thanksgiving Day', true, true, true),
+  ('2026-12-25', 'Christmas Day', true, true, true),
+  ('2027-01-01', 'New Year''s Day', true, true, false),
+  ('2027-01-18', 'Martin Luther King Jr. Day', true, true, false),
+  ('2027-02-15', 'Washington''s Birthday', true, true, false),
+  ('2027-05-31', 'Memorial Day', true, true, false),
+  ('2027-06-18', 'Juneteenth National Independence Day (Observed)', true, true, false),
+  ('2027-07-05', 'Independence Day (Observed)', true, true, false),
+  ('2027-09-06', 'Labor Day', true, true, false),
+  ('2027-10-11', 'Columbus Day', true, true, false),
+  ('2027-11-11', 'Veterans Day', true, true, false),
+  ('2027-11-25', 'Thanksgiving Day', true, true, true),
+  ('2027-12-24', 'Christmas Day (Observed)', true, true, true),
+  ('2027-12-31', 'New Year''s Day (Observed)', true, true, false),
+  ('2028-01-17', 'Martin Luther King Jr. Day', true, true, false),
+  ('2028-02-21', 'Washington''s Birthday', true, true, false),
+  ('2028-05-29', 'Memorial Day', true, true, false),
+  ('2028-06-19', 'Juneteenth National Independence Day', true, true, false),
+  ('2028-07-04', 'Independence Day', true, true, false),
+  ('2028-09-04', 'Labor Day', true, true, false),
+  ('2028-10-09', 'Columbus Day', true, true, false),
+  ('2028-11-10', 'Veterans Day (Observed)', true, true, false),
+  ('2028-11-23', 'Thanksgiving Day', true, true, true),
+  ('2028-12-25', 'Christmas Day', true, true, true),
+  ('2029-01-01', 'New Year''s Day', true, true, false),
+  ('2029-01-15', 'Martin Luther King Jr. Day', true, true, false),
+  ('2029-02-19', 'Washington''s Birthday', true, true, false),
+  ('2029-05-28', 'Memorial Day', true, true, false),
+  ('2029-06-19', 'Juneteenth National Independence Day', true, true, false),
+  ('2029-07-04', 'Independence Day', true, true, false),
+  ('2029-09-03', 'Labor Day', true, true, false),
+  ('2029-10-08', 'Columbus Day', true, true, false),
+  ('2029-11-12', 'Veterans Day (Observed)', true, true, false),
+  ('2029-11-22', 'Thanksgiving Day', true, true, true),
+  ('2029-12-25', 'Christmas Day', true, true, true),
+  ('2030-01-01', 'New Year''s Day', true, true, false),
+  ('2030-01-21', 'Martin Luther King Jr. Day', true, true, false),
+  ('2030-02-18', 'Washington''s Birthday', true, true, false),
+  ('2030-05-27', 'Memorial Day', true, true, false),
+  ('2030-06-19', 'Juneteenth National Independence Day', true, true, false),
+  ('2030-07-04', 'Independence Day', true, true, false),
+  ('2030-09-02', 'Labor Day', true, true, false),
+  ('2030-10-14', 'Columbus Day', true, true, false),
+  ('2030-11-11', 'Veterans Day', true, true, false),
+  ('2030-11-28', 'Thanksgiving Day', true, true, true),
+  ('2030-12-25', 'Christmas Day', true, true, true)
+ON CONFLICT (holiday_date) DO UPDATE
+SET name = EXCLUDED.name, is_federal = EXCLUDED.is_federal, bank_holiday = EXCLUDED.bank_holiday, support_limited = EXCLUDED.support_limited, updated_at = NOW();
+
+-- ============================================
+-- MIGRATIONS 034-035: Onboarding enhancements (cols already in 023/025)
+-- ============================================
+
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS professional_headline TEXT;
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS profile_photo_url TEXT;
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS phone_number TEXT;
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number TEXT;
+
+CREATE TABLE IF NOT EXISTS cleaner_agreements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id UUID NOT NULL REFERENCES cleaner_profiles(id) ON DELETE CASCADE,
+  agreement_type TEXT NOT NULL,
+  version TEXT NOT NULL DEFAULT '1.0',
+  accepted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_cleaner_agreements_cleaner_id ON cleaner_agreements(cleaner_id);
+
+CREATE TABLE IF NOT EXISTS phone_verifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  phone_number TEXT NOT NULL,
+  otp_code TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  verified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_phone_verifications_user_id ON phone_verifications(user_id);
+
+CREATE TABLE IF NOT EXISTS id_verifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id UUID NOT NULL REFERENCES cleaner_profiles(id) ON DELETE CASCADE,
+  document_type TEXT NOT NULL,
+  document_url TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  reviewed_at TIMESTAMPTZ,
+  reviewed_by TEXT REFERENCES users(id),
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_id_verifications_cleaner_id ON id_verifications(cleaner_id);
+
+CREATE TABLE IF NOT EXISTS background_checks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id UUID NOT NULL REFERENCES cleaner_profiles(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL DEFAULT 'checkr',
+  provider_id TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  report_url TEXT,
+  completed_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_background_checks_cleaner_id ON background_checks(cleaner_id);
+
+CREATE TABLE IF NOT EXISTS cleaner_service_areas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id UUID NOT NULL REFERENCES cleaner_profiles(id) ON DELETE CASCADE,
+  zip_code TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_cleaner_service_areas_cleaner_id ON cleaner_service_areas(cleaner_id);
+
+CREATE TABLE IF NOT EXISTS availability_blocks (
+  id BIGSERIAL PRIMARY KEY,
+  cleaner_id UUID NOT NULL REFERENCES cleaner_profiles(id) ON DELETE CASCADE,
+  day_of_week INTEGER NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_availability_blocks_cleaner_id ON availability_blocks(cleaner_id);
+
+-- ============================================
+-- MIGRATION 037: Migration Tracking
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  id SERIAL PRIMARY KEY,
+  migration_name TEXT NOT NULL UNIQUE,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  checksum TEXT,
+  applied_by TEXT,
+  notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_schema_migrations_applied_at ON schema_migrations (applied_at DESC);
+
+CREATE OR REPLACE FUNCTION migration_applied(migration_name TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (SELECT 1 FROM schema_migrations WHERE schema_migrations.migration_name = migration_applied.migration_name);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION record_migration_applied(p_migration_name TEXT, p_checksum TEXT DEFAULT NULL, p_applied_by TEXT DEFAULT NULL, p_notes TEXT DEFAULT NULL)
+RETURNS VOID AS $$
+BEGIN
+  INSERT INTO schema_migrations (migration_name, checksum, applied_by, notes)
+  VALUES (p_migration_name, p_checksum, p_applied_by, p_notes)
+  ON CONFLICT (migration_name) DO NOTHING;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
+-- MIGRATION 038: Worker Hardening
+-- ============================================
+
+ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_job_queue_idempotency ON job_queue (queue_name, idempotency_key) WHERE idempotency_key IS NOT NULL;
+ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS dead_letter_reason TEXT;
+ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS dead_letter_at TIMESTAMPTZ;
+ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS locked_by TEXT;
+ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ;
+ALTER TABLE worker_runs ADD COLUMN IF NOT EXISTS lock_expires_at TIMESTAMPTZ;
+
+CREATE OR REPLACE FUNCTION recover_expired_job_locks(lock_timeout_minutes INTEGER DEFAULT 30)
+RETURNS INTEGER AS $$
+DECLARE recovered_count INTEGER;
+BEGIN
+  UPDATE job_queue
+  SET status = 'pending', locked_by = NULL, locked_at = NULL, attempts = attempts + 1,
+      error_message = COALESCE(error_message || '; ', '') || 'Lock expired - recovered'
+  WHERE status = 'processing'
+    AND locked_at < NOW() - (lock_timeout_minutes || ' minutes')::INTERVAL
+    AND attempts < max_attempts;
+  GET DIAGNOSTICS recovered_count = ROW_COUNT;
+  RETURN recovered_count;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION recover_expired_worker_runs(lock_timeout_minutes INTEGER DEFAULT 60)
+RETURNS INTEGER AS $$
+DECLARE recovered_count INTEGER;
+BEGIN
+  UPDATE worker_runs
+  SET status = 'failed', finished_at = NOW(), error_message = 'Worker run expired - likely crashed'
+  WHERE status = 'running'
+    AND started_at < NOW() - (lock_timeout_minutes || ' minutes')::INTERVAL;
+  GET DIAGNOSTICS recovered_count = ROW_COUNT;
+  RETURN recovered_count;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE VIEW job_queue_stats AS
+SELECT queue_name, status, COUNT(*) as count,
+  AVG(EXTRACT(EPOCH FROM (completed_at - started_at))) as avg_duration_seconds,
+  MAX(created_at) as last_created_at, MAX(completed_at) as last_completed_at
+FROM job_queue GROUP BY queue_name, status;
+
+CREATE OR REPLACE VIEW dead_letter_queue AS
+SELECT id, queue_name, payload, attempts, max_attempts, dead_letter_reason, dead_letter_at, error_message, created_at
+FROM job_queue WHERE status = 'dead' ORDER BY dead_letter_at DESC;
+
+-- ============================================
+-- MIGRATION 039: Idempotency Keys
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+  idempotency_key TEXT PRIMARY KEY,
+  endpoint TEXT NOT NULL,
+  method TEXT NOT NULL,
+  status_code INTEGER NOT NULL,
+  response_body JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_idempotency_keys_endpoint ON idempotency_keys (endpoint, created_at);
+
+CREATE OR REPLACE FUNCTION cleanup_old_idempotency_keys()
+RETURNS INTEGER AS $$
+DECLARE deleted_count INTEGER;
+BEGIN
+  DELETE FROM idempotency_keys WHERE created_at < NOW() - INTERVAL '24 hours';
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
+-- MIGRATION 040: Token Invalidation (fixed: metadata + status)
+-- ============================================
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 1;
+CREATE INDEX IF NOT EXISTS idx_users_token_version ON users(token_version);
+
+CREATE TABLE IF NOT EXISTS invalidated_tokens (
+  jti TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  invalidated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reason TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_invalidated_tokens_user ON invalidated_tokens(user_id);
+
+CREATE OR REPLACE FUNCTION invalidate_user_tokens(user_id_param TEXT, reason_param TEXT DEFAULT NULL)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE users SET token_version = token_version + 1 WHERE id = user_id_param;
+  IF reason_param IS NOT NULL THEN
+    INSERT INTO security_events (event_type, user_id, status, metadata)
+    VALUES ('token_invalidated', user_id_param, 'success', jsonb_build_object('reason', reason_param));
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
+-- MIGRATION 041: N8N Event Log
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS n8n_event_log (
+  id BIGSERIAL PRIMARY KEY,
+  idempotency_key TEXT NOT NULL UNIQUE,
+  event_name TEXT NOT NULL,
+  job_id UUID NULL,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  source TEXT NOT NULL DEFAULT 'backend_to_n8n',
+  status TEXT NOT NULL DEFAULT 'processed',
+  workflow_name TEXT NULL,
+  message TEXT NULL,
+  payload JSONB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS n8n_event_log_event_name_idx ON n8n_event_log(event_name);
+CREATE INDEX IF NOT EXISTS n8n_event_log_job_id_idx ON n8n_event_log(job_id);
+CREATE INDEX IF NOT EXISTS n8n_event_log_received_at_idx ON n8n_event_log(received_at);
+
+-- ============================================
+-- MIGRATION 042: Webhook Events
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS webhook_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider TEXT NOT NULL,
+  event_id TEXT NOT NULL,
+  event_type TEXT,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  signature_verified BOOLEAN NOT NULL DEFAULT false,
+  payload_json JSONB,
+  processing_status TEXT NOT NULL DEFAULT 'pending' CHECK (processing_status IN ('pending', 'processing', 'done', 'failed')),
+  attempt_count INT NOT NULL DEFAULT 0,
+  last_error TEXT,
+  processed_at TIMESTAMPTZ,
+  UNIQUE (provider, event_id)
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_events_provider_event_id ON webhook_events (provider, event_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_events_processing_status ON webhook_events (processing_status) WHERE processing_status = 'pending';
+
+-- ============================================
+-- MIGRATIONS 043-056 + 906 (inlined from _appendix_043_to_906.sql)
+-- ============================================
+-- ============================================
+-- MIGRATION 043: Cleaner Level System (condensed)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS cleaner_level_definitions (
+  level INTEGER PRIMARY KEY CHECK (level >= 1 AND level <= 10),
+  name TEXT NOT NULL,
+  description TEXT,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+INSERT INTO cleaner_level_definitions (level, name, description, display_order) VALUES
+(1, 'New Cleaner', 'First success, zero friction', 1),
+(2, 'Active', 'Prove consistency and responsiveness', 2),
+(3, 'Reliable', 'Establish trust', 3),
+(4, 'Trusted', 'Reduce platform risk, higher quality', 4),
+(5, 'Professional', 'Separate pros from casuals', 5),
+(6, 'Elite', 'Operational excellence', 6),
+(7, 'Community Favorite', 'Retention and loyalty', 7),
+(8, 'Master', 'High-value supply', 8),
+(9, 'Top Performer', 'Scarcity and excellence', 9),
+(10, 'Legend', 'Long-term anchors', 10)
+ON CONFLICT (level) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description;
+
+CREATE TABLE IF NOT EXISTS cleaner_level_goals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  level INTEGER NOT NULL REFERENCES cleaner_level_definitions(level),
+  goal_key TEXT NOT NULL,
+  goal_type TEXT NOT NULL CHECK (goal_type IN ('core', 'stretch', 'maintenance')),
+  name TEXT NOT NULL,
+  description TEXT,
+  criteria JSONB NOT NULL,
+  reward_type TEXT,
+  reward_config JSONB,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(level, goal_key)
+);
+CREATE INDEX IF NOT EXISTS idx_level_goals_level ON cleaner_level_goals(level);
+
+CREATE TABLE IF NOT EXISTS cleaner_level_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  current_level INTEGER NOT NULL DEFAULT 1 REFERENCES cleaner_level_definitions(level),
+  level_reached_at TIMESTAMPTZ,
+  maintenance_paused BOOLEAN DEFAULT false,
+  maintenance_paused_at TIMESTAMPTZ,
+  maintenance_paused_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_level_progress_cleaner ON cleaner_level_progress(cleaner_id);
+
+CREATE TABLE IF NOT EXISTS cleaner_goal_completions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  level INTEGER NOT NULL,
+  goal_key TEXT NOT NULL,
+  completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  metadata JSONB,
+  UNIQUE(cleaner_id, level, goal_key)
+);
+
+CREATE TABLE IF NOT EXISTS cleaner_rewards_granted (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  level INTEGER NOT NULL,
+  goal_key TEXT NOT NULL,
+  reward_type TEXT NOT NULL,
+  reward_config JSONB NOT NULL,
+  granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired', 'used', 'revoked')),
+  metadata JSONB
+);
+
+CREATE TABLE IF NOT EXISTS cleaner_login_days (
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  login_date DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (cleaner_id, login_date)
+);
+
+CREATE TABLE IF NOT EXISTS cleaner_active_boosts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  boost_type TEXT NOT NULL,
+  multiplier NUMERIC(5,2),
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  source_goal_key TEXT,
+  source_level INTEGER,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO cleaner_level_goals (level, goal_key, goal_type, name, description, criteria, reward_type, reward_config, display_order) VALUES
+(1, 'complete_1_cleaning', 'core', 'Complete 1 cleaning', 'Finish your first job', '{"type":"jobs_completed","min":1}'::jsonb, null, null, 1),
+(1, 'upload_photos', 'core', 'Upload before & after photos', 'Upload photos for a job', '{"type":"photos_uploaded","min":1}'::jsonb, null, null, 2),
+(1, 'clock_in_out', 'core', 'Successful clock-in and clock-out', 'Check in and check out on a job', '{"type":"clock_in_out","min":1}'::jsonb, null, null, 3),
+(1, 'accept_1_job', 'core', 'Accept 1 job request', 'Accept your first job', '{"type":"jobs_accepted","min":1}'::jsonb, null, null, 4),
+(1, 'send_1_message', 'core', 'Send at least 1 message to a client', 'Communicate with a client', '{"type":"messages_sent","min":1}'::jsonb, null, null, 5)
+ON CONFLICT (level, goal_key) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description;
+
+DROP TRIGGER IF EXISTS trigger_initialize_level_progress ON users;
+CREATE OR REPLACE FUNCTION initialize_cleaner_level_progress()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.role = 'cleaner' THEN
+    INSERT INTO cleaner_level_progress (cleaner_id, current_level)
+    VALUES (NEW.id, 1)
+    ON CONFLICT (cleaner_id) DO NOTHING;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER trigger_initialize_level_progress AFTER INSERT ON users FOR EACH ROW EXECUTE FUNCTION initialize_cleaner_level_progress();
+
+INSERT INTO cleaner_level_progress (cleaner_id, current_level)
+SELECT cp.user_id, 1 FROM cleaner_profiles cp
+WHERE NOT EXISTS (SELECT 1 FROM cleaner_level_progress lp WHERE lp.cleaner_id = cp.user_id)
+ON CONFLICT (cleaner_id) DO NOTHING;
+
+-- ============================================
+-- MIGRATION 044: Meaningful Login
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS cleaner_meaningful_actions (
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  action_date DATE NOT NULL,
+  action_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (cleaner_id, action_date, action_type)
+);
+
+CREATE OR REPLACE VIEW cleaner_boost_attribution_placeholder AS
+SELECT c.cleaner_id, DATE_TRUNC('week', NOW())::date AS week_start, 0::int AS extra_bookings_attributed
+FROM cleaner_active_boosts c
+WHERE c.is_active = true AND c.expires_at > NOW()
+GROUP BY c.cleaner_id;
+
+-- ============================================
+-- MIGRATION 045: Gamification Expansion
+-- ============================================
+
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS has_addons BOOLEAN DEFAULT false;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS addons_count INTEGER DEFAULT 0;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS template_id TEXT;
+DO $$ BEGIN ALTER TABLE job_offers ADD COLUMN decline_reason TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+ALTER TABLE cleaner_profiles ADD COLUMN IF NOT EXISTS max_travel_miles NUMERIC(5,2) DEFAULT 10;
+
+CREATE TABLE IF NOT EXISTS message_templates (
+  id TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  copy TEXT NOT NULL,
+  category TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+INSERT INTO message_templates (id, label, copy, category) VALUES
+('tmpl_on_my_way', 'On my way', 'On my way', 'professional'),
+('tmpl_arrived', 'I''ve arrived', 'I''ve arrived', 'professional'),
+('tmpl_starting_now', 'Starting now', 'Starting now', 'professional'),
+('tmpl_finished_photos_attached', 'Finished â€” photos attached', 'Finished â€” here are your photos.', 'professional'),
+('tmpl_thank_you', 'Thank you', 'Thanks for choosing PureTask! I just finished up â€” let me know if there''s anything you''d like adjusted.', 'courtesy'),
+('tmpl_review_request', 'Request a review', 'If you were happy with the cleaning, would you mind leaving a quick review? It really helps me get booked more often. Thank you!', 'courtesy')
+ON CONFLICT (id) DO UPDATE SET label = EXCLUDED.label, copy = EXCLUDED.copy, category = EXCLUDED.category;
+
+-- ============================================
+-- MIGRATION 046: Safety Reports
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS safety_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  job_offer_id UUID REFERENCES job_offers(id) ON DELETE SET NULL,
+  reason TEXT NOT NULL DEFAULT 'safety_concern',
+  note TEXT,
+  photo_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============================================
+-- MIGRATION 047: Event Ingestion
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS pt_event_log (
+  event_id UUID PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  occurred_at TIMESTAMPTZ NOT NULL,
+  source TEXT NOT NULL CHECK (source IN ('mobile','web','server','admin','system')),
+  idempotency_key TEXT,
+  cleaner_id TEXT,
+  client_id TEXT,
+  job_id UUID,
+  job_request_id UUID,
+  region_id TEXT,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_pt_event_log_occurred_at ON pt_event_log (occurred_at);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_pt_event_log_idempotency ON pt_event_log (event_type, idempotency_key) WHERE idempotency_key IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS pt_engagement_sessions (
+  session_id UUID PRIMARY KEY,
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  started_at TIMESTAMPTZ NOT NULL,
+  source TEXT NOT NULL CHECK (source IN ('mobile','web')),
+  timezone TEXT,
+  device_platform TEXT,
+  app_version TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS pt_engagement_actions (
+  action_id UUID PRIMARY KEY,
+  session_id UUID NOT NULL REFERENCES pt_engagement_sessions(session_id) ON DELETE CASCADE,
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  occurred_at TIMESTAMPTZ NOT NULL,
+  action TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ============================================
+-- MIGRATION 048: Reward Grants
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS cleaner_goal_progress (
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  goal_id TEXT NOT NULL,
+  current_value JSONB NOT NULL DEFAULT '{}'::jsonb,
+  progress_ratio NUMERIC(5,4) NOT NULL DEFAULT 0,
+  completed BOOLEAN NOT NULL DEFAULT false,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (cleaner_id, goal_id)
+);
+
+CREATE TABLE IF NOT EXISTS gamification_reward_grants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reward_id TEXT NOT NULL,
+  granted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ends_at TIMESTAMPTZ NULL,
+  uses_remaining INTEGER NULL,
+  source_type TEXT NOT NULL CHECK (source_type IN ('goal','level','admin')),
+  source_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','expired','revoked')),
+  meta JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS gamification_choice_eligibilities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  choice_group_id TEXT NOT NULL,
+  source_goal_id TEXT NOT NULL,
+  earned_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  selected_reward_id TEXT NULL,
+  selected_at TIMESTAMPTZ NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','selected','expired','revoked')),
+  meta JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE OR REPLACE VIEW gamification_active_rewards AS
+SELECT * FROM gamification_reward_grants
+WHERE status = 'active' AND (ends_at IS NULL OR ends_at > now());
+
+-- ============================================
+-- MIGRATION 049: SQL Helpers
+-- ============================================
+
+CREATE OR REPLACE FUNCTION pt_haversine_meters(lat1 double precision, lon1 double precision, lat2 double precision, lon2 double precision)
+RETURNS double precision LANGUAGE sql IMMUTABLE AS $$
+  SELECT 2 * 6371000 * asin(sqrt(pow(sin(radians((lat2 - lat1) / 2)), 2) + cos(radians(lat1)) * cos(radians(lat2)) * pow(sin(radians((lon2 - lon1) / 2)), 2)));
+$$;
+
+CREATE OR REPLACE FUNCTION pt_haversine_miles(lat1 double precision, lon1 double precision, lat2 double precision, lon2 double precision)
+RETURNS double precision LANGUAGE sql IMMUTABLE AS $$
+  SELECT pt_haversine_meters(lat1, lon1, lat2, lon2) / 1609.344;
+$$;
+
+CREATE OR REPLACE FUNCTION pt_within_radius_meters(lat1 double precision, lon1 double precision, lat2 double precision, lon2 double precision, radius_m double precision)
+RETURNS boolean LANGUAGE sql IMMUTABLE AS $$
+  SELECT pt_haversine_meters(lat1, lon1, lat2, lon2) <= radius_m;
+$$;
+
+-- ============================================
+-- MIGRATION 050: Reward Idempotency
+-- ============================================
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reward_grants_source ON gamification_reward_grants (cleaner_id, reward_id, source_type, source_id);
+ALTER TABLE gamification_choice_eligibilities ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ NULL;
+
+CREATE OR REPLACE FUNCTION gamification_use_reward(grant_id uuid)
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE gamification_reward_grants
+  SET uses_remaining = CASE WHEN uses_remaining IS NULL THEN NULL WHEN uses_remaining <= 1 THEN 0 ELSE uses_remaining - 1 END,
+      status = CASE WHEN uses_remaining IS NULL THEN status WHEN uses_remaining <= 1 THEN 'expired' ELSE status END
+  WHERE id = grant_id AND status = 'active';
+END;
+$$;
+
+-- ============================================
+-- MIGRATION 051: Admin Control Plane
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS admin_feature_flags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT NOT NULL,
+  region_id TEXT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  variant TEXT NULL,
+  config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  effective_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by TEXT NULL REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS admin_reward_budget (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  scope TEXT NOT NULL CHECK (scope IN ('global','region')),
+  region_id TEXT NOT NULL DEFAULT '__global__',
+  cash_cap_daily_cents INTEGER NOT NULL DEFAULT 0,
+  cash_cap_monthly_cents INTEGER NOT NULL DEFAULT 0,
+  cash_rewards_enabled BOOLEAN NOT NULL DEFAULT true,
+  emergency_disable_all_rewards BOOLEAN NOT NULL DEFAULT false,
+  updated_by TEXT NULL REFERENCES users(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (scope, region_id)
+);
+
+CREATE TABLE IF NOT EXISTS admin_config_versions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  config_type TEXT NOT NULL CHECK (config_type IN ('goals','rewards','governor','levels','full_bundle')),
+  version INTEGER NOT NULL,
+  region_id TEXT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','superseded','draft')),
+  effective_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  payload JSONB NOT NULL,
+  change_summary TEXT NOT NULL DEFAULT '',
+  created_by TEXT NULL REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_admin_user_id TEXT NULL REFERENCES users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NULL,
+  before_state JSONB NULL,
+  after_state JSONB NULL,
+  meta JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS region_governor_config (
+  region_id TEXT PRIMARY KEY,
+  config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_by TEXT NULL REFERENCES users(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ============================================
+-- MIGRATION 052: Cash Budget
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS gamification_cash_reward_ledger (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  region_id TEXT NULL,
+  reward_id TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
+  source_type TEXT NOT NULL CHECK (source_type IN ('goal','level','admin','choice')),
+  source_id TEXT NOT NULL,
+  granted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  meta JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_cash_ledger_source ON gamification_cash_reward_ledger (cleaner_id, reward_id, source_type, source_id);
+
+CREATE OR REPLACE VIEW gamification_cash_spend_daily AS
+SELECT COALESCE(region_id, '__global__') AS region_key, date_trunc('day', granted_at)::date AS day, SUM(amount_cents)::bigint AS spend_cents
+FROM gamification_cash_reward_ledger GROUP BY 1, 2;
+
+CREATE OR REPLACE VIEW gamification_cash_spend_monthly AS
+SELECT COALESCE(region_id, '__global__') AS region_key, date_trunc('month', granted_at)::date AS month, SUM(amount_cents)::bigint AS spend_cents
+FROM gamification_cash_reward_ledger GROUP BY 1, 2;
+
+-- ============================================
+-- MIGRATION 053: Badges
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS badge_definitions (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('core','fun')),
+  icon_key TEXT NULL,
+  is_profile_visible BOOLEAN NOT NULL DEFAULT false,
+  is_enabled BOOLEAN NOT NULL DEFAULT true,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  trigger JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS cleaner_badges (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  badge_id TEXT NOT NULL REFERENCES badge_definitions(id) ON DELETE CASCADE,
+  earned_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  meta JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_cleaner_badge_once ON cleaner_badges (cleaner_id, badge_id);
+
+CREATE TABLE IF NOT EXISTS cleaner_achievement_feed (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('badge','level_up','goal_complete','reward_granted')),
+  ref_id TEXT NULL,
+  title TEXT NOT NULL,
+  subtitle TEXT NULL,
+  meta JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO badge_definitions (id, name, description, category, icon_key, is_profile_visible, sort_order, trigger) VALUES
+('badge_first_job', 'First Job Completed', 'Completed your first job on PureTask.', 'core', 'first_job', true, 10, '{"type":"metric","metric":"jobs.completed.count","op":">=","target":1}'::jsonb),
+('badge_first_5star', 'First 5-Star Rating', 'Received your first 5-star rating.', 'core', 'star', true, 20, '{"type":"metric","metric":"ratings.five_star.count","op":">=","target":1}'::jsonb)
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description;
+
+-- ============================================
+-- MIGRATION 054: Seasonal Challenges
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS season_rules (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  starts_at TIMESTAMPTZ NOT NULL,
+  ends_at TIMESTAMPTZ NOT NULL,
+  is_enabled BOOLEAN NOT NULL DEFAULT true,
+  regions TEXT[] NULL,
+  rule JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS season_application_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  season_id TEXT NOT NULL REFERENCES season_rules(id) ON DELETE CASCADE,
+  cleaner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  region_id TEXT NULL,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  context JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+-- ============================================
+-- MIGRATION 055: Ops Views
+-- ============================================
+
+CREATE OR REPLACE VIEW ops_cleaner_gamification_snapshot AS
+SELECT clp.cleaner_id, clp.current_level AS level, clp.maintenance_paused AS paused,
+  CASE WHEN clp.maintenance_paused_reason IS NOT NULL AND trim(clp.maintenance_paused_reason) <> ''
+    THEN regexp_split_to_array(trim(clp.maintenance_paused_reason), $$\s*;\s*$$)
+    ELSE ARRAY[]::text[] END AS pause_reasons,
+  clp.updated_at
+FROM cleaner_level_progress clp;
+
+CREATE OR REPLACE VIEW ops_cleaner_goal_counts AS
+SELECT cleaner_id,
+  COUNT(*) FILTER (WHERE completed = true) AS goals_complete_total,
+  COUNT(*) FILTER (WHERE completed = false) AS goals_in_progress_total,
+  COUNT(*) AS goals_total
+FROM cleaner_goal_progress GROUP BY cleaner_id;
+
+-- ============================================
+-- MIGRATION 056: Marketplace Governor
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS region_marketplace_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  region_id TEXT NOT NULL,
+  window_start TIMESTAMPTZ NOT NULL,
+  window_end TIMESTAMPTZ NOT NULL,
+  active_cleaners INTEGER NOT NULL DEFAULT 0,
+  available_cleaners INTEGER NOT NULL DEFAULT 0,
+  job_requests INTEGER NOT NULL DEFAULT 0,
+  jobs_booked INTEGER NOT NULL DEFAULT 0,
+  median_fill_minutes INTEGER NULL,
+  cancel_rate NUMERIC NULL,
+  dispute_rate NUMERIC NULL,
+  avg_rating NUMERIC NULL,
+  on_time_rate NUMERIC NULL,
+  acceptance_rate NUMERIC NULL,
+  computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  meta JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS region_governor_state (
+  region_id TEXT PRIMARY KEY,
+  state TEXT NOT NULL CHECK (state IN ('undersupply','balanced','oversupply','quality_risk')),
+  visibility_multiplier NUMERIC NOT NULL DEFAULT 1.0,
+  early_exposure_minutes INTEGER NOT NULL DEFAULT 0,
+  acceptance_strictness_factor NUMERIC NOT NULL DEFAULT 1.0,
+  quality_emphasis_factor NUMERIC NOT NULL DEFAULT 1.0,
+  cash_rewards_enabled BOOLEAN NOT NULL DEFAULT true,
+  reason TEXT NULL,
+  based_on_window_end TIMESTAMPTZ NULL,
+  computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  meta JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS region_governor_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  region_id TEXT NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('compute','override','enable','disable','config_update')),
+  actor TEXT NULL,
+  before_state JSONB NULL,
+  after_state JSONB NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO region_governor_state (region_id, state, reason)
+VALUES ('__global__', 'balanced', 'no_metrics')
+ON CONFLICT (region_id) DO NOTHING;
+
+-- ============================================
+-- MIGRATION 906: Durable Jobs
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS durable_jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_type TEXT NOT NULL,
+  idempotency_key TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  max_attempts INTEGER NOT NULL DEFAULT 5,
+  run_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  locked_at TIMESTAMPTZ,
+  locked_by TEXT,
+  payload_json JSONB,
+  result_json JSONB,
+  error_message TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uniq_durable_jobs_type_key UNIQUE (job_type, idempotency_key),
+  CONSTRAINT chk_durable_jobs_status CHECK (status IN ('pending','running','completed','failed','retrying','dead'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_durable_jobs_pending ON durable_jobs (run_at) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_durable_jobs_type_status ON durable_jobs (job_type, status, run_at);
+CREATE INDEX IF NOT EXISTS idx_durable_jobs_locked ON durable_jobs (locked_at) WHERE status = 'running';
+
+-- ============================================
 -- COMPLETE SCHEMA CREATED SUCCESSFULLY!
 -- ============================================
 -- This schema includes:
--- - Base migrations 001-019 (original consolidated schema)
--- - Migration 020: Stripe object processed tracking
--- - Migration 021: Payout pause feature  
--- - Migration 022: Schema enhancements (disputes, payout pause audit, reconciliation history)
--- - Migration 023: Cleaner portal invoicing system
--- - Migration 024: V3 pricing snapshot
--- - Migration 025: Authentication enhancements (email verification, 2FA, OAuth, sessions)
--- - Hardening 901: Stripe events processed idempotency
--- - Hardening 902: Ledger idempotency constraints
--- - Hardening 903: Payout items uniqueness
--- - Hardening 904: Worker runs tracking
--- - Hardening 905: Users FK text consistency
+-- - Base migrations 001-025 + hardening 901-905
+-- - Migrations 026-056: AI assistant, admin settings, cleaner AI, onboarding gamification,
+--   message history, federal holidays, migrations 034-035, tracking, worker hardening,
+--   idempotency, token invalidation, n8n/webhook events, cleaner levels, gamification,
+--   safety reports, badges, seasonal challenges, marketplace governor
+-- - Hardening 906: Durable jobs
 -- ============================================
 
 SELECT 'PURETASK COMPLETE CONSOLIDATED SCHEMA CREATED SUCCESSFULLY!' AS status,
-       'Includes migrations 001-025 + hardening 901-905' AS coverage;
+       'Includes migrations 001-056 + hardening 901-906' AS coverage;

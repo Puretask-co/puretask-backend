@@ -4,8 +4,11 @@
 // ============================================
 // CRITICAL: Initialize Sentry FIRST, before ANY other imports
 // This allows Sentry to properly instrument Express, HTTP, and database calls
+// Skip in test env so tests that import full app don't fail on instrument resolution
 // ============================================
-require("./instrument");
+if (process.env.NODE_ENV !== "test") {
+  require("./instrument");
+}
 
 // Now safe to import everything else
 import express from "express";
@@ -16,13 +19,10 @@ import { env } from "./config/env";
 import { logger } from "./lib/logger";
 import { initRedis, closeRedis } from "./lib/redis";
 import { authMiddlewareAttachUser } from "./lib/auth";
-import {
-  endpointRateLimiter,
-  additionalSecurityHeaders,
-  sanitizeBody,
-} from "./lib/security";
+import { endpointRateLimiter, additionalSecurityHeaders, sanitizeBody } from "./lib/security";
 import { requestContextMiddleware, enrichRequestContext } from "./middleware/requestContext";
 import { redactHeaders } from "./lib/logRedaction";
+import { metrics } from "./lib/metrics";
 
 // Import routes
 import healthRouter from "./routes/health";
@@ -94,15 +94,17 @@ app.set("trust proxy", 1);
 // ============================================
 
 // Helmet for secure headers
-app.use(helmet({
-  contentSecurityPolicy: false, // We handle CSP manually for API
-  crossOriginEmbedderPolicy: false,
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  },
-}));
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // We handle CSP manually for API
+    crossOriginEmbedderPolicy: false,
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+  })
+);
 
 // Enhanced security headers (includes CSP)
 import { securityHeaders } from "./middleware/security";
@@ -141,7 +143,12 @@ app.use(
 // Body Parsing (with special handling for Stripe)
 // ============================================
 app.use((req, res, next) => {
-  if (req.path === "/stripe/webhook" || req.path === "/api/v1/stripe/webhook") {
+  const rawBodyPaths = [
+    "/stripe/webhook",
+    "/api/v1/stripe/webhook",
+    "/api/webhooks/stripe/webhook",
+  ];
+  if (rawBodyPaths.some((p) => req.path === p)) {
     // Stripe needs raw body for signature verification
     express.raw({ type: "application/json", limit: "500kb" })(req, res, next);
   } else {
@@ -186,7 +193,7 @@ app.use((req, res, next) => {
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    
+
     // Log request
     logger.info("http_request", {
       method: req.method,
@@ -203,9 +210,8 @@ app.use((req, res, next) => {
 
     // Record metrics (skip health/status endpoints to reduce noise)
     if (!req.path.startsWith("/health") && !req.path.startsWith("/status")) {
-      const { metrics } = require("./lib/metrics");
       metrics.apiRequest(req.method, req.path, res.statusCode, duration);
-      
+
       // Record error metrics for 4xx/5xx responses
       if (res.statusCode >= 400) {
         const errorCode = res.statusCode >= 500 ? "5xx" : "4xx";
@@ -220,21 +226,25 @@ app.use((req, res, next) => {
 // ============================================
 // API Documentation (Swagger/OpenAPI)
 // ============================================
-if (env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'true') {
+if (env.NODE_ENV !== "production" || process.env.ENABLE_API_DOCS === "true") {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const swaggerUi = require('swagger-ui-express');
+    const swaggerUi = require("swagger-ui-express");
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { swaggerSpec } = require('./config/swagger');
-    
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-      customCss: '.swagger-ui .topbar { display: none }',
-      customSiteTitle: 'PureTask API Documentation',
-    }));
-    
-    logger.info('swagger_ui_enabled', { path: '/api-docs' });
+    const { swaggerSpec } = require("./config/swagger");
+
+    app.use(
+      "/api-docs",
+      swaggerUi.serve,
+      swaggerUi.setup(swaggerSpec, {
+        customCss: ".swagger-ui .topbar { display: none }",
+        customSiteTitle: "PureTask API Documentation",
+      })
+    );
+
+    logger.info("swagger_ui_enabled", { path: "/api-docs" });
   } catch (error) {
-    logger.warn('swagger_ui_failed', { error: (error as Error).message });
+    logger.warn("swagger_ui_failed", { error: (error as Error).message });
   }
 }
 
@@ -286,6 +296,11 @@ apiRouter.use(eventsRouter);
 app.use("/", apiRouter);
 app.use("/api/v1", apiRouter);
 
+// Section 7: Canonical /api/webhooks/* (no JWT; signature-only)
+const webhooksRouter = express.Router();
+webhooksRouter.use("/stripe", stripeRouter);
+app.use("/api/webhooks", webhooksRouter);
+
 // ============================================
 // 404 Handler
 // ============================================
@@ -324,7 +339,6 @@ app.use(
     const code = err.code || "INTERNAL_ERROR";
 
     // Record error metrics
-    const { metrics } = require("./lib/metrics");
     metrics.errorOccurred(code, req.path);
 
     // Note: Sentry already captured the error via setupExpressErrorHandler above
@@ -340,9 +354,7 @@ app.use(
 
     // Don't leak error details in production
     const message =
-      env.NODE_ENV === "production" && statusCode === 500
-        ? "Internal server error"
-        : err.message;
+      env.NODE_ENV === "production" && statusCode === 500 ? "Internal server error" : err.message;
 
     const requestId = (req as any).requestId ?? (res.locals as any)?.requestId;
     res.status(statusCode).json({
@@ -356,16 +368,17 @@ app.use(
 // ============================================
 // Only start server if not in test mode
 // Tests import the app but don't need the server running
-const isTestMode = process.env.RUNNING_TESTS === 'true' ||
-                   process.env.NODE_ENV === 'test' || 
-                   process.env.VITEST === 'true' ||
-                   typeof process.env.VITEST_WORKER_ID !== 'undefined';
+const isTestMode =
+  process.env.RUNNING_TESTS === "true" ||
+  process.env.NODE_ENV === "test" ||
+  process.env.VITEST === "true" ||
+  typeof process.env.VITEST_WORKER_ID !== "undefined";
 
 let server: ReturnType<typeof app.listen> | null = null;
 
 if (!isTestMode) {
   const PORT = env.PORT;
-  
+
   // Initialize Redis for rate limiting
   initRedis().catch((err) => {
     logger.warn("redis_init_skipped", {
@@ -373,7 +386,7 @@ if (!isTestMode) {
       fallback: "Using in-memory rate limiting",
     });
   });
-  
+
   // Bind to 0.0.0.0 for Railway/Docker compatibility
   server = app.listen(PORT, "0.0.0.0", () => {
     logger.info("server_started", {

@@ -1,7 +1,7 @@
 // src/tests/integration/jobs.test.ts
 // Integration tests for job creation and management
 
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";
@@ -15,25 +15,21 @@ describe("Jobs Integration Tests", () => {
   beforeAll(async () => {
     // Create test client
     const clientEmail = `client-${Date.now()}@example.com`;
-    const clientRes = await request(app)
-      .post("/auth/register")
-      .send({
-        email: clientEmail,
-        password: "TestPassword123!",
-        role: "client",
-      });
+    const clientRes = await request(app).post("/auth/register").send({
+      email: clientEmail,
+      password: "TestPassword123!",
+      role: "client",
+    });
     clientToken = clientRes.body.token;
     clientId = clientRes.body.user.id;
 
     // Create test cleaner
     const cleanerEmail = `cleaner-${Date.now()}@example.com`;
-    const cleanerRes = await request(app)
-      .post("/auth/register")
-      .send({
-        email: cleanerEmail,
-        password: "TestPassword123!",
-        role: "cleaner",
-      });
+    const cleanerRes = await request(app).post("/auth/register").send({
+      email: cleanerEmail,
+      password: "TestPassword123!",
+      role: "cleaner",
+    });
     cleanerToken = cleanerRes.body.token;
     cleanerId = cleanerRes.body.user.id;
   });

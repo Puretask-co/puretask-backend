@@ -101,7 +101,7 @@ async function calculateCancellationRisk(
   userRole: "client" | "cleaner"
 ): Promise<{ score: number; factor: RiskFactor }> {
   const column = userRole === "client" ? "client_id" : "cleaner_id";
-  
+
   const result = await query<{
     total: string;
     cancelled: string;
@@ -152,11 +152,13 @@ async function calculateCancellationRisk(
 /**
  * Calculate payment failure risk (0-30 points)
  */
-async function calculatePaymentFailureRisk(userId: string): Promise<{ score: number; factor: RiskFactor }> {
+async function calculatePaymentFailureRisk(
+  userId: string
+): Promise<{ score: number; factor: RiskFactor }> {
   // Check for failed payments in stripe_events or payment_intents
   // For now, we'll use a simple query on credit_ledger to detect payment issues
   // In production, you'd query Stripe events table
-  
+
   // Simplified: check for negative balances that weren't resolved
   const result = await query<{ failures: string }>(
     `
@@ -170,7 +172,7 @@ async function calculatePaymentFailureRisk(userId: string): Promise<{ score: num
   );
 
   const failures = Number(result.rows[0]?.failures || 0);
-  
+
   let score = 0;
   let severity: "low" | "medium" | "high" = "low";
 
@@ -204,7 +206,7 @@ async function calculateDisputeRisk(
   userRole: "client" | "cleaner"
 ): Promise<{ score: number; factor: RiskFactor }> {
   const column = userRole === "client" ? "client_id" : "cleaner_id";
-  
+
   // Get disputes where user is involved
   const result = await query<{ disputes: string }>(
     `
@@ -218,7 +220,7 @@ async function calculateDisputeRisk(
   );
 
   const disputes = Number(result.rows[0]?.disputes || 0);
-  
+
   let score = 0;
   let severity: "low" | "medium" | "high" = "low";
 
@@ -316,7 +318,11 @@ export async function calculateRiskFlags(
 async function detectSuspiciousBookingPattern(
   userId: string,
   userRole: "client" | "cleaner"
-): Promise<{ severity: "medium" | "high"; description: string; evidence: Record<string, any> } | null> {
+): Promise<{
+  severity: "medium" | "high";
+  description: string;
+  evidence: Record<string, any>;
+} | null> {
   if (userRole !== "client") {
     return null; // Only check clients for booking patterns
   }
@@ -370,7 +376,10 @@ async function detectSuspiciousBookingPattern(
 /**
  * Get complete risk profile for a user
  */
-export async function getUserRiskProfile(userId: string, userRole: "client" | "cleaner"): Promise<RiskProfile> {
+export async function getUserRiskProfile(
+  userId: string,
+  userRole: "client" | "cleaner"
+): Promise<RiskProfile> {
   const riskScore = await calculateRiskScore(userId, userRole);
   const flags = await calculateRiskFlags(userId, userRole);
 
@@ -391,13 +400,14 @@ export async function getUserRiskProfile(userId: string, userRole: "client" | "c
 /**
  * Get list of users with active risk flags (for admin review)
  */
-export async function getRiskReviewQueue(): Promise<Array<{ userId: string; userRole: "client" | "cleaner"; flags: RiskFlag[]; riskScore: number }>> {
+export async function getRiskReviewQueue(): Promise<
+  Array<{ userId: string; userRole: "client" | "cleaner"; flags: RiskFlag[]; riskScore: number }>
+> {
   // For now, this is a placeholder
   // In production, you'd query a risk_flags table
   // For MVP, we can calculate on-demand
-  
+
   // This would typically query active flags from database
   // For now, return empty array - admins can query specific users
   return [];
 }
-

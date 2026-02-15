@@ -31,10 +31,7 @@ export type ActorType = "client" | "cleaner" | "system" | "admin";
  * - disputed
  * - cancelled
  */
-export const allowedTransitions: Record<
-  JobStatus,
-  Partial<Record<JobEventType, JobStatus>>
-> = {
+export const allowedTransitions: Record<JobStatus, Partial<Record<JobEventType, JobStatus>>> = {
   // Initial state: client has requested a job
   requested: {
     job_accepted: "accepted",
@@ -81,17 +78,12 @@ export const allowedTransitions: Record<
  * Get next status from current status and event
  * Throws if transition is invalid
  */
-export function getNextStatus(
-  current: JobStatus,
-  event: JobEventType
-): JobStatus {
+export function getNextStatus(current: JobStatus, event: JobEventType): JobStatus {
   const mapping = allowedTransitions[current] ?? {};
   const next = mapping[event];
 
   if (!next) {
-    throw new Error(
-      `Invalid transition: cannot apply "${event}" when status is "${current}"`
-    );
+    throw new Error(`Invalid transition: cannot apply "${event}" when status is "${current}"`);
   }
 
   return next;
@@ -100,10 +92,7 @@ export function getNextStatus(
 /**
  * Check if a transition is allowed
  */
-export function canTransition(
-  current: JobStatus,
-  event: JobEventType
-): boolean {
+export function canTransition(current: JobStatus, event: JobEventType): boolean {
   try {
     getNextStatus(current, event);
     return true;
@@ -148,10 +137,7 @@ export const eventPermissions: Record<JobEventType, ActorType[]> = {
 /**
  * Check if an actor can trigger an event
  */
-export function canActorTriggerEvent(
-  actorType: ActorType,
-  event: JobEventType
-): boolean {
+export function canActorTriggerEvent(actorType: ActorType, event: JobEventType): boolean {
   const allowed = eventPermissions[event] ?? [];
   return allowed.includes(actorType);
 }
@@ -179,8 +165,7 @@ export function validateTransition(opts: {
   } catch (err) {
     return {
       valid: false,
-      error:
-        err instanceof Error ? err.message : "Invalid state machine transition",
+      error: err instanceof Error ? err.message : "Invalid state machine transition",
     };
   }
 }

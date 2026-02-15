@@ -19,13 +19,7 @@ export interface LogJobEventParams {
  * Matches 001_init.sql schema: (id, job_id, actor_type, actor_id, event_type, payload, created_at)
  */
 export async function logJobEvent(params: LogJobEventParams): Promise<void> {
-  const {
-    jobId = null,
-    actorType = null,
-    actorId = null,
-    eventType,
-    payload = {},
-  } = params;
+  const { jobId = null, actorType = null, actorId = null, eventType, payload = {} } = params;
 
   await query(
     `
@@ -45,9 +39,7 @@ export async function logJobEvent(params: LogJobEventParams): Promise<void> {
 /**
  * Get all events for a specific job
  */
-export async function getJobEventsForJob(
-  jobId: string
-): Promise<JobEvent[]> {
+export async function getJobEventsForJob(jobId: string): Promise<JobEvent[]> {
   const result = await query<JobEvent>(
     `
       SELECT *
@@ -64,10 +56,7 @@ export async function getJobEventsForJob(
 /**
  * Get events by event type
  */
-export async function getEventsByType(
-  eventType: string,
-  limit: number = 100
-): Promise<JobEvent[]> {
+export async function getEventsByType(eventType: string, limit: number = 100): Promise<JobEvent[]> {
   const result = await query<JobEvent>(
     `
       SELECT *
@@ -85,10 +74,7 @@ export async function getEventsByType(
 /**
  * Get events by actor
  */
-export async function getEventsByActor(
-  actorId: string,
-  limit: number = 100
-): Promise<JobEvent[]> {
+export async function getEventsByActor(actorId: string, limit: number = 100): Promise<JobEvent[]> {
   const result = await query<JobEvent>(
     `
       SELECT *

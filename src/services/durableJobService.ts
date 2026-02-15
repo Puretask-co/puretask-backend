@@ -77,10 +77,7 @@ export async function claim(workerId: string, limit: number = 5): Promise<Durabl
 /**
  * Mark job completed. Call after handler succeeds.
  */
-export async function complete(
-  jobId: string,
-  result?: Record<string, unknown>
-): Promise<void> {
+export async function complete(jobId: string, result?: Record<string, unknown>): Promise<void> {
   await pool.query(
     `UPDATE durable_jobs SET status = 'completed', result_json = $2, locked_at = NULL, locked_by = NULL, updated_at = NOW() WHERE id = $1`,
     [jobId, result ? JSON.stringify(result) : null]

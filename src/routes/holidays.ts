@@ -8,9 +8,18 @@ import { listHolidays, getHolidayByDate } from "../services/holidayService";
 const holidaysRouter = Router();
 
 const listQuerySchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   limit: z.string().regex(/^\d+$/).optional(),
 });
 

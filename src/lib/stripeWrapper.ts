@@ -56,45 +56,28 @@ export const stripeOperations = {
   /**
    * Create transfer with circuit breaker
    */
-  async createTransfer(
-    params: Stripe.TransferCreateParams
-  ): Promise<Stripe.Transfer> {
-    return executeStripeOperation(
-      () => stripe.transfers.create(params),
-      "createTransfer"
-    );
+  async createTransfer(params: Stripe.TransferCreateParams): Promise<Stripe.Transfer> {
+    return executeStripeOperation(() => stripe.transfers.create(params), "createTransfer");
   },
 
   /**
    * Create account with circuit breaker
    */
-  async createAccount(
-    params: Stripe.AccountCreateParams
-  ): Promise<Stripe.Account> {
-    return executeStripeOperation(
-      () => stripe.accounts.create(params),
-      "createAccount"
-    );
+  async createAccount(params: Stripe.AccountCreateParams): Promise<Stripe.Account> {
+    return executeStripeOperation(() => stripe.accounts.create(params), "createAccount");
   },
 
   /**
    * Create account link with circuit breaker
    */
-  async createAccountLink(
-    params: Stripe.AccountLinkCreateParams
-  ): Promise<Stripe.AccountLink> {
-    return executeStripeOperation(
-      () => stripe.accountLinks.create(params),
-      "createAccountLink"
-    );
+  async createAccountLink(params: Stripe.AccountLinkCreateParams): Promise<Stripe.AccountLink> {
+    return executeStripeOperation(() => stripe.accountLinks.create(params), "createAccountLink");
   },
 
   /**
    * Retrieve payment intent with circuit breaker
    */
-  async retrievePaymentIntent(
-    id: string
-  ): Promise<Stripe.PaymentIntent> {
+  async retrievePaymentIntent(id: string): Promise<Stripe.PaymentIntent> {
     return executeStripeOperation(
       () => stripe.paymentIntents.retrieve(id),
       "retrievePaymentIntent"

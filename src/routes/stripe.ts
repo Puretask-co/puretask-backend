@@ -6,7 +6,11 @@ import Stripe from "stripe";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import { query } from "../db/client";
-import { createPaymentIntent, handleStripeEvent, getPaymentIntentByJobId } from "../services/paymentService";
+import {
+  createPaymentIntent,
+  handleStripeEvent,
+  getPaymentIntentByJobId,
+} from "../services/paymentService";
 import { queueWebhookForRetry } from "../services/webhookRetryService";
 import { requireAuth, requireClient, AuthedRequest } from "../middleware/authCanonical";
 import { validateBody } from "../lib/validation";
@@ -147,11 +151,7 @@ stripeRouter.post("/webhook", async (req: Request, res: Response) => {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      getStripeWebhookSecret()
-    );
+    event = stripe.webhooks.constructEvent(req.body, sig, getStripeWebhookSecret());
   } catch (err) {
     logger.error("stripe_webhook_signature_verification_failed", {
       error: (err as Error).message,
@@ -273,4 +273,3 @@ stripeRouter.get(
 );
 
 export default stripeRouter;
-

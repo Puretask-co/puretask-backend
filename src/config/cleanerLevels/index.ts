@@ -112,11 +112,19 @@ let _rewards: RewardDefinition[] | null = null;
 let _levelCopy: { global: Record<string, string>; levels: Record<string, LevelCopy> } | null = null;
 let _goodFaithDeclines: GoodFaithDeclinesConfig | null = null;
 let _badges: BadgesConfig | null = null;
-let _quickTemplates: { templates: Array<{ id: string; key: string; label: string; copy: string; category: string }>; meaningfulMessageMinChars?: number } | null = null;
-let _bestPractices: { cards: Array<{ id: string; title: string; description: string; category?: string }> } | null = null;
+let _quickTemplates: {
+  templates: Array<{ id: string; key: string; label: string; copy: string; category: string }>;
+  meaningfulMessageMinChars?: number;
+} | null = null;
+let _bestPractices: {
+  cards: Array<{ id: string; title: string; description: string; category?: string }>;
+} | null = null;
 let _seasonalRules: { rules: Array<Record<string, unknown>> } | null = null;
 let _rewardUnlocksByLevel: Record<string, { unlocks: string[]; note: string }> | null = null;
-let _choiceRewardGroups: Record<string, { id: string; title: string; description: string; options: string[] }> | null = null;
+let _choiceRewardGroups: Record<
+  string,
+  { id: string; title: string; description: string; options: string[] }
+> | null = null;
 
 /**
  * Get all goal definitions from config
@@ -172,9 +180,14 @@ export function getReward(id: string): RewardDefinition | undefined {
 /**
  * Get in-app copy for levels (cleaner-facing)
  */
-export function getLevelCopy(): { global: Record<string, string>; levels: Record<string, LevelCopy> } {
+export function getLevelCopy(): {
+  global: Record<string, string>;
+  levels: Record<string, LevelCopy>;
+} {
   if (!_levelCopy) {
-    _levelCopy = loadJson<{ global: Record<string, string>; levels: Record<string, LevelCopy> }>("levelCopy.json");
+    _levelCopy = loadJson<{ global: Record<string, string>; levels: Record<string, LevelCopy> }>(
+      "levelCopy.json"
+    );
   }
   return _levelCopy;
 }
@@ -210,7 +223,10 @@ export function getBadges(): BadgesConfig {
 /**
  * Get quick message templates
  */
-export function getQuickTemplates(): { templates: Array<{ id: string; key: string; label: string; copy: string; category: string }>; meaningfulMessageMinChars?: number } {
+export function getQuickTemplates(): {
+  templates: Array<{ id: string; key: string; label: string; copy: string; category: string }>;
+  meaningfulMessageMinChars?: number;
+} {
   if (!_quickTemplates) {
     _quickTemplates = loadJson<typeof _quickTemplates>("quickTemplates.json");
   }
@@ -220,7 +236,9 @@ export function getQuickTemplates(): { templates: Array<{ id: string; key: strin
 /**
  * Get best practices (non-gating guidance)
  */
-export function getBestPractices(): { cards: Array<{ id: string; title: string; description: string; category?: string }> } {
+export function getBestPractices(): {
+  cards: Array<{ id: string; title: string; description: string; category?: string }>;
+} {
   if (!_bestPractices) {
     _bestPractices = loadJson<typeof _bestPractices>("bestPractices.json");
   }
@@ -250,7 +268,10 @@ export function getRewardUnlocksByLevel(): Record<string, { unlocks: string[]; n
 /**
  * Get choice reward groups (choose-one rewards)
  */
-export function getChoiceRewardGroups(): Record<string, { id: string; title: string; description: string; options: string[] }> {
+export function getChoiceRewardGroups(): Record<
+  string,
+  { id: string; title: string; description: string; options: string[] }
+> {
   if (!_choiceRewardGroups) {
     _choiceRewardGroups = loadJson<typeof _choiceRewardGroups>("choiceRewardGroups.json");
   }

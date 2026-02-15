@@ -37,37 +37,63 @@ export const env = {
   CREDITS_ENABLED: process.env.CREDITS_ENABLED !== "false", // Default: enabled
   REFUNDS_ENABLED: process.env.REFUNDS_ENABLED !== "false", // Default: enabled
   WORKERS_ENABLED: process.env.WORKERS_ENABLED !== "false", // Default: enabled
-  
+  /** Section 6: When true, crons enqueue to durable_jobs only; durable job worker does the work. */
+  CRONS_ENQUEUE_ONLY: process.env.CRONS_ENQUEUE_ONLY === "true",
+
   // Payouts
   PAYOUT_CURRENCY: process.env.PAYOUT_CURRENCY || "usd",
   // Credit system: 10 credits = $1 USD (per policy)
   CENTS_PER_CREDIT: process.env.CENTS_PER_CREDIT ? Number(process.env.CENTS_PER_CREDIT) : 10,
 
   // Platform fee and cleaner payout configuration (per Terms of Service)
-  PLATFORM_FEE_PERCENT: process.env.PLATFORM_FEE_PERCENT ? Number(process.env.PLATFORM_FEE_PERCENT) : 15,
+  PLATFORM_FEE_PERCENT: process.env.PLATFORM_FEE_PERCENT
+    ? Number(process.env.PLATFORM_FEE_PERCENT)
+    : 15,
   // Cleaner payout percentages by tier (cleaners receive 80-85% of booking amount)
-  CLEANER_PAYOUT_PERCENT_BRONZE: process.env.CLEANER_PAYOUT_PERCENT_BRONZE ? Number(process.env.CLEANER_PAYOUT_PERCENT_BRONZE) : 80,
-  CLEANER_PAYOUT_PERCENT_SILVER: process.env.CLEANER_PAYOUT_PERCENT_SILVER ? Number(process.env.CLEANER_PAYOUT_PERCENT_SILVER) : 82,
-  CLEANER_PAYOUT_PERCENT_GOLD: process.env.CLEANER_PAYOUT_PERCENT_GOLD ? Number(process.env.CLEANER_PAYOUT_PERCENT_GOLD) : 84,
-  CLEANER_PAYOUT_PERCENT_PLATINUM: process.env.CLEANER_PAYOUT_PERCENT_PLATINUM ? Number(process.env.CLEANER_PAYOUT_PERCENT_PLATINUM) : 85,
+  CLEANER_PAYOUT_PERCENT_BRONZE: process.env.CLEANER_PAYOUT_PERCENT_BRONZE
+    ? Number(process.env.CLEANER_PAYOUT_PERCENT_BRONZE)
+    : 80,
+  CLEANER_PAYOUT_PERCENT_SILVER: process.env.CLEANER_PAYOUT_PERCENT_SILVER
+    ? Number(process.env.CLEANER_PAYOUT_PERCENT_SILVER)
+    : 82,
+  CLEANER_PAYOUT_PERCENT_GOLD: process.env.CLEANER_PAYOUT_PERCENT_GOLD
+    ? Number(process.env.CLEANER_PAYOUT_PERCENT_GOLD)
+    : 84,
+  CLEANER_PAYOUT_PERCENT_PLATINUM: process.env.CLEANER_PAYOUT_PERCENT_PLATINUM
+    ? Number(process.env.CLEANER_PAYOUT_PERCENT_PLATINUM)
+    : 85,
 
   // Operational defaults (optional)
-  GPS_CHECKIN_RADIUS_METERS: process.env.GPS_CHECKIN_RADIUS_METERS ? Number(process.env.GPS_CHECKIN_RADIUS_METERS) : 250,
-  ON_TIME_EARLY_MINUTES: process.env.ON_TIME_EARLY_MINUTES ? Number(process.env.ON_TIME_EARLY_MINUTES) : 15,
-  ON_TIME_LATE_MINUTES: process.env.ON_TIME_LATE_MINUTES ? Number(process.env.ON_TIME_LATE_MINUTES) : 15,
+  GPS_CHECKIN_RADIUS_METERS: process.env.GPS_CHECKIN_RADIUS_METERS
+    ? Number(process.env.GPS_CHECKIN_RADIUS_METERS)
+    : 250,
+  ON_TIME_EARLY_MINUTES: process.env.ON_TIME_EARLY_MINUTES
+    ? Number(process.env.ON_TIME_EARLY_MINUTES)
+    : 15,
+  ON_TIME_LATE_MINUTES: process.env.ON_TIME_LATE_MINUTES
+    ? Number(process.env.ON_TIME_LATE_MINUTES)
+    : 15,
   GOOD_FAITH_SHORT_NOTICE_HOURS: process.env.GOOD_FAITH_SHORT_NOTICE_HOURS
     ? Number(process.env.GOOD_FAITH_SHORT_NOTICE_HOURS)
     : 18,
   MIN_PHOTOS_TOTAL: process.env.MIN_PHOTOS_TOTAL ? Number(process.env.MIN_PHOTOS_TOTAL) : 3,
   MIN_BEFORE_PHOTOS: process.env.MIN_BEFORE_PHOTOS ? Number(process.env.MIN_BEFORE_PHOTOS) : 2,
   MIN_AFTER_PHOTOS: process.env.MIN_AFTER_PHOTOS ? Number(process.env.MIN_AFTER_PHOTOS) : 2,
-  PHOTO_RETENTION_DAYS: process.env.PHOTO_RETENTION_DAYS ? Number(process.env.PHOTO_RETENTION_DAYS) : 90,
-  DISPUTE_WINDOW_HOURS: process.env.DISPUTE_WINDOW_HOURS ? Number(process.env.DISPUTE_WINDOW_HOURS) : 48,
-  CLEANER_NOSHOW_BONUS_CREDITS: process.env.CLEANER_NOSHOW_BONUS_CREDITS ? Number(process.env.CLEANER_NOSHOW_BONUS_CREDITS) : 50,
+  PHOTO_RETENTION_DAYS: process.env.PHOTO_RETENTION_DAYS
+    ? Number(process.env.PHOTO_RETENTION_DAYS)
+    : 90,
+  DISPUTE_WINDOW_HOURS: process.env.DISPUTE_WINDOW_HOURS
+    ? Number(process.env.DISPUTE_WINDOW_HOURS)
+    : 48,
+  CLEANER_NOSHOW_BONUS_CREDITS: process.env.CLEANER_NOSHOW_BONUS_CREDITS
+    ? Number(process.env.CLEANER_NOSHOW_BONUS_CREDITS)
+    : 50,
   NON_CREDIT_SURCHARGE_PERCENT: process.env.NON_CREDIT_SURCHARGE_PERCENT
     ? Number(process.env.NON_CREDIT_SURCHARGE_PERCENT)
     : 10,
-  MIN_LEAD_TIME_HOURS: process.env.MIN_LEAD_TIME_HOURS ? Number(process.env.MIN_LEAD_TIME_HOURS) : 2,
+  MIN_LEAD_TIME_HOURS: process.env.MIN_LEAD_TIME_HOURS
+    ? Number(process.env.MIN_LEAD_TIME_HOURS)
+    : 2,
   SUBSCRIPTION_DEFAULT_CREDITS: process.env.SUBSCRIPTION_DEFAULT_CREDITS
     ? Number(process.env.SUBSCRIPTION_DEFAULT_CREDITS)
     : 100,
@@ -82,35 +108,38 @@ export const env = {
   N8N_API_KEY: process.env.N8N_API_KEY || "",
   APP_URL: process.env.APP_URL || "http://localhost:3000",
   STORAGE_URL: process.env.STORAGE_URL || "https://storage.puretask.com",
-  
+
   // Monitoring (optional)
   SENTRY_DSN: process.env.SENTRY_DSN || "",
-  
+
   // Redis (for rate limiting in production)
   REDIS_URL: process.env.REDIS_URL || "",
   USE_REDIS_RATE_LIMITING: process.env.USE_REDIS_RATE_LIMITING === "true",
-  
+
   // Feature flags
   USE_EVENT_BASED_NOTIFICATIONS: process.env.USE_EVENT_BASED_NOTIFICATIONS !== "false", // Default: true if n8n is configured
 
   // Notifications - SendGrid (Email)
   SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || "",
   SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL || "no-reply@puretask.com",
-  
+
   // Email Template IDs (from SendGrid - see docs/email-registry.md)
   SENDGRID_TEMPLATE_CLIENT_JOB_BOOKED: process.env.SENDGRID_TEMPLATE_CLIENT_JOB_BOOKED || "",
   SENDGRID_TEMPLATE_CLIENT_JOB_ACCEPTED: process.env.SENDGRID_TEMPLATE_CLIENT_JOB_ACCEPTED || "",
-  SENDGRID_TEMPLATE_CLIENT_CLEANER_ON_MY_WAY: process.env.SENDGRID_TEMPLATE_CLIENT_CLEANER_ON_MY_WAY || "",
+  SENDGRID_TEMPLATE_CLIENT_CLEANER_ON_MY_WAY:
+    process.env.SENDGRID_TEMPLATE_CLIENT_CLEANER_ON_MY_WAY || "",
   SENDGRID_TEMPLATE_CLIENT_JOB_COMPLETED: process.env.SENDGRID_TEMPLATE_CLIENT_JOB_COMPLETED || "",
   SENDGRID_TEMPLATE_CLEANER_JOB_APPROVED: process.env.SENDGRID_TEMPLATE_CLEANER_JOB_APPROVED || "",
   SENDGRID_TEMPLATE_CLEANER_JOB_DISPUTED: process.env.SENDGRID_TEMPLATE_CLEANER_JOB_DISPUTED || "",
   SENDGRID_TEMPLATE_USER_JOB_CANCELLED: process.env.SENDGRID_TEMPLATE_USER_JOB_CANCELLED || "",
-  SENDGRID_TEMPLATE_CLIENT_CREDIT_PURCHASE: process.env.SENDGRID_TEMPLATE_CLIENT_CREDIT_PURCHASE || "",
+  SENDGRID_TEMPLATE_CLIENT_CREDIT_PURCHASE:
+    process.env.SENDGRID_TEMPLATE_CLIENT_CREDIT_PURCHASE || "",
   SENDGRID_TEMPLATE_CLEANER_PAYOUT_SENT: process.env.SENDGRID_TEMPLATE_CLEANER_PAYOUT_SENT || "",
   SENDGRID_TEMPLATE_USER_WELCOME: process.env.SENDGRID_TEMPLATE_USER_WELCOME || "",
-  SENDGRID_TEMPLATE_USER_EMAIL_VERIFICATION: process.env.SENDGRID_TEMPLATE_USER_EMAIL_VERIFICATION || "",
+  SENDGRID_TEMPLATE_USER_EMAIL_VERIFICATION:
+    process.env.SENDGRID_TEMPLATE_USER_EMAIL_VERIFICATION || "",
   SENDGRID_TEMPLATE_USER_PASSWORD_RESET: process.env.SENDGRID_TEMPLATE_USER_PASSWORD_RESET || "",
-  
+
   // SMS Template IDs (Twilio)
   SMS_TEMPLATE_EMERGENCY: process.env.SMS_TEMPLATE_EMERGENCY || "",
   SMS_TEMPLATE_JOB_REMINDER: process.env.SMS_TEMPLATE_JOB_REMINDER || "",
@@ -134,7 +163,7 @@ export const env = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
   GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || "",
-  
+
   // OAuth Authentication
   FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID || "",
   FACEBOOK_APP_SECRET: process.env.FACEBOOK_APP_SECRET || "",
@@ -154,33 +183,44 @@ function validateEnvironment(): void {
   if (env.STRIPE_SECRET_KEY) {
     const isTestMode = env.STRIPE_SECRET_KEY.startsWith("sk_test_");
     const isLiveMode = env.STRIPE_SECRET_KEY.startsWith("sk_live_");
-    
+
     if (!isTestMode && !isLiveMode) {
       errors.push("STRIPE_SECRET_KEY must start with 'sk_test_' or 'sk_live_'");
     }
-    
+
     // Production safety: warn if test mode in production
     if (env.NODE_ENV === "production" && isTestMode) {
-      warnings.push("⚠️  WARNING: Using Stripe test key in production! This will not process real payments.");
+      warnings.push(
+        "⚠️  WARNING: Using Stripe test key in production! This will not process real payments."
+      );
     }
-    
+
     // Development safety: warn if live mode in development
     if (env.NODE_ENV === "development" && isLiveMode) {
-      warnings.push("⚠️  WARNING: Using Stripe live key in development! This will process real payments.");
+      warnings.push(
+        "⚠️  WARNING: Using Stripe live key in development! This will process real payments."
+      );
     }
   }
 
-      // Check database URL format
-      if (!env.DATABASE_URL.includes("postgres://") && !env.DATABASE_URL.includes("postgresql://")) {
-        errors.push("DATABASE_URL must be a valid PostgreSQL connection string");
-      }
-      
-      // Check for SSL mode (required for Neon and most cloud databases)
-      if (!env.DATABASE_URL.includes("sslmode=")) {
-        warnings.push("⚠️  WARNING: DATABASE_URL missing sslmode parameter. Neon and most cloud databases require SSL. Add ?sslmode=require to your connection string.");
-      } else if (!env.DATABASE_URL.includes("sslmode=require") && !env.DATABASE_URL.includes("sslmode=prefer")) {
-        warnings.push("⚠️  WARNING: DATABASE_URL sslmode is not 'require' or 'prefer'. For production, use ?sslmode=require");
-      }
+  // Check database URL format
+  if (!env.DATABASE_URL.includes("postgres://") && !env.DATABASE_URL.includes("postgresql://")) {
+    errors.push("DATABASE_URL must be a valid PostgreSQL connection string");
+  }
+
+  // Check for SSL mode (required for Neon and most cloud databases)
+  if (!env.DATABASE_URL.includes("sslmode=")) {
+    warnings.push(
+      "⚠️  WARNING: DATABASE_URL missing sslmode parameter. Neon and most cloud databases require SSL. Add ?sslmode=require to your connection string."
+    );
+  } else if (
+    !env.DATABASE_URL.includes("sslmode=require") &&
+    !env.DATABASE_URL.includes("sslmode=prefer")
+  ) {
+    warnings.push(
+      "⚠️  WARNING: DATABASE_URL sslmode is not 'require' or 'prefer'. For production, use ?sslmode=require"
+    );
+  }
 
   // Check JWT secret strength in production
   if (env.NODE_ENV === "production" && env.JWT_SECRET.length < 32) {

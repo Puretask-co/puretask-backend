@@ -31,10 +31,9 @@ export async function ensureCleanerStripeAccount(cleanerId: string): Promise<str
   }
 
   // Get cleaner email for the account
-  const userResult = await query<{ email: string }>(
-    `SELECT email FROM users WHERE id = $1`,
-    [cleanerId]
-  );
+  const userResult = await query<{ email: string }>(`SELECT email FROM users WHERE id = $1`, [
+    cleanerId,
+  ]);
   const email = userResult.rows[0]?.email;
 
   // Create new Express account
@@ -261,10 +260,9 @@ export async function handleConnectWebhookEvent(event: Stripe.Event): Promise<vo
 
       if (cleanerId) {
         // Clear the stripe_account_id when deauthorized
-        await query(
-          `UPDATE cleaner_profiles SET stripe_account_id = NULL WHERE user_id = $1`,
-          [cleanerId]
-        );
+        await query(`UPDATE cleaner_profiles SET stripe_account_id = NULL WHERE user_id = $1`, [
+          cleanerId,
+        ]);
 
         logger.warn("stripe_account_deauthorized", {
           cleanerId,
@@ -279,4 +277,3 @@ export async function handleConnectWebhookEvent(event: Stripe.Event): Promise<vo
       logger.debug("stripe_connect_event_ignored", { type: event.type });
   }
 }
-

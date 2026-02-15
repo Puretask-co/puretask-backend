@@ -42,18 +42,19 @@ export async function getCleanerPayoutPercent(cleanerId: string): Promise<number
       `SELECT tier, payout_percent FROM cleaner_profiles WHERE user_id = $1`,
       [cleanerId]
     );
-    
+
     if (result.rows.length === 0) {
       return env.CLEANER_PAYOUT_PERCENT_BRONZE; // Default to bronze
     }
-    
+
     const { tier, payout_percent } = result.rows[0];
-    
+
     // Use stored payout_percent if explicitly set (allows manual override)
+    // Coerce to number: pg returns NUMERIC as string (e.g. '80.00')
     if (payout_percent !== null && payout_percent !== undefined) {
-      return payout_percent;
+      return Number(payout_percent);
     }
-    
+
     // V1 CORE FEATURE: Calculate payout percentage from tier (which comes from reliability score)
     // Tier is updated when reliability score changes (see reliabilityService.ts)
     if (tier) {
@@ -69,12 +70,12 @@ export async function getCleanerPayoutPercent(cleanerId: string): Promise<number
           return env.CLEANER_PAYOUT_PERCENT_BRONZE; // 80%
       }
     }
-    
+
     // If tier is not set, default to bronze
     return env.CLEANER_PAYOUT_PERCENT_BRONZE;
   } catch (error: any) {
     // If column doesn't exist or query fails, default to bronze
-    if (error?.code === '42703' || error?.code === '42P01') {
+    if (error?.code === "42703" || error?.code === "42P01") {
       // Column or table doesn't exist - use default
       return env.CLEANER_PAYOUT_PERCENT_BRONZE;
     }
@@ -86,7 +87,7 @@ export async function getCleanerPayoutPercent(cleanerId: string): Promise<number
 /**
  * Called when a job is approved & completed.
  * Creates a pending payout row for that job/cleaner.
- * 
+ *
  * Per Terms of Service:
  * - Platform fee: 15% of transaction value
  * - Cleaners receive 80-85% of booking amount depending on tier
@@ -98,7 +99,7 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
 
   // Get cleaner's payout percentage based on tier
   const payoutPercent = await getCleanerPayoutPercent(job.cleaner_id);
-  
+
   // Calculate payout amounts (applying tier-based percentage)
   const grossCents = job.credit_amount * CENTS_PER_CREDIT;
   const payoutCents = Math.round(grossCents * (payoutPercent / 100));
@@ -120,7 +121,7 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
       `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1) AS exists`,
       [job.cleaner_id]
     );
-    
+
     if (!userCheck.rows[0]?.exists) {
       // User doesn't exist - this is a data integrity issue
       // In test environments, this might indicate the user was deleted or never committed
@@ -129,12 +130,12 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
         jobId: job.id,
         message: "Cleaner user does not exist in users table - cannot create payout",
       });
-      
+
       // Throw a clear error instead of attempting insert
       throw Object.assign(
         new Error(
           `Cannot create payout: cleaner user ${job.cleaner_id} does not exist in users table. ` +
-          `This may be a test isolation issue - ensure the user exists before creating payouts.`
+            `This may be a test isolation issue - ensure the user exists before creating payouts.`
         ),
         { statusCode: 500, code: "USER_NOT_FOUND" }
       );
@@ -161,23 +162,23 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
       );
     } catch (error: any) {
       // If foreign key constraint fails, provide helpful debugging info
-      if (error?.code === '23503') {
+      if (error?.code === "23503") {
         logger.error("payout_creation_failed_foreign_key", {
           cleanerId: job.cleaner_id,
           jobId: job.id,
           error: error?.message,
           constraint: error?.constraint,
         });
-        
+
         // Provide actionable error message
         throw Object.assign(
           new Error(
             `Failed to create payout: foreign key constraint violation. ` +
-            `Constraint: ${error?.constraint}. ` +
-            `The foreign key may reference the wrong table. ` +
-            `Expected: payouts.cleaner_id -> users.id. ` +
-            `Run DB/migrations/000_fix_payouts_fk.sql to fix the constraint. ` +
-            `Error: ${error?.message}`
+              `Constraint: ${error?.constraint}. ` +
+              `The foreign key may reference the wrong table. ` +
+              `Expected: payouts.cleaner_id -> users.id. ` +
+              `Run DB/migrations/000_fix_payouts_fk.sql to fix the constraint. ` +
+              `Error: ${error?.message}`
           ),
           { statusCode: 500, constraint: error?.constraint }
         );
@@ -303,7 +304,7 @@ export async function processPendingPayouts(): Promise<{
         `,
         [payoutIds]
       );
-      
+
       skipped += payouts.length;
       continue;
     }
@@ -355,10 +356,14 @@ export async function processPendingPayouts(): Promise<{
         payoutCount: payouts.length,
       });
 
-      // Record metrics
-      const { metrics } = require("../lib/metrics");
-      for (const payout of payouts) {
-        metrics.payoutProcessed(payout.amount_cents, true);
+      // Record metrics (optional - skip if module unavailable in test env)
+      try {
+        const { metrics } = require("../lib/metrics");
+        for (const payout of payouts) {
+          metrics.payoutProcessed(payout.amount_cents, true);
+        }
+      } catch {
+        // metrics module may be mocked or unavailable in tests
       }
 
       await publishEvent({
@@ -393,10 +398,14 @@ export async function processPendingPayouts(): Promise<{
         [payoutIds]
       );
 
-      // Record metrics for failed payouts
-      const { metrics } = require("../lib/metrics");
-      for (const payout of payouts) {
-        metrics.payoutProcessed(payout.amount_cents, false);
+      // Record metrics for failed payouts (optional - skip if module unavailable in tests)
+      try {
+        const { metrics } = require("../lib/metrics");
+        for (const payout of payouts) {
+          metrics.payoutProcessed(payout.amount_cents, false);
+        }
+      } catch {
+        // metrics module may be mocked or unavailable in test env
       }
 
       failed += payouts.length;
@@ -476,10 +485,7 @@ export async function processSinglePayout(payoutId: string): Promise<Payout> {
 /**
  * Get payout history for a cleaner
  */
-export async function getCleanerPayouts(
-  cleanerId: string,
-  limit: number = 50
-): Promise<Payout[]> {
+export async function getCleanerPayouts(cleanerId: string, limit: number = 50): Promise<Payout[]> {
   const result = await query<Payout>(
     `
       SELECT *
@@ -498,10 +504,7 @@ export async function getCleanerPayouts(
  * Get payout for a specific job
  */
 export async function getPayoutForJob(jobId: string): Promise<Payout | null> {
-  const result = await query<Payout>(
-    `SELECT * FROM payouts WHERE job_id = $1 LIMIT 1`,
-    [jobId]
-  );
+  const result = await query<Payout>(`SELECT * FROM payouts WHERE job_id = $1 LIMIT 1`, [jobId]);
   return result.rows[0] ?? null;
 }
 

@@ -9,7 +9,7 @@
 | [TOS_CONSOLIDATED.md](./TOS_CONSOLIDATED.md) | Single master TOS for counsel (merge all TOS sections) |
 | [IC_SAFEGUARDS_APPENDIX.md](./IC_SAFEGUARDS_APPENDIX.md) | Full text for TOS appendix + in-app |
 | [AB5_ANALYSIS.md](./AB5_ANALYSIS.md) | California AB5 / ABC Test prong-by-prong memo |
-| [LAWYER_REVIEW_NOTES.md](./LAWYER_REVIEW_NOTES.md) | Rationale per TOS clause (for counsel) |
+| [COUNSEL_REVIEW_RATIONALE.md](./COUNSEL_REVIEW_RATIONALE.md) | Rationale per TOS clause (for counsel) |
 | [IN_APP_COPY_CLEANER.md](./IN_APP_COPY_CLEANER.md) | IC-safe bullets for cleaner app |
 | [IN_APP_COPY_CLIENT.md](./IN_APP_COPY_CLIENT.md) | IC-safe bullets for client app |
 

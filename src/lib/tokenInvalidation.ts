@@ -8,14 +8,8 @@ import { logger } from "./logger";
  * Invalidate all tokens for a user (increment token_version)
  * This will cause all existing tokens to fail verification
  */
-export async function invalidateUserTokens(
-  userId: string,
-  reason?: string
-): Promise<void> {
-  await query(
-    `SELECT invalidate_user_tokens($1, $2)`,
-    [userId, reason || null]
-  );
+export async function invalidateUserTokens(userId: string, reason?: string): Promise<void> {
+  await query(`SELECT invalidate_user_tokens($1, $2)`, [userId, reason || null]);
 
   logger.info("user_tokens_invalidated", {
     userId,
@@ -64,7 +58,7 @@ export async function cleanupInvalidatedTokens(): Promise<number> {
   );
 
   const count = parseInt(result.rows[0]?.count || "0", 10);
-  
+
   if (count > 0) {
     logger.info("invalidated_tokens_cleaned_up", { count });
   }

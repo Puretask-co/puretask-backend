@@ -27,10 +27,7 @@ const requestContext = new AsyncLocalStorage<RequestContext>();
  * Run a function within a request context
  * All logs within this context will include the context fields
  */
-export function withRequestContext<T>(
-  context: Partial<RequestContext>,
-  fn: () => T
-): T {
+export function withRequestContext<T>(context: Partial<RequestContext>, fn: () => T): T {
   const requestId = context.requestId || generateRequestId();
   return requestContext.run({ requestId, ...context }, fn);
 }
@@ -134,9 +131,7 @@ function log(level: LogLevel, msg: string, meta?: Record<string, unknown>): void
   }
 
   // Remove undefined values for cleaner output
-  const cleanEntry = Object.fromEntries(
-    Object.entries(entry).filter(([, v]) => v !== undefined)
-  );
+  const cleanEntry = Object.fromEntries(Object.entries(entry).filter(([, v]) => v !== undefined));
 
   const output = JSON.stringify(cleanEntry);
 
@@ -205,5 +200,6 @@ export const logger = {
 // ============================================
 
 export const stripeLogger = logger.child({ service: "stripe" } as Partial<RequestContext>);
-export const workerLogger = (workerName: string) => logger.child({ workerName } as Partial<RequestContext>);
+export const workerLogger = (workerName: string) =>
+  logger.child({ workerName } as Partial<RequestContext>);
 export const jobLogger = (jobId: string) => logger.child({ jobId } as Partial<RequestContext>);

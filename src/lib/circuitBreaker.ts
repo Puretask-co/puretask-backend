@@ -28,7 +28,7 @@ export interface CircuitBreakerStats {
 
 /**
  * Circuit breaker implementation
- * 
+ *
  * States:
  * - CLOSED: Normal operation, requests pass through
  * - OPEN: Too many failures, requests fail immediately
@@ -110,10 +110,7 @@ export class CircuitBreaker {
     if (this.state === "half-open") {
       // Still failing, open circuit again
       this.transitionToOpen();
-    } else if (
-      this.state === "closed" &&
-      this.failures >= this.config.failureThreshold
-    ) {
+    } else if (this.state === "closed" && this.failures >= this.config.failureThreshold) {
       // Too many failures, open circuit
       this.transitionToOpen();
     }

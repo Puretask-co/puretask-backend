@@ -59,80 +59,72 @@ const eventSchema = z.object({
  *       400:
  *         description: Invalid signature or body
  */
-eventsRouter.post(
-  "/n8n/events",
-  verifyN8nSignature,
-  async (req, res: Response) => {
-    try {
-      const parsed = eventSchema.parse(req.body);
+eventsRouter.post("/n8n/events", verifyN8nSignature, async (req, res: Response) => {
+  try {
+    const parsed = eventSchema.parse(req.body);
 
-      await publishEvent({
-        jobId: parsed.jobId,
-        actorType: parsed.actorType,
-        actorId: parsed.actorId,
-        eventName: parsed.eventType,
-        payload: parsed.payload,
-      });
+    await publishEvent({
+      jobId: parsed.jobId,
+      actorType: parsed.actorType,
+      actorId: parsed.actorId,
+      eventName: parsed.eventType,
+      payload: parsed.payload,
+    });
 
-      logger.info("n8n_event_received", {
-        eventType: parsed.eventType,
-        jobId: parsed.jobId,
-      });
+    logger.info("n8n_event_received", {
+      eventType: parsed.eventType,
+      jobId: parsed.jobId,
+    });
 
-      res.status(204).send();
-    } catch (err) {
-      const error = err as Error & { issues?: unknown };
+    res.status(204).send();
+  } catch (err) {
+    const error = err as Error & { issues?: unknown };
 
-      if (error.issues) {
-        return res.status(400).json({
-          error: { code: "VALIDATION_ERROR", message: "Invalid event body", details: error.issues },
-        });
-      }
-
-      logger.error("n8n_event_failed", { error: error.message });
-      res.status(500).json({
-        error: { code: "EVENT_FAILED", message: error.message },
+    if (error.issues) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "Invalid event body", details: error.issues },
       });
     }
+
+    logger.error("n8n_event_failed", { error: error.message });
+    res.status(500).json({
+      error: { code: "EVENT_FAILED", message: error.message },
+    });
   }
-);
+});
 
 /**
  * POST /events
  * Alternative endpoint without /n8n prefix
  * Also protected by HMAC signature verification
  */
-eventsRouter.post(
-  "/events",
-  verifyN8nSignature,
-  async (req, res: Response) => {
-    try {
-      const parsed = eventSchema.parse(req.body);
+eventsRouter.post("/events", verifyN8nSignature, async (req, res: Response) => {
+  try {
+    const parsed = eventSchema.parse(req.body);
 
-      await publishEvent({
-        jobId: parsed.jobId,
-        actorType: parsed.actorType,
-        actorId: parsed.actorId,
-        eventName: parsed.eventType,
-        payload: parsed.payload,
-      });
+    await publishEvent({
+      jobId: parsed.jobId,
+      actorType: parsed.actorType,
+      actorId: parsed.actorId,
+      eventName: parsed.eventType,
+      payload: parsed.payload,
+    });
 
-      res.status(204).send();
-    } catch (err) {
-      const error = err as Error & { issues?: unknown };
+    res.status(204).send();
+  } catch (err) {
+    const error = err as Error & { issues?: unknown };
 
-      if (error.issues) {
-        return res.status(400).json({
-          error: { code: "VALIDATION_ERROR", message: "Invalid event body" },
-        });
-      }
-
-      logger.error("n8n_event_failed", { error: error.message });
-      res.status(500).json({
-        error: { code: "EVENT_FAILED", message: error.message },
+    if (error.issues) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "Invalid event body" },
       });
     }
+
+    logger.error("n8n_event_failed", { error: error.message });
+    res.status(500).json({
+      error: { code: "EVENT_FAILED", message: error.message },
+    });
   }
-);
+});
 
 export default eventsRouter;

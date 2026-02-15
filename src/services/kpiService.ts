@@ -30,13 +30,13 @@ export interface ExtendedKpiMetrics extends DailyMetrics {
   new_users: number;
   new_clients: number;
   new_cleaners: number;
-  
+
   // Financial metrics
   credits_purchased: number;
   credits_escrowed: number;
   credits_released: number;
   credits_refunded: number;
-  
+
   // Payout metrics
   payouts_created: number;
   payouts_paid: number;
@@ -210,7 +210,9 @@ export async function getKpiSnapshots(options: {
   }
 
   if (endDate) {
-    whereClause += whereClause ? ` AND date <= $${paramIndex}::date` : `WHERE date <= $${paramIndex}::date`;
+    whereClause += whereClause
+      ? ` AND date <= $${paramIndex}::date`
+      : `WHERE date <= $${paramIndex}::date`;
     params.push(endDate);
     paramIndex++;
   }
@@ -235,9 +237,7 @@ export async function getKpiSnapshots(options: {
  * Get the latest KPI snapshot
  */
 export async function getLatestKpiSnapshot(): Promise<KpiSnapshot | null> {
-  const result = await query<KpiSnapshot>(
-    `SELECT * FROM kpi_snapshots ORDER BY date DESC LIMIT 1`
-  );
+  const result = await query<KpiSnapshot>(`SELECT * FROM kpi_snapshots ORDER BY date DESC LIMIT 1`);
   return result.rows[0] ?? null;
 }
 
@@ -283,13 +283,15 @@ export async function getKpiGrowth(): Promise<{
 
   const data = result.rows[0];
 
-  const jobsGrowth = data.previous_total > 0
-    ? ((data.current_total - data.previous_total) / data.previous_total) * 100
-    : 0;
+  const jobsGrowth =
+    data.previous_total > 0
+      ? ((data.current_total - data.previous_total) / data.previous_total) * 100
+      : 0;
 
-  const completedGrowth = data.previous_completed > 0
-    ? ((data.current_completed - data.previous_completed) / data.previous_completed) * 100
-    : 0;
+  const completedGrowth =
+    data.previous_completed > 0
+      ? ((data.current_completed - data.previous_completed) / data.previous_completed) * 100
+      : 0;
 
   return {
     jobs_growth_pct: Math.round(jobsGrowth * 100) / 100,
@@ -308,4 +310,3 @@ export async function getKpiGrowth(): Promise<{
     },
   };
 }
-

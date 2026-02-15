@@ -14,45 +14,54 @@ import { generateChecklist, generateDisputeSuggestion } from "../../services/aiS
 // ============================================
 
 // Calendar sync handler
-queueService.registerHandler(QUEUE_NAMES.CALENDAR_SYNC, async (payload: {
-  userId: string;
-  jobId: string;
-  eventData: {
-    summary: string;
-    description: string;
-    start: string;
-    end: string;
-    location?: string;
-  };
-}) => {
-  await syncJobToCalendar(payload.userId, payload.jobId, {
-    summary: payload.eventData.summary,
-    description: payload.eventData.description,
-    start: new Date(payload.eventData.start),
-    end: new Date(payload.eventData.end),
-    location: payload.eventData.location,
-  });
-});
+queueService.registerHandler(
+  QUEUE_NAMES.CALENDAR_SYNC,
+  async (payload: {
+    userId: string;
+    jobId: string;
+    eventData: {
+      summary: string;
+      description: string;
+      start: string;
+      end: string;
+      location?: string;
+    };
+  }) => {
+    await syncJobToCalendar(payload.userId, payload.jobId, {
+      summary: payload.eventData.summary,
+      description: payload.eventData.description,
+      start: new Date(payload.eventData.start),
+      end: new Date(payload.eventData.end),
+      location: payload.eventData.location,
+    });
+  }
+);
 
 // AI checklist handler
-queueService.registerHandler(QUEUE_NAMES.AI_CHECKLIST, async (payload: {
-  jobId: string;
-  input: Parameters<typeof generateChecklist>[0];
-}) => {
-  const checklist = await generateChecklist(payload.input);
-  logger.info("ai_checklist_processed", { jobId: payload.jobId, steps: checklist.steps.length });
-  // Could store result in job_metadata or send notification
-});
+queueService.registerHandler(
+  QUEUE_NAMES.AI_CHECKLIST,
+  async (payload: { jobId: string; input: Parameters<typeof generateChecklist>[0] }) => {
+    const checklist = await generateChecklist(payload.input);
+    logger.info("ai_checklist_processed", { jobId: payload.jobId, steps: checklist.steps.length });
+    // Could store result in job_metadata or send notification
+  }
+);
 
 // AI dispute handler
-queueService.registerHandler(QUEUE_NAMES.AI_DISPUTE, async (payload: {
-  disputeId: string;
-  input: Parameters<typeof generateDisputeSuggestion>[0];
-}) => {
-  const suggestion = await generateDisputeSuggestion(payload.input);
-  logger.info("ai_dispute_processed", { disputeId: payload.disputeId, action: suggestion.recommended_action });
-  // Could store result in dispute metadata
-});
+queueService.registerHandler(
+  QUEUE_NAMES.AI_DISPUTE,
+  async (payload: {
+    disputeId: string;
+    input: Parameters<typeof generateDisputeSuggestion>[0];
+  }) => {
+    const suggestion = await generateDisputeSuggestion(payload.input);
+    logger.info("ai_dispute_processed", {
+      disputeId: payload.disputeId,
+      action: suggestion.recommended_action,
+    });
+    // Could store result in dispute metadata
+  }
+);
 
 // ============================================
 // Main Processing Loop
@@ -62,7 +71,7 @@ const POLL_INTERVAL_MS = 5000; // 5 seconds
 
 async function processAllQueues(): Promise<void> {
   const queues = Object.values(QUEUE_NAMES);
-  
+
   for (const queueName of queues) {
     try {
       const result = await processQueue(queueName, 10);
@@ -86,7 +95,7 @@ async function main(): Promise<void> {
       } catch (err) {
         logger.error("queue_loop_error", { error: (err as Error).message });
       }
-      
+
       // Wait before next poll
       await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
     }
@@ -117,4 +126,3 @@ if (require.main === module) {
 }
 
 export { main as runQueueProcessor };
-

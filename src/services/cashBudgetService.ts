@@ -57,10 +57,7 @@ export class CashBudgetService {
     return { allowed: true, effective };
   }
 
-  async canSpend(params: {
-    region_id?: string | null;
-    amount_cents: number;
-  }): Promise<{
+  async canSpend(params: { region_id?: string | null; amount_cents: number }): Promise<{
     ok: boolean;
     reason?: string;
     remaining_daily_cents?: number;
@@ -78,7 +75,9 @@ export class CashBudgetService {
     }
 
     const now = new Date();
-    const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+    const dayStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0)
+    );
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
 
     const [usedDaily, usedMonthly] = await Promise.all([
@@ -108,7 +107,11 @@ export class CashBudgetService {
       };
     }
 
-    return { ok: true, remaining_daily_cents: remainingDaily, remaining_monthly_cents: remainingMonthly };
+    return {
+      ok: true,
+      remaining_daily_cents: remainingDaily,
+      remaining_monthly_cents: remainingMonthly,
+    };
   }
 
   async recordCashGrant(params: {
@@ -121,9 +124,7 @@ export class CashBudgetService {
     meta?: Record<string, unknown>;
   }): Promise<{ recorded: boolean }> {
     try {
-      return await withTransaction((client) =>
-        this.recordCashGrantWithClient(client, params)
-      );
+      return await withTransaction((client) => this.recordCashGrantWithClient(client, params));
     } catch {
       return { recorded: false };
     }
@@ -194,9 +195,7 @@ export class CashBudgetService {
   }): Promise<number> {
     try {
       const regionFilter =
-        params.scope === "global"
-          ? "region_id IS NULL"
-          : "region_id IS NOT DISTINCT FROM $2";
+        params.scope === "global" ? "region_id IS NULL" : "region_id IS NOT DISTINCT FROM $2";
       const args =
         params.scope === "global"
           ? [params.since.toISOString()]

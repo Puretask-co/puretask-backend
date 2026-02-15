@@ -1,10 +1,10 @@
 // src/services/aiCommunication.ts
 // Central AI Communication Service - Replaces Base44 CommunicationService
 
-import { query } from '../db/client';
-import { logger } from '../lib/logger';
-import { sendEmail } from './notifications/providers/emailProvider';
-import { sendSMS } from './notifications/providers/smsProvider';
+import { query } from "../db/client";
+import { logger } from "../lib/logger";
+import { sendEmail } from "./notifications/providers/emailProvider";
+import { sendSMS } from "./notifications/providers/smsProvider";
 
 interface MessageData {
   cleaner_id: string;
@@ -42,7 +42,7 @@ export class AICommunicationService {
       );
 
       if (cleanerResult.rows.length === 0) {
-        return { success: false, deliveryResults: [], error: 'Cleaner profile not found' };
+        return { success: false, deliveryResults: [], error: "Cleaner profile not found" };
       }
 
       const cleaner = cleanerResult.rows[0];
@@ -50,8 +50,8 @@ export class AICommunicationService {
       const messageConfig = commSettings[message_type];
 
       if (!messageConfig || !messageConfig.enabled) {
-        logger.info('message_type_not_enabled', { cleaner_id, message_type });
-        return { success: false, deliveryResults: [], error: 'Message type not enabled' };
+        logger.info("message_type_not_enabled", { cleaner_id, message_type });
+        return { success: false, deliveryResults: [], error: "Message type not enabled" };
       }
 
       // Get client info
@@ -64,17 +64,17 @@ export class AICommunicationService {
       );
 
       if (clientResult.rows.length === 0) {
-        return { success: false, deliveryResults: [], error: 'Client not found' };
+        return { success: false, deliveryResults: [], error: "Client not found" };
       }
 
       const client = clientResult.rows[0];
 
       // Replace template variables
-      const template = messageConfig.custom_template || '';
+      const template = messageConfig.custom_template || "";
       const message = this.replaceVariables(template, {
         ...custom_data,
-        cleaner_name: cleaner.full_name || 'Your cleaner',
-        client_name: client.first_name || 'Valued client'
+        cleaner_name: cleaner.full_name || "Your cleaner",
+        client_name: client.first_name || "Valued client",
       });
 
       const channels = messageConfig.channels || [];
@@ -84,39 +84,45 @@ export class AICommunicationService {
       for (const channel of channels) {
         try {
           let result;
-          if (channel === 'sms' && client.phone) {
+          if (channel === "sms" && client.phone) {
             result = await this.sendViaSMS(client.phone, message);
             deliveryResults.push({ channel, success: true, result });
-          } else if (channel === 'email') {
+          } else if (channel === "email") {
             result = await this.sendViaEmail(client.email, `PureTask - ${message_type}`, message);
             deliveryResults.push({ channel, success: true, result });
-          } else if (channel === 'in_app') {
+          } else if (channel === "in_app") {
             result = await this.sendViaInApp(booking_id, client_id, cleaner_id, message);
             deliveryResults.push({ channel, success: true, result });
           }
         } catch (error) {
-          deliveryResults.push({ 
-            channel, 
-            success: false, 
-            error: (error as Error).message 
+          deliveryResults.push({
+            channel,
+            success: false,
+            error: (error as Error).message,
           });
         }
       }
 
       // Log delivery
-      await this.logDelivery(message_type, cleaner_id, client_id, booking_id, channels, deliveryResults);
+      await this.logDelivery(
+        message_type,
+        cleaner_id,
+        client_id,
+        booking_id,
+        channels,
+        deliveryResults
+      );
 
       return {
         success: true,
-        deliveryResults
+        deliveryResults,
       };
-
     } catch (error) {
-      logger.error('ai_communication_error', { error });
-      return { 
-        success: false, 
-        deliveryResults: [], 
-        error: (error as Error).message 
+      logger.error("ai_communication_error", { error });
+      return {
+        success: false,
+        deliveryResults: [],
+        error: (error as Error).message,
       };
     }
   }
@@ -126,10 +132,10 @@ export class AICommunicationService {
    */
   static replaceVariables(template: string, data: Record<string, any>): string {
     let result = template;
-    
-    Object.keys(data).forEach(key => {
-      const regex = new RegExp(`{${key}}`, 'g');
-      result = result.replace(regex, data[key] || '');
+
+    Object.keys(data).forEach((key) => {
+      const regex = new RegExp(`{${key}}`, "g");
+      result = result.replace(regex, data[key] || "");
     });
 
     return result;
@@ -140,7 +146,7 @@ export class AICommunicationService {
    */
   private static async sendViaSMS(to_number: string, message_body: string) {
     if (!to_number) {
-      throw new Error('Phone number not available for SMS');
+      throw new Error("Phone number not available for SMS");
     }
 
     return await sendSMS({ to: to_number, message: message_body });
@@ -154,7 +160,7 @@ export class AICommunicationService {
       to,
       subject,
       text: body,
-      html: `<p>${body.replace(/\n/g, '<br>')}</p>`
+      html: `<p>${body.replace(/\n/g, "<br>")}</p>`,
     });
   }
 
@@ -169,12 +175,11 @@ export class AICommunicationService {
   ) {
     // Find or create conversation thread
     let thread;
-    
+
     if (booking_id) {
-      const threadResult = await query(
-        `SELECT * FROM conversation_threads WHERE booking_id = $1`,
-        [booking_id]
-      );
+      const threadResult = await query(`SELECT * FROM conversation_threads WHERE booking_id = $1`, [
+        booking_id,
+      ]);
       if (threadResult.rows.length > 0) {
         thread = threadResult.rows[0];
       }
@@ -187,7 +192,7 @@ export class AICommunicationService {
           participants, booking_id, subject, last_message_at, unread_count_client
         ) VALUES ($1, $2, $3, NOW(), 1)
         RETURNING *`,
-        [[client_id, cleaner_id], booking_id || null, 'Booking Communication']
+        [[client_id, cleaner_id], booking_id || null, "Booking Communication"]
       );
       thread = newThreadResult.rows[0];
     }
@@ -198,7 +203,7 @@ export class AICommunicationService {
         thread_id, sender_id, content, type, timestamp
       ) VALUES ($1, $2, $3, $4, NOW())
       RETURNING *`,
-      [thread.id, cleaner_id, message, 'system_message']
+      [thread.id, cleaner_id, message, "system_message"]
     );
 
     // Update thread
@@ -233,8 +238,7 @@ export class AICommunicationService {
         [message_type, cleaner_id, client_id, booking_id || null, channels, JSON.stringify(results)]
       );
     } catch (error) {
-      logger.error('failed_to_log_delivery', { error });
+      logger.error("failed_to_log_delivery", { error });
     }
   }
 }
-

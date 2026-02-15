@@ -1,12 +1,11 @@
-import { describe, it, expect, beforeEach } from "@jest/globals";
-import { jest } from "@jest/globals";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { isObjectAlreadyProcessed, markObjectProcessed } from "../../services/paymentService";
 import { query } from "../../db/client";
 
-jest.mock("../../db/client", () => {
+vi.mock("../../db/client", () => {
   const processed = new Set<string>();
   return {
-    query: jest.fn(async (sql: string, params: any[]) => {
+    query: vi.fn(async (sql: string, params: any[]) => {
       if (sql.includes("SELECT object_id")) {
         const key = `${params[0]}|${params[1]}`;
         return { rows: processed.has(key) ? [{ object_id: params[0] }] : [] };
@@ -30,4 +29,3 @@ describe("stripe object idempotency helpers", () => {
     expect(await isObjectAlreadyProcessed(id, type)).toBe(true);
   });
 });
-

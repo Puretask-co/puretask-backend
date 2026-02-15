@@ -3,7 +3,12 @@
 
 import { Router, Response } from "express";
 import { query } from "../../db/client";
-import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../../middleware/authCanonical";
+import {
+  requireAuth,
+  requireAdmin,
+  AuthedRequest,
+  authedHandler,
+} from "../../middleware/authCanonical";
 import { z } from "zod";
 import { validateQuery } from "../../lib/validation";
 

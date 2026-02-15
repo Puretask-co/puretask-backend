@@ -72,7 +72,9 @@ describe("gamificationMetrics", () => {
     const clockOut = new Date("2025-02-02T12:00:00Z");
 
     it("photo during job window is valid", () => {
-      expect(isPhotoWithinJobWindow(new Date("2025-02-02T11:00:00Z"), clockIn, clockOut)).toBe(true);
+      expect(isPhotoWithinJobWindow(new Date("2025-02-02T11:00:00Z"), clockIn, clockOut)).toBe(
+        true
+      );
     });
     it("photo at clock-in is valid", () => {
       expect(isPhotoWithinJobWindow(clockIn, clockIn, clockOut)).toBe(true);
@@ -81,10 +83,14 @@ describe("gamificationMetrics", () => {
       expect(isPhotoWithinJobWindow(clockOut, clockIn, clockOut)).toBe(true);
     });
     it("photo before clock-in is invalid", () => {
-      expect(isPhotoWithinJobWindow(new Date("2025-02-02T09:59:00Z"), clockIn, clockOut)).toBe(false);
+      expect(isPhotoWithinJobWindow(new Date("2025-02-02T09:59:00Z"), clockIn, clockOut)).toBe(
+        false
+      );
     });
     it("photo after clock-out is invalid", () => {
-      expect(isPhotoWithinJobWindow(new Date("2025-02-02T12:01:00Z"), clockIn, clockOut)).toBe(false);
+      expect(isPhotoWithinJobWindow(new Date("2025-02-02T12:01:00Z"), clockIn, clockOut)).toBe(
+        false
+      );
     });
   });
 });

@@ -2,7 +2,7 @@
 // Full job lifecycle smoke test
 
 import request from "supertest";
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import app from "../../index";
 import {
   createTestClient,
@@ -18,12 +18,12 @@ describe("Job Lifecycle Smoke Test", () => {
 
   beforeAll(async () => {
     // Wait a bit for database connection to be ready (setup.ts may still be retrying)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
     // Create test users with retry logic for database connection issues
     let attempts = 0;
     const maxAttempts = 3;
-    
+
     while (attempts < maxAttempts) {
       try {
         client = await createTestClient();
@@ -32,10 +32,12 @@ describe("Job Lifecycle Smoke Test", () => {
       } catch (error: any) {
         attempts++;
         if (attempts >= maxAttempts) {
-          throw new Error(`Failed to create test users after ${maxAttempts} attempts: ${error.message}`);
+          throw new Error(
+            `Failed to create test users after ${maxAttempts} attempts: ${error.message}`
+          );
         }
         // Wait before retry (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, 2000 * Math.pow(2, attempts - 1)));
+        await new Promise((resolve) => setTimeout(resolve, 2000 * Math.pow(2, attempts - 1)));
       }
     }
   }, 120000); // 120 second timeout for user creation with retries (increased from 90s)
@@ -45,7 +47,7 @@ describe("Job Lifecycle Smoke Test", () => {
     const { query } = await import("../../db/client");
     const clientCheck = await query(`SELECT id FROM users WHERE id = $1`, [client.id]);
     const cleanerCheck = await query(`SELECT id FROM users WHERE id = $1`, [cleaner.id]);
-    
+
     // Recreate users if they were deleted (test isolation issue)
     if (clientCheck.rows.length === 0) {
       console.warn(`Test client user ${client.id} was deleted, recreating...`);
@@ -55,7 +57,7 @@ describe("Job Lifecycle Smoke Test", () => {
       console.warn(`Test cleaner user ${cleaner.id} was deleted, recreating...`);
       cleaner = await createTestCleaner();
     }
-    
+
     // Add credits to client for each test to ensure test isolation
     // Credits are consumed during job creation, so we need fresh credits for each test
     // Use the current client.id (which may have been updated if user was recreated)
@@ -90,10 +92,10 @@ describe("Job Lifecycle Smoke Test", () => {
       });
 
     expect(createRes.status).toBe(201);
-    expect(createRes.body.job).toBeDefined();
-    const jobId = createRes.body.job.id;
+    expect(createRes.body.data?.job).toBeDefined();
+    const jobId = createRes.body.data.job.id;
     expect(jobId).toBeTruthy();
-    expect(createRes.body.job.status).toBe("requested");
+    expect(createRes.body.data.job.status).toBe("requested");
 
     // 2. Cleaner accepts job
     const acceptRes = await request(app)
@@ -102,8 +104,8 @@ describe("Job Lifecycle Smoke Test", () => {
       .send({ event_type: "job_accepted" });
 
     expect(acceptRes.status).toBe(200);
-    expect(acceptRes.body.job.status).toBe("accepted");
-    expect(acceptRes.body.job.cleaner_id).toBe(cleaner.id);
+    expect((acceptRes.body.data?.job ?? acceptRes.body.job)?.status).toBe("accepted");
+    expect((acceptRes.body.data?.job ?? acceptRes.body.job)?.cleaner_id).toBe(cleaner.id);
 
     // 3. Cleaner marks on_my_way
     const omwRes = await request(app)
@@ -112,7 +114,7 @@ describe("Job Lifecycle Smoke Test", () => {
       .send({ event_type: "cleaner_on_my_way" });
 
     expect(omwRes.status).toBe(200);
-    expect(omwRes.body.job.status).toBe("on_my_way");
+    expect((omwRes.body.data?.job ?? omwRes.body.job)?.status).toBe("on_my_way");
 
     // 4. Cleaner starts job (check in)
     const startRes = await request(app)
@@ -124,8 +126,8 @@ describe("Job Lifecycle Smoke Test", () => {
       });
 
     expect(startRes.status).toBe(200);
-    expect(startRes.body.job.status).toBe("in_progress");
-    expect(startRes.body.job.actual_start_at).toBeTruthy();
+    expect((startRes.body.data?.job ?? startRes.body.job)?.status).toBe("in_progress");
+    expect((startRes.body.data?.job ?? startRes.body.job)?.actual_start_at).toBeTruthy();
 
     // 5. Cleaner completes job (check out)
     const completeRes = await request(app)
@@ -134,8 +136,8 @@ describe("Job Lifecycle Smoke Test", () => {
       .send({ event_type: "job_completed" });
 
     expect(completeRes.status).toBe(200);
-    expect(completeRes.body.job.status).toBe("awaiting_approval");
-    expect(completeRes.body.job.actual_end_at).toBeTruthy();
+    expect((completeRes.body.data?.job ?? completeRes.body.job)?.status).toBe("awaiting_approval");
+    expect((completeRes.body.data?.job ?? completeRes.body.job)?.actual_end_at).toBeTruthy();
 
     // 6. Client approves job with rating
     const approveRes = await request(app)
@@ -147,8 +149,8 @@ describe("Job Lifecycle Smoke Test", () => {
       });
 
     expect(approveRes.status).toBe(200);
-    expect(approveRes.body.job.status).toBe("completed");
-    expect(approveRes.body.job.rating).toBe(5);
+    expect((approveRes.body.data?.job ?? approveRes.body.job)?.status).toBe("completed");
+    expect((approveRes.body.data?.job ?? approveRes.body.job)?.rating).toBe(5);
   });
 
   it("allows client to cancel a requested job", async () => {
@@ -164,7 +166,7 @@ describe("Job Lifecycle Smoke Test", () => {
       });
 
     expect(createRes.status).toBe(201);
-    const jobId = createRes.body.job.id;
+    const jobId = createRes.body.data?.job?.id ?? createRes.body.job?.id;
 
     // Cancel job
     const cancelRes = await request(app)
@@ -173,7 +175,7 @@ describe("Job Lifecycle Smoke Test", () => {
       .send({ event_type: "job_cancelled" });
 
     expect(cancelRes.status).toBe(200);
-    expect(cancelRes.body.job.status).toBe("cancelled");
+    expect((cancelRes.body.data?.job ?? cancelRes.body.job)?.status).toBe("cancelled");
   });
 
   it("prevents invalid state transitions", async () => {
@@ -188,7 +190,7 @@ describe("Job Lifecycle Smoke Test", () => {
         credit_amount: 50,
       });
 
-    const jobId = createRes.body.job.id;
+    const jobId = createRes.body.data?.job?.id ?? createRes.body.job?.id;
 
     // Try to complete without accepting first
     const invalidRes = await request(app)
@@ -197,7 +199,6 @@ describe("Job Lifecycle Smoke Test", () => {
       .send({ event_type: "job_completed" });
 
     expect(invalidRes.status).toBe(400);
-    expect(invalidRes.body.error.code).toBe("BAD_TRANSITION");
+    expect(invalidRes.body.error?.code).toBe("BAD_TRANSITION");
   });
 });
-

@@ -29,9 +29,8 @@ export interface DisputeResolution {
  * Get admin KPIs dashboard data
  */
 export async function getAdminKPIs(dateFrom?: string, dateTo?: string): Promise<AdminKPIs> {
-  const dateFilter = dateFrom && dateTo
-    ? `AND created_at >= $1::timestamptz AND created_at <= $2::timestamptz`
-    : "";
+  const dateFilter =
+    dateFrom && dateTo ? `AND created_at >= $1::timestamptz AND created_at <= $2::timestamptz` : "";
   const params = dateFrom && dateTo ? [dateFrom, dateTo] : [];
 
   // Total jobs
@@ -69,10 +68,9 @@ export async function getAdminKPIs(dateFrom?: string, dateTo?: string): Promise<
   );
   const cancelledJobs = parseInt(cancelledJobsResult.rows[0]?.count || "0", 10);
 
-  // Total credits escrowed (from credit_ledger - job_escrow entries)
-  // Uses amount and direction columns instead of delta_credits
+  // Total credits escrowed (from credit_ledger - job_escrow entries use delta_credits, negative = held)
   const creditsResult = await query<{ total: string }>(
-    `SELECT COALESCE(SUM(ABS(CASE WHEN direction = 'credit' THEN amount ELSE -amount END)), 0) as total FROM credit_ledger WHERE reason = 'job_escrow' ${dateFilter}`,
+    `SELECT COALESCE(SUM(ABS(delta_credits)), 0) as total FROM credit_ledger WHERE reason = 'job_escrow' ${dateFilter}`,
     params
   );
   const totalCreditsEscrowed = parseFloat(creditsResult.rows[0]?.total || "0");
@@ -130,10 +128,7 @@ export async function getAdminKPIs(dateFrom?: string, dateTo?: string): Promise<
 /**
  * Get all disputes from disputes table
  */
-export async function getDisputes(
-  status?: DisputeStatus,
-  limit: number = 50
-): Promise<Dispute[]> {
+export async function getDisputes(status?: DisputeStatus, limit: number = 50): Promise<Dispute[]> {
   const statusFilter = status ? "WHERE d.status = $1" : "";
   const params = status ? [status, limit] : [limit];
 
@@ -190,18 +185,22 @@ export async function resolveDispute(
   const updated = updatedResult.rows[0];
 
   // Update job status based on resolution
-  const newJobStatus: JobStatus = resolution.resolution === "resolved_refund" ? "cancelled" : "completed";
-  await query(
-    `UPDATE jobs SET status = $2, updated_at = NOW() WHERE id = $1`,
-    [jobId, newJobStatus]
-  );
+  const newJobStatus: JobStatus =
+    resolution.resolution === "resolved_refund" ? "cancelled" : "completed";
+  await query(`UPDATE jobs SET status = $2, updated_at = NOW() WHERE id = $1`, [
+    jobId,
+    newJobStatus,
+  ]);
 
   // Publish event
   await publishEvent({
     jobId,
     actorType: "admin",
     actorId: adminId,
-    eventName: resolution.resolution === "resolved_refund" ? "dispute_resolved_refund" : "dispute_resolved_no_refund",
+    eventName:
+      resolution.resolution === "resolved_refund"
+        ? "dispute_resolved_refund"
+        : "dispute_resolved_no_refund",
     payload: {
       disputeId: dispute.id,
       resolution: resolution.resolution,
@@ -228,10 +227,7 @@ export async function overrideJobStatus(
   reason: string,
   adminId: string
 ): Promise<Job> {
-  const jobResult = await query<Job>(
-    `SELECT * FROM jobs WHERE id = $1`,
-    [jobId]
-  );
+  const jobResult = await query<Job>(`SELECT * FROM jobs WHERE id = $1`, [jobId]);
 
   if (jobResult.rows.length === 0) {
     throw new Error("Job not found");
@@ -334,15 +330,7 @@ export async function listJobsForAdmin(filters: {
   limit?: number;
   offset?: number;
 }): Promise<{ jobs: Job[]; total: number }> {
-  const {
-    status,
-    clientId,
-    cleanerId,
-    dateFrom,
-    dateTo,
-    limit = 50,
-    offset = 0,
-  } = filters;
+  const { status, clientId, cleanerId, dateFrom, dateTo, limit = 50, offset = 0 } = filters;
 
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -482,15 +470,12 @@ export interface JobTimeline {
  */
 export async function getJobDetails(jobId: string): Promise<JobTimeline> {
   // Get job
-  const jobResult = await query<Job>(
-    `SELECT * FROM jobs WHERE id = $1`,
-    [jobId]
-  );
-  
+  const jobResult = await query<Job>(`SELECT * FROM jobs WHERE id = $1`, [jobId]);
+
   if (jobResult.rows.length === 0) {
     throw Object.assign(new Error("Job not found"), { statusCode: 404 });
   }
-  
+
   const job = jobResult.rows[0];
 
   // Get client info
@@ -518,10 +503,7 @@ export async function getJobDetails(jobId: string): Promise<JobTimeline> {
   const events = eventsResult.rows;
 
   // Get dispute
-  const disputeResult = await query<Dispute>(
-    `SELECT * FROM disputes WHERE job_id = $1`,
-    [jobId]
-  );
+  const disputeResult = await query<Dispute>(`SELECT * FROM disputes WHERE job_id = $1`, [jobId]);
   const dispute = disputeResult.rows[0] ?? null;
 
   // Get payment intents
@@ -543,10 +525,7 @@ export async function getJobDetails(jobId: string): Promise<JobTimeline> {
   const paymentIntents = paymentsResult.rows;
 
   // Get payout
-  const payoutResult = await query<Payout>(
-    `SELECT * FROM payouts WHERE job_id = $1`,
-    [jobId]
-  );
+  const payoutResult = await query<Payout>(`SELECT * FROM payouts WHERE job_id = $1`, [jobId]);
   const payout = payoutResult.rows[0] ?? null;
 
   // Get photos
@@ -555,10 +534,9 @@ export async function getJobDetails(jobId: string): Promise<JobTimeline> {
     type: string;
     url: string;
     created_at: string;
-  }>(
-    `SELECT id, type, url, created_at FROM job_photos WHERE job_id = $1 ORDER BY created_at ASC`,
-    [jobId]
-  );
+  }>(`SELECT id, type, url, created_at FROM job_photos WHERE job_id = $1 ORDER BY created_at ASC`, [
+    jobId,
+  ]);
   const photos = photosResult.rows;
 
   // Get credit entries
@@ -587,4 +565,22 @@ export async function getJobDetails(jobId: string): Promise<JobTimeline> {
     photos,
     creditEntries,
   };
+}
+
+/**
+ * Get dispute detail by dispute ID (for admin dispute resolution UI)
+ * Returns full timeline: dispute, job, events, photos, payments, credits
+ */
+export async function getDisputeDetail(disputeId: string): Promise<JobTimeline | null> {
+  const disputeResult = await query<Dispute>(
+    `SELECT * FROM disputes WHERE id = $1`,
+    [disputeId]
+  );
+
+  if (disputeResult.rows.length === 0) {
+    return null;
+  }
+
+  const dispute = disputeResult.rows[0];
+  return getJobDetails(dispute.job_id);
 }

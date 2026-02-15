@@ -1,12 +1,12 @@
 // src/test-helpers/fixtures.ts
 // Test data fixtures and factories
 
-import { faker } from '@faker-js/faker';
+import { faker } from "@faker-js/faker";
 
 export const createMockUser = (overrides: Partial<any> = {}) => ({
   id: faker.string.uuid(),
   email: faker.internet.email(),
-  role: 'client',
+  role: "client",
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   ...overrides,
@@ -15,7 +15,7 @@ export const createMockUser = (overrides: Partial<any> = {}) => ({
 export const createMockCleaner = (overrides: Partial<any> = {}) => ({
   id: faker.string.uuid(),
   user_id: faker.string.uuid(),
-  tier: 'bronze',
+  tier: "bronze",
   hourly_rate_credits: 50,
   avg_rating: 4.5,
   total_jobs_completed: 10,
@@ -27,8 +27,8 @@ export const createMockJob = (overrides: Partial<any> = {}) => ({
   id: faker.string.uuid(),
   client_id: faker.string.uuid(),
   cleaner_id: faker.string.uuid(),
-  status: 'pending',
-  service_type: 'standard',
+  status: "pending",
+  service_type: "standard",
   scheduled_date: faker.date.future().toISOString(),
   duration_hours: 2,
   total_credits: 100,
@@ -40,8 +40,8 @@ export const createMockBooking = (overrides: Partial<any> = {}) => ({
   id: faker.string.uuid(),
   client_id: faker.string.uuid(),
   cleaner_id: faker.string.uuid(),
-  status: 'confirmed',
-  service_type: 'standard',
+  status: "confirmed",
+  service_type: "standard",
   scheduled_date: faker.date.future().toISOString(),
   duration_hours: 3,
   address: faker.location.streetAddress(),
@@ -64,22 +64,22 @@ export const createMockMessage = (overrides: Partial<any> = {}) => ({
 });
 
 export const validClientData = {
-  email: 'testclient@example.com',
-  password: 'SecurePass123!',
-  role: 'client' as const,
+  email: "testclient@example.com",
+  password: "SecurePass123!",
+  role: "client" as const,
 };
 
 export const validCleanerData = {
-  email: 'testcleaner@example.com',
-  password: 'SecurePass123!',
-  role: 'cleaner' as const,
+  email: "testcleaner@example.com",
+  password: "SecurePass123!",
+  role: "cleaner" as const,
 };
 
 export const validAdminData = {
-  email: 'testadmin@example.com',
-  password: 'SecurePass123!',
-  role: 'admin' as const,
+  email: "testadmin@example.com",
+  password: "SecurePass123!",
+  role: "admin" as const,
 };
 
-export const mockJWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEyMzQ1Njc4LTEyMzQtMTIzNC0xMjM0LTEyMzQ1Njc4OTAxMiIsInJvbGUiOiJjbGllbnQiLCJpYXQiOjE1MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-
+export const mockJWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEyMzQ1Njc4LTEyMzQtMTIzNC0xMjM0LTEyMzQ1Njc4OTAxMiIsInJvbGUiOiJjbGllbnQiLCJpYXQiOjE1MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";

@@ -10,6 +10,7 @@ import { releaseJobCreditsToCleaner } from "./creditsService";
 import { recordEarningsForCompletedJob } from "./payoutsService";
 import { Job } from "../types/db";
 import { env } from "../config/env";
+import { metrics } from "../lib/metrics";
 
 // ============================================
 // Types
@@ -85,10 +86,7 @@ export async function getJobTrackingState(jobId: string): Promise<JobTrackingSta
     address: string;
     latitude: number;
     longitude: number;
-  }>(
-    `SELECT * FROM jobs WHERE id = $1`,
-    [jobId]
-  );
+  }>(`SELECT * FROM jobs WHERE id = $1`, [jobId]);
 
   if (jobResult.rows.length === 0) {
     throw Object.assign(new Error("Job not found"), { statusCode: 404 });
@@ -114,8 +112,8 @@ export async function getJobTrackingState(jobId: string): Promise<JobTrackingSta
   );
 
   const photos = {
-    before: photosResult.rows.filter(p => p.type === "before").map(p => p.url),
-    after: photosResult.rows.filter(p => p.type === "after").map(p => p.url),
+    before: photosResult.rows.filter((p) => p.type === "before").map((p) => p.url),
+    after: photosResult.rows.filter((p) => p.type === "after").map((p) => p.url),
   };
 
   // Get cleaner info if assigned
@@ -152,7 +150,7 @@ export async function getJobTrackingState(jobId: string): Promise<JobTrackingSta
 
     // Get last known location (from events)
     const locationEvent = eventsResult.rows
-      .filter(e => e.event_type === "cleaner.location_updated")
+      .filter((e) => e.event_type === "cleaner.location_updated")
       .pop();
 
     if (locationEvent?.payload) {
@@ -181,7 +179,7 @@ export async function getJobTrackingState(jobId: string): Promise<JobTrackingSta
 
   // Extract key timestamps from events
   const getEventTime = (type: string) => {
-    const event = eventsResult.rows.find(e => e.event_type === type);
+    const event = eventsResult.rows.find((e) => e.event_type === type);
     return event?.timestamp ?? null;
   };
 
@@ -223,10 +221,7 @@ export async function startEnRoute(
     throw Object.assign(new Error("Job must be in accepted status"), { statusCode: 400 });
   }
 
-  await query(
-    `UPDATE jobs SET status = 'on_my_way', updated_at = NOW() WHERE id = $1`,
-    [jobId]
-  );
+  await query(`UPDATE jobs SET status = 'on_my_way', updated_at = NOW() WHERE id = $1`, [jobId]);
 
   await publishEvent({
     jobId,
@@ -262,18 +257,20 @@ export async function markArrived(
       job.latitude,
       job.longitude
     );
-    
+
     const maxRadius = env.GPS_CHECKIN_RADIUS_METERS;
     if (distanceMeters > maxRadius) {
-      logger.warn("job_arrival_distance_warning", { 
-        jobId, 
-        cleanerId, 
+      logger.warn("job_arrival_distance_warning", {
+        jobId,
+        cleanerId,
         distanceMeters,
         maxRadius,
         exceeded: true,
       });
       throw Object.assign(
-        new Error(`GPS check-in failed: You must be within ${maxRadius} meters of the job location. Current distance: ${Math.round(distanceMeters)} meters`),
+        new Error(
+          `GPS check-in failed: You must be within ${maxRadius} meters of the job location. Current distance: ${Math.round(distanceMeters)} meters`
+        ),
         { statusCode: 400, code: "GPS_TOO_FAR" }
       );
     }
@@ -284,7 +281,18 @@ export async function markArrived(
     actorType: "cleaner",
     actorId: cleanerId,
     eventName: "job.cleaner_arrived",
-    payload: { location, distanceMeters: job.latitude && job.longitude ? calculateDistanceMeters(location.latitude, location.longitude, job.latitude, job.longitude) : null },
+    payload: {
+      location,
+      distanceMeters:
+        job.latitude && job.longitude
+          ? calculateDistanceMeters(
+              location.latitude,
+              location.longitude,
+              job.latitude,
+              job.longitude
+            )
+          : null,
+    },
   });
 
   logger.info("job_cleaner_arrived", { jobId, cleanerId });
@@ -314,17 +322,19 @@ export async function checkIn(
       job.latitude,
       job.longitude
     );
-    
+
     const maxRadius = env.GPS_CHECKIN_RADIUS_METERS;
     if (distanceMeters > maxRadius) {
-      logger.warn("job_checkin_distance_warning", { 
-        jobId, 
-        cleanerId, 
+      logger.warn("job_checkin_distance_warning", {
+        jobId,
+        cleanerId,
         distanceMeters,
         maxRadius,
       });
       throw Object.assign(
-        new Error(`GPS check-in failed: You must be within ${maxRadius} meters of the job location. Current distance: ${Math.round(distanceMeters)} meters`),
+        new Error(
+          `GPS check-in failed: You must be within ${maxRadius} meters of the job location. Current distance: ${Math.round(distanceMeters)} meters`
+        ),
         { statusCode: 400, code: "GPS_TOO_FAR" }
       );
     }
@@ -393,7 +403,9 @@ export async function checkOut(
   const minPhotos = env.MIN_PHOTOS_TOTAL;
   if (totalPhotos < minPhotos) {
     throw Object.assign(
-      new Error(`Minimum ${minPhotos} photos required (before + after combined). You have ${beforeCount} before photos and ${afterPhotos.length} after photos. Please add ${minPhotos - totalPhotos} more.`),
+      new Error(
+        `Minimum ${minPhotos} photos required (before + after combined). You have ${beforeCount} before photos and ${afterPhotos.length} after photos. Please add ${minPhotos - totalPhotos} more.`
+      ),
       { statusCode: 400, code: "INSUFFICIENT_PHOTOS" }
     );
   }
@@ -438,9 +450,9 @@ export async function checkOut(
     payload: { totalPhotos, beforePhotos: beforeCount, afterPhotos: afterPhotos.length, notes },
   });
 
-  logger.info("job_checked_out", { 
-    jobId, 
-    cleanerId, 
+  logger.info("job_checked_out", {
+    jobId,
+    cleanerId,
     totalPhotos,
     beforePhotos: beforeCount,
     afterPhotos: afterPhotos.length,
@@ -510,10 +522,10 @@ export async function approveJob(
 
     if (updateResult.rows.length === 0) {
       // Job was already completed or status changed (race condition)
-      throw Object.assign(
-        new Error("Job status changed - cannot approve"),
-        { statusCode: 409, code: "CONFLICT" }
-      );
+      throw Object.assign(new Error("Job status changed - cannot approve"), {
+        statusCode: 409,
+        code: "CONFLICT",
+      });
     }
 
     const updatedJob = updateResult.rows[0];
@@ -521,7 +533,7 @@ export async function approveJob(
     // Step 2: Release escrowed credits to cleaner (if cleaner assigned and credits exist)
     if (updatedJob.cleaner_id && updatedJob.credit_amount > 0) {
       await releaseJobCreditsToCleaner(updatedJob.cleaner_id, jobId, updatedJob.credit_amount);
-      
+
       // Step 3: Create payout record
       const jobForPayout = {
         id: updatedJob.id,
@@ -573,7 +585,6 @@ export async function approveJob(
     logger.info("job_approved", { jobId, clientId, rating, tip, cleanerId: updatedJob.cleaner_id });
 
     // Record metrics
-    const { metrics } = require("../lib/metrics");
     if (updatedJob.actual_start_at && updatedJob.actual_end_at) {
       const start = new Date(updatedJob.actual_start_at);
       const end = new Date(updatedJob.actual_end_at);
@@ -610,10 +621,7 @@ export async function disputeJob(
   );
 
   // Update job status
-  await query(
-    `UPDATE jobs SET status = 'disputed', updated_at = NOW() WHERE id = $1`,
-    [jobId]
-  );
+  await query(`UPDATE jobs SET status = 'disputed', updated_at = NOW() WHERE id = $1`, [jobId]);
 
   await publishEvent({
     jobId,
@@ -637,10 +645,7 @@ async function verifyCleanerJob(jobId: string, cleanerId: string) {
     cleaner_id: string;
     latitude: number;
     longitude: number;
-  }>(
-    `SELECT id, status, cleaner_id, latitude, longitude FROM jobs WHERE id = $1`,
-    [jobId]
-  );
+  }>(`SELECT id, status, cleaner_id, latitude, longitude FROM jobs WHERE id = $1`, [jobId]);
 
   const job = result.rows[0];
   if (!job) {
@@ -659,10 +664,7 @@ async function verifyClientJob(jobId: string, clientId: string) {
     client_id: string;
     cleaner_id: string | null;
     credit_amount: number;
-  }>(
-    `SELECT id, status, client_id, cleaner_id, credit_amount FROM jobs WHERE id = $1`,
-    [jobId]
-  );
+  }>(`SELECT id, status, client_id, cleaner_id, credit_amount FROM jobs WHERE id = $1`, [jobId]);
 
   const job = result.rows[0];
   if (!job) {
@@ -681,10 +683,10 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   const R = 3959; // Earth radius in miles
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
@@ -695,14 +697,13 @@ function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2:
   const R = 6371000; // Earth radius in meters
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
 function toRad(deg: number): number {
   return deg * (Math.PI / 180);
 }
-

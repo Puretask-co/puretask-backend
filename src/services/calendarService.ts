@@ -12,7 +12,8 @@ import { enqueue, QUEUE_NAMES } from "../lib/queue";
 const GOOGLE_CONFIG = {
   CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
   CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
-  REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/calendar/google/callback",
+  REDIRECT_URI:
+    process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/calendar/google/callback",
   SCOPES: [
     "https://www.googleapis.com/auth/calendar.events",
     "https://www.googleapis.com/auth/calendar.readonly",
@@ -56,7 +57,7 @@ export interface CalendarEvent {
  */
 export function getGoogleConnectUrl(userId: string): string {
   const state = Buffer.from(JSON.stringify({ userId })).toString("base64");
-  
+
   const params = new URLSearchParams({
     client_id: GOOGLE_CONFIG.CLIENT_ID,
     redirect_uri: GOOGLE_CONFIG.REDIRECT_URI,
@@ -102,12 +103,9 @@ export async function handleGoogleCallback(
   const tokens = await tokenResponse.json();
 
   // Get user's email from Google
-  const userInfoResponse = await fetch(
-    "https://www.googleapis.com/oauth2/v2/userinfo",
-    {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
-    }
-  );
+  const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  });
 
   const userInfo = await userInfoResponse.json();
 
@@ -123,9 +121,7 @@ export async function handleGoogleCallback(
   const calendarId = calendarInfo.id || "primary";
 
   // Calculate token expiry
-  const expiresAt = tokens.expires_in
-    ? new Date(Date.now() + tokens.expires_in * 1000)
-    : null;
+  const expiresAt = tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null;
 
   // Save connection (upsert)
   const result = await query<CalendarConnection>(
@@ -198,9 +194,7 @@ async function refreshAccessToken(connection: CalendarConnection): Promise<strin
 
   const tokens = await response.json();
 
-  const expiresAt = tokens.expires_in
-    ? new Date(Date.now() + tokens.expires_in * 1000)
-    : null;
+  const expiresAt = tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null;
 
   // Update stored token
   await query(
@@ -242,10 +236,10 @@ export async function disconnectCalendar(
   userId: string,
   provider: string = "google"
 ): Promise<void> {
-  await query(
-    `DELETE FROM calendar_connections WHERE user_id = $1 AND provider = $2`,
-    [userId, provider]
-  );
+  await query(`DELETE FROM calendar_connections WHERE user_id = $1 AND provider = $2`, [
+    userId,
+    provider,
+  ]);
 
   // Also delete synced events
   await query(
@@ -264,10 +258,7 @@ export async function disconnectCalendar(
 /**
  * Toggle sync enabled
  */
-export async function toggleCalendarSync(
-  userId: string,
-  enabled: boolean
-): Promise<void> {
+export async function toggleCalendarSync(userId: string, enabled: boolean): Promise<void> {
   await query(
     `UPDATE calendar_connections SET sync_enabled = $2, updated_at = NOW() WHERE user_id = $1`,
     [userId, enabled]
@@ -373,10 +364,9 @@ export async function syncJobToCalendar(
     }
 
     // Update last synced
-    await query(
-      `UPDATE calendar_connections SET last_synced_at = NOW() WHERE id = $1`,
-      [connection.id]
-    );
+    await query(`UPDATE calendar_connections SET last_synced_at = NOW() WHERE id = $1`, [
+      connection.id,
+    ]);
 
     logger.info("job_synced_to_calendar", { userId, jobId, externalEventId });
 
@@ -394,10 +384,7 @@ export async function syncJobToCalendar(
 /**
  * Delete a calendar event for a job
  */
-export async function deleteJobFromCalendar(
-  userId: string,
-  jobId: string
-): Promise<void> {
+export async function deleteJobFromCalendar(userId: string, jobId: string): Promise<void> {
   const connection = await getUserCalendarConnection(userId);
   if (!connection) return;
 
@@ -419,10 +406,10 @@ export async function deleteJobFromCalendar(
       }
     );
 
-    await query(
-      `DELETE FROM calendar_events WHERE connection_id = $1 AND job_id = $2`,
-      [connection.id, jobId]
-    );
+    await query(`DELETE FROM calendar_events WHERE connection_id = $1 AND job_id = $2`, [
+      connection.id,
+      jobId,
+    ]);
 
     logger.info("job_deleted_from_calendar", { userId, jobId });
   } catch (err) {
@@ -521,6 +508,8 @@ END:VCALENDAR`;
 }
 
 function formatICSDate(date: Date): string {
-  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  return date
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
 }
-

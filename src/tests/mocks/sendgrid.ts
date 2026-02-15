@@ -14,7 +14,7 @@ export function createMockSendGridSuccess(): MockSendGridResponse {
   return {
     statusCode: 202,
     body: {
-      message: 'Email sent successfully',
+      message: "Email sent successfully",
     },
     headers: {},
   };
@@ -25,7 +25,7 @@ export function createMockSendGridSuccess(): MockSendGridResponse {
  */
 export function createMockSendGridError(
   statusCode: number = 400,
-  message: string = 'Bad Request'
+  message: string = "Bad Request"
 ): MockSendGridResponse {
   return {
     statusCode,
@@ -60,10 +60,10 @@ export interface MockEmailData {
  */
 export function createMockEmailData(overrides?: Partial<MockEmailData>): MockEmailData {
   return {
-    to: 'test@example.com',
-    from: 'noreply@puretask.com',
-    subject: 'Test Email',
-    html: '<p>Test email content</p>',
+    to: "test@example.com",
+    from: "noreply@puretask.com",
+    subject: "Test Email",
+    html: "<p>Test email content</p>",
     ...overrides,
   };
 }

@@ -111,7 +111,9 @@ export async function createTicket(params: {
  * Get ticket by ID with messages
  */
 export async function getTicketById(ticketId: string): Promise<TicketWithMessages | null> {
-  const ticketResult = await query<SupportTicket & { user_email: string; assigned_to_email: string | null }>(
+  const ticketResult = await query<
+    SupportTicket & { user_email: string; assigned_to_email: string | null }
+  >(
     `
       SELECT 
         t.*,
@@ -444,4 +446,3 @@ export async function getTicketStats(): Promise<{
     byPriority,
   };
 }
-

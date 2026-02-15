@@ -1,9 +1,14 @@
 // src/routes/admin/risk.ts
-import { Router, Response, NextFunction } from 'express';
-import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from '../../middleware/authCanonical';
-import { query } from '../../db/client';
-import { logger } from '../../lib/logger';
-import { RiskManagementData } from '../../types/admin';
+import { Router, Response, NextFunction } from "express";
+import {
+  requireAuth,
+  requireAdmin,
+  AuthedRequest,
+  authedHandler,
+} from "../../middleware/authCanonical";
+import { query } from "../../db/client";
+import { logger } from "../../lib/logger";
+import { RiskManagementData } from "../../types/admin";
 
 const router = Router();
 
@@ -23,10 +28,12 @@ router.use(requireAdmin);
  *       200:
  *         description: Risk overview
  */
-router.get('/overview', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    // Flagged clients
-    const flaggedClientsResult = await query(`
+router.get(
+  "/overview",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      // Flagged clients
+      const flaggedClientsResult = await query(`
       SELECT 
         cp.user_id as id,
         cp.full_name as name,
@@ -55,8 +62,8 @@ router.get('/overview', authedHandler(async (req: AuthedRequest, res: Response) 
       LIMIT 50
     `);
 
-    // Flagged cleaners
-    const flaggedCleanersResult = await query(`
+      // Flagged cleaners
+      const flaggedCleanersResult = await query(`
       SELECT 
         cp.user_id as id,
         cp.full_name as name,
@@ -75,8 +82,8 @@ router.get('/overview', authedHandler(async (req: AuthedRequest, res: Response) 
       LIMIT 50
     `);
 
-    // Disputes
-    const disputesResult = await query(`
+      // Disputes
+      const disputesResult = await query(`
       SELECT 
         d.id,
         d.booking_id,
@@ -90,8 +97,8 @@ router.get('/overview', authedHandler(async (req: AuthedRequest, res: Response) 
       LIMIT 50
     `);
 
-    // Safety incidents
-    const safetyIncidentsResult = await query(`
+      // Safety incidents
+      const safetyIncidentsResult = await query(`
       SELECT 
         si.id,
         u.email as reported_by,
@@ -113,86 +120,89 @@ router.get('/overview', authedHandler(async (req: AuthedRequest, res: Response) 
       LIMIT 50
     `);
 
-    const riskData: RiskManagementData = {
-      flaggedClients: flaggedClientsResult.rows.map(row => ({
-        id: row.id,
-        name: row.name,
-        email: row.email,
-        flags: Array.isArray(row.flags) ? row.flags : [],
-        totalBookings: parseInt(row.total_bookings || 0),
-        disputeCount: parseInt(row.dispute_count)
-      })),
-      flaggedCleaners: flaggedCleanersResult.rows.map(row => ({
-        id: row.id,
-        name: row.name,
-        email: row.email,
-        flags: Array.isArray(row.flags) ? row.flags : [],
-        reliabilityScore: parseFloat(row.reliability_score || 0)
-      })),
-      disputes: disputesResult.rows.map(row => ({
-        id: row.id,
-        bookingId: row.booking_id,
-        initiator: row.initiator,
-        subject: row.subject,
-        status: row.status,
-        createdAt: row.created_at
-      })),
-      safetyIncidents: safetyIncidentsResult.rows.map(row => ({
-        id: row.id,
-        reportedBy: row.reported_by,
-        incidentType: row.incident_type,
-        severity: row.severity,
-        status: row.status,
-        createdAt: row.created_at
-      }))
-    };
+      const riskData: RiskManagementData = {
+        flaggedClients: flaggedClientsResult.rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          email: row.email,
+          flags: Array.isArray(row.flags) ? row.flags : [],
+          totalBookings: parseInt(row.total_bookings || 0),
+          disputeCount: parseInt(row.dispute_count),
+        })),
+        flaggedCleaners: flaggedCleanersResult.rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          email: row.email,
+          flags: Array.isArray(row.flags) ? row.flags : [],
+          reliabilityScore: parseFloat(row.reliability_score || 0),
+        })),
+        disputes: disputesResult.rows.map((row) => ({
+          id: row.id,
+          bookingId: row.booking_id,
+          initiator: row.initiator,
+          subject: row.subject,
+          status: row.status,
+          createdAt: row.created_at,
+        })),
+        safetyIncidents: safetyIncidentsResult.rows.map((row) => ({
+          id: row.id,
+          reportedBy: row.reported_by,
+          incidentType: row.incident_type,
+          severity: row.severity,
+          status: row.status,
+          createdAt: row.created_at,
+        })),
+      };
 
-    logger.info('Admin risk overview retrieved', {
-      adminId: req.user?.id
-    });
+      logger.info("Admin risk overview retrieved", {
+        adminId: req.user?.id,
+      });
 
-    res.json(riskData);
-  } catch (error) {
-    logger.error('Error fetching risk overview', { error });
-    res.status(500).json({ error: 'Failed to fetch risk overview' });
-  }
-}));
+      res.json(riskData);
+    } catch (error) {
+      logger.error("Error fetching risk overview", { error });
+      res.status(500).json({ error: "Failed to fetch risk overview" });
+    }
+  })
+);
 
 /**
  * GET /admin/risk/flags
  * Get all risk flags with filters
  */
-router.get('/flags', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { userId, severity, active = 'true', page = '1', limit = '50' } = req.query;
-    const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+router.get(
+  "/flags",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { userId, severity, active = "true", page = "1", limit = "50" } = req.query;
+      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-    const conditions: string[] = ['1=1'];
-    const params: any[] = [];
-    let paramIndex = 1;
+      const conditions: string[] = ["1=1"];
+      const params: any[] = [];
+      let paramIndex = 1;
 
-    if (userId) {
-      conditions.push(`rf.user_id = $${paramIndex}`);
-      params.push(userId);
-      paramIndex++;
-    }
+      if (userId) {
+        conditions.push(`rf.user_id = $${paramIndex}`);
+        params.push(userId);
+        paramIndex++;
+      }
 
-    if (severity) {
-      conditions.push(`rf.severity = $${paramIndex}`);
-      params.push(severity);
-      paramIndex++;
-    }
+      if (severity) {
+        conditions.push(`rf.severity = $${paramIndex}`);
+        params.push(severity);
+        paramIndex++;
+      }
 
-    if (active === 'true') {
-      conditions.push(`rf.active = true`);
-    } else if (active === 'false') {
-      conditions.push(`rf.active = false`);
-    }
+      if (active === "true") {
+        conditions.push(`rf.active = true`);
+      } else if (active === "false") {
+        conditions.push(`rf.active = false`);
+      }
 
-    const whereClause = conditions.join(' AND ');
+      const whereClause = conditions.join(" AND ");
 
-    const flags = await query(
-      `SELECT 
+      const flags = await query(
+        `SELECT 
         rf.*,
         u.email as user_email,
         cp.full_name as client_name,
@@ -204,123 +214,132 @@ router.get('/flags', authedHandler(async (req: AuthedRequest, res: Response) => 
       WHERE ${whereClause}
       ORDER BY rf.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      [...params, parseInt(limit as string), offset]
-    );
+        [...params, parseInt(limit as string), offset]
+      );
 
-    res.json({ flags: flags.rows });
-  } catch (error) {
-    logger.error('Error fetching risk flags', { error });
-    res.status(500).json({ error: 'Failed to fetch risk flags' });
-  }
-}));
+      res.json({ flags: flags.rows });
+    } catch (error) {
+      logger.error("Error fetching risk flags", { error });
+      res.status(500).json({ error: "Failed to fetch risk flags" });
+    }
+  })
+);
 
 /**
  * POST /admin/risk/flags
  * Create a new risk flag
  */
-router.post('/flags', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { userId, flagType, reason, severity, metadata } = req.body;
+router.post(
+  "/flags",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { userId, flagType, reason, severity, metadata } = req.body;
 
-    const result = await query(
-      `INSERT INTO risk_flags 
+      const result = await query(
+        `INSERT INTO risk_flags 
        (user_id, flag_type, reason, severity, metadata, flagged_by, active, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, true, NOW())
        RETURNING *`,
-      [userId, flagType, reason, severity, metadata || {}, req.user?.id]
-    );
+        [userId, flagType, reason, severity, metadata || {}, req.user?.id]
+      );
 
-    // Log admin action
-    await query(
-      `INSERT INTO admin_audit_log (admin_id, action, resource_type, resource_id, changes, ip_address)
+      // Log admin action
+      await query(
+        `INSERT INTO admin_audit_log (admin_id, action, resource_type, resource_id, changes, ip_address)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        req.user?.id,
-        'create_risk_flag',
-        'risk_flag',
-        result.rows[0].id,
-        JSON.stringify({ userId, flagType, reason, severity }),
-        req.ip
-      ]
-    );
+        [
+          req.user?.id,
+          "create_risk_flag",
+          "risk_flag",
+          result.rows[0].id,
+          JSON.stringify({ userId, flagType, reason, severity }),
+          req.ip,
+        ]
+      );
 
-    logger.warn('Admin created risk flag', {
-      adminId: req.user?.id,
-      userId,
-      flagType,
-      severity
-    });
+      logger.warn("Admin created risk flag", {
+        adminId: req.user?.id,
+        userId,
+        flagType,
+        severity,
+      });
 
-    res.json(result.rows[0]);
-  } catch (error) {
-    logger.error('Error creating risk flag', { error });
-    res.status(500).json({ error: 'Failed to create risk flag' });
-  }
-}));
+      res.json(result.rows[0]);
+    } catch (error) {
+      logger.error("Error creating risk flag", { error });
+      res.status(500).json({ error: "Failed to create risk flag" });
+    }
+  })
+);
 
 /**
  * PATCH /admin/risk/flags/:id/resolve
  * Resolve a risk flag
  */
-router.patch('/flags/:id/resolve', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { resolution } = req.body;
+router.patch(
+  "/flags/:id/resolve",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { resolution } = req.body;
 
-    const result = await query(
-      `UPDATE risk_flags 
+      const result = await query(
+        `UPDATE risk_flags 
        SET active = false, resolved_at = NOW(), resolved_by = $1, resolution = $2
        WHERE id = $3
        RETURNING *`,
-      [req.user?.id, resolution, id]
-    );
+        [req.user?.id, resolution, id]
+      );
 
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Risk flag not found' });
-      return;
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: "Risk flag not found" });
+        return;
+      }
+
+      logger.info("Admin resolved risk flag", {
+        adminId: req.user?.id,
+        flagId: id,
+      });
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      logger.error("Error resolving risk flag", { error });
+      res.status(500).json({ error: "Failed to resolve risk flag" });
     }
-
-    logger.info('Admin resolved risk flag', {
-      adminId: req.user?.id,
-      flagId: id
-    });
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    logger.error('Error resolving risk flag', { error });
-    res.status(500).json({ error: 'Failed to resolve risk flag' });
-  }
-}));
+  })
+);
 
 /**
  * GET /admin/risk/disputes
  * Get all disputes with filters
  */
-router.get('/disputes', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { status, bookingId, page = '1', limit = '50' } = req.query;
-    const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+router.get(
+  "/disputes",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { status, bookingId, page = "1", limit = "50" } = req.query;
+      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-    const conditions: string[] = ['1=1'];
-    const params: any[] = [];
-    let paramIndex = 1;
+      const conditions: string[] = ["1=1"];
+      const params: any[] = [];
+      let paramIndex = 1;
 
-    if (status) {
-      conditions.push(`d.status = $${paramIndex}`);
-      params.push(status);
-      paramIndex++;
-    }
+      if (status) {
+        conditions.push(`d.status = $${paramIndex}`);
+        params.push(status);
+        paramIndex++;
+      }
 
-    if (bookingId) {
-      conditions.push(`d.booking_id = $${paramIndex}`);
-      params.push(bookingId);
-      paramIndex++;
-    }
+      if (bookingId) {
+        conditions.push(`d.booking_id = $${paramIndex}`);
+        params.push(bookingId);
+        paramIndex++;
+      }
 
-    const whereClause = conditions.join(' AND ');
+      const whereClause = conditions.join(" AND ");
 
-    const disputes = await query(
-      `SELECT 
+      const disputes = await query(
+        `SELECT 
         d.*,
         j.date as booking_date,
         j.address as booking_address,
@@ -333,86 +352,92 @@ router.get('/disputes', authedHandler(async (req: AuthedRequest, res: Response) 
       WHERE ${whereClause}
       ORDER BY d.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      [...params, parseInt(limit as string), offset]
-    );
+        [...params, parseInt(limit as string), offset]
+      );
 
-    res.json({ disputes: disputes.rows });
-  } catch (error) {
-    logger.error('Error fetching disputes', { error });
-    res.status(500).json({ error: 'Failed to fetch disputes' });
-  }
-}));
+      res.json({ disputes: disputes.rows });
+    } catch (error) {
+      logger.error("Error fetching disputes", { error });
+      res.status(500).json({ error: "Failed to fetch disputes" });
+    }
+  })
+);
 
 /**
  * PATCH /admin/risk/disputes/:id/status
  * Update dispute status
  */
-router.patch('/disputes/:id/status', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { status, resolution } = req.body;
+router.patch(
+  "/disputes/:id/status",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { status, resolution } = req.body;
 
-    const validStatuses = ['open', 'investigating', 'resolved', 'closed'];
-    if (!validStatuses.includes(status)) {
-      res.status(400).json({ error: 'Invalid status' });
-      return;
-    }
+      const validStatuses = ["open", "investigating", "resolved", "closed"];
+      if (!validStatuses.includes(status)) {
+        res.status(400).json({ error: "Invalid status" });
+        return;
+      }
 
-    const result = await query(
-      `UPDATE disputes 
+      const result = await query(
+        `UPDATE disputes 
        SET status = $1, resolution = $2, updated_at = NOW()
        WHERE id = $3
        RETURNING *`,
-      [status, resolution, id]
-    );
+        [status, resolution, id]
+      );
 
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Dispute not found' });
-      return;
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: "Dispute not found" });
+        return;
+      }
+
+      logger.info("Admin updated dispute status", {
+        adminId: req.user?.id,
+        disputeId: id,
+        status,
+      });
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      logger.error("Error updating dispute status", { error });
+      res.status(500).json({ error: "Failed to update dispute status" });
     }
-
-    logger.info('Admin updated dispute status', {
-      adminId: req.user?.id,
-      disputeId: id,
-      status
-    });
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    logger.error('Error updating dispute status', { error });
-    res.status(500).json({ error: 'Failed to update dispute status' });
-  }
-}));
+  })
+);
 
 /**
  * GET /admin/risk/safety-incidents
  * Get all safety incidents
  */
-router.get('/safety-incidents', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { severity, status, page = '1', limit = '50' } = req.query;
-    const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+router.get(
+  "/safety-incidents",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { severity, status, page = "1", limit = "50" } = req.query;
+      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-    const conditions: string[] = ['1=1'];
-    const params: any[] = [];
-    let paramIndex = 1;
+      const conditions: string[] = ["1=1"];
+      const params: any[] = [];
+      let paramIndex = 1;
 
-    if (severity) {
-      conditions.push(`si.severity = $${paramIndex}`);
-      params.push(severity);
-      paramIndex++;
-    }
+      if (severity) {
+        conditions.push(`si.severity = $${paramIndex}`);
+        params.push(severity);
+        paramIndex++;
+      }
 
-    if (status) {
-      conditions.push(`si.status = $${paramIndex}`);
-      params.push(status);
-      paramIndex++;
-    }
+      if (status) {
+        conditions.push(`si.status = $${paramIndex}`);
+        params.push(status);
+        paramIndex++;
+      }
 
-    const whereClause = conditions.join(' AND ');
+      const whereClause = conditions.join(" AND ");
 
-    const incidents = await query(
-      `SELECT 
+      const incidents = await query(
+        `SELECT 
         si.*,
         u.email as reported_by_email,
         j.date as booking_date,
@@ -430,23 +455,26 @@ router.get('/safety-incidents', authedHandler(async (req: AuthedRequest, res: Re
         END,
         si.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      [...params, parseInt(limit as string), offset]
-    );
+        [...params, parseInt(limit as string), offset]
+      );
 
-    res.json({ incidents: incidents.rows });
-  } catch (error) {
-    logger.error('Error fetching safety incidents', { error });
-    res.status(500).json({ error: 'Failed to fetch safety incidents' });
-  }
-}));
+      res.json({ incidents: incidents.rows });
+    } catch (error) {
+      logger.error("Error fetching safety incidents", { error });
+      res.status(500).json({ error: "Failed to fetch safety incidents" });
+    }
+  })
+);
 
 /**
  * GET /admin/risk/stats
  * Get risk management statistics
  */
-router.get('/stats', authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const stats = await query(`
+router.get(
+  "/stats",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const stats = await query(`
       SELECT 
         (SELECT COUNT(*) FROM risk_flags WHERE active = true) as active_flags,
         (SELECT COUNT(*) FROM risk_flags WHERE active = true AND severity = 'high') as high_severity_flags,
@@ -455,12 +483,12 @@ router.get('/stats', authedHandler(async (req: AuthedRequest, res: Response) => 
         (SELECT COUNT(*) FROM safety_incidents WHERE severity = 'critical' AND status != 'resolved') as critical_incidents
     `);
 
-    res.json(stats.rows[0]);
-  } catch (error) {
-    logger.error('Error fetching risk stats', { error });
-    res.status(500).json({ error: 'Failed to fetch risk stats' });
-  }
-}));
+      res.json(stats.rows[0]);
+    } catch (error) {
+      logger.error("Error fetching risk stats", { error });
+      res.status(500).json({ error: "Failed to fetch risk stats" });
+    }
+  })
+);
 
 export default router;
-

@@ -14,7 +14,9 @@ import { User, UserRole, ClientProfile, CleanerProfile } from "../types/db";
  * Sanitize user for admin response (excludes password_hash)
  * Admins can see more fields than regular users, but never password hashes
  */
-export function sanitizeUserForAdmin(user: User | UserWithProfile): Omit<User | UserWithProfile, 'password_hash'> {
+export function sanitizeUserForAdmin(
+  user: User | UserWithProfile
+): Omit<User | UserWithProfile, "password_hash"> {
   const { password_hash, ...sanitized } = user as any;
   return sanitized;
 }
@@ -33,8 +35,8 @@ export interface CreateUserInput {
   password: string;
   role: UserRole;
   phone?: string;
-  defaultAddress?: string;  // for clients
-  hourlyRateCredits?: number;  // for cleaners
+  defaultAddress?: string; // for clients
+  hourlyRateCredits?: number; // for cleaners
 }
 
 export interface UpdateUserInput {
@@ -48,7 +50,7 @@ export interface UpdateUserInput {
 
 export interface UserListFilters {
   role?: UserRole;
-  search?: string;  // email search
+  search?: string; // email search
   limit?: number;
   offset?: number;
 }
@@ -90,13 +92,15 @@ export async function listUsers(filters: UserListFilters = {}): Promise<{
   const total = Number(countResult.rows[0]?.count || 0);
 
   // Get users with profiles and balance
-  const usersResult = await query<UserWithProfile & {
-    default_address?: string;
-    tier?: string;
-    reliability_score?: number;
-    hourly_rate_credits?: number;
-    balance?: string;
-  }>(
+  const usersResult = await query<
+    UserWithProfile & {
+      default_address?: string;
+      tier?: string;
+      reliability_score?: number;
+      hourly_rate_credits?: number;
+      balance?: string;
+    }
+  >(
     `
       SELECT 
         u.*,
@@ -133,15 +137,17 @@ export async function listUsers(filters: UserListFilters = {}): Promise<{
  * Get user by ID with full profile
  */
 export async function getUserById(userId: string): Promise<UserWithProfile | null> {
-  const result = await query<UserWithProfile & {
-    default_address?: string;
-    stripe_customer_id?: string;
-    tier?: string;
-    reliability_score?: number;
-    hourly_rate_credits?: number;
-    stripe_account_id?: string;
-    balance?: string;
-  }>(
+  const result = await query<
+    UserWithProfile & {
+      default_address?: string;
+      stripe_customer_id?: string;
+      tier?: string;
+      reliability_score?: number;
+      hourly_rate_credits?: number;
+      stripe_account_id?: string;
+      balance?: string;
+    }
+  >(
     `
       SELECT 
         u.*,
@@ -177,10 +183,7 @@ export async function getUserById(userId: string): Promise<UserWithProfile | nul
  * Get user by email
  */
 export async function getUserByEmail(email: string): Promise<User | null> {
-  const result = await query<User>(
-    `SELECT * FROM users WHERE email = $1`,
-    [email]
-  );
+  const result = await query<User>(`SELECT * FROM users WHERE email = $1`, [email]);
   return result.rows[0] ?? null;
 }
 
@@ -250,10 +253,7 @@ export async function createUser(input: CreateUserInput): Promise<UserWithProfil
 /**
  * Update user details (admin action)
  */
-export async function updateUser(
-  userId: string,
-  input: UpdateUserInput
-): Promise<UserWithProfile> {
+export async function updateUser(userId: string, input: UpdateUserInput): Promise<UserWithProfile> {
   const user = await getUserById(userId);
   if (!user) {
     throw Object.assign(new Error("User not found"), { statusCode: 404 });
@@ -282,33 +282,28 @@ export async function updateUser(
   if (input.role !== undefined && input.role !== user.role) {
     userFields.push(`role = $${paramIndex++}`);
     userParams.push(input.role);
-    
+
     // Invalidate tokens on role change (security measure)
     const { invalidateUserTokens } = await import("../lib/tokenInvalidation");
     await invalidateUserTokens(userId, "role_changed");
-    
+
     // Handle role change - create new profile if needed
     if (input.role === "client") {
-      await query(
-        `INSERT INTO client_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING`,
-        [userId]
-      );
+      await query(`INSERT INTO client_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING`, [
+        userId,
+      ]);
     } else if (input.role === "cleaner") {
-      await query(
-        `INSERT INTO cleaner_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING`,
-        [userId]
-      );
+      await query(`INSERT INTO cleaner_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING`, [
+        userId,
+      ]);
     }
   }
 
   if (userFields.length > 0) {
     userFields.push(`updated_at = NOW()`);
     userParams.push(userId);
-    
-    await query(
-      `UPDATE users SET ${userFields.join(", ")} WHERE id = $${paramIndex}`,
-      userParams
-    );
+
+    await query(`UPDATE users SET ${userFields.join(", ")} WHERE id = $${paramIndex}`, userParams);
   }
 
   // Update client profile
@@ -373,10 +368,9 @@ export async function deleteUser(userId: string, hard: boolean = false): Promise
       await query(`DELETE FROM users WHERE id = $1`, [userId]);
       logger.info("admin_user_hard_deleted", { userId, email: user.email });
     } catch (err) {
-      throw Object.assign(
-        new Error("Cannot delete user with existing jobs or payments"),
-        { statusCode: 400 }
-      );
+      throw Object.assign(new Error("Cannot delete user with existing jobs or payments"), {
+        statusCode: 400,
+      });
     }
   } else {
     // Soft delete - disable the account by changing email
@@ -400,10 +394,7 @@ export async function deleteUser(userId: string, hard: boolean = false): Promise
 /**
  * Reset user password (admin action)
  */
-export async function resetUserPassword(
-  userId: string,
-  newPassword: string
-): Promise<void> {
+export async function resetUserPassword(userId: string, newPassword: string): Promise<void> {
   const user = await getUserById(userId);
   if (!user) {
     throw Object.assign(new Error("User not found"), { statusCode: 404 });
@@ -411,10 +402,10 @@ export async function resetUserPassword(
 
   const passwordHash = await hashPassword(newPassword);
 
-  await query(
-    `UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`,
-    [userId, passwordHash]
-  );
+  await query(`UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`, [
+    userId,
+    passwordHash,
+  ]);
 
   // Invalidate all existing tokens for this user
   const { invalidateUserTokens } = await import("../lib/tokenInvalidation");

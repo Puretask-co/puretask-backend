@@ -14,7 +14,7 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import { AvailabilityBlock, BlackoutPeriod, Job } from './types';
+import { AvailabilityBlock, BlackoutPeriod, Job } from "./types";
 
 // ============================================
 // Types
@@ -53,13 +53,10 @@ export class AvailabilityService {
    */
   static async setWeeklyAvailability(
     cleanerId: number,
-    blocks: Omit<AvailabilityBlock, 'id' | 'cleanerId'>[]
+    blocks: Omit<AvailabilityBlock, "id" | "cleanerId">[]
   ): Promise<void> {
     // Remove existing blocks
-    await query(
-      `DELETE FROM availability_blocks WHERE cleaner_id = $1`,
-      [String(cleanerId)]
-    );
+    await query(`DELETE FROM availability_blocks WHERE cleaner_id = $1`, [String(cleanerId)]);
 
     // Insert new blocks
     for (const block of blocks) {
@@ -88,7 +85,7 @@ export class AvailabilityService {
       [String(cleanerId)]
     );
 
-    const blocks: AvailabilityBlock[] = result.rows.map(row => ({
+    const blocks: AvailabilityBlock[] = result.rows.map((row) => ({
       id: Number(row.id),
       cleanerId: Number(row.cleaner_id),
       dayOfWeek: Number(row.day_of_week),
@@ -110,7 +107,7 @@ export class AvailabilityService {
       [String(cleanerId), dayOfWeek]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       id: Number(row.id),
       cleanerId: Number(row.cleaner_id),
       dayOfWeek: Number(row.day_of_week),
@@ -161,10 +158,7 @@ export class AvailabilityService {
    * Remove a blackout period
    */
   static async removeBlackoutPeriod(blackoutId: number): Promise<void> {
-    await query(
-      `DELETE FROM blackout_periods WHERE id = $1`,
-      [blackoutId]
-    );
+    await query(`DELETE FROM blackout_periods WHERE id = $1`, [blackoutId]);
 
     logger.info("blackout_period_removed", { blackoutId });
   }
@@ -180,7 +174,7 @@ export class AvailabilityService {
       [String(cleanerId)]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       id: Number(row.id),
       cleanerId: Number(row.cleaner_id),
       startTs: new Date(row.start_ts),
@@ -224,7 +218,7 @@ export class AvailabilityService {
 
   /**
    * Core availability check
-   * 
+   *
    * Checks:
    * 1. Weekly availability blocks
    * 2. Blackout period overrides
@@ -244,14 +238,14 @@ export class AvailabilityService {
     const reqStartStr = timeStr(requestedStart);
     const reqEndStr = timeStr(requestedEnd);
 
-    const withinAnyBlock = blocks.some(b => {
+    const withinAnyBlock = blocks.some((b) => {
       return b.startTime <= reqStartStr && b.endTime >= reqEndStr;
     });
 
     if (!withinAnyBlock) {
       return {
         available: false,
-        reason: 'outside_availability',
+        reason: "outside_availability",
       };
     }
 
@@ -260,7 +254,7 @@ export class AvailabilityService {
     if (blackout) {
       return {
         available: false,
-        reason: 'blackout_period',
+        reason: "blackout_period",
         blackout,
       };
     }
@@ -270,7 +264,7 @@ export class AvailabilityService {
     if (conflictJob) {
       return {
         available: false,
-        reason: 'job_conflict',
+        reason: "job_conflict",
         conflictJob,
       };
     }
@@ -398,8 +392,10 @@ export class AvailabilityService {
     const dLon = this.toRad(lon2 - lon1);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      Math.cos(this.toRad(lat1)) *
+        Math.cos(this.toRad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
@@ -408,4 +404,3 @@ export class AvailabilityService {
     return deg * (Math.PI / 180);
   }
 }
-

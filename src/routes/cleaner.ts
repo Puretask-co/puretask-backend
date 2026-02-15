@@ -5,7 +5,12 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import {
+  requireAuth,
+  requireRole,
+  AuthedRequest,
+  authedHandler,
+} from "../middleware/authCanonical";
 import { getCleanerProfile, updateCleanerProfileRates } from "../services/authService";
 import {
   createStripeConnectAccount,
@@ -506,7 +511,10 @@ cleanerRouter.get(
         userId: req.user?.id,
       });
       res.status(500).json({
-        error: { code: "LIST_HOLIDAY_OVERRIDES_FAILED", message: "Failed to list holiday overrides" },
+        error: {
+          code: "LIST_HOLIDAY_OVERRIDES_FAILED",
+          message: "Failed to list holiday overrides",
+        },
       });
     }
   })
@@ -550,7 +558,10 @@ cleanerRouter.put(
         userId: req.user?.id,
       });
       res.status((error as any).statusCode ?? 400).json({
-        error: { code: (error as any).code ?? "UPDATE_HOLIDAY_OVERRIDE_FAILED", message: (error as Error).message },
+        error: {
+          code: (error as any).code ?? "UPDATE_HOLIDAY_OVERRIDE_FAILED",
+          message: (error as Error).message,
+        },
       });
     }
   })
@@ -565,10 +576,7 @@ cleanerRouter.get(
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { limit = "50" } = req.query;
-      const payouts = await getCleanerPayouts(
-        req.user!.id,
-        parseInt(limit as string, 10)
-      );
+      const payouts = await getCleanerPayouts(req.user!.id, parseInt(limit as string, 10));
       res.json({ payouts });
     } catch (error) {
       logger.error("get_payouts_failed", {
@@ -590,17 +598,20 @@ cleanerRouter.get(
  * GET /cleaner/time-off
  * Get time off entries
  */
-cleanerRouter.get("/time-off", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const timeOff = await getTimeOff(req.user!.id, true);
-    res.json({ timeOff });
-  } catch (error) {
-    logger.error("get_time_off_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_TIME_OFF_FAILED", message: "Failed to get time off" },
-    });
-  }
-}));
+cleanerRouter.get(
+  "/time-off",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const timeOff = await getTimeOff(req.user!.id, true);
+      res.json({ timeOff });
+    } catch (error) {
+      logger.error("get_time_off_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_TIME_OFF_FAILED", message: "Failed to get time off" },
+      });
+    }
+  })
+);
 
 /**
  * POST /cleaner/time-off
@@ -638,17 +649,20 @@ cleanerRouter.post(
  * DELETE /cleaner/time-off/:id
  * Delete time off entry
  */
-cleanerRouter.delete("/time-off/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    await deleteTimeOff(req.user!.id, req.params.id);
-    res.json({ deleted: true });
-  } catch (error) {
-    logger.error("delete_time_off_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "DELETE_TIME_OFF_FAILED", message: "Failed to delete" },
-    });
-  }
-}));
+cleanerRouter.delete(
+  "/time-off/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      await deleteTimeOff(req.user!.id, req.params.id);
+      res.json({ deleted: true });
+    } catch (error) {
+      logger.error("delete_time_off_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "DELETE_TIME_OFF_FAILED", message: "Failed to delete" },
+      });
+    }
+  })
+);
 
 // ============================================
 // Service Areas
@@ -658,17 +672,20 @@ cleanerRouter.delete("/time-off/:id", authedHandler(async (req: AuthedRequest, r
  * GET /cleaner/service-areas
  * Get service areas
  */
-cleanerRouter.get("/service-areas", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const areas = await getServiceAreas(req.user!.id);
-    res.json({ serviceAreas: areas });
-  } catch (error) {
-    logger.error("get_service_areas_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_AREAS_FAILED", message: "Failed to get areas" },
-    });
-  }
-}));
+cleanerRouter.get(
+  "/service-areas",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const areas = await getServiceAreas(req.user!.id);
+      res.json({ serviceAreas: areas });
+    } catch (error) {
+      logger.error("get_service_areas_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_AREAS_FAILED", message: "Failed to get areas" },
+      });
+    }
+  })
+);
 
 /**
  * POST /cleaner/service-areas
@@ -706,17 +723,20 @@ cleanerRouter.post(
  * DELETE /cleaner/service-areas/:id
  * Delete service area
  */
-cleanerRouter.delete("/service-areas/:id", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    await deleteServiceArea(req.user!.id, req.params.id);
-    res.json({ deleted: true });
-  } catch (error) {
-    logger.error("delete_service_area_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "DELETE_AREA_FAILED", message: "Failed to delete" },
-    });
-  }
-}));
+cleanerRouter.delete(
+  "/service-areas/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      await deleteServiceArea(req.user!.id, req.params.id);
+      res.json({ deleted: true });
+    } catch (error) {
+      logger.error("delete_service_area_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "DELETE_AREA_FAILED", message: "Failed to delete" },
+      });
+    }
+  })
+);
 
 // ============================================
 // Preferences
@@ -726,17 +746,20 @@ cleanerRouter.delete("/service-areas/:id", authedHandler(async (req: AuthedReque
  * GET /cleaner/preferences
  * Get cleaner preferences
  */
-cleanerRouter.get("/preferences", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const preferences = await getPreferences(req.user!.id);
-    res.json({ preferences });
-  } catch (error) {
-    logger.error("get_preferences_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_PREFS_FAILED", message: "Failed to get preferences" },
-    });
-  }
-}));
+cleanerRouter.get(
+  "/preferences",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const preferences = await getPreferences(req.user!.id);
+      res.json({ preferences });
+    } catch (error) {
+      logger.error("get_preferences_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_PREFS_FAILED", message: "Failed to get preferences" },
+      });
+    }
+  })
+);
 
 /**
  * PUT /cleaner/preferences
@@ -778,41 +801,48 @@ cleanerRouter.put(
  * GET /cleaner/schedule/:date
  * Get cleaner's schedule for a specific date
  */
-cleanerRouter.get("/schedule/:date", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const date = new Date(req.params.date);
-    if (isNaN(date.getTime())) {
-      res.status(400).json({
-        error: { code: "INVALID_DATE", message: "Invalid date format" },
-      });
-      return;
-    }
+cleanerRouter.get(
+  "/schedule/:date",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const date = new Date(req.params.date);
+      if (isNaN(date.getTime())) {
+        res.status(400).json({
+          error: { code: "INVALID_DATE", message: "Invalid date format" },
+        });
+        return;
+      }
 
-    const schedule = await getCleanerSchedule(req.user!.id, date);
-    res.json({ date: req.params.date, schedule });
-  } catch (error) {
-    logger.error("get_schedule_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_SCHEDULE_FAILED", message: "Failed to get schedule" },
-    });
-  }
-}));
+      const schedule = await getCleanerSchedule(req.user!.id, date);
+      res.json({ date: req.params.date, schedule });
+    } catch (error) {
+      logger.error("get_schedule_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_SCHEDULE_FAILED", message: "Failed to get schedule" },
+      });
+    }
+  })
+);
 
 // ============================================
 // Reliability Score (V1 CORE FEATURE)
 // ============================================
-cleanerRouter.get("/reliability", requireRole("cleaner"), authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { getCleanerReliabilityInfo } = await import("../services/reliabilityService");
-    const reliability = await getCleanerReliabilityInfo(req.user!.id);
-    res.json({ reliability });
-  } catch (error) {
-    logger.error("get_reliability_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "GET_RELIABILITY_FAILED", message: "Failed to get reliability" },
-    });
-  }
-}));
+cleanerRouter.get(
+  "/reliability",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { getCleanerReliabilityInfo } = await import("../services/reliabilityService");
+      const reliability = await getCleanerReliabilityInfo(req.user!.id);
+      res.json({ reliability });
+    } catch (error) {
+      logger.error("get_reliability_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_RELIABILITY_FAILED", message: "Failed to get reliability" },
+      });
+    }
+  })
+);
 
 // ============================================
 // Earnings Dashboard (V3 FEATURE)
@@ -823,20 +853,23 @@ cleanerRouter.get("/reliability", requireRole("cleaner"), authedHandler(async (r
  * V3 FEATURE: Get cleaner earnings dashboard - simple, user-friendly view
  * Shows pending earnings, paid out, and next payout date
  */
-cleanerRouter.get("/earnings", requireRole("cleaner"), authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const earnings = await getCleanerEarnings(req.user!.id);
-    res.json({ earnings });
-  } catch (error) {
-    logger.error("get_cleaner_earnings_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_EARNINGS_FAILED", message: "Failed to get earnings" },
-    });
-  }
-}));
+cleanerRouter.get(
+  "/earnings",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const earnings = await getCleanerEarnings(req.user!.id);
+      res.json({ earnings });
+    } catch (error) {
+      logger.error("get_cleaner_earnings_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_EARNINGS_FAILED", message: "Failed to get earnings" },
+      });
+    }
+  })
+);
 
 export default cleanerRouter;
-

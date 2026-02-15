@@ -1,6 +1,6 @@
 // src/middleware/authCanonical.ts
 // CANONICAL AUTH MIDDLEWARE - Single source of truth for authentication
-// 
+//
 // This is the ONLY auth middleware that should be used in routes.
 // All legacy auth mechanisms are deprecated and removed.
 
@@ -40,19 +40,15 @@ export function authedHandler(
 
 /**
  * requireAuth - Enforces JWT authentication
- * 
+ *
  * Use this for all protected routes.
  * Returns 401 if no token or invalid token.
- * 
+ *
  * @example
  * router.use(requireAuth);
  * router.get('/profile', (req: AuthedRequest, res) => { ... });
  */
-export async function requireAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -99,20 +95,16 @@ export async function requireAuth(
 
 /**
  * optionalAuth - Attaches user if token present, but doesn't fail if missing
- * 
+ *
  * Use this ONLY for public routes that can work with or without auth.
- * 
+ *
  * @example
  * router.get('/public-data', optionalAuth, (req, res) => {
  *   if (req.user) { /* authenticated user *\/ }
  *   else { /* anonymous user *\/ }
  * });
  */
-export async function optionalAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function optionalAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -137,14 +129,14 @@ export async function optionalAuth(
 
 /**
  * requireRole - Enforces authentication AND specific role(s)
- * 
+ *
  * Use this for role-restricted routes.
  * Must be used AFTER requireAuth or on routes that already have requireAuth.
- * 
+ *
  * @example
  * router.use(requireAuth);
  * router.get('/admin/users', requireRole('admin'), (req: AuthedRequest, res) => { ... });
- * 
+ *
  * @example
  * router.get('/cleaner/earnings', requireAuth, requireRole('cleaner'), (req: AuthedRequest, res) => { ... });
  */
@@ -192,13 +184,35 @@ export function requireRole(...allowedRoles: RequirableRole[]) {
 }
 
 /**
- * requireAdmin - Convenience wrapper for admin-only routes
- * 
+ * requireAdmin - Full admin only (admin, super_admin)
+ *
  * @example
  * router.use(requireAuth);
  * router.get('/admin/users', requireAdmin, (req: AuthedRequest, res) => { ... });
  */
-export const requireAdmin = requireRole("admin");
+export const requireAdmin = requireRole("admin", "super_admin");
+
+/**
+ * requireSupportRole - Admin or support staff (disputes, refunds within limits)
+ * support_agent: view only; support_lead: + refund/override; admin/super_admin: full
+ */
+export const requireSupportRole = requireRole(
+  "admin",
+  "super_admin",
+  "support_agent",
+  "support_lead"
+);
+
+/**
+ * requireFinanceRole - Admin or ops_finance (payout holds, large refunds)
+ */
+export const requireFinanceRole = requireRole("admin", "super_admin", "ops_finance");
+
+/**
+ * requireDisputeResolveRole - Can resolve disputes (support_lead+)
+ * support_agent can only view
+ */
+export const requireDisputeResolveRole = requireRole("admin", "super_admin", "support_lead");
 
 /**
  * requireCleaner - Convenience wrapper for cleaner-only routes
@@ -228,10 +242,9 @@ export async function requireSuperAdmin(
     return;
   }
   try {
-    const result = await query<{ role: string }>(
-      "SELECT role FROM users WHERE id = $1",
-      [authedReq.user.id]
-    );
+    const result = await query<{ role: string }>("SELECT role FROM users WHERE id = $1", [
+      authedReq.user.id,
+    ]);
     if (result.rows.length === 0) {
       res.status(401).json({
         error: { code: "USER_NOT_FOUND", message: "User not found" },

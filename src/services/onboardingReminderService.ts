@@ -32,16 +32,16 @@ function getStepDisplayName(step: string | null): string {
 /**
  * Get abandoned onboarding cleaners
  */
-export async function getAbandonedOnboardingCleaners(
-  hoursThreshold: number = 24
-): Promise<Array<{
-  id: string;
-  user_id: string;
-  first_name: string | null;
-  onboarding_current_step: string | null;
-  onboarding_started_at: Date;
-  email: string;
-}>> {
+export async function getAbandonedOnboardingCleaners(hoursThreshold: number = 24): Promise<
+  Array<{
+    id: string;
+    user_id: string;
+    first_name: string | null;
+    onboarding_current_step: string | null;
+    onboarding_started_at: Date;
+    email: string;
+  }>
+> {
   try {
     const thresholdDate = new Date(Date.now() - hoursThreshold * 60 * 60 * 1000);
 
@@ -83,15 +83,13 @@ export async function getAbandonedOnboardingCleaners(
 /**
  * Send onboarding reminder email
  */
-export async function sendOnboardingReminder(
-  cleaner: {
-    id: string;
-    user_id: string;
-    first_name: string | null;
-    email: string;
-    onboarding_current_step: string | null;
-  }
-): Promise<{ success: boolean; error?: string }> {
+export async function sendOnboardingReminder(cleaner: {
+  id: string;
+  user_id: string;
+  first_name: string | null;
+  email: string;
+  onboarding_current_step: string | null;
+}): Promise<{ success: boolean; error?: string }> {
   try {
     if (!env.SENDGRID_API_KEY) {
       logger.warn("sendgrid_not_configured", { cleanerId: cleaner.id });
@@ -195,9 +193,7 @@ export async function sendOnboardingReminder(
 /**
  * Send reminders to all abandoned cleaners
  */
-export async function sendOnboardingReminders(
-  hoursThreshold: number = 24
-): Promise<{
+export async function sendOnboardingReminders(hoursThreshold: number = 24): Promise<{
   success: boolean;
   count: number;
   errors: Array<{ cleanerId: string; error: string }>;

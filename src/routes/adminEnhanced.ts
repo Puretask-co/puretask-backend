@@ -5,7 +5,12 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { requireAuth, requireAdmin, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import {
+  requireAuth,
+  requireAdmin,
+  AuthedRequest,
+  authedHandler,
+} from "../middleware/authCanonical";
 import { query } from "../db/client";
 
 const adminEnhancedRouter = Router();
@@ -32,11 +37,13 @@ adminEnhancedRouter.use(requireAdmin);
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/dashboard/realtime", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    // Get real-time metrics
-    const metrics = await query(
-      `
+adminEnhancedRouter.get(
+  "/dashboard/realtime",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      // Get real-time metrics
+      const metrics = await query(
+        `
       SELECT 
         (SELECT COUNT(*) FROM jobs WHERE status IN ('requested', 'accepted', 'in_progress')) as active_jobs,
         (SELECT COUNT(*) FROM users WHERE created_at >= CURRENT_DATE) as new_users_today,
@@ -45,20 +52,21 @@ adminEnhancedRouter.get("/dashboard/realtime", authedHandler(async (req: AuthedR
         (SELECT COUNT(*) FROM payout_requests WHERE status = 'pending') as pending_payouts,
         (SELECT SUM(credit_amount) FROM jobs WHERE status = 'completed' AND completed_at >= CURRENT_DATE) / 100.0 as revenue_today
       `,
-      []
-    );
+        []
+      );
 
-    res.json({ metrics: metrics.rows[0] });
-  } catch (error) {
-    logger.error("get_realtime_metrics_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_METRICS_FAILED", message: "Failed to get real-time metrics" },
-    });
-  }
-}));
+      res.json({ metrics: metrics.rows[0] });
+    } catch (error) {
+      logger.error("get_realtime_metrics_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_METRICS_FAILED", message: "Failed to get real-time metrics" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -82,13 +90,15 @@ adminEnhancedRouter.get("/dashboard/realtime", authedHandler(async (req: AuthedR
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/dashboard/alerts", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { severity = "all" } = req.query;
+adminEnhancedRouter.get(
+  "/dashboard/alerts",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { severity = "all" } = req.query;
 
-    // Critical alerts
-    const criticalAlerts = await query(
-      `
+      // Critical alerts
+      const criticalAlerts = await query(
+        `
       SELECT 
         'dispute' as type,
         id,
@@ -117,12 +127,12 @@ adminEnhancedRouter.get("/dashboard/alerts", authedHandler(async (req: AuthedReq
       ORDER BY created_at DESC
       LIMIT 20
       `,
-      []
-    );
+        []
+      );
 
-    // Warning alerts
-    const warningAlerts = await query(
-      `
+      // Warning alerts
+      const warningAlerts = await query(
+        `
       SELECT 
         'risk_flag' as type,
         user_id as id,
@@ -141,26 +151,27 @@ adminEnhancedRouter.get("/dashboard/alerts", authedHandler(async (req: AuthedReq
       ORDER BY created_at DESC
       LIMIT 20
       `,
-      []
-    );
+        []
+      );
 
-    const alerts = {
-      critical: criticalAlerts.rows,
-      warning: warningAlerts.rows,
-      info: [], // Info alerts can be added
-    };
+      const alerts = {
+        critical: criticalAlerts.rows,
+        warning: warningAlerts.rows,
+        info: [], // Info alerts can be added
+      };
 
-    res.json({ alerts });
-  } catch (error) {
-    logger.error("get_alerts_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_ALERTS_FAILED", message: "Failed to get alerts" },
-    });
-  }
-}));
+      res.json({ alerts });
+    } catch (error) {
+      logger.error("get_alerts_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_ALERTS_FAILED", message: "Failed to get alerts" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -177,75 +188,78 @@ adminEnhancedRouter.get("/dashboard/alerts", authedHandler(async (req: AuthedReq
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/system/health", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    // Check database connection
-    const dbCheck = await query("SELECT NOW() as timestamp", []);
-    const dbHealthy = dbCheck.rows.length > 0;
+adminEnhancedRouter.get(
+  "/system/health",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      // Check database connection
+      const dbCheck = await query("SELECT NOW() as timestamp", []);
+      const dbHealthy = dbCheck.rows.length > 0;
 
-    // Check for stuck jobs
-    const stuckJobs = await query(
-      `
+      // Check for stuck jobs
+      const stuckJobs = await query(
+        `
       SELECT COUNT(*) as count
       FROM jobs
       WHERE status IN ('requested', 'accepted')
         AND scheduled_start_at < NOW() - INTERVAL '2 hours'
         AND updated_at < NOW() - INTERVAL '1 hour'
       `,
-      []
-    );
+        []
+      );
 
-    // Check for failed payouts
-    const failedPayouts = await query(
-      `
+      // Check for failed payouts
+      const failedPayouts = await query(
+        `
       SELECT COUNT(*) as count
       FROM payout_requests
       WHERE status = 'failed' AND created_at >= NOW() - INTERVAL '24 hours'
       `,
-      []
-    );
+        []
+      );
 
-    // Check for pending disputes
-    const pendingDisputes = await query(
-      `
+      // Check for pending disputes
+      const pendingDisputes = await query(
+        `
       SELECT COUNT(*) as count
       FROM disputes
       WHERE status = 'open' AND created_at >= NOW() - INTERVAL '7 days'
       `,
-      []
-    );
+        []
+      );
 
-    const health = {
-      database: {
-        status: dbHealthy ? "healthy" : "unhealthy",
-        responseTime: Date.now(), // Simplified
-      },
-      jobs: {
-        stuck: parseInt(stuckJobs.rows[0]?.count || "0"),
-        status: parseInt(stuckJobs.rows[0]?.count || "0") > 10 ? "warning" : "healthy",
-      },
-      payouts: {
-        failed: parseInt(failedPayouts.rows[0]?.count || "0"),
-        status: parseInt(failedPayouts.rows[0]?.count || "0") > 5 ? "warning" : "healthy",
-      },
-      disputes: {
-        pending: parseInt(pendingDisputes.rows[0]?.count || "0"),
-        status: parseInt(pendingDisputes.rows[0]?.count || "0") > 20 ? "warning" : "healthy",
-      },
-      overall: "healthy", // Would calculate based on all checks
-    };
+      const health = {
+        database: {
+          status: dbHealthy ? "healthy" : "unhealthy",
+          responseTime: Date.now(), // Simplified
+        },
+        jobs: {
+          stuck: parseInt(stuckJobs.rows[0]?.count || "0"),
+          status: parseInt(stuckJobs.rows[0]?.count || "0") > 10 ? "warning" : "healthy",
+        },
+        payouts: {
+          failed: parseInt(failedPayouts.rows[0]?.count || "0"),
+          status: parseInt(failedPayouts.rows[0]?.count || "0") > 5 ? "warning" : "healthy",
+        },
+        disputes: {
+          pending: parseInt(pendingDisputes.rows[0]?.count || "0"),
+          status: parseInt(pendingDisputes.rows[0]?.count || "0") > 20 ? "warning" : "healthy",
+        },
+        overall: "healthy", // Would calculate based on all checks
+      };
 
-    res.json({ health });
-  } catch (error) {
-    logger.error("get_system_health_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_HEALTH_FAILED", message: "Failed to get system health" },
-    });
-  }
-}));
+      res.json({ health });
+    } catch (error) {
+      logger.error("get_system_health_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_HEALTH_FAILED", message: "Failed to get system health" },
+      });
+    }
+  })
+);
 
 // ============================================
 // JOBS ENHANCEMENTS
@@ -376,7 +390,8 @@ adminEnhancedRouter.post(
         error: { code: "BULK_ACTION_FAILED", message: "Failed to perform bulk action" },
       });
     }
-  }));
+  })
+);
 
 /**
  * @swagger
@@ -393,11 +408,13 @@ adminEnhancedRouter.post(
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/jobs/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    // Stuck jobs
-    const stuckJobs = await query(
-      `
+adminEnhancedRouter.get(
+  "/jobs/insights",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      // Stuck jobs
+      const stuckJobs = await query(
+        `
       SELECT 
         status,
         COUNT(*) as count
@@ -407,24 +424,24 @@ adminEnhancedRouter.get("/jobs/insights", authedHandler(async (req: AuthedReques
         AND updated_at < NOW() - INTERVAL '1 hour'
       GROUP BY status
       `,
-      []
-    );
+        []
+      );
 
-    // Average completion time
-    const avgCompletion = await query(
-      `
+      // Average completion time
+      const avgCompletion = await query(
+        `
       SELECT 
         AVG(EXTRACT(EPOCH FROM (completed_at - scheduled_start_at)) / 3600) as avg_hours
       FROM jobs
       WHERE status = 'completed'
         AND completed_at >= NOW() - INTERVAL '30 days'
       `,
-      []
-    );
+        []
+      );
 
-    // Jobs needing attention
-    const needsAttention = await query(
-      `
+      // Jobs needing attention
+      const needsAttention = await query(
+        `
       SELECT COUNT(*) as count
       FROM jobs
       WHERE (
@@ -433,26 +450,27 @@ adminEnhancedRouter.get("/jobs/insights", authedHandler(async (req: AuthedReques
         OR (status = 'awaiting_approval' AND updated_at < NOW() - INTERVAL '48 hours')
       )
       `,
-      []
-    );
+        []
+      );
 
-    res.json({
-      insights: {
-        stuckJobs: stuckJobs.rows,
-        avgCompletionTime: parseFloat(avgCompletion.rows[0]?.avg_hours || "0"),
-        needsAttention: parseInt(needsAttention.rows[0]?.count || "0"),
-      },
-    });
-  } catch (error) {
-    logger.error("get_job_insights_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
-    });
-  }
-}));
+      res.json({
+        insights: {
+          stuckJobs: stuckJobs.rows,
+          avgCompletionTime: parseFloat(avgCompletion.rows[0]?.avg_hours || "0"),
+          needsAttention: parseInt(needsAttention.rows[0]?.count || "0"),
+        },
+      });
+    } catch (error) {
+      logger.error("get_job_insights_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
+      });
+    }
+  })
+);
 
 // ============================================
 // DISPUTES ENHANCEMENTS
@@ -550,8 +568,8 @@ adminEnhancedRouter.post(
         error: { code: "ANALYZE_FAILED", message: "Failed to analyze dispute" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -568,11 +586,13 @@ adminEnhancedRouter.post(
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/disputes/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    // Common dispute reasons
-    const commonReasons = await query(
-      `
+adminEnhancedRouter.get(
+  "/disputes/insights",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      // Common dispute reasons
+      const commonReasons = await query(
+        `
       SELECT 
         reason,
         COUNT(*) as count,
@@ -583,12 +603,12 @@ adminEnhancedRouter.get("/disputes/insights", authedHandler(async (req: AuthedRe
       ORDER BY count DESC
       LIMIT 10
       `,
-      []
-    );
+        []
+      );
 
-    // Average resolution time
-    const avgResolutionTime = await query(
-      `
+      // Average resolution time
+      const avgResolutionTime = await query(
+        `
       SELECT 
         AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) / 3600) as avg_hours
       FROM disputes
@@ -596,38 +616,39 @@ adminEnhancedRouter.get("/disputes/insights", authedHandler(async (req: AuthedRe
         AND resolved_at IS NOT NULL
         AND resolved_at >= NOW() - INTERVAL '90 days'
       `,
-      []
-    );
+        []
+      );
 
-    // Refund rate by reason
-    const refundRate = await query(
-      `
+      // Refund rate by reason
+      const refundRate = await query(
+        `
       SELECT 
         COUNT(*) FILTER (WHERE resolution = 'refund')::float / NULLIF(COUNT(*), 0) as refund_rate
       FROM disputes
       WHERE status != 'open'
         AND created_at >= NOW() - INTERVAL '90 days'
       `,
-      []
-    );
+        []
+      );
 
-    res.json({
-      insights: {
-        commonReasons: commonReasons.rows,
-        avgResolutionTime: parseFloat(avgResolutionTime.rows[0]?.avg_hours || "0"),
-        refundRate: parseFloat(refundRate.rows[0]?.refund_rate || "0"),
-      },
-    });
-  } catch (error) {
-    logger.error("get_dispute_insights_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
-    });
-  }
-}));
+      res.json({
+        insights: {
+          commonReasons: commonReasons.rows,
+          avgResolutionTime: parseFloat(avgResolutionTime.rows[0]?.avg_hours || "0"),
+          refundRate: parseFloat(refundRate.rows[0]?.refund_rate || "0"),
+        },
+      });
+    } catch (error) {
+      logger.error("get_dispute_insights_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
+      });
+    }
+  })
+);
 
 // ============================================
 // USERS ENHANCEMENTS
@@ -655,13 +676,15 @@ adminEnhancedRouter.get("/disputes/insights", authedHandler(async (req: AuthedRe
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/users/:id/risk-profile", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
+adminEnhancedRouter.get(
+  "/users/:id/risk-profile",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
 
-    // Get risk flags
-    const riskFlags = await query(
-      `
+      // Get risk flags
+      const riskFlags = await query(
+        `
       SELECT 
         rf.*,
         rf.severity,
@@ -672,12 +695,12 @@ adminEnhancedRouter.get("/users/:id/risk-profile", authedHandler(async (req: Aut
       WHERE rf.user_id = $1
       ORDER BY rf.created_at DESC
       `,
-      [id]
-    );
+        [id]
+      );
 
-    // Calculate risk score (simplified)
-    const riskScore = await query(
-      `
+      // Calculate risk score (simplified)
+      const riskScore = await query(
+        `
       SELECT 
         COUNT(*) FILTER (WHERE severity = 'high') * 10 +
         COUNT(*) FILTER (WHERE severity = 'medium') * 5 +
@@ -685,37 +708,38 @@ adminEnhancedRouter.get("/users/:id/risk-profile", authedHandler(async (req: Aut
       FROM risk_flags
       WHERE user_id = $1
       `,
-      [id]
-    );
+        [id]
+      );
 
-    // User activity summary
-    const activity = await query(
-      `
+      // User activity summary
+      const activity = await query(
+        `
       SELECT 
         (SELECT COUNT(*) FROM jobs WHERE client_id = $1 OR cleaner_id = $1) as total_jobs,
         (SELECT COUNT(*) FROM disputes WHERE client_id = $1 OR cleaner_id = $1) as total_disputes,
         (SELECT COUNT(*) FROM credit_ledger WHERE user_id = $1 AND reason = 'refund') as refunds_count
       `,
-      [id]
-    );
+        [id]
+      );
 
-    res.json({
-      riskProfile: {
-        riskScore: parseInt(riskScore.rows[0]?.score || "0"),
-        riskFlags: riskFlags.rows,
-        activity: activity.rows[0],
-      },
-    });
-  } catch (error) {
-    logger.error("get_risk_profile_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_RISK_PROFILE_FAILED", message: "Failed to get risk profile" },
-    });
-  }
-}));
+      res.json({
+        riskProfile: {
+          riskScore: parseInt(riskScore.rows[0]?.score || "0"),
+          riskFlags: riskFlags.rows,
+          activity: activity.rows[0],
+        },
+      });
+    } catch (error) {
+      logger.error("get_risk_profile_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_RISK_PROFILE_FAILED", message: "Failed to get risk profile" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -830,8 +854,8 @@ adminEnhancedRouter.post(
         error: { code: "RISK_ACTION_FAILED", message: "Failed to perform risk action" },
       });
     }
-  }
-));
+  })
+);
 
 // ============================================
 // ANALYTICS ENHANCEMENTS
@@ -948,8 +972,8 @@ adminEnhancedRouter.post(
         error: { code: "BUILD_REPORT_FAILED", message: "Failed to build report" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -966,11 +990,13 @@ adminEnhancedRouter.post(
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/analytics/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    // Revenue trend
-    const revenueTrend = await query(
-      `
+adminEnhancedRouter.get(
+  "/analytics/insights",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      // Revenue trend
+      const revenueTrend = await query(
+        `
       SELECT 
         DATE_TRUNC('week', completed_at) as week,
         SUM(credit_amount) / 100.0 as revenue
@@ -980,12 +1006,12 @@ adminEnhancedRouter.get("/analytics/insights", authedHandler(async (req: AuthedR
       GROUP BY week
       ORDER BY week DESC
       `,
-      []
-    );
+        []
+      );
 
-    // User growth
-    const userGrowth = await query(
-      `
+      // User growth
+      const userGrowth = await query(
+        `
       SELECT 
         DATE_TRUNC('week', created_at) as week,
         COUNT(*) as new_users
@@ -994,33 +1020,34 @@ adminEnhancedRouter.get("/analytics/insights", authedHandler(async (req: AuthedR
       GROUP BY week
       ORDER BY week DESC
       `,
-      []
-    );
+        []
+      );
 
-    // Calculate insights
-    const insights = [];
-    if (revenueTrend.rows.length >= 2) {
-      const currentWeek = revenueTrend.rows[0]?.revenue || 0;
-      const lastWeek = revenueTrend.rows[1]?.revenue || 0;
-      const change = ((currentWeek - lastWeek) / lastWeek) * 100;
-      insights.push({
-        type: "revenue",
-        message: `Revenue is ${change > 0 ? "up" : "down"} ${Math.abs(change).toFixed(1)}% this week`,
-        trend: change > 0 ? "up" : "down",
+      // Calculate insights
+      const insights = [];
+      if (revenueTrend.rows.length >= 2) {
+        const currentWeek = revenueTrend.rows[0]?.revenue || 0;
+        const lastWeek = revenueTrend.rows[1]?.revenue || 0;
+        const change = ((currentWeek - lastWeek) / lastWeek) * 100;
+        insights.push({
+          type: "revenue",
+          message: `Revenue is ${change > 0 ? "up" : "down"} ${Math.abs(change).toFixed(1)}% this week`,
+          trend: change > 0 ? "up" : "down",
+        });
+      }
+
+      res.json({ insights, trends: { revenue: revenueTrend.rows, users: userGrowth.rows } });
+    } catch (error) {
+      logger.error("get_analytics_insights_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
       });
     }
-
-    res.json({ insights, trends: { revenue: revenueTrend.rows, users: userGrowth.rows } });
-  } catch (error) {
-    logger.error("get_analytics_insights_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // FINANCE ENHANCEMENTS
@@ -1047,13 +1074,15 @@ adminEnhancedRouter.get("/analytics/insights", authedHandler(async (req: AuthedR
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/finance/forecast", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { months = 3 } = req.query;
+adminEnhancedRouter.get(
+  "/finance/forecast",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { months = 3 } = req.query;
 
-    // Get historical revenue
-    const historical = await query(
-      `
+      // Get historical revenue
+      const historical = await query(
+        `
       SELECT 
         DATE_TRUNC('month', completed_at) as month,
         SUM(credit_amount) / 100.0 as revenue
@@ -1063,40 +1092,39 @@ adminEnhancedRouter.get("/finance/forecast", authedHandler(async (req: AuthedReq
       GROUP BY month
       ORDER BY month ASC
       `,
-      []
-    );
+        []
+      );
 
-    // Simple forecast (average of last 3 months)
-    const avgRevenue =
-      historical.rows
-        .slice(-3)
-        .reduce((sum, row) => sum + parseFloat(row.revenue || "0"), 0) / 3;
+      // Simple forecast (average of last 3 months)
+      const avgRevenue =
+        historical.rows.slice(-3).reduce((sum, row) => sum + parseFloat(row.revenue || "0"), 0) / 3;
 
-    const forecast = [];
-    for (let i = 1; i <= parseInt(months as string); i++) {
-      const date = new Date();
-      date.setMonth(date.getMonth() + i);
-      forecast.push({
-        month: date.toISOString().slice(0, 7),
-        forecasted: avgRevenue,
-        confidence: 0.7, // Simplified
+      const forecast = [];
+      for (let i = 1; i <= parseInt(months as string); i++) {
+        const date = new Date();
+        date.setMonth(date.getMonth() + i);
+        forecast.push({
+          month: date.toISOString().slice(0, 7),
+          forecasted: avgRevenue,
+          confidence: 0.7, // Simplified
+        });
+      }
+
+      res.json({
+        historical: historical.rows,
+        forecast,
+      });
+    } catch (error) {
+      logger.error("get_forecast_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_FORECAST_FAILED", message: "Failed to get forecast" },
       });
     }
-
-    res.json({
-      historical: historical.rows,
-      forecast,
-    });
-  } catch (error) {
-    logger.error("get_forecast_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_FORECAST_FAILED", message: "Failed to get forecast" },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -1124,13 +1152,15 @@ adminEnhancedRouter.get("/finance/forecast", authedHandler(async (req: AuthedReq
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/finance/reports", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { start_date, end_date } = req.query;
+adminEnhancedRouter.get(
+  "/finance/reports",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { start_date, end_date } = req.query;
 
-    // Revenue breakdown
-    const revenue = await query(
-      `
+      // Revenue breakdown
+      const revenue = await query(
+        `
       SELECT 
         SUM(credit_amount) / 100.0 as total_revenue,
         COUNT(*) as job_count,
@@ -1140,24 +1170,36 @@ adminEnhancedRouter.get("/finance/reports", authedHandler(async (req: AuthedRequ
         ${start_date ? "AND completed_at >= $1::timestamp" : ""}
         ${end_date ? `AND completed_at <= $${start_date ? "2" : "1"}::timestamp` : ""}
       `,
-      start_date && end_date ? [start_date, end_date] : start_date ? [start_date] : end_date ? [end_date] : []
-    );
+        start_date && end_date
+          ? [start_date, end_date]
+          : start_date
+            ? [start_date]
+            : end_date
+              ? [end_date]
+              : []
+      );
 
-    // Platform fees
-    const fees = await query(
-      `
+      // Platform fees
+      const fees = await query(
+        `
       SELECT 
         SUM(platform_fee_cents) / 100.0 as total_fees
       FROM cleaner_earnings
       WHERE created_at >= COALESCE($1::timestamp, NOW() - INTERVAL '30 days')
         AND created_at <= COALESCE($2::timestamp, NOW())
       `,
-      start_date && end_date ? [start_date, end_date] : start_date ? [start_date, null] : end_date ? [null, end_date] : [null, null]
-    );
+        start_date && end_date
+          ? [start_date, end_date]
+          : start_date
+            ? [start_date, null]
+            : end_date
+              ? [null, end_date]
+              : [null, null]
+      );
 
-    // Payouts
-    const payouts = await query(
-      `
+      // Payouts
+      const payouts = await query(
+        `
       SELECT 
         SUM(amount_cents) / 100.0 as total_payouts,
         COUNT(*) as payout_count
@@ -1166,26 +1208,33 @@ adminEnhancedRouter.get("/finance/reports", authedHandler(async (req: AuthedRequ
         ${start_date ? "AND created_at >= $1::timestamp" : ""}
         ${end_date ? `AND created_at <= $${start_date ? "2" : "1"}::timestamp` : ""}
       `,
-      start_date && end_date ? [start_date, end_date] : start_date ? [start_date] : end_date ? [end_date] : []
-    );
+        start_date && end_date
+          ? [start_date, end_date]
+          : start_date
+            ? [start_date]
+            : end_date
+              ? [end_date]
+              : []
+      );
 
-    res.json({
-      reports: {
-        revenue: revenue.rows[0],
-        fees: fees.rows[0],
-        payouts: payouts.rows[0],
-      },
-    });
-  } catch (error) {
-    logger.error("get_finance_reports_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_REPORTS_FAILED", message: "Failed to get reports" },
-    });
-  }
-}));
+      res.json({
+        reports: {
+          revenue: revenue.rows[0],
+          fees: fees.rows[0],
+          payouts: payouts.rows[0],
+        },
+      });
+    } catch (error) {
+      logger.error("get_finance_reports_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_REPORTS_FAILED", message: "Failed to get reports" },
+      });
+    }
+  })
+);
 
 // ============================================
 // COMMUNICATION ENHANCEMENTS
@@ -1206,10 +1255,12 @@ adminEnhancedRouter.get("/finance/reports", authedHandler(async (req: AuthedRequ
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/communication/templates", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const templates = await query(
-      `
+adminEnhancedRouter.get(
+  "/communication/templates",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const templates = await query(
+        `
       SELECT 
         id,
         name,
@@ -1222,20 +1273,21 @@ adminEnhancedRouter.get("/communication/templates", authedHandler(async (req: Au
       WHERE is_active = true
       ORDER BY category, name
       `,
-      []
-    );
+        []
+      );
 
-    res.json({ templates: templates.rows });
-  } catch (error) {
-    logger.error("get_templates_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_TEMPLATES_FAILED", message: "Failed to get templates" },
-    });
-  }
-}));
+      res.json({ templates: templates.rows });
+    } catch (error) {
+      logger.error("get_templates_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_TEMPLATES_FAILED", message: "Failed to get templates" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1308,8 +1360,8 @@ adminEnhancedRouter.post(
         error: { code: "SEND_MESSAGE_FAILED", message: "Failed to send message" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -1326,10 +1378,12 @@ adminEnhancedRouter.post(
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/communication/analytics", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const analytics = await query(
-      `
+adminEnhancedRouter.get(
+  "/communication/analytics",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const analytics = await query(
+        `
       SELECT 
         channel,
         COUNT(*) as sent_count,
@@ -1338,20 +1392,21 @@ adminEnhancedRouter.get("/communication/analytics", authedHandler(async (req: Au
       WHERE created_at >= NOW() - INTERVAL '30 days'
       GROUP BY channel
       `,
-      []
-    );
+        []
+      );
 
-    res.json({ analytics: analytics.rows });
-  } catch (error) {
-    logger.error("get_communication_analytics_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_ANALYTICS_FAILED", message: "Failed to get analytics" },
-    });
-  }
-}));
+      res.json({ analytics: analytics.rows });
+    } catch (error) {
+      logger.error("get_communication_analytics_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_ANALYTICS_FAILED", message: "Failed to get analytics" },
+      });
+    }
+  })
+);
 
 // ============================================
 // RISK ENHANCEMENTS
@@ -1372,10 +1427,12 @@ adminEnhancedRouter.get("/communication/analytics", authedHandler(async (req: Au
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/risk/scoring", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const riskScores = await query(
-      `
+adminEnhancedRouter.get(
+  "/risk/scoring",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const riskScores = await query(
+        `
       SELECT 
         user_id,
         risk_score,
@@ -1387,20 +1444,21 @@ adminEnhancedRouter.get("/risk/scoring", authedHandler(async (req: AuthedRequest
       ORDER BY risk_score DESC
       LIMIT 50
       `,
-      []
-    );
+        []
+      );
 
-    res.json({ riskScores: riskScores.rows });
-  } catch (error) {
-    logger.error("get_risk_scoring_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_RISK_SCORING_FAILED", message: "Failed to get risk scoring" },
-    });
-  }
-}));
+      res.json({ riskScores: riskScores.rows });
+    } catch (error) {
+      logger.error("get_risk_scoring_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_RISK_SCORING_FAILED", message: "Failed to get risk scoring" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1468,8 +1526,8 @@ adminEnhancedRouter.post(
         error: { code: "MITIGATE_RISK_FAILED", message: "Failed to mitigate risk" },
       });
     }
-  }
-));
+  })
+);
 
 // ============================================
 // REPORTS ENHANCEMENTS
@@ -1501,20 +1559,23 @@ adminEnhancedRouter.post(
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.post("/reports/build", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    // Similar to analytics/custom-report
-    res.json({ success: true, message: "Report building functionality" });
-  } catch (error) {
-    logger.error("build_report_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "BUILD_REPORT_FAILED", message: "Failed to build report" },
-    });
-  }
-}));
+adminEnhancedRouter.post(
+  "/reports/build",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      // Similar to analytics/custom-report
+      res.json({ success: true, message: "Report building functionality" });
+    } catch (error) {
+      logger.error("build_report_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "BUILD_REPORT_FAILED", message: "Failed to build report" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1585,8 +1646,8 @@ adminEnhancedRouter.post(
         error: { code: "SCHEDULE_REPORT_FAILED", message: "Failed to schedule report" },
       });
     }
-  }
-));
+  })
+);
 
 // ============================================
 // SETTINGS ENHANCEMENTS
@@ -1607,28 +1668,31 @@ adminEnhancedRouter.post(
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/settings/feature-flags", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    // Feature flags would be stored in database or config
-    const featureFlags = {
-      "ai_assistant": true,
-      "gamification": true,
-      "recurring_bookings": true,
-      "instant_payouts": true,
-      "gps_tracking": false,
-    };
+adminEnhancedRouter.get(
+  "/settings/feature-flags",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      // Feature flags would be stored in database or config
+      const featureFlags = {
+        ai_assistant: true,
+        gamification: true,
+        recurring_bookings: true,
+        instant_payouts: true,
+        gps_tracking: false,
+      };
 
-    res.json({ featureFlags });
-  } catch (error) {
-    logger.error("get_feature_flags_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_FEATURE_FLAGS_FAILED", message: "Failed to get feature flags" },
-    });
-  }
-}));
+      res.json({ featureFlags });
+    } catch (error) {
+      logger.error("get_feature_flags_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_FEATURE_FLAGS_FAILED", message: "Failed to get feature flags" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1650,12 +1714,14 @@ adminEnhancedRouter.get("/settings/feature-flags", authedHandler(async (req: Aut
  *       403:
  *         description: Forbidden - admin only
  */
-adminEnhancedRouter.get("/settings/audit-log", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const { limit = 50 } = req.query;
+adminEnhancedRouter.get(
+  "/settings/audit-log",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { limit = 50 } = req.query;
 
-    const auditLog = await query(
-      `
+      const auditLog = await query(
+        `
       SELECT 
         id,
         admin_user_id,
@@ -1670,19 +1736,20 @@ adminEnhancedRouter.get("/settings/audit-log", authedHandler(async (req: AuthedR
       ORDER BY created_at DESC
       LIMIT $1
       `,
-      [parseInt(limit as string)]
-    );
+        [parseInt(limit as string)]
+      );
 
-    res.json({ auditLog: auditLog.rows });
-  } catch (error) {
-    logger.error("get_audit_log_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_AUDIT_LOG_FAILED", message: "Failed to get audit log" },
-    });
-  }
-}));
+      res.json({ auditLog: auditLog.rows });
+    } catch (error) {
+      logger.error("get_audit_log_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_AUDIT_LOG_FAILED", message: "Failed to get audit log" },
+      });
+    }
+  })
+);
 
 export default adminEnhancedRouter;

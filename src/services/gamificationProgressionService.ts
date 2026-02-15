@@ -53,8 +53,7 @@ function toGoalDefinition(g: {
   let window: GoalDefinition["window"] = null;
   if (g.window) {
     if (g.window.type === "days") window = { type: "days", value: g.window.value };
-    else if (g.window.type === "last_jobs")
-      window = { type: "last_jobs", value: g.window.value };
+    else if (g.window.type === "last_jobs") window = { type: "last_jobs", value: g.window.value };
     else window = { type: "lifetime" };
   }
   return {

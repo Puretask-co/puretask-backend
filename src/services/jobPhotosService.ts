@@ -88,10 +88,7 @@ export async function getJobPhotos(jobId: string): Promise<JobPhoto[]> {
 /**
  * Get photos by type
  */
-export async function getJobPhotosByType(
-  jobId: string,
-  type: PhotoType
-): Promise<JobPhoto[]> {
+export async function getJobPhotosByType(jobId: string, type: PhotoType): Promise<JobPhoto[]> {
   const result = await query<JobPhoto>(
     `
       SELECT *
@@ -108,10 +105,7 @@ export async function getJobPhotosByType(
 /**
  * Delete a photo
  */
-export async function deleteJobPhoto(
-  photoId: string,
-  cleanerId: string
-): Promise<boolean> {
+export async function deleteJobPhoto(photoId: string, cleanerId: string): Promise<boolean> {
   const result = await query(
     `
       DELETE FROM job_photos
@@ -132,7 +126,7 @@ export async function deleteJobPhoto(
 /**
  * Generate a presigned URL for upload (placeholder - implement with your storage provider)
  * This would integrate with S3, Cloudinary, etc.
- * 
+ *
  * Security hardening:
  * - Max file size: 10MB
  * - TTL: 15 minutes (signed URL expires)
@@ -212,4 +206,3 @@ export async function getPhotoCount(
 
   return counts;
 }
-

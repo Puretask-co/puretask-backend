@@ -51,10 +51,7 @@ export function isBookingKillSwitchActive(): boolean {
 /**
  * Check if a feature is enabled before proceeding.
  */
-export function requireFeature(
-  name: keyof typeof featureFlags,
-  action: string
-): void {
+export function requireFeature(name: keyof typeof featureFlags, action: string): void {
   const enabled = featureFlags[name];
   if (!enabled) {
     throw new Error(`Feature ${name} is disabled. Cannot ${action}.`);

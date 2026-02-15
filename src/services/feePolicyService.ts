@@ -9,7 +9,9 @@ import { getRewards } from "../config/cleanerLevels";
 
 function getInstantPayoutWaiverRewardIds(): string[] {
   return getRewards()
-    .filter((r) => r.kind === "payout_fee" && (r.params as { waive_fee?: boolean })?.waive_fee === true)
+    .filter(
+      (r) => r.kind === "payout_fee" && (r.params as { waive_fee?: boolean })?.waive_fee === true
+    )
     .map((r) => r.id);
 }
 

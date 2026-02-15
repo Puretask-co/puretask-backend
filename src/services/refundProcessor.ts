@@ -27,7 +27,12 @@ export async function processStripeRefund(ctx: RefundContext): Promise<void> {
   const credits = env.CENTS_PER_CREDIT ? amount / env.CENTS_PER_CREDIT : 0;
 
   if (!credits || Number.isNaN(credits) || credits <= 0) {
-    logger.warn("refund_processor_invalid_credits_calc", { chargeId, paymentIntentId, amount, credits });
+    logger.warn("refund_processor_invalid_credits_calc", {
+      chargeId,
+      paymentIntentId,
+      amount,
+      credits,
+    });
     return;
   }
 
@@ -82,4 +87,3 @@ export async function processStripeRefund(ctx: RefundContext): Promise<void> {
     credits,
   });
 }
-

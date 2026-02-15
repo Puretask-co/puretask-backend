@@ -1,40 +1,41 @@
 // src/lib/__tests__/security.test.ts
 // Unit tests for security utilities (rate limiting, etc.)
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { jest } from '@jest/globals';
-import { Request, Response, NextFunction } from 'express';
-import { createRateLimiter, generalRateLimiter } from '../security';
+import { beforeEach, vi } from "vitest";
+import { Request, Response, NextFunction } from "express";
+import { createRateLimiter, generalRateLimiter } from "../security";
 
-describe('security utilities', () => {
+describe("security utilities", () => {
   let req: Partial<Request>;
   let res: Partial<Response>;
   let next: NextFunction;
 
+  let uniqueKey = 0;
   beforeEach(() => {
+    uniqueKey += 1;
     req = {
-      ip: '127.0.0.1',
-      path: '/test',
-      method: 'GET',
+      ip: `127.0.0.${uniqueKey}`,
+      path: "/test",
+      method: "GET",
       headers: {},
     };
     res = {
-      setHeader: jest.fn().mockReturnThis(),
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      setHeader: vi.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
     };
-    next = jest.fn();
-    jest.clearAllMocks();
+    next = vi.fn();
+    vi.clearAllMocks();
   });
 
-  describe('createRateLimiter', () => {
-    it('allows requests under limit', () => {
+  describe("createRateLimiter", () => {
+    it("allows requests under limit", () => {
       const limiter = createRateLimiter({
-        windowMs: 60000, // 1 minute
+        windowMs: 60000,
         max: 10,
+        keyGenerator: () => `test-allow-${uniqueKey}`,
       });
 
-      // Make 5 requests
       for (let i = 0; i < 5; i++) {
         limiter(req as Request, res as Response, next);
       }
@@ -43,13 +44,13 @@ describe('security utilities', () => {
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    it('blocks requests over limit', () => {
+    it("blocks requests over limit", () => {
       const limiter = createRateLimiter({
         windowMs: 60000,
         max: 5,
+        keyGenerator: () => `test-block-${uniqueKey}`,
       });
 
-      // Make 6 requests
       for (let i = 0; i < 6; i++) {
         limiter(req as Request, res as Response, next);
       }
@@ -59,46 +60,45 @@ describe('security utilities', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({
-            code: 'RATE_LIMITED',
+            code: "RATE_LIMITED",
           }),
         })
       );
     });
 
-    it('resets limit after window expires', async () => {
+    it("resets limit after window expires", async () => {
       const limiter = createRateLimiter({
-        windowMs: 100, // 100ms window
+        windowMs: 100,
         max: 2,
+        keyGenerator: () => `test-reset-${uniqueKey}`,
       });
 
-      // Make 2 requests (should pass)
       limiter(req as Request, res as Response, next);
       limiter(req as Request, res as Response, next);
       expect(next).toHaveBeenCalledTimes(2);
 
-      // Wait for window to expire
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
-      // Next request should pass (window reset)
       limiter(req as Request, res as Response, next);
       expect(next).toHaveBeenCalledTimes(3);
     });
 
-    it('sets rate limit headers', () => {
+    it("sets rate limit headers", () => {
       const limiter = createRateLimiter({
         windowMs: 60000,
         max: 10,
+        keyGenerator: () => `test-headers-${uniqueKey}`,
       });
 
       limiter(req as Request, res as Response, next);
 
-      expect(res.setHeader).toHaveBeenCalledWith('X-RateLimit-Limit', 10);
-      expect(res.setHeader).toHaveBeenCalledWith('X-RateLimit-Remaining', 9);
-      expect(res.setHeader).toHaveBeenCalledWith('X-RateLimit-Reset', expect.any(Number));
+      expect(res.setHeader).toHaveBeenCalledWith("X-RateLimit-Limit", 10);
+      expect(res.setHeader).toHaveBeenCalledWith("X-RateLimit-Remaining", 9);
+      expect(res.setHeader).toHaveBeenCalledWith("X-RateLimit-Reset", expect.any(Number));
     });
 
-    it('uses custom key generator', () => {
-      const customKey = 'custom-key';
+    it("uses custom key generator", () => {
+      const customKey = `custom-key-${uniqueKey}`;
       const limiter = createRateLimiter({
         windowMs: 60000,
         max: 5,
@@ -111,11 +111,9 @@ describe('security utilities', () => {
     });
   });
 
-  describe('generalRateLimiter', () => {
-    it('is a configured rate limiter', () => {
-      expect(typeof generalRateLimiter).toBe('function');
-      
-      // Should allow requests under limit
+  describe("generalRateLimiter", () => {
+    it("is a configured rate limiter", () => {
+      expect(typeof generalRateLimiter).toBe("function");
       generalRateLimiter(req as Request, res as Response, next);
       expect(next).toHaveBeenCalled();
     });

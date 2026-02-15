@@ -9,16 +9,12 @@ import { Response, Request } from "express";
 
 /**
  * Send successful response with data wrapper
- * 
+ *
  * Usage:
  * sendSuccess(res, { user: ... });
  * sendSuccess(res, users, { pagination: ... });
  */
-export function sendSuccess<T>(
-  res: Response,
-  data: T,
-  meta?: Record<string, unknown>
-): Response {
+export function sendSuccess<T>(res: Response, data: T, meta?: Record<string, unknown>): Response {
   const response: any = {
     data,
   };
@@ -38,7 +34,7 @@ export function sendSuccess<T>(
 
 /**
  * Send paginated success response
- * 
+ *
  * Usage:
  * sendPaginatedSuccess(res, items, total, limit, offset);
  */
@@ -66,11 +62,7 @@ export function sendPaginatedSuccess<T>(
 /**
  * Send created response (201)
  */
-export function sendCreated<T>(
-  res: Response,
-  data: T,
-  location?: string
-): Response {
+export function sendCreated<T>(res: Response, data: T, location?: string): Response {
   if (location) {
     res.location(location);
   }

@@ -2,7 +2,7 @@
 // Credit system integration tests
 
 import request from "supertest";
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import app from "../../index";
 import { query } from "../../db/client";
 import {
@@ -65,7 +65,7 @@ describe("Credit System Integration", () => {
 
       expect(entries.rows.length).toBeGreaterThan(0);
       expect(entries.rows[0].amount).toBe(100);
-      expect(entries.rows[0].direction).toBe('credit');
+      expect(entries.rows[0].direction).toBe("credit");
     });
   });
 
@@ -102,7 +102,7 @@ describe("Credit System Integration", () => {
       );
       expect(entries.rows.length).toBe(1);
       expect(entries.rows[0].amount).toBe(150);
-      expect(entries.rows[0].direction).toBe('debit');
+      expect(entries.rows[0].direction).toBe("debit");
     });
 
     it("prevents job creation with insufficient credits", async () => {
@@ -169,7 +169,7 @@ describe("Credit System Integration", () => {
       );
       expect(entries.rows.length).toBe(1);
       expect(entries.rows[0].amount).toBe(100);
-      expect(entries.rows[0].direction).toBe('credit');
+      expect(entries.rows[0].direction).toBe("credit");
     });
   });
 
@@ -216,7 +216,7 @@ describe("Credit System Integration", () => {
       );
       expect(entries.rows.length).toBe(1);
       expect(entries.rows[0].amount).toBe(80);
-      expect(entries.rows[0].direction).toBe('credit');
+      expect(entries.rows[0].direction).toBe("credit");
     });
   });
 

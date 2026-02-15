@@ -11,39 +11,39 @@ import { env } from "../config/env";
 
 export const CREDIT_ECONOMY_CONFIG = {
   // Weekly bonus caps
-  WEEKLY_BONUS_CAP: 50,           // Max 50 bonus credits per week
-  WEEKLY_BONUS_WARNING: 40,       // Warn at 40 credits
+  WEEKLY_BONUS_CAP: 50, // Max 50 bonus credits per week
+  WEEKLY_BONUS_WARNING: 40, // Warn at 40 credits
 
   // Reliability decay
-  DECAY_INACTIVE_WEEKS: 2,        // Start decay after 2 weeks inactive
-  DECAY_RATE_PER_WEEK: 2,         // -2 points per week inactive
+  DECAY_INACTIVE_WEEKS: 2, // Start decay after 2 weeks inactive
+  DECAY_RATE_PER_WEEK: 2, // -2 points per week inactive
 
   // Tier lock duration (days)
-  TIER_LOCK_DAYS: 7,              // Can't lose tier for 7 days after promotion
+  TIER_LOCK_DAYS: 7, // Can't lose tier for 7 days after promotion
 
   // Cancellation policy (per Terms of Service)
   // Grace cancellations: 2 free cancellations per client (LIFETIME, not monthly)
   LIFETIME_GRACE_CANCELLATIONS: 2,
-  
+
   // Cancellation fee percentages based on notice given:
   // - >48 hours: 0% fee (free cancellation)
   // - 24-48 hours: 50% fee
   // - <24 hours: 100% fee
-  CANCEL_FREE_HOURS: 48,          // Free cancellation if >48h before
-  CANCEL_PARTIAL_HOURS: 24,       // 50% fee if 24-48h before
+  CANCEL_FREE_HOURS: 48, // Free cancellation if >48h before
+  CANCEL_PARTIAL_HOURS: 24, // 50% fee if 24-48h before
   CANCEL_FEE_PARTIAL_PERCENT: 50, // 50% fee for 24-48h notice
-  CANCEL_FEE_LATE_PERCENT: 100,   // 100% fee for <24h notice
+  CANCEL_FEE_LATE_PERCENT: 100, // 100% fee for <24h notice
 
   // Anti-fraud thresholds
   FRAUD_RAPID_BONUS_THRESHOLD: 5, // Alert if >5 bonuses in 1 hour
   FRAUD_LARGE_ADJUSTMENT_THRESHOLD: 500, // Alert if single adjustment >500 credits
 
   // Cleaner penalties (reliability score impact)
-  NO_SHOW_PENALTY_CLEANER: 25,    // Cleaner no-show reliability penalty
-  LATE_CANCEL_PENALTY_CLEANER: 10,// Cleaner late cancellation reliability penalty
+  NO_SHOW_PENALTY_CLEANER: 25, // Cleaner no-show reliability penalty
+  LATE_CANCEL_PENALTY_CLEANER: 10, // Cleaner late cancellation reliability penalty
 
   // Photo compliance bonus (per Photo Proof policy)
-  PHOTO_COMPLIANCE_BONUS: 10,     // +10 reliability points for photo compliance
+  PHOTO_COMPLIANCE_BONUS: 10, // +10 reliability points for photo compliance
 };
 
 // ============================================
@@ -95,7 +95,10 @@ export async function getUserWeeklyBonusTotal(userId: string): Promise<number> {
 /**
  * Check if user can receive bonus (under cap)
  */
-export async function canReceiveBonus(userId: string, amount: number): Promise<{
+export async function canReceiveBonus(
+  userId: string,
+  amount: number
+): Promise<{
   allowed: boolean;
   currentTotal: number;
   cap: number;
@@ -280,19 +283,18 @@ export async function applyReliabilityDecay(): Promise<{
  */
 export async function isTierLocked(cleanerId: string): Promise<boolean> {
   try {
-    const result = await query<{ locked: boolean }>(
-      `SELECT is_tier_locked($1) as locked`,
-      [cleanerId]
-    );
+    const result = await query<{ locked: boolean }>(`SELECT is_tier_locked($1) as locked`, [
+      cleanerId,
+    ]);
     return result.rows[0]?.locked ?? false;
   } catch (error: any) {
     // If function doesn't exist, check tier_locks table directly
-    if (error?.code === '42883' || error?.message?.includes('does not exist')) {
+    if (error?.code === "42883" || error?.message?.includes("does not exist")) {
       logger.warn("is_tier_locked_function_missing", {
         cleanerId,
         message: "is_tier_locked function not found, checking tier_locks table directly",
       });
-      
+
       // Fallback: check tier_locks table directly
       const lockResult = await query<{ id: string }>(
         `
@@ -302,10 +304,10 @@ export async function isTierLocked(cleanerId: string): Promise<boolean> {
         `,
         [cleanerId]
       );
-      
+
       return lockResult.rows.length > 0;
     }
-    
+
     // Re-throw other errors
     throw error;
   }
@@ -497,12 +499,12 @@ export function calculateCancellationFeePercent(hoursBefore: number): number {
 
 /**
  * Record a client job cancellation (per Cancellation Policy)
- * 
+ *
  * Fee structure:
  * - >48h before: 0% fee (free cancellation)
  * - 24-48h before: 50% fee
  * - <24h before: 100% fee
- * 
+ *
  * Grace cancellations:
  * - Each client gets 2 FREE grace cancellations (LIFETIME, not monthly)
  * - Grace cancellations waive the 50% or 100% fee
@@ -525,23 +527,23 @@ export async function recordClientCancellation(params: {
 
   const now = new Date();
   const hoursBefore = (scheduledStart.getTime() - now.getTime()) / (1000 * 60 * 60);
-  
+
   // Calculate base fee percentage
   const baseFeePercent = calculateCancellationFeePercent(hoursBefore);
-  
+
   // Check grace cancellations remaining (LIFETIME total)
   const graceRemaining = await getGraceCancellationsRemaining(clientId);
-  
+
   // Determine if grace cancellation can/should be used
   let usedGrace = false;
   let feePercent = baseFeePercent;
-  
+
   if (baseFeePercent > 0 && useGraceCancellation && graceRemaining > 0) {
     // Use grace cancellation to waive fee
     usedGrace = true;
     feePercent = 0;
   }
-  
+
   // Calculate actual credits
   const feeCredits = Math.round(jobCreditAmount * (feePercent / 100));
   const refundCredits = jobCreditAmount - feeCredits;
@@ -610,11 +612,10 @@ export async function recordCleanerCancellation(params: {
 
   const now = new Date();
   const hoursBefore = (scheduledStart.getTime() - now.getTime()) / (1000 * 60 * 60);
-  
+
   // Late cancellations affect reliability more
-  const reliabilityPenalty = hoursBefore < 24 
-    ? CREDIT_ECONOMY_CONFIG.LATE_CANCEL_PENALTY_CLEANER 
-    : 5;
+  const reliabilityPenalty =
+    hoursBefore < 24 ? CREDIT_ECONOMY_CONFIG.LATE_CANCEL_PENALTY_CLEANER : 5;
 
   // Record cancellation
   await query(
@@ -658,10 +659,10 @@ export async function getGraceCancellationsRemaining(clientId: string): Promise<
  * Record a grace cancellation used
  */
 async function recordGraceCancellationUsed(clientId: string, jobId: string): Promise<void> {
-  await query(
-    `INSERT INTO grace_cancellations (client_id, job_id) VALUES ($1, $2)`,
-    [clientId, jobId]
-  );
+  await query(`INSERT INTO grace_cancellations (client_id, job_id) VALUES ($1, $2)`, [
+    clientId,
+    jobId,
+  ]);
   logger.info("grace_cancellation_used", { clientId, jobId });
 }
 
@@ -693,11 +694,12 @@ export async function recordCancellation(params: {
       jobCreditAmount: 0, // Legacy - no amount tracking
       useGraceCancellation: false,
     });
-    
+
     return {
       isGracePeriod: false,
       penaltyCredits: result.feeCredits,
-      monthlyCount: CREDIT_ECONOMY_CONFIG.LIFETIME_GRACE_CANCELLATIONS - result.graceCancellationsRemaining,
+      monthlyCount:
+        CREDIT_ECONOMY_CONFIG.LIFETIME_GRACE_CANCELLATIONS - result.graceCancellationsRemaining,
     };
   } else {
     await recordCleanerCancellation({ jobId, cleanerId: cancelledBy, scheduledStart });
@@ -726,7 +728,7 @@ export async function processCleanerNoShow(params: {
   totalCreditsToClient: number;
 }> {
   const { jobId, cleanerId, clientId, jobCreditAmount } = params;
-  
+
   const bonusCredits = env.CLEANER_NOSHOW_BONUS_CREDITS;
   const totalCreditsToClient = jobCreditAmount + bonusCredits;
 
@@ -880,18 +882,20 @@ export async function getAuditLogs(params: {
   actorId?: string;
   action?: string;
   limit?: number;
-}): Promise<Array<{
-  id: string;
-  actor_id: string | null;
-  actor_type: string;
-  action: string;
-  resource_type: string;
-  resource_id: string | null;
-  old_value: unknown;
-  new_value: unknown;
-  metadata: Record<string, unknown>;
-  created_at: string;
-}>> {
+}): Promise<
+  Array<{
+    id: string;
+    actor_id: string | null;
+    actor_type: string;
+    action: string;
+    resource_type: string;
+    resource_id: string | null;
+    old_value: unknown;
+    new_value: unknown;
+    metadata: Record<string, unknown>;
+    created_at: string;
+  }>
+> {
   const conditions: string[] = [];
   const values: unknown[] = [];
   let paramIndex = 1;
@@ -933,6 +937,5 @@ function getISOWeek(date: Date): number {
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
-

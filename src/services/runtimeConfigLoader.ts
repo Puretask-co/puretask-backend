@@ -137,9 +137,15 @@ export class RuntimeConfigLoader {
       this.getActive("governor", regionId),
     ]);
 
-    const goalsArr = Array.isArray(goals.payload) ? goals.payload : (goals.payload as { goals?: unknown[] })?.goals ?? getGoals();
-    const rewardsArr = Array.isArray(rewards.payload) ? rewards.payload : (rewards.payload as { rewards?: unknown[] })?.rewards ?? getRewards();
-    const levelsArr = Array.isArray(levels.payload) ? levels.payload : (levels.payload as { levels?: unknown[] })?.levels ?? getLevels();
+    const goalsArr = Array.isArray(goals.payload)
+      ? goals.payload
+      : ((goals.payload as { goals?: unknown[] })?.goals ?? getGoals());
+    const rewardsArr = Array.isArray(rewards.payload)
+      ? rewards.payload
+      : ((rewards.payload as { rewards?: unknown[] })?.rewards ?? getRewards());
+    const levelsArr = Array.isArray(levels.payload)
+      ? levels.payload
+      : ((levels.payload as { levels?: unknown[] })?.levels ?? getLevels());
 
     return {
       region_id: regionId ?? null,

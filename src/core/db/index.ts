@@ -2,30 +2,30 @@
 // Database layer exports for all core systems
 
 // Reliability Engine DB (Tasks 1.1-1.5)
-export * from './reliabilityDb';
+export * from "./reliabilityDb";
 
 // Client Risk Engine DB (Tasks 2.1-2.5)
-export * from './clientRiskDb';
+export * from "./clientRiskDb";
 
 // Reschedule System DB (Tasks 3.1-3.9)
-export * from './rescheduleDb';
+export * from "./rescheduleDb";
 
 // Cancellation System DB (Tasks 4.1-4.4)
-export * from './cancellationDb';
+export * from "./cancellationDb";
 
 // Matching System DB (Tasks 5.1-5.2)
-export * from './matchingDb';
+export * from "./matchingDb";
 
 // Re-export as namespaced objects for backward compatibility
-import * as reliabilityDb from './reliabilityDb';
-import * as clientRiskDb from './clientRiskDb';
-import * as rescheduleDb from './rescheduleDb';
-import * as cancellationDb from './cancellationDb';
-import * as matchingDb from './matchingDb';
+import * as reliabilityDb from "./reliabilityDb";
+import * as clientRiskDb from "./clientRiskDb";
+import * as rescheduleDb from "./rescheduleDb";
+import * as cancellationDb from "./cancellationDb";
+import * as matchingDb from "./matchingDb";
 
 /**
  * Unified database layer for core systems.
- * 
+ *
  * This object provides a unified interface to all database operations
  * needed by the core scoring and operational engines.
  */
@@ -113,17 +113,18 @@ export const coreDb = {
   // Scoring Events (unified interface)
   scoring: {
     logClientRiskEvents: clientRiskDb.logClientRiskEvents,
-    logCleanerEvents: async (events: Array<{
-      cleanerId: number;
-      jobId?: number | null;
-      eventType: string;
-      weight: number;
-      metadata?: Record<string, any>;
-    }>) => {
+    logCleanerEvents: async (
+      events: Array<{
+        cleanerId: number;
+        jobId?: number | null;
+        eventType: string;
+        weight: number;
+        metadata?: Record<string, any>;
+      }>
+    ) => {
       for (const event of events) {
         await reliabilityDb.insertCleanerEvent(event);
       }
     },
   },
 };
-

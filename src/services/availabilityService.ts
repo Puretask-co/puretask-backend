@@ -68,7 +68,13 @@ export interface AvailabilitySlot {
 
 // Days of week for reference
 export const DAYS_OF_WEEK = [
-  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
 ];
 
 // ============================================
@@ -189,14 +195,11 @@ export async function setWeeklyAvailability(
 /**
  * Clear a specific day's availability
  */
-export async function clearDayAvailability(
-  cleanerId: string,
-  dayOfWeek: number
-): Promise<void> {
-  await query(
-    `DELETE FROM cleaner_availability WHERE cleaner_id = $1 AND day_of_week = $2`,
-    [cleanerId, dayOfWeek]
-  );
+export async function clearDayAvailability(cleanerId: string, dayOfWeek: number): Promise<void> {
+  await query(`DELETE FROM cleaner_availability WHERE cleaner_id = $1 AND day_of_week = $2`, [
+    cleanerId,
+    dayOfWeek,
+  ]);
 }
 
 // ============================================
@@ -232,15 +235,7 @@ export async function addTimeOff(params: {
   endTime?: string;
   reason?: string;
 }): Promise<TimeOff> {
-  const {
-    cleanerId,
-    startDate,
-    endDate,
-    allDay = true,
-    startTime,
-    endTime,
-    reason,
-  } = params;
+  const { cleanerId, startDate, endDate, allDay = true, startTime, endTime, reason } = params;
 
   const result = await query<TimeOff>(
     `
@@ -265,10 +260,10 @@ export async function addTimeOff(params: {
  * Delete time off entry
  */
 export async function deleteTimeOff(cleanerId: string, timeOffId: string): Promise<void> {
-  await query(
-    `DELETE FROM cleaner_time_off WHERE id = $1 AND cleaner_id = $2`,
-    [timeOffId, cleanerId]
-  );
+  await query(`DELETE FROM cleaner_time_off WHERE id = $1 AND cleaner_id = $2`, [
+    timeOffId,
+    cleanerId,
+  ]);
 
   logger.info("cleaner_time_off_deleted", { cleanerId, timeOffId });
 }
@@ -300,15 +295,7 @@ export async function addServiceArea(params: {
   latitude?: number;
   longitude?: number;
 }): Promise<ServiceArea> {
-  const {
-    cleanerId,
-    zipCode,
-    city,
-    state,
-    radiusMiles,
-    latitude,
-    longitude,
-  } = params;
+  const { cleanerId, zipCode, city, state, radiusMiles, latitude, longitude } = params;
 
   const result = await query<ServiceArea>(
     `
@@ -316,7 +303,15 @@ export async function addServiceArea(params: {
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `,
-    [cleanerId, zipCode ?? null, city ?? null, state ?? null, radiusMiles ?? null, latitude ?? null, longitude ?? null]
+    [
+      cleanerId,
+      zipCode ?? null,
+      city ?? null,
+      state ?? null,
+      radiusMiles ?? null,
+      latitude ?? null,
+      longitude ?? null,
+    ]
   );
 
   logger.info("cleaner_service_area_added", { cleanerId, zipCode, city, state });
@@ -328,10 +323,10 @@ export async function addServiceArea(params: {
  * Delete a service area
  */
 export async function deleteServiceArea(cleanerId: string, areaId: string): Promise<void> {
-  await query(
-    `DELETE FROM cleaner_service_areas WHERE id = $1 AND cleaner_id = $2`,
-    [areaId, cleanerId]
-  );
+  await query(`DELETE FROM cleaner_service_areas WHERE id = $1 AND cleaner_id = $2`, [
+    areaId,
+    cleanerId,
+  ]);
 }
 
 // ============================================
@@ -410,10 +405,7 @@ export async function setPreferences(
 /**
  * Check if a cleaner is available at a specific datetime
  */
-export async function isCleanerAvailable(
-  cleanerId: string,
-  datetime: Date
-): Promise<boolean> {
+export async function isCleanerAvailable(cleanerId: string, datetime: Date): Promise<boolean> {
   const result = await query<{ is_available: boolean }>(
     `SELECT is_cleaner_available($1, $2::TIMESTAMPTZ) as is_available`,
     [cleanerId, datetime.toISOString()]
@@ -481,9 +473,7 @@ export async function getAvailableCleaners(
   zipCode?: string
 ): Promise<string[]> {
   // Get all active cleaners
-  const cleanersResult = await query<{ user_id: string }>(
-    `SELECT user_id FROM cleaner_profiles`
-  );
+  const cleanersResult = await query<{ user_id: string }>(`SELECT user_id FROM cleaner_profiles`);
 
   const availableCleanerIds: string[] = [];
 
@@ -508,10 +498,7 @@ export async function getAvailableCleaners(
 /**
  * Check if cleaner serves a specific zip code
  */
-export async function cleanerServesZipCode(
-  cleanerId: string,
-  zipCode: string
-): Promise<boolean> {
+export async function cleanerServesZipCode(cleanerId: string, zipCode: string): Promise<boolean> {
   const areas = await getServiceAreas(cleanerId);
 
   // If no areas defined, assume they serve everywhere
@@ -583,4 +570,3 @@ export async function getCleanerSchedule(
     scheduledJobs: jobsResult.rows,
   };
 }
-

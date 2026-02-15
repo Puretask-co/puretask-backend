@@ -1,7 +1,7 @@
 // src/tests/integration/v4Features.test.ts
 // Integration tests for V4 features: Boosts, Analytics, Manager Dashboard, Risk Flags
 
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";
@@ -45,8 +45,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get boost options", async () => {
       const res = await request(app)
         .get("/premium/boosts/options")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role);
+        .set("Authorization", `Bearer ${cleaner.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.options).toBeDefined();
@@ -60,8 +59,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get active boost (none initially)", async () => {
       const res = await request(app)
         .get("/premium/boosts/active")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role);
+        .set("Authorization", `Bearer ${cleaner.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.boost).toBeNull();
@@ -70,8 +68,7 @@ describe("V4 Features Integration Tests", () => {
     it("should fail to purchase boost without credits", async () => {
       const res = await request(app)
         .post("/premium/boosts/purchase")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role)
+        .set("Authorization", `Bearer ${cleaner.token}`)
         .send({ boostType: "STANDARD" });
 
       expect(res.status).toBe(400);
@@ -85,8 +82,7 @@ describe("V4 Features Integration Tests", () => {
 
       const res = await request(app)
         .post("/premium/boosts/purchase")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role)
+        .set("Authorization", `Bearer ${cleaner.token}`)
         .send({ boostType: "STANDARD" });
 
       expect(res.status).toBe(200);
@@ -100,8 +96,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get active boost after purchase", async () => {
       const res = await request(app)
         .get("/premium/boosts/active")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role);
+        .set("Authorization", `Bearer ${cleaner.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.boost).toBeDefined();
@@ -112,8 +107,7 @@ describe("V4 Features Integration Tests", () => {
     it("should prevent purchasing second boost while one is active", async () => {
       const res = await request(app)
         .post("/premium/boosts/purchase")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role)
+        .set("Authorization", `Bearer ${cleaner.token}`)
         .send({ boostType: "PREMIUM" });
 
       expect(res.status).toBe(400);
@@ -130,8 +124,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get dashboard metrics (admin only)", async () => {
       const res = await request(app)
         .get("/analytics/dashboard")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ timeRange: "month" });
 
       expect(res.status).toBe(200);
@@ -146,8 +139,7 @@ describe("V4 Features Integration Tests", () => {
     it("should reject analytics access for non-admin", async () => {
       const res = await request(app)
         .get("/analytics/dashboard")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(403);
     });
@@ -155,8 +147,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get revenue trend", async () => {
       const res = await request(app)
         .get("/analytics/revenue/trend")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ timeRange: "month" });
 
       expect(res.status).toBe(200);
@@ -167,8 +158,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get revenue by period", async () => {
       const res = await request(app)
         .get("/analytics/revenue/by-period")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ timeRange: "month", groupBy: "day" });
 
       expect(res.status).toBe(200);
@@ -179,8 +169,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get job trend", async () => {
       const res = await request(app)
         .get("/analytics/jobs/trend")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ timeRange: "month" });
 
       expect(res.status).toBe(200);
@@ -191,8 +180,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get job status breakdown", async () => {
       const res = await request(app)
         .get("/analytics/jobs/status")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ timeRange: "month" });
 
       expect(res.status).toBe(200);
@@ -202,8 +190,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get user signup trend", async () => {
       const res = await request(app)
         .get("/analytics/users/signups")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ timeRange: "month", role: "all" });
 
       expect(res.status).toBe(200);
@@ -214,8 +201,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get top clients", async () => {
       const res = await request(app)
         .get("/analytics/top/clients")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ timeRange: "month", limit: 10 });
 
       expect(res.status).toBe(200);
@@ -226,8 +212,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get top cleaners", async () => {
       const res = await request(app)
         .get("/analytics/top/cleaners")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ timeRange: "month", limit: 10 });
 
       expect(res.status).toBe(200);
@@ -238,8 +223,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get top rated cleaners", async () => {
       const res = await request(app)
         .get("/analytics/top/rated-cleaners")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ limit: 10 });
 
       expect(res.status).toBe(200);
@@ -250,8 +234,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get credit economy health", async () => {
       const res = await request(app)
         .get("/analytics/credits/health")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role);
+        .set("Authorization", `Bearer ${admin.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.health).toBeDefined();
@@ -262,8 +245,7 @@ describe("V4 Features Integration Tests", () => {
     it("should generate full analytics report", async () => {
       const res = await request(app)
         .get("/analytics/report")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ timeRange: "month" });
 
       expect(res.status).toBe(200);
@@ -280,8 +262,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get dashboard overview (admin only)", async () => {
       const res = await request(app)
         .get("/manager/overview")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role);
+        .set("Authorization", `Bearer ${admin.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.overview).toBeDefined();
@@ -295,8 +276,7 @@ describe("V4 Features Integration Tests", () => {
     it("should reject manager access for non-admin", async () => {
       const res = await request(app)
         .get("/manager/overview")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(403);
     });
@@ -304,8 +284,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get active alerts", async () => {
       const res = await request(app)
         .get("/manager/alerts")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role);
+        .set("Authorization", `Bearer ${admin.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.alerts).toBeDefined();
@@ -316,8 +295,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get supply/demand heatmap", async () => {
       const res = await request(app)
         .get("/manager/heatmap")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role);
+        .set("Authorization", `Bearer ${admin.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.heatmap).toBeDefined();
@@ -326,8 +304,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get tier distribution", async () => {
       const res = await request(app)
         .get("/manager/tiers")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role);
+        .set("Authorization", `Bearer ${admin.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.distribution).toBeDefined();
@@ -336,8 +313,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get retention cohorts", async () => {
       const res = await request(app)
         .get("/manager/retention")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role);
+        .set("Authorization", `Bearer ${admin.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.cohorts).toBeDefined();
@@ -346,8 +322,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get support stats", async () => {
       const res = await request(app)
         .get("/manager/support-stats")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role);
+        .set("Authorization", `Bearer ${admin.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.stats).toBeDefined();
@@ -356,8 +331,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get background check stats", async () => {
       const res = await request(app)
         .get("/manager/background-check-stats")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role);
+        .set("Authorization", `Bearer ${admin.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.stats).toBeDefined();
@@ -366,8 +340,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get full report", async () => {
       const res = await request(app)
         .get("/manager/full-report")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role);
+        .set("Authorization", `Bearer ${admin.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.generatedAt).toBeDefined();
@@ -387,8 +360,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get risk review queue (admin only)", async () => {
       const res = await request(app)
         .get("/admin/risk/review")
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role);
+        .set("Authorization", `Bearer ${admin.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.queue).toBeDefined();
@@ -399,8 +371,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get user risk profile (admin only)", async () => {
       const res = await request(app)
         .get(`/admin/risk/${client.id}`)
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ role: "client" });
 
       expect(res.status).toBe(200);
@@ -419,8 +390,7 @@ describe("V4 Features Integration Tests", () => {
     it("should reject risk profile access for non-admin", async () => {
       const res = await request(app)
         .get(`/admin/risk/${client.id}`)
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(403);
     });
@@ -428,8 +398,7 @@ describe("V4 Features Integration Tests", () => {
     it("should calculate risk score for cleaner", async () => {
       const res = await request(app)
         .get(`/admin/risk/${cleaner.id}`)
-        .set("x-user-id", admin.id)
-        .set("x-user-role", admin.role)
+        .set("Authorization", `Bearer ${admin.token}`)
         .query({ role: "cleaner" });
 
       expect(res.status).toBe(200);
@@ -451,8 +420,7 @@ describe("V4 Features Integration Tests", () => {
 
       const res = await request(app)
         .post("/premium/rush/calculate")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role)
+        .set("Authorization", `Bearer ${client.token}`)
         .send({
           scheduledStartAt: futureDate.toISOString(),
           baseCredits: 100,
@@ -468,8 +436,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get referral code", async () => {
       const res = await request(app)
         .get("/premium/referrals/code")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.code).toBeDefined();
@@ -485,8 +452,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get referral stats", async () => {
       const res = await request(app)
         .get("/premium/referrals/stats")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.stats).toBeDefined();
@@ -496,17 +462,14 @@ describe("V4 Features Integration Tests", () => {
       // First get a code
       const codeRes = await request(app)
         .get("/premium/referrals/code")
-        .set("x-user-id", cleaner.id)
-        .set("x-user-role", cleaner.role);
+        .set("Authorization", `Bearer ${cleaner.token}`);
 
-      const code = typeof codeRes.body.code === "string" 
-        ? codeRes.body.code 
-        : codeRes.body.code?.code;
+      const code =
+        typeof codeRes.body.code === "string" ? codeRes.body.code : codeRes.body.code?.code;
 
       const res = await request(app)
         .post("/premium/referrals/validate")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role)
+        .set("Authorization", `Bearer ${client.token}`)
         .send({ code });
 
       expect(res.status).toBe(200);
@@ -516,8 +479,7 @@ describe("V4 Features Integration Tests", () => {
     it("should get referral leaderboard", async () => {
       const res = await request(app)
         .get("/premium/referrals/leaderboard")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.leaderboard).toBeDefined();
@@ -537,8 +499,7 @@ describe("V4 Features Integration Tests", () => {
       // Create a job
       const jobRes = await request(app)
         .post("/jobs")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role)
+        .set("Authorization", `Bearer ${client.token}`)
         .send({
           address: "123 Test St",
           scheduled_start_at: new Date(Date.now() + 86400000).toISOString(),
@@ -554,8 +515,7 @@ describe("V4 Features Integration Tests", () => {
         // Get candidates (should include boosted cleaner)
         const candidatesRes = await request(app)
           .get(`/jobs/${jobId}/candidates`)
-          .set("x-user-id", client.id)
-          .set("x-user-role", client.role);
+          .set("Authorization", `Bearer ${client.token}`);
 
         expect(candidatesRes.status).toBe(200);
         expect(candidatesRes.body.candidates).toBeDefined();
@@ -568,9 +528,7 @@ describe("V4 Features Integration Tests", () => {
 
         if (boostedCandidate) {
           // Check if boost is mentioned in reasons
-          const hasBoost = boostedCandidate.reasons?.some((r: string) =>
-            r.includes("Boost")
-          );
+          const hasBoost = boostedCandidate.reasons?.some((r: string) => r.includes("Boost"));
           // Boost should be applied if active
           expect(hasBoost || boostedCandidate.score >= 0).toBe(true);
         }
@@ -580,6 +538,4 @@ describe("V4 Features Integration Tests", () => {
       }
     });
   });
-
 });
-

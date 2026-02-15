@@ -16,10 +16,7 @@ const RESET_TOKEN_EXPIRY_HOURS = 1; // Short expiry for security
  */
 export async function requestPasswordReset(email: string, ipAddress?: string): Promise<void> {
   // Find user by email
-  const result = await query<User>(
-    `SELECT * FROM users WHERE email = $1`,
-    [email]
-  );
+  const result = await query<User>(`SELECT * FROM users WHERE email = $1`, [email]);
 
   const user = result.rows[0];
 
@@ -37,17 +34,17 @@ export async function requestPasswordReset(email: string, ipAddress?: string): P
       userId: user.id,
       email,
     });
-    throw Object.assign(
-      new Error("Account is temporarily locked. Please try again later."),
-      { statusCode: 429, code: "ACCOUNT_LOCKED" }
-    );
+    throw Object.assign(new Error("Account is temporarily locked. Please try again later."), {
+      statusCode: 429,
+      code: "ACCOUNT_LOCKED",
+    });
   }
 
   // Check rate limiting (prevent spam)
   if (user.password_reset_token_expires_at) {
     const tokenExpiry = new Date(user.password_reset_token_expires_at);
     const minutesRemaining = (tokenExpiry.getTime() - Date.now()) / (1000 * 60);
-    
+
     if (minutesRemaining > 55) {
       logger.warn("password_reset_rate_limited", { userId: user.id, email });
       throw Object.assign(
@@ -87,10 +84,12 @@ export async function requestPasswordReset(email: string, ipAddress?: string): P
     });
 
     // Log security event
-    await query(
-      `SELECT log_security_event($1, $2, $3, $4, NULL, '{}'::JSONB)`,
-      [user.id, "password_reset_requested", "success", ipAddress]
-    );
+    await query(`SELECT log_security_event($1, $2, $3, $4, NULL, '{}'::JSONB)`, [
+      user.id,
+      "password_reset_requested",
+      "success",
+      ipAddress,
+    ]);
 
     logger.info("password_reset_email_sent", { userId: user.id, email });
   } catch (error) {
@@ -106,7 +105,9 @@ export async function requestPasswordReset(email: string, ipAddress?: string): P
 /**
  * Verify password reset token (check if valid)
  */
-export async function verifyResetToken(token: string): Promise<{ valid: boolean; userId?: string }> {
+export async function verifyResetToken(
+  token: string
+): Promise<{ valid: boolean; userId?: string }> {
   const result = await query<User>(
     `SELECT id FROM users 
      WHERE password_reset_token = $1
@@ -165,16 +166,15 @@ export async function resetPassword(
   );
 
   // Revoke all existing sessions (force re-login)
-  await query(
-    `SELECT revoke_all_user_sessions($1)`,
-    [user.id]
-  );
+  await query(`SELECT revoke_all_user_sessions($1)`, [user.id]);
 
   // Log security event
-  await query(
-    `SELECT log_security_event($1, $2, $3, $4, NULL, '{}'::JSONB)`,
-    [user.id, "password_reset", "success", ipAddress]
-  );
+  await query(`SELECT log_security_event($1, $2, $3, $4, NULL, '{}'::JSONB)`, [
+    user.id,
+    "password_reset",
+    "success",
+    ipAddress,
+  ]);
 
   logger.info("password_reset_completed", { userId: user.id, email: user.email });
 
@@ -213,16 +213,15 @@ export async function changePassword(
   await updatePassword(userId, currentPassword, newPassword);
 
   // Log security event
-  await query(
-    `SELECT log_security_event($1, $2, $3, $4, NULL, '{}'::JSONB)`,
-    [userId, "password_changed", "success", ipAddress]
-  );
+  await query(`SELECT log_security_event($1, $2, $3, $4, NULL, '{}'::JSONB)`, [
+    userId,
+    "password_changed",
+    "success",
+    ipAddress,
+  ]);
 
   // Get user for notification
-  const userResult = await query<User>(
-    `SELECT * FROM users WHERE id = $1`,
-    [userId]
-  );
+  const userResult = await query<User>(`SELECT * FROM users WHERE id = $1`, [userId]);
 
   const user = userResult.rows[0];
   if (user) {
@@ -271,4 +270,3 @@ export async function wasPasswordRecentlyChanged(
 
   return hoursAgo < withinHours;
 }
-

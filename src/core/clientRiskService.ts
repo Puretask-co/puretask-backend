@@ -10,10 +10,10 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import { ClientRiskEvent } from './types';
-import { clampScore, computeRiskBand, RiskBand } from './scoring';
-import { CLIENT_RISK_CONFIG as cfg, FLEXIBILITY_CONFIG } from './config';
-import { daysAgo } from './timeBuckets';
+import { ClientRiskEvent } from "./types";
+import { clampScore, computeRiskBand, RiskBand } from "./scoring";
+import { CLIENT_RISK_CONFIG as cfg, FLEXIBILITY_CONFIG } from "./config";
+import { daysAgo } from "./timeBuckets";
 
 // ============================================
 // Types
@@ -186,7 +186,7 @@ export class ClientRiskService {
 
   /**
    * Compute risk score from events
-   * 
+   *
    * Process:
    * 1. Sum all event weights (base risk)
    * 2. Apply caps (card declines, disputes)
@@ -202,9 +202,7 @@ export class ClientRiskService {
     const shortWindowDays = cfg.windows.shortDays;
 
     // Filter events from last 14 days
-    const eventsLast14 = eventsLast60.filter(
-      e => daysAgo(e.createdAt, now) <= shortWindowDays
-    );
+    const eventsLast14 = eventsLast60.filter((e) => daysAgo(e.createdAt, now) <= shortWindowDays);
 
     // Calculate raw base risk and track specific event types
     let baseRisk = 0;
@@ -215,12 +213,12 @@ export class ClientRiskService {
     for (const ev of eventsLast60) {
       baseRisk += ev.weight;
 
-      if (ev.eventType === 'card_decline') {
+      if (ev.eventType === "card_decline") {
         cardDeclineCount++;
         cardDeclineWeightRaw += ev.weight;
       }
 
-      if (ev.eventType === 'dispute_client_at_fault') {
+      if (ev.eventType === "dispute_client_at_fault") {
         disputeClientAtFaultWeightRaw += ev.weight;
       }
     }
@@ -249,7 +247,7 @@ export class ClientRiskService {
 
     // Pattern: 3+ late_reschedule_lt24 in last 14 days → +10
     const lateReschedLt24Count14d = eventsLast14.filter(
-      e => e.eventType === 'late_reschedule_lt24'
+      (e) => e.eventType === "late_reschedule_lt24"
     ).length;
 
     if (lateReschedLt24Count14d >= cfg.patterns.lateReschedulePatternThreshold) {
@@ -259,7 +257,7 @@ export class ClientRiskService {
 
     // Inconvenience patterns (already logged as events with weights)
     const inconveniencePatternEvents = eventsLast60.filter(
-      e => e.eventType === 'inconvenience_pattern'
+      (e) => e.eventType === "inconvenience_pattern"
     );
     patterns.inconveniencePattern = inconveniencePatternEvents.reduce(
       (sum, e) => sum + e.weight,
@@ -268,7 +266,7 @@ export class ClientRiskService {
 
     // High inconvenience count for stats
     const highInconvenienceCount = eventsLast14.filter(
-      e => e.eventType === 'high_inconvenience'
+      (e) => e.eventType === "high_inconvenience"
     ).length;
 
     // Time-based decay: -2 per full week with no new negative events
@@ -316,7 +314,7 @@ export class ClientRiskService {
    * Get the timestamp of the last negative event (weight > 0)
    */
   private static getLastNegativeEventAt(events: ClientRiskEventRecord[]): Date | null {
-    const negativeEvents = events.filter(e => e.weight > 0);
+    const negativeEvents = events.filter((e) => e.weight > 0);
     if (negativeEvents.length === 0) return null;
 
     return negativeEvents.reduce(
@@ -334,8 +332,8 @@ export class ClientRiskService {
    * High and Critical risk clients cannot use grace for late windows
    */
   static canUseGraceCancellation(riskBand: RiskBand, window: string): boolean {
-    if (riskBand === 'high' || riskBand === 'critical') {
-      if (window === '50%' || window === '100%') {
+    if (riskBand === "high" || riskBand === "critical") {
+      if (window === "50%" || window === "100%") {
         return false;
       }
     }
@@ -347,7 +345,7 @@ export class ClientRiskService {
    * High and Critical risk clients must cancel instead
    */
   static canRescheduleLt24(riskBand: RiskBand): boolean {
-    return riskBand !== 'high' && riskBand !== 'critical';
+    return riskBand !== "high" && riskBand !== "critical";
   }
 
   /**
@@ -355,7 +353,7 @@ export class ClientRiskService {
    * Deprioritize for high-risk clients
    */
   static shouldShowEliteCleaners(riskBand: RiskBand): boolean {
-    return riskBand !== 'high' && riskBand !== 'critical';
+    return riskBand !== "high" && riskBand !== "critical";
   }
 
   // ============================================
@@ -374,7 +372,7 @@ export class ClientRiskService {
       [String(clientId), since.toISOString()]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       id: Number(row.id),
       clientId: Number(row.client_id),
       jobId: row.job_id ? Number(row.job_id) : null,
@@ -397,7 +395,7 @@ export class ClientRiskService {
        )`
     );
 
-    return result.rows.map(row => ({ id: Number(row.id) }));
+    return result.rows.map((row) => ({ id: Number(row.id) }));
   }
 
   private static async upsertRiskScore(score: ClientRiskScoreRecord): Promise<void> {
@@ -437,4 +435,3 @@ export class ClientRiskService {
     );
   }
 }
-

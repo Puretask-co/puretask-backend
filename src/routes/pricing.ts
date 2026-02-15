@@ -5,7 +5,11 @@
 import { Router, Response } from "express";
 import { logger } from "../lib/logger";
 import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
-import { calculateJobPricing, getPricingEstimate, getTierPriceBands } from "../services/pricingService";
+import {
+  calculateJobPricing,
+  getPricingEstimate,
+  getTierPriceBands,
+} from "../services/pricingService";
 
 const pricingRouter = Router();
 
@@ -47,81 +51,87 @@ pricingRouter.use(requireAuth);
  *       400:
  *         description: Invalid parameters
  */
-pricingRouter.get(
-  "/estimate",
-  async (req: AuthedRequest, res: Response) => {
-    try {
-      // Parse query parameters manually (query params come as strings)
-      const hours = req.query.hours ? Number(req.query.hours) : null;
-      if (!hours || hours <= 0) {
-        return res.status(400).json({
-          error: { code: "VALIDATION_ERROR", message: "hours query parameter is required and must be positive" },
-        });
-      }
-
-      const tier = req.query.tier as "bronze" | "silver" | "gold" | "platinum" | undefined;
-      if (tier && !["bronze", "silver", "gold", "platinum"].includes(tier)) {
-        return res.status(400).json({
-          error: { code: "VALIDATION_ERROR", message: "tier must be bronze, silver, gold, or platinum" },
-        });
-      }
-
-      const baseRate = req.query.baseRate ? Number(req.query.baseRate) : undefined;
-      if (baseRate !== undefined && baseRate <= 0) {
-        return res.status(400).json({
-          error: { code: "VALIDATION_ERROR", message: "baseRate must be positive if provided" },
-        });
-      }
-
-      const cleaningType = req.query.cleaningType as "basic" | "deep" | "moveout" | undefined;
-      if (cleaningType && !["basic", "deep", "moveout"].includes(cleaningType)) {
-        return res.status(400).json({
-          error: { code: "VALIDATION_ERROR", message: "cleaningType must be basic, deep, or moveout" },
-        });
-      }
-
-      // If tier is specified, return specific pricing
-      if (tier) {
-        const breakdown = calculateJobPricing({
-          cleanerTier: tier,
-          baseHours: hours,
-          baseRatePerHour: baseRate,
-          cleaningType: cleaningType || "basic",
-        });
-
-        return res.json({
-          tier,
-          hours,
-          breakdown,
-          message: "Pricing estimate for specified tier",
-        });
-      }
-
-      // If no tier specified, return range for all tiers
-      const estimate = getPricingEstimate(hours, baseRate);
-
-      return res.json({
-        hours,
-        estimate: {
-          minPrice: estimate.minPrice,
-          maxPrice: estimate.maxPrice,
-          minCredits: estimate.minCredits,
-          maxCredits: estimate.maxCredits,
-          breakdown: estimate.breakdown,
+pricingRouter.get("/estimate", async (req: AuthedRequest, res: Response) => {
+  try {
+    // Parse query parameters manually (query params come as strings)
+    const hours = req.query.hours ? Number(req.query.hours) : null;
+    if (!hours || hours <= 0) {
+      return res.status(400).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "hours query parameter is required and must be positive",
         },
-        message: "Pricing estimate range across all tiers",
-      });
-    } catch (error) {
-      logger.error("pricing_estimate_failed", {
-        error: (error as Error).message,
-        query: req.query,
-      });
-      res.status(400).json({
-        error: { code: "PRICING_ESTIMATE_FAILED", message: (error as Error).message },
       });
     }
+
+    const tier = req.query.tier as "bronze" | "silver" | "gold" | "platinum" | undefined;
+    if (tier && !["bronze", "silver", "gold", "platinum"].includes(tier)) {
+      return res.status(400).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "tier must be bronze, silver, gold, or platinum",
+        },
+      });
+    }
+
+    const baseRate = req.query.baseRate ? Number(req.query.baseRate) : undefined;
+    if (baseRate !== undefined && baseRate <= 0) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "baseRate must be positive if provided" },
+      });
+    }
+
+    const cleaningType = req.query.cleaningType as "basic" | "deep" | "moveout" | undefined;
+    if (cleaningType && !["basic", "deep", "moveout"].includes(cleaningType)) {
+      return res.status(400).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "cleaningType must be basic, deep, or moveout",
+        },
+      });
+    }
+
+    // If tier is specified, return specific pricing
+    if (tier) {
+      const breakdown = calculateJobPricing({
+        cleanerTier: tier,
+        baseHours: hours,
+        baseRatePerHour: baseRate,
+        cleaningType: cleaningType || "basic",
+      });
+
+      return res.json({
+        tier,
+        hours,
+        breakdown,
+        message: "Pricing estimate for specified tier",
+      });
+    }
+
+    // If no tier specified, return range for all tiers
+    const estimate = getPricingEstimate(hours, baseRate);
+
+    return res.json({
+      hours,
+      estimate: {
+        minPrice: estimate.minPrice,
+        maxPrice: estimate.maxPrice,
+        minCredits: estimate.minCredits,
+        maxCredits: estimate.maxCredits,
+        breakdown: estimate.breakdown,
+      },
+      message: "Pricing estimate range across all tiers",
+    });
+  } catch (error) {
+    logger.error("pricing_estimate_failed", {
+      error: (error as Error).message,
+      query: req.query,
+    });
+    res.status(400).json({
+      error: { code: "PRICING_ESTIMATE_FAILED", message: (error as Error).message },
+    });
   }
-);
+});
 
 /**
  * @swagger
@@ -154,4 +164,3 @@ pricingRouter.get("/tiers", async (_req: AuthedRequest, res: Response) => {
 });
 
 export default pricingRouter;
-

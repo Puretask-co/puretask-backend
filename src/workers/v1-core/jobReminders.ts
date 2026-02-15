@@ -81,15 +81,20 @@ async function send24hReminder(job: JobForReminder): Promise<void> {
   });
   const jobUrl = buildClientJobUrl(job.id);
 
-  await sendNotificationToUser(job.client_id, "job.reminder_24h", {
-    jobId: job.id,
-    address: job.address,
-    scheduledTime,
-    scheduledDate: new Date(job.scheduled_start_at).toLocaleDateString(),
-    creditAmount: job.credit_amount,
-    jobUrl,
-    timeZoneLabel: "local time", // TODO: Get actual timezone from job
-  }, ["email", "push"]);
+  await sendNotificationToUser(
+    job.client_id,
+    "job.reminder_24h",
+    {
+      jobId: job.id,
+      address: job.address,
+      scheduledTime,
+      scheduledDate: new Date(job.scheduled_start_at).toLocaleDateString(),
+      creditAmount: job.credit_amount,
+      jobUrl,
+      timeZoneLabel: "local time", // TODO: Get actual timezone from job
+    },
+    ["email", "push"]
+  );
 
   // Mark reminder as sent
   await query(
@@ -119,15 +124,20 @@ async function send2hReminder(job: JobForReminder): Promise<void> {
   });
   const checkInUrl = buildCheckInUrl(job.id);
 
-  await sendNotificationToUser(job.cleaner_id, "job.reminder_2h", {
-    jobId: job.id,
-    address: job.address,
-    scheduledTime,
-    creditAmount: job.credit_amount,
-    checkInUrl,
-    timeZoneLabel: "local time", // TODO: Get actual timezone from job
-    // TODO: Generate shortUrl for SMS (when short link service is implemented)
-  }, ["sms", "push"]);
+  await sendNotificationToUser(
+    job.cleaner_id,
+    "job.reminder_2h",
+    {
+      jobId: job.id,
+      address: job.address,
+      scheduledTime,
+      creditAmount: job.credit_amount,
+      checkInUrl,
+      timeZoneLabel: "local time", // TODO: Get actual timezone from job
+      // TODO: Generate shortUrl for SMS (when short link service is implemented)
+    },
+    ["sms", "push"]
+  );
 
   // Mark reminder as sent
   await query(

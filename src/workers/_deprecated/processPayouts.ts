@@ -5,7 +5,10 @@
 import { query } from "../../db/client";
 import { logger } from "../../lib/logger";
 import { runWorkerWithLock, getWorkerLockId } from "../../lib/workerUtils";
-import { processSinglePayout, processPendingPayouts as processPendingPayoutsService } from "../../services/payoutsService";
+import {
+  processSinglePayout,
+  processPendingPayouts as processPendingPayoutsService,
+} from "../../services/payoutsService";
 import type { Payout, CleanerEarning } from "../../types/db";
 
 // Configuration
@@ -127,29 +130,25 @@ export async function runPayoutsWorker(): Promise<{
   const WORKER_NAME = "payouts";
   const LOCK_ID = 1001; // Unique lock ID for payout worker (manual override)
 
-  const result = await runWorkerWithLock(
-    WORKER_NAME,
-    LOCK_ID,
-    async () => {
-      logger.info("payouts_worker_executing", {
-        batchSize: BATCH_SIZE,
-        minPayoutUsd: MIN_PAYOUT_USD,
-      });
+  const result = await runWorkerWithLock(WORKER_NAME, LOCK_ID, async () => {
+    logger.info("payouts_worker_executing", {
+      batchSize: BATCH_SIZE,
+      minPayoutUsd: MIN_PAYOUT_USD,
+    });
 
-      // Step 1: Create payouts for cleaners with pending earnings
-      const createResult = await createPayoutsForCleaners();
+    // Step 1: Create payouts for cleaners with pending earnings
+    const createResult = await createPayoutsForCleaners();
 
-      // Step 2: Process pending payouts
-      const processResult = await processPendingPayouts();
+    // Step 2: Process pending payouts
+    const processResult = await processPendingPayouts();
 
-      return {
-        processed: createResult.created + processResult.processed,
-        failed: createResult.failed + processResult.failed,
-        payoutsCreated: createResult.created,
-        payoutsProcessed: processResult.processed,
-      };
-    }
-  );
+    return {
+      processed: createResult.created + processResult.processed,
+      failed: createResult.failed + processResult.failed,
+      payoutsCreated: createResult.created,
+      payoutsProcessed: processResult.processed,
+    };
+  });
 
   // If lock was held (null), return zero stats
   if (!result) {
@@ -175,4 +174,3 @@ if (require.main === module) {
       process.exit(1);
     });
 }
-

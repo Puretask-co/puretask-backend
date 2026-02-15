@@ -11,25 +11,25 @@ import { env } from "../config/env";
 export function securityHeaders(req: Request, res: Response, next: NextFunction) {
   // Prevent clickjacking
   res.setHeader("X-Frame-Options", "DENY");
-  
+
   // Prevent MIME type sniffing
   res.setHeader("X-Content-Type-Options", "nosniff");
-  
+
   // XSS Protection (legacy, but still useful)
   res.setHeader("X-XSS-Protection", "1; mode=block");
-  
+
   // Referrer Policy
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  
+
   // Permissions Policy (formerly Feature Policy)
   res.setHeader(
     "Permissions-Policy",
     "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=()"
   );
-  
+
   // Remove powered by header
   res.removeHeader("X-Powered-By");
-  
+
   // Enhanced Content Security Policy for API
   // Note: Frontend should have its own CSP
   const frontendUrl = env.FRONTEND_URL || "http://localhost:3000";
@@ -47,23 +47,17 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
       "form-action 'self'",
     ].join("; ")
   );
-  
+
   // Strict Transport Security (only in production with HTTPS)
   if (env.NODE_ENV === "production") {
-    res.setHeader(
-      "Strict-Transport-Security",
-      "max-age=31536000; includeSubDomains; preload"
-    );
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
   }
-  
+
   // Expect-CT header (Certificate Transparency)
   if (env.NODE_ENV === "production") {
-    res.setHeader(
-      "Expect-CT",
-      "max-age=86400, enforce"
-    );
+    res.setHeader("Expect-CT", "max-age=86400, enforce");
   }
-  
+
   next();
 }
 
@@ -74,7 +68,7 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
  */
 export function sanitizeInput(input: string): string {
   if (typeof input !== "string") return input;
-  
+
   return input
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -89,7 +83,7 @@ export function sanitizeInput(input: string): string {
  * Adds a unique ID to each request for logging/tracing
  */
 export function requestId(req: Request, res: Response, next: NextFunction) {
-  const id = req.headers["x-request-id"] as string || generateRequestId();
+  const id = (req.headers["x-request-id"] as string) || generateRequestId();
   (req as any).requestId = id;
   res.setHeader("X-Request-ID", id);
   next();
@@ -98,4 +92,3 @@ export function requestId(req: Request, res: Response, next: NextFunction) {
 function generateRequestId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 9)}`;
 }
-

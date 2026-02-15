@@ -12,6 +12,34 @@
 - **App:** Build `npm run build`; start `npm start`. Workers: run per [package.json](../package.json) scripts (e.g. `worker:scheduler`, `worker:durable-jobs`).
 - **CI:** Push to main/develop runs lint, tests, security scan, migrations check (`.github/workflows/`).
 
+### 1.1 Production schema alignment (existing Neon DB)
+
+If production was created from an older Neon schema or has FK/column mismatches, run the alignment patch. **Back up first.**
+
+```bash
+# 1. Set production DB URL (do not commit this)
+export PRODUCTION_DATABASE_URL="postgresql://...your-production-url..."
+
+# 2. Run patch (prompts for confirmation; use --yes to skip)
+npm run db:patch:production
+
+# Or non-interactive:
+PRODUCTION_DATABASE_URL="..." npm run db:patch:production -- --yes
+```
+
+The patch (`DB/migrations/000_NEON_PATCH_test_db_align.sql`) fixes: payouts/cleaner_availability FKs → users(id), adds missing columns (amount_cents, amount_credits, cleaning_type, etc.), adds job_event_type values, updates is_cleaner_available for uuid/text. Idempotent—safe to run more than once.
+
+**Verify schema after patch:**
+```bash
+PRODUCTION_DATABASE_URL="..." npm run db:verify:production
+```
+
+### 1.2 Critical-flow tests (integration / E2E)
+
+- `src/tests/integration/jobLifecycle.test.ts` — Full job flow (create → accept → start → complete → approve; cancellation; dispute).
+- `src/tests/smoke/*` — Smoke tests for jobs, messages, credits, events.
+- Run: `npm run test:integration` and `npm run test:smoke`.
+
 ---
 
 ## 2. Rollback

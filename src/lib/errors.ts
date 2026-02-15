@@ -15,21 +15,22 @@ export enum ErrorCode {
   TOKEN_EXPIRED = "TOKEN_EXPIRED",
   FORBIDDEN = "FORBIDDEN",
   INVALID_CREDENTIALS = "INVALID_CREDENTIALS",
-  
+
   // Validation
   VALIDATION_ERROR = "VALIDATION_ERROR",
   INVALID_INPUT = "INVALID_INPUT",
-  
+
   // Resource errors
   NOT_FOUND = "NOT_FOUND",
   ALREADY_EXISTS = "ALREADY_EXISTS",
   CONFLICT = "CONFLICT",
-  
+
   // Business logic
   INVALID_STATE = "INVALID_STATE",
+  BAD_TRANSITION = "BAD_TRANSITION",
   INSUFFICIENT_CREDITS = "INSUFFICIENT_CREDITS",
   RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED",
-  
+
   // Server errors
   INTERNAL_ERROR = "INTERNAL_ERROR",
   DATABASE_ERROR = "DATABASE_ERROR",
@@ -56,9 +57,7 @@ export class AppError extends Error {
       error: {
         code: this.code,
         message: this.message,
-        ...(this.details !== undefined && this.details !== null
-          ? { details: this.details }
-          : {}),
+        ...(this.details !== undefined && this.details !== null ? { details: this.details } : {}),
       },
     };
   }
@@ -77,9 +76,7 @@ export const Errors = {
   },
 
   notFound(resource = "Resource", id?: string): AppError {
-    const message = id
-      ? `${resource} with ID ${id} not found`
-      : `${resource} not found`;
+    const message = id ? `${resource} with ID ${id} not found` : `${resource} not found`;
     return new AppError(ErrorCode.NOT_FOUND, message, 404);
   },
 
@@ -119,7 +116,9 @@ export const Errors = {
  */
 export function sendError(res: Response, error: unknown, context?: Record<string, unknown>): void {
   // Get requestId from response locals or context
-  const requestId = (res.locals?.requestId || (context as any)?.requestId || (res as any).requestId) as string | undefined;
+  const requestId = (res.locals?.requestId ||
+    (context as any)?.requestId ||
+    (res as any).requestId) as string | undefined;
 
   // Handle AppError
   if (error instanceof AppError) {
@@ -208,16 +207,14 @@ export function sendError(res: Response, error: unknown, context?: Record<string
 /**
  * Async route handler wrapper
  * Automatically catches errors and passes them to error handler
- * 
+ *
  * Usage:
  * router.get('/users', asyncHandler(async (req, res) => {
  *   const users = await getUsers();
  *   res.json(users);
  * }));
  */
-export function asyncHandler(
-  fn: (req: any, res: Response, next?: any) => Promise<any>
-) {
+export function asyncHandler(fn: (req: any, res: Response, next?: any) => Promise<any>) {
   return (req: any, res: Response, next: any) => {
     Promise.resolve(fn(req, res, next)).catch((error) => {
       sendError(res, error, {
@@ -228,4 +225,3 @@ export function asyncHandler(
     });
   };
 }
-

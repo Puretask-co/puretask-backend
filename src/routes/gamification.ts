@@ -1,6 +1,6 @@
 /**
  * Gamification & Onboarding API
- * 
+ *
  * Handles: onboarding progress, achievements, certifications, template library
  */
 
@@ -9,14 +9,9 @@ import { z } from "zod";
 import { query } from "../db/client";
 import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { requireRole } from "../middleware/jwtAuth";
-import {
-  getLevelProgress,
-  recordCleanerLogin,
-} from "../services/cleanerLevelService";
+import { getLevelProgress, recordCleanerLogin } from "../services/cleanerLevelService";
 import { recordEvent, recordSessionStart } from "../services/eventIngestionService";
-import {
-  getCleanerProgression,
-} from "../services/gamificationProgressionService";
+import { getCleanerProgression } from "../services/gamificationProgressionService";
 import {
   selectChoiceReward,
   getActiveRewards,
@@ -72,7 +67,8 @@ router.get(
   requireRole("cleaner"),
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.query.region_id as string) || null;
-    if (!(await gateGamification(req, res, regionId, { level: 1, goals: [], progress: [] }))) return;
+    if (!(await gateGamification(req, res, regionId, { level: 1, goals: [], progress: [] })))
+      return;
     try {
       const cleanerId = req.user!.id;
       const progress = await getLevelProgress(cleanerId);
@@ -203,7 +199,10 @@ router.get(
   requireRole("cleaner"),
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.query.region_id as string) ?? null;
-    if (!(await isGamificationEnabled({ region_id: regionId })) || !(await isNextBestActionEnabled({ region_id: regionId }))) {
+    if (
+      !(await isGamificationEnabled({ region_id: regionId })) ||
+      !(await isNextBestActionEnabled({ region_id: regionId }))
+    ) {
       res.json({ ok: true, gamification_enabled: false, actions: [] });
       return;
     }
@@ -266,7 +265,10 @@ router.get(
   requireRole("cleaner"),
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.query.region_id as string) || null;
-    if (!(await isGamificationEnabled({ region_id: regionId })) || !(await isGamificationBadgesEnabled({ region_id: regionId }))) {
+    if (
+      !(await isGamificationEnabled({ region_id: regionId })) ||
+      !(await isGamificationBadgesEnabled({ region_id: regionId }))
+    ) {
       res.json({ ok: true, gamification_enabled: false, badges: [] });
       return;
     }
@@ -402,12 +404,24 @@ router.post(
     try {
       const parsed = eventSchema.safeParse(req.body);
       if (!parsed.success) {
-        res.status(400).json({ error: { code: "VALIDATION_ERROR", details: parsed.error.flatten() } });
+        res
+          .status(400)
+          .json({ error: { code: "VALIDATION_ERROR", details: parsed.error.flatten() } });
         return;
       }
-      const { event_type, occurred_at, payload, idempotency_key, job_id, job_request_id, client_id } = parsed.data;
+      const {
+        event_type,
+        occurred_at,
+        payload,
+        idempotency_key,
+        job_id,
+        job_request_id,
+        client_id,
+      } = parsed.data;
       const source = (req.headers["x-event-source"] as string) || "mobile";
-      const validSource = ["mobile", "web"].includes(source) ? (source as "mobile" | "web") : "mobile";
+      const validSource = ["mobile", "web"].includes(source)
+        ? (source as "mobile" | "web")
+        : "mobile";
 
       await recordEvent({
         event_type,
@@ -448,11 +462,15 @@ router.post(
     try {
       const parsed = sessionStartSchema.safeParse(req.body);
       if (!parsed.success) {
-        res.status(400).json({ error: { code: "VALIDATION_ERROR", details: parsed.error.flatten() } });
+        res
+          .status(400)
+          .json({ error: { code: "VALIDATION_ERROR", details: parsed.error.flatten() } });
         return;
       }
       const source = (req.headers["x-event-source"] as string) || "mobile";
-      const validSource = ["mobile", "web"].includes(source) ? (source as "mobile" | "web") : "mobile";
+      const validSource = ["mobile", "web"].includes(source)
+        ? (source as "mobile" | "web")
+        : "mobile";
 
       await recordSessionStart(parsed.data.session_id, req.user!.id, validSource, {
         timezone: parsed.data.timezone,
@@ -513,10 +531,7 @@ router.get("/onboarding/progress", async (req: AuthedRequest, res) => {
 
     if (result.rows.length === 0) {
       // Initialize if not exists
-      await query(
-        `INSERT INTO cleaner_onboarding_progress (cleaner_id) VALUES ($1)`,
-        [cleanerId]
-      );
+      await query(`INSERT INTO cleaner_onboarding_progress (cleaner_id) VALUES ($1)`, [cleanerId]);
       return res.json({
         completionPercentage: 0,
         wizardCompleted: false,
@@ -568,62 +583,67 @@ router.get("/onboarding/progress", async (req: AuthedRequest, res) => {
  *       400:
  *         description: No valid fields to update
  */
-router.post("/onboarding/update", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const updates = req.body;
+router.post(
+  "/onboarding/update",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const updates = req.body;
 
-    const allowedFields = [
-      'setup_wizard_step',
-      'setup_wizard_completed',
-      'profile_photo_uploaded',
-      'bio_completed',
-      'services_defined',
-      'availability_set',
-      'pricing_configured',
-      'ai_personality_set',
-      'templates_customized',
-      'quick_responses_added',
-      'first_template_used',
-      'viewed_insights_dashboard',
-      'created_custom_template',
-      'marked_favorite_response',
-    ];
+      const allowedFields = [
+        "setup_wizard_step",
+        "setup_wizard_completed",
+        "profile_photo_uploaded",
+        "bio_completed",
+        "services_defined",
+        "availability_set",
+        "pricing_configured",
+        "ai_personality_set",
+        "templates_customized",
+        "quick_responses_added",
+        "first_template_used",
+        "viewed_insights_dashboard",
+        "created_custom_template",
+        "marked_favorite_response",
+      ];
 
-    const updateFields = Object.keys(updates)
-      .filter(key => allowedFields.includes(key))
-      .map((key, index) => `${key} = $${index + 2}`)
-      .join(', ');
+      const updateFields = Object.keys(updates)
+        .filter((key) => allowedFields.includes(key))
+        .map((key, index) => `${key} = $${index + 2}`)
+        .join(", ");
 
-    if (!updateFields) {
-      return res.status(400).json({
-        error: { code: "VALIDATION_ERROR", message: "No valid fields to update" },
-      });
-    }
+      if (!updateFields) {
+        return res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: "No valid fields to update" },
+        });
+      }
 
-    const values = [cleanerId, ...Object.keys(updates)
-      .filter(key => allowedFields.includes(key))
-      .map(key => updates[key])
-    ];
+      const values = [
+        cleanerId,
+        ...Object.keys(updates)
+          .filter((key) => allowedFields.includes(key))
+          .map((key) => updates[key]),
+      ];
 
-    await query(
-      `UPDATE cleaner_onboarding_progress
+      await query(
+        `UPDATE cleaner_onboarding_progress
        SET ${updateFields}, updated_at = NOW()
        WHERE cleaner_id = $1`,
-      values
-    );
+        values
+      );
 
-    // Check if any achievements unlocked
-    await checkAndUnlockAchievements(cleanerId);
+      // Check if any achievements unlocked
+      await checkAndUnlockAchievements(cleanerId);
 
-    res.json({ message: "Progress updated successfully" });
-  } catch (error: any) {
-    console.error("Error updating onboarding progress:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to update progress" },
-    });
-  }
-}));
+      res.json({ message: "Progress updated successfully" });
+    } catch (error: any) {
+      console.error("Error updating onboarding progress:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to update progress" },
+      });
+    }
+  })
+);
 
 // ============================================
 // ACHIEVEMENTS
@@ -642,13 +662,15 @@ router.post("/onboarding/update", authedHandler(async (req: AuthedRequest, res) 
  *       200:
  *         description: achievements (grouped), stats (earnedPoints, totalPoints, etc.)
  */
-router.get("/achievements", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
+router.get(
+  "/achievements",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
 
-    // Get all achievements with earned status
-    const result = await query(
-      `SELECT 
+      // Get all achievements with earned status
+      const result = await query(
+        `SELECT 
         a.id,
         a.achievement_key as "key",
         a.name,
@@ -666,42 +688,42 @@ router.get("/achievements", authedHandler(async (req: AuthedRequest, res) => {
       LEFT JOIN cleaner_achievements ca ON a.id = ca.achievement_id AND ca.cleaner_id = $1
       WHERE a.is_active = true
       ORDER BY a.display_order, a.created_at`,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    // Group by category
-    const grouped = result.rows.reduce((acc: any, achievement: any) => {
-      if (!acc[achievement.category]) {
-        acc[achievement.category] = [];
-      }
-      acc[achievement.category].push(achievement);
-      return acc;
-    }, {});
+      // Group by category
+      const grouped = result.rows.reduce((acc: any, achievement: any) => {
+        if (!acc[achievement.category]) {
+          acc[achievement.category] = [];
+        }
+        acc[achievement.category].push(achievement);
+        return acc;
+      }, {});
 
-    // Calculate total points
-    const earnedPoints = result.rows
-      .filter((a: any) => a.earned)
-      .reduce((sum: number, a: any) => sum + a.points, 0);
+      // Calculate total points
+      const earnedPoints = result.rows
+        .filter((a: any) => a.earned)
+        .reduce((sum: number, a: any) => sum + a.points, 0);
 
-    const totalPoints = result.rows
-      .reduce((sum: number, a: any) => sum + a.points, 0);
+      const totalPoints = result.rows.reduce((sum: number, a: any) => sum + a.points, 0);
 
-    res.json({
-      achievements: grouped,
-      stats: {
-        earnedPoints,
-        totalPoints,
-        earnedCount: result.rows.filter((a: any) => a.earned).length,
-        totalCount: result.rows.length,
-      },
-    });
-  } catch (error: any) {
-    console.error("Error fetching achievements:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to fetch achievements" },
-    });
-  }
-}));
+      res.json({
+        achievements: grouped,
+        stats: {
+          earnedPoints,
+          totalPoints,
+          earnedCount: result.rows.filter((a: any) => a.earned).length,
+          totalCount: result.rows.length,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch achievements" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -721,26 +743,29 @@ router.get("/achievements", authedHandler(async (req: AuthedRequest, res) => {
  *       200:
  *         description: Achievement marked as seen
  */
-router.post("/achievements/:achievementId/mark-seen", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { achievementId } = req.params;
+router.post(
+  "/achievements/:achievementId/mark-seen",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { achievementId } = req.params;
 
-    await query(
-      `UPDATE cleaner_achievements
+      await query(
+        `UPDATE cleaner_achievements
        SET seen = true
        WHERE cleaner_id = $1 AND achievement_id = $2`,
-      [cleanerId, achievementId]
-    );
+        [cleanerId, achievementId]
+      );
 
-    res.json({ message: "Achievement marked as seen" });
-  } catch (error: any) {
-    console.error("Error marking achievement:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to mark achievement" },
-    });
-  }
-}));
+      res.json({ message: "Achievement marked as seen" });
+    } catch (error: any) {
+      console.error("Error marking achievement:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to mark achievement" },
+      });
+    }
+  })
+);
 
 // ============================================
 // CERTIFICATIONS
@@ -759,12 +784,14 @@ router.post("/achievements/:achievementId/mark-seen", authedHandler(async (req: 
  *       200:
  *         description: List of certifications with progress
  */
-router.get("/certifications", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
+router.get(
+  "/certifications",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
 
-    const result = await query(
-      `SELECT 
+      const result = await query(
+        `SELECT 
         c.id,
         c.certification_key as "key",
         c.name,
@@ -783,32 +810,33 @@ router.get("/certifications", authedHandler(async (req: AuthedRequest, res) => {
       LEFT JOIN cleaner_certifications cc ON c.id = cc.certification_id AND cc.cleaner_id = $1
       WHERE c.is_active = true
       ORDER BY c.level`,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    // Calculate progress for each certification
-    const certsWithProgress = await Promise.all(
-      result.rows.map(async (cert: any) => {
-        const progress = await calculateCertificationProgress(cleanerId, cert.requirements);
-        return {
-          ...cert,
-          progress,
-          canEarn: progress >= 100 && !cert.earned,
-        };
-      })
-    );
+      // Calculate progress for each certification
+      const certsWithProgress = await Promise.all(
+        result.rows.map(async (cert: any) => {
+          const progress = await calculateCertificationProgress(cleanerId, cert.requirements);
+          return {
+            ...cert,
+            progress,
+            canEarn: progress >= 100 && !cert.earned,
+          };
+        })
+      );
 
-    res.json({
-      certifications: certsWithProgress,
-      currentLevel: certsWithProgress.filter((c: any) => c.earned).length,
-    });
-  } catch (error: any) {
-    console.error("Error fetching certifications:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to fetch certifications" },
-    });
-  }
-}));
+      res.json({
+        certifications: certsWithProgress,
+        currentLevel: certsWithProgress.filter((c: any) => c.earned).length,
+      });
+    } catch (error: any) {
+      console.error("Error fetching certifications:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch certifications" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -834,10 +862,9 @@ router.post("/certifications/:certificationId/claim", async (req: AuthedRequest,
     const { certificationId } = req.params;
 
     // Check if requirements met
-    const cert = await query(
-      `SELECT requirements FROM certifications WHERE id = $1`,
-      [certificationId]
-    );
+    const cert = await query(`SELECT requirements FROM certifications WHERE id = $1`, [
+      certificationId,
+    ]);
 
     if (cert.rows.length === 0) {
       return res.status(404).json({
@@ -904,11 +931,13 @@ router.post("/certifications/:certificationId/claim", async (req: AuthedRequest,
  *       200:
  *         description: templates array and count
  */
-router.get("/template-library", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const { category, type, search, sort = 'rating' } = req.query;
+router.get(
+  "/template-library",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const { category, type, search, sort = "rating" } = req.query;
 
-    let sql = `
+      let sql = `
       SELECT 
         id,
         template_type as type,
@@ -930,51 +959,52 @@ router.get("/template-library", authedHandler(async (req: AuthedRequest, res) =>
       WHERE is_active = true
     `;
 
-    const params: any[] = [];
-    let paramIndex = 1;
+      const params: any[] = [];
+      let paramIndex = 1;
 
-    if (category) {
-      sql += ` AND category = $${paramIndex}`;
-      params.push(category);
-      paramIndex++;
+      if (category) {
+        sql += ` AND category = $${paramIndex}`;
+        params.push(category);
+        paramIndex++;
+      }
+
+      if (type) {
+        sql += ` AND template_type = $${paramIndex}`;
+        params.push(type);
+        paramIndex++;
+      }
+
+      if (search) {
+        sql += ` AND (template_name ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR $${paramIndex} = ANY(tags))`;
+        params.push(`%${search}%`);
+        paramIndex++;
+      }
+
+      // Sorting
+      if (sort === "rating") {
+        sql += ` ORDER BY is_featured DESC, rating_average DESC, rating_count DESC`;
+      } else if (sort === "popular") {
+        sql += ` ORDER BY is_featured DESC, usage_count DESC`;
+      } else if (sort === "recent") {
+        sql += ` ORDER BY is_featured DESC, created_at DESC`;
+      }
+
+      sql += ` LIMIT 50`;
+
+      const result = await query(sql, params);
+
+      res.json({
+        templates: result.rows,
+        count: result.rows.length,
+      });
+    } catch (error: any) {
+      console.error("Error fetching template library:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch templates" },
+      });
     }
-
-    if (type) {
-      sql += ` AND template_type = $${paramIndex}`;
-      params.push(type);
-      paramIndex++;
-    }
-
-    if (search) {
-      sql += ` AND (template_name ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR $${paramIndex} = ANY(tags))`;
-      params.push(`%${search}%`);
-      paramIndex++;
-    }
-
-    // Sorting
-    if (sort === 'rating') {
-      sql += ` ORDER BY is_featured DESC, rating_average DESC, rating_count DESC`;
-    } else if (sort === 'popular') {
-      sql += ` ORDER BY is_featured DESC, usage_count DESC`;
-    } else if (sort === 'recent') {
-      sql += ` ORDER BY is_featured DESC, created_at DESC`;
-    }
-
-    sql += ` LIMIT 50`;
-
-    const result = await query(sql, params);
-
-    res.json({
-      templates: result.rows,
-      count: result.rows.length,
-    });
-  } catch (error: any) {
-    console.error("Error fetching template library:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to fetch templates" },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -1003,50 +1033,50 @@ router.get("/template-library", authedHandler(async (req: AuthedRequest, res) =>
  *       404:
  *         description: Template not found
  */
-router.post("/template-library/:templateId/save", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { templateId } = req.params;
-    const { customizedContent } = req.body;
+router.post(
+  "/template-library/:templateId/save",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { templateId } = req.params;
+      const { customizedContent } = req.body;
 
-    // Get template from library
-    const template = await query(
-      `SELECT * FROM template_library WHERE id = $1`,
-      [templateId]
-    );
+      // Get template from library
+      const template = await query(`SELECT * FROM template_library WHERE id = $1`, [templateId]);
 
-    if (template.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "NOT_FOUND", message: "Template not found" },
-      });
-    }
+      if (template.rows.length === 0) {
+        return res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Template not found" },
+        });
+      }
 
-    // Save to user's templates
-    await query(
-      `INSERT INTO cleaner_saved_library_templates 
+      // Save to user's templates
+      await query(
+        `INSERT INTO cleaner_saved_library_templates 
         (cleaner_id, library_template_id, customized_content)
        VALUES ($1, $2, $3)
        ON CONFLICT (cleaner_id, library_template_id) 
        DO UPDATE SET customized_content = EXCLUDED.customized_content, saved_at = NOW()`,
-      [cleanerId, templateId, customizedContent || template.rows[0].template_content]
-    );
+        [cleanerId, templateId, customizedContent || template.rows[0].template_content]
+      );
 
-    // Increment usage count
-    await query(
-      `UPDATE template_library 
+      // Increment usage count
+      await query(
+        `UPDATE template_library 
        SET usage_count = usage_count + 1 
        WHERE id = $1`,
-      [templateId]
-    );
+        [templateId]
+      );
 
-    res.json({ message: "Template saved successfully" });
-  } catch (error: any) {
-    console.error("Error saving template:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to save template" },
-    });
-  }
-}));
+      res.json({ message: "Template saved successfully" });
+    } catch (error: any) {
+      console.error("Error saving template:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to save template" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1120,12 +1150,14 @@ router.post("/template-library/:templateId/rate", async (req: AuthedRequest, res
  *       200:
  *         description: templates array and count
  */
-router.get("/template-library/saved", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
+router.get(
+  "/template-library/saved",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
 
-    const result = await query(
-      `SELECT 
+      const result = await query(
+        `SELECT 
         st.id,
         st.customized_content as "customizedContent",
         st.is_active as "isActive",
@@ -1139,20 +1171,21 @@ router.get("/template-library/saved", authedHandler(async (req: AuthedRequest, r
       JOIN template_library tl ON st.library_template_id = tl.id
       WHERE st.cleaner_id = $1 AND st.is_active = true
       ORDER BY st.saved_at DESC`,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    res.json({
-      templates: result.rows,
-      count: result.rows.length,
-    });
-  } catch (error: any) {
-    console.error("Error fetching saved templates:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to fetch saved templates" },
-    });
-  }
-}));
+      res.json({
+        templates: result.rows,
+        count: result.rows.length,
+      });
+    } catch (error: any) {
+      console.error("Error fetching saved templates:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch saved templates" },
+      });
+    }
+  })
+);
 
 // ============================================
 // TOOLTIPS
@@ -1231,35 +1264,38 @@ router.get("/tooltips", async (req: AuthedRequest, res) => {
  *       200:
  *         description: Tooltip dismissed
  */
-router.post("/tooltips/:tooltipId/dismiss", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
-    const { tooltipId } = req.params;
-    const { helpful } = req.body;
+router.post(
+  "/tooltips/:tooltipId/dismiss",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const { tooltipId } = req.params;
+      const { helpful } = req.body;
 
-    await query(
-      `INSERT INTO cleaner_tooltip_interactions (cleaner_id, tooltip_id, marked_helpful)
+      await query(
+        `INSERT INTO cleaner_tooltip_interactions (cleaner_id, tooltip_id, marked_helpful)
        VALUES ($1, $2, $3)
        ON CONFLICT (cleaner_id, tooltip_id) DO UPDATE SET marked_helpful = EXCLUDED.marked_helpful`,
-      [cleanerId, tooltipId, helpful]
-    );
+        [cleanerId, tooltipId, helpful]
+      );
 
-    // Update tooltip dismissed count in onboarding
-    await query(
-      `UPDATE cleaner_onboarding_progress
+      // Update tooltip dismissed count in onboarding
+      await query(
+        `UPDATE cleaner_onboarding_progress
        SET tooltip_dismissed_count = tooltip_dismissed_count + 1
        WHERE cleaner_id = $1`,
-      [cleanerId]
-    );
+        [cleanerId]
+      );
 
-    res.json({ message: "Tooltip dismissed" });
-  } catch (error: any) {
-    console.error("Error dismissing tooltip:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to dismiss tooltip" },
-    });
-  }
-}));
+      res.json({ message: "Tooltip dismissed" });
+    } catch (error: any) {
+      console.error("Error dismissing tooltip:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to dismiss tooltip" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -1309,7 +1345,10 @@ router.post("/template-library", async (req: AuthedRequest, res) => {
     // Validation
     if (!template_name || !template_content || !category) {
       return res.status(400).json({
-        error: { code: "VALIDATION_ERROR", message: "Template name, content, and category are required" },
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Template name, content, and category are required",
+        },
       });
     }
 
@@ -1328,15 +1367,15 @@ router.post("/template-library", async (req: AuthedRequest, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id, template_name as name, created_at as "createdAt"`,
       [
-        template_type || 'custom',
+        template_type || "custom",
         template_name,
         template_content,
         JSON.stringify(variables || []),
         category,
         subcategory || null,
-        description || '',
+        description || "",
         cleanerId,
-        tags || []
+        tags || [],
       ]
     );
 
@@ -1383,12 +1422,14 @@ router.post("/template-library", async (req: AuthedRequest, res) => {
  *       404:
  *         description: Template not found
  */
-router.get("/template-library/:templateId", authedHandler(async (req: AuthedRequest, res) => {
-  try {
-    const { templateId } = req.params;
+router.get(
+  "/template-library/:templateId",
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const { templateId } = req.params;
 
-    const result = await query(
-      `SELECT 
+      const result = await query(
+        `SELECT 
         id,
         template_type as type,
         template_name as name,
@@ -1407,23 +1448,24 @@ router.get("/template-library/:templateId", authedHandler(async (req: AuthedRequ
         created_at as "createdAt"
       FROM template_library
       WHERE id = $1 AND is_active = true`,
-      [templateId]
-    );
+        [templateId]
+      );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "NOT_FOUND", message: "Template not found" },
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Template not found" },
+        });
+      }
+
+      res.json({ template: result.rows[0] });
+    } catch (error: any) {
+      console.error("Error fetching template:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch template" },
       });
     }
-
-    res.json({ template: result.rows[0] });
-  } catch (error: any) {
-    console.error("Error fetching template:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to fetch template" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // HELPER FUNCTIONS
@@ -1459,9 +1501,12 @@ async function checkAndUnlockAchievements(cleanerId: string) {
       let earned = false;
 
       // Check criteria based on achievement type
-      if (criteria.action === 'login' && criteria.count === 1) {
+      if (criteria.action === "login" && criteria.count === 1) {
         earned = true; // First login
-      } else if (criteria.profile_completion && userProgress.profile_completion_percentage >= criteria.profile_completion) {
+      } else if (
+        criteria.profile_completion &&
+        userProgress.profile_completion_percentage >= criteria.profile_completion
+      ) {
         earned = true;
       } else if (criteria.setup_wizard_completed && userProgress.setup_wizard_completed) {
         earned = true;
@@ -1469,11 +1514,20 @@ async function checkAndUnlockAchievements(cleanerId: string) {
         earned = true;
       } else if (criteria.created_custom_template && userProgress.created_custom_template) {
         earned = true;
-      } else if (criteria.templates_customized && userProgress.templates_customized >= criteria.templates_customized) {
+      } else if (
+        criteria.templates_customized &&
+        userProgress.templates_customized >= criteria.templates_customized
+      ) {
         earned = true;
-      } else if (criteria.quick_responses_added && userProgress.quick_responses_added >= criteria.quick_responses_added) {
+      } else if (
+        criteria.quick_responses_added &&
+        userProgress.quick_responses_added >= criteria.quick_responses_added
+      ) {
         earned = true;
-      } else if (criteria.days_since_signup && userProgress.days_since_signup >= criteria.days_since_signup) {
+      } else if (
+        criteria.days_since_signup &&
+        userProgress.days_since_signup >= criteria.days_since_signup
+      ) {
         earned = true;
       }
 
@@ -1491,7 +1545,10 @@ async function checkAndUnlockAchievements(cleanerId: string) {
   }
 }
 
-async function calculateCertificationProgress(cleanerId: string, requirements: any): Promise<number> {
+async function calculateCertificationProgress(
+  cleanerId: string,
+  requirements: any
+): Promise<number> {
   try {
     const progress = await query(
       `SELECT * FROM cleaner_onboarding_progress WHERE cleaner_id = $1`,
@@ -1518,4 +1575,3 @@ async function calculateCertificationProgress(cleanerId: string, requirements: a
 }
 
 export default router;
-

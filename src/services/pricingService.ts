@@ -89,7 +89,7 @@ export interface PricingSnapshot {
 
 /**
  * Calculate tier-aware pricing for a job
- * 
+ *
  * V3 FEATURE: Tier-based pricing rewards reliability
  * - Bronze: Floor pricing (minimum rates)
  * - Silver: Standard pricing
@@ -100,7 +100,7 @@ export function calculateJobPricing(input: PricingCalculationInput): PricingBrea
 
   // Get base rate (use provided or default based on cleaning type)
   const standardBaseRate = baseRatePerHour || STANDARD_BASE_RATE_PER_HOUR;
-  
+
   // Get tier price band
   const tier = cleanerTier.toLowerCase();
   const priceBand = TIER_PRICE_BANDS[tier] || TIER_PRICE_BANDS["silver"]; // Default to silver if invalid tier
@@ -108,7 +108,10 @@ export function calculateJobPricing(input: PricingCalculationInput): PricingBrea
   // Calculate tier-adjusted rate per hour
   // Apply multiplier, then ensure it's within min/max bounds
   let tierAdjustedRatePerHour = standardBaseRate * priceBand.multiplier;
-  tierAdjustedRatePerHour = Math.max(priceBand.min, Math.min(priceBand.max, tierAdjustedRatePerHour));
+  tierAdjustedRatePerHour = Math.max(
+    priceBand.min,
+    Math.min(priceBand.max, tierAdjustedRatePerHour)
+  );
 
   // Calculate base price (before tier adjustment)
   const basePrice = standardBaseRate * baseHours;
@@ -190,7 +193,10 @@ export function getTierPriceBands(): Record<string, TierPriceBand> {
  * Get pricing estimate without cleaner tier (for pre-booking estimates)
  * Returns a range based on possible tiers
  */
-export function getPricingEstimate(baseHours: number, baseRatePerHour?: number): {
+export function getPricingEstimate(
+  baseHours: number,
+  baseRatePerHour?: number
+): {
   minPrice: number;
   maxPrice: number;
   minCredits: number;
@@ -233,4 +239,3 @@ export function getPricingEstimate(baseHours: number, baseRatePerHour?: number):
     },
   };
 }
-

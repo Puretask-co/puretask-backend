@@ -83,7 +83,10 @@ type TemplateSpec = {
 
 // Defaults applied centrally so templates stay clean.
 type RequiredDefaults = Required<
-  Pick<TemplateData, "jobId" | "clientName" | "cleanerName" | "address" | "creditAmount" | "amount" | "name">
+  Pick<
+    TemplateData,
+    "jobId" | "clientName" | "cleanerName" | "address" | "creditAmount" | "amount" | "name"
+  >
 > &
   Pick<
     TemplateData,
@@ -297,7 +300,8 @@ const TEMPLATES: Record<NotificationType, TemplateSpec> = {
         `Hi ${d.clientName},\n\nYour job (${d.jobId}) has been cancelled.\n\nAny escrowed credits have been refunded to your account.\n\nThanks,\nThe PureTask Team`,
     },
     sms: {
-      text: (d) => `PureTask: Your job ${shortJobId(d.jobId)} has been cancelled. Credits refunded.`,
+      text: (d) =>
+        `PureTask: Your job ${shortJobId(d.jobId)} has been cancelled. Credits refunded.`,
     },
     push: {
       title: () => "Job Cancelled",
@@ -324,7 +328,11 @@ const TEMPLATES: Record<NotificationType, TemplateSpec> = {
   "job.reminder_2h": {
     type: "job.reminder_2h",
     channels: ["email", "sms", "push"],
-    required: { email: ["cleanerName", "scheduledTime", "checkInUrl"], sms: ["scheduledTime"], push: ["scheduledTime"] },
+    required: {
+      email: ["cleanerName", "scheduledTime", "checkInUrl"],
+      sms: ["scheduledTime"],
+      push: ["scheduledTime"],
+    },
     primaryActionKey: "checkInUrl",
     email: {
       subject: () => "Reminder: Your cleaning starts in 2 hours",
@@ -346,7 +354,11 @@ const TEMPLATES: Record<NotificationType, TemplateSpec> = {
   "job.no_show_warning": {
     type: "job.no_show_warning",
     channels: ["email", "sms", "push"],
-    required: { email: ["cleanerName", "scheduledTime", "checkInUrl"], sms: ["scheduledTime"], push: ["scheduledTime"] },
+    required: {
+      email: ["cleanerName", "scheduledTime", "checkInUrl"],
+      sms: ["scheduledTime"],
+      push: ["scheduledTime"],
+    },
     primaryActionKey: "checkInUrl",
     email: {
       subject: () => "Action needed: Check in for your job",
@@ -428,7 +440,7 @@ const TEMPLATES: Record<NotificationType, TemplateSpec> = {
     },
   },
 
-  "welcome": {
+  welcome: {
     type: "welcome",
     channels: ["email"],
     required: { email: ["name"] },
@@ -482,7 +494,9 @@ export function renderNotification(
   const useChannels = channels?.length ? channels : spec.channels;
 
   const out: RenderedNotification = {};
-  const primaryUrl = spec.primaryActionKey ? (d[spec.primaryActionKey] as string | undefined) : undefined;
+  const primaryUrl = spec.primaryActionKey
+    ? (d[spec.primaryActionKey] as string | undefined)
+    : undefined;
 
   if (useChannels.includes("email") && spec.email) {
     assertRequired(spec, "email", d);
@@ -540,7 +554,8 @@ export function getEmailBody(type: NotificationType, data: Record<string, unknow
  */
 export function getSmsBody(type: NotificationType, data: Record<string, unknown>): string {
   const spec = TEMPLATES[type];
-  if (!spec?.sms) return `PureTask: Update for job ${(data.jobId as string)?.slice(0, 8) || "job"}. Check the app for details.`;
+  if (!spec?.sms)
+    return `PureTask: Update for job ${(data.jobId as string)?.slice(0, 8) || "job"}. Check the app for details.`;
   return spec.sms.text(withDefaults(data as TemplateData));
 }
 

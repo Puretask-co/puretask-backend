@@ -30,4 +30,3 @@ main().catch((error) => {
   log.error("metrics_snapshot_worker_fatal", { error });
   process.exit(1);
 });
-

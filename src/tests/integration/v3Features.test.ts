@@ -1,7 +1,7 @@
 // src/tests/integration/v3Features.test.ts
 // V3 FEATURES: Tests for Tier-Aware Pricing, Subscriptions, Earnings Dashboard
 
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";
@@ -95,8 +95,7 @@ describe("V3 Features Integration Tests", () => {
     it("should create a subscription", async () => {
       const res = await request(app)
         .post("/premium/subscriptions")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role)
+        .set("Authorization", `Bearer ${client.token}`)
         .send({
           frequency: "weekly",
           dayOfWeek: 1, // Monday
@@ -116,8 +115,7 @@ describe("V3 Features Integration Tests", () => {
     it("should get client subscriptions", async () => {
       const res = await request(app)
         .get("/premium/subscriptions")
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.subscriptions).toBeDefined();
@@ -129,8 +127,7 @@ describe("V3 Features Integration Tests", () => {
 
       const res = await request(app)
         .patch(`/premium/subscriptions/${subscriptionId}/status`)
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role)
+        .set("Authorization", `Bearer ${client.token}`)
         .send({
           status: "paused",
         });
@@ -144,8 +141,7 @@ describe("V3 Features Integration Tests", () => {
 
       const res = await request(app)
         .patch(`/premium/subscriptions/${subscriptionId}/status`)
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role)
+        .set("Authorization", `Bearer ${client.token}`)
         .send({
           status: "active",
         });
@@ -159,8 +155,7 @@ describe("V3 Features Integration Tests", () => {
 
       const res = await request(app)
         .delete(`/premium/subscriptions/${subscriptionId}`)
-        .set("x-user-id", client.id)
-        .set("x-user-role", client.role);
+        .set("Authorization", `Bearer ${client.token}`);
 
       expect(res.status).toBe(200);
     });
@@ -198,4 +193,3 @@ describe("V3 Features Integration Tests", () => {
     });
   });
 });
-

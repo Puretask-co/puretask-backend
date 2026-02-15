@@ -14,8 +14,8 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import { InconvenienceLog, ClientRiskEvent, CleanerEvent } from './types';
-import { FLEXIBILITY_CONFIG } from './config';
+import { InconvenienceLog, ClientRiskEvent, CleanerEvent } from "./types";
+import { FLEXIBILITY_CONFIG } from "./config";
 
 // ============================================
 // Types
@@ -25,10 +25,10 @@ export interface LogInconvenienceInput {
   jobId: number;
   clientId: number;
   cleanerId: number;
-  causedBy: 'client' | 'cleaner' | 'system';
-  ratedBy: 'client' | 'cleaner';
+  causedBy: "client" | "cleaner" | "system";
+  ratedBy: "client" | "cleaner";
   score: 1 | 2 | 3 | 4;
-  relatedEventType: 'reschedule' | 'cancel' | 'no_show' | 'issue';
+  relatedEventType: "reschedule" | "cancel" | "no_show" | "issue";
   relatedEventId: number | null;
   reasonCode: string | null;
   note?: string | null;
@@ -139,7 +139,7 @@ export class InconvenienceService {
         clientEvents.push({
           clientId,
           jobId: null,
-          eventType: 'inconvenience_pattern',
+          eventType: "inconvenience_pattern",
           weight,
           metadata: { count, windowDays: cfg.patternWindowDays },
         });
@@ -205,7 +205,7 @@ export class InconvenienceService {
         cleanerEvents.push({
           cleanerId,
           jobId: null,
-          eventType: 'inconvenience_high',
+          eventType: "inconvenience_high",
           weight,
           metadata: { count, windowDays: cfg.cleanerPatternWindowDays },
         });
@@ -239,7 +239,10 @@ export class InconvenienceService {
   /**
    * Get inconvenience stats for a client
    */
-  static async getClientStats(clientId: number, since: Date): Promise<{
+  static async getClientStats(
+    clientId: number,
+    since: Date
+  ): Promise<{
     highInconvenienceCount: number;
     totalCount: number;
     averageScore: number | null;
@@ -267,7 +270,10 @@ export class InconvenienceService {
   /**
    * Get inconvenience stats for a cleaner
    */
-  static async getCleanerStats(cleanerId: number, since: Date): Promise<{
+  static async getCleanerStats(
+    cleanerId: number,
+    since: Date
+  ): Promise<{
     highInconvenienceCount: number;
     totalCount: number;
     averageScore: number | null;
@@ -292,4 +298,3 @@ export class InconvenienceService {
     };
   }
 }
-

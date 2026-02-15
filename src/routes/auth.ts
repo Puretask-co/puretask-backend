@@ -213,7 +213,10 @@ authRouter.post("/login", async (req, res: Response) => {
       import("../services/cleanerLevelService")
         .then(({ recordCleanerLogin }) => recordCleanerLogin(user.id))
         .catch((err) =>
-          logger.warn("record_cleaner_login_failed", { userId: user.id, error: (err as Error).message })
+          logger.warn("record_cleaner_login_failed", {
+            userId: user.id,
+            error: (err as Error).message,
+          })
         );
     }
 

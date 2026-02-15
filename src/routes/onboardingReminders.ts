@@ -4,7 +4,10 @@
 import { Router, Response } from "express";
 import { requireAuth, requireAdmin, AuthedRequest } from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
-import { sendOnboardingReminders, getAbandonedOnboardingCleaners } from "../services/onboardingReminderService";
+import {
+  sendOnboardingReminders,
+  getAbandonedOnboardingCleaners,
+} from "../services/onboardingReminderService";
 
 const reminderRouter = Router();
 
@@ -81,9 +84,7 @@ reminderRouter.post("/send", async (req: AuthedRequest, res: Response) => {
  */
 reminderRouter.get("/abandoned", async (req: AuthedRequest, res: Response) => {
   try {
-    const hoursThreshold = req.query.hours_threshold
-      ? Number(req.query.hours_threshold)
-      : 24;
+    const hoursThreshold = req.query.hours_threshold ? Number(req.query.hours_threshold) : 24;
 
     const cleaners = await getAbandonedOnboardingCleaners(hoursThreshold);
 

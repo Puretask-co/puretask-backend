@@ -95,7 +95,15 @@ export async function generateReferralCode(
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `,
-    [userId, code, type, rewardCredits, refereeCredits, maxUses ?? null, expiresAt?.toISOString() ?? null]
+    [
+      userId,
+      code,
+      type,
+      rewardCredits,
+      refereeCredits,
+      maxUses ?? null,
+      expiresAt?.toISOString() ?? null,
+    ]
   );
 
   logger.info("referral_code_generated", { userId, code });
@@ -122,10 +130,9 @@ export async function validateReferralCode(code: string): Promise<{
   code?: ReferralCode;
   reason?: string;
 }> {
-  const result = await query<ReferralCode>(
-    `SELECT * FROM referral_codes WHERE code = $1`,
-    [code.toUpperCase()]
-  );
+  const result = await query<ReferralCode>(`SELECT * FROM referral_codes WHERE code = $1`, [
+    code.toUpperCase(),
+  ]);
 
   if (result.rows.length === 0) {
     return { valid: false, reason: "Code not found" };
@@ -163,7 +170,11 @@ export async function applyReferralCode(
   // Validate code
   const validation = await validateReferralCode(referralCode);
   if (!validation.valid || !validation.code) {
-    logger.warn("invalid_referral_code_used", { refereeId, referralCode, reason: validation.reason });
+    logger.warn("invalid_referral_code_used", {
+      refereeId,
+      referralCode,
+      reason: validation.reason,
+    });
     return null;
   }
 
@@ -176,10 +187,9 @@ export async function applyReferralCode(
   }
 
   // Check if referee already has a referral
-  const existingReferral = await query<Referral>(
-    `SELECT * FROM referrals WHERE referee_id = $1`,
-    [refereeId]
-  );
+  const existingReferral = await query<Referral>(`SELECT * FROM referrals WHERE referee_id = $1`, [
+    refereeId,
+  ]);
 
   if (existingReferral.rows.length > 0) {
     logger.warn("user_already_referred", { refereeId });
@@ -208,10 +218,7 @@ export async function applyReferralCode(
   );
 
   // Increment code uses
-  await query(
-    `UPDATE referral_codes SET uses_count = uses_count + 1 WHERE id = $1`,
-    [code.id]
-  );
+  await query(`UPDATE referral_codes SET uses_count = uses_count + 1 WHERE id = $1`, [code.id]);
 
   // Award referee their bonus immediately
   await awardBonusCredits({
@@ -250,7 +257,7 @@ export async function checkReferralQualification(userId: string): Promise<void> 
     `
       SELECT COUNT(*)::text as count
       FROM jobs
-      WHERE ${referral.referee_role === 'client' ? 'client_id' : 'cleaner_id'} = $1
+      WHERE ${referral.referee_role === "client" ? "client_id" : "cleaner_id"} = $1
         AND status = 'completed'
         AND created_at >= $2
     `,
@@ -260,10 +267,10 @@ export async function checkReferralQualification(userId: string): Promise<void> 
   const jobsCompleted = Number(jobsResult.rows[0]?.count || 0);
 
   // Update jobs completed count
-  await query(
-    `UPDATE referrals SET jobs_completed = $2 WHERE id = $1`,
-    [referral.id, jobsCompleted]
-  );
+  await query(`UPDATE referrals SET jobs_completed = $2 WHERE id = $1`, [
+    referral.id,
+    jobsCompleted,
+  ]);
 
   // Check if qualified
   if (jobsCompleted >= referral.jobs_required) {
@@ -293,10 +300,9 @@ async function processReferralReward(referralId: string): Promise<void> {
   });
 
   // Update referral status
-  await query(
-    `UPDATE referrals SET status = 'rewarded', rewarded_at = NOW() WHERE id = $1`,
-    [referralId]
-  );
+  await query(`UPDATE referrals SET status = 'rewarded', rewarded_at = NOW() WHERE id = $1`, [
+    referralId,
+  ]);
 
   // Emit event
   await publishEvent({
@@ -367,23 +373,22 @@ export async function getUserReferralStats(userId: string): Promise<{
 /**
  * Get referral leaderboard
  */
-export async function getReferralLeaderboard(limit: number = 10): Promise<Array<{
-  userId: string;
-  email: string;
-  totalReferrals: number;
-  successfulReferrals: number;
-  totalEarned: number;
-}>> {
+export async function getReferralLeaderboard(limit: number = 10): Promise<
+  Array<{
+    userId: string;
+    email: string;
+    totalReferrals: number;
+    successfulReferrals: number;
+    totalEarned: number;
+  }>
+> {
   const result = await query<{
     referrer_id: string;
     email: string;
     total_referrals: string;
     successful_referrals: string;
     total_credits_earned: string;
-  }>(
-    `SELECT * FROM referral_leaderboard LIMIT $1`,
-    [limit]
-  );
+  }>(`SELECT * FROM referral_leaderboard LIMIT $1`, [limit]);
 
   return result.rows.map((row) => ({
     userId: row.referrer_id,
@@ -411,10 +416,7 @@ async function generateUniqueCode(): Promise<string> {
     attempts++;
 
     // Check if exists
-    const existing = await query(
-      `SELECT id FROM referral_codes WHERE code = $1`,
-      [code]
-    );
+    const existing = await query(`SELECT id FROM referral_codes WHERE code = $1`, [code]);
 
     if (existing.rows.length === 0) {
       return code;
@@ -424,4 +426,3 @@ async function generateUniqueCode(): Promise<string> {
   // Fallback: use UUID suffix
   return code + Date.now().toString(36).toUpperCase().slice(-4);
 }
-

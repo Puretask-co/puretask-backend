@@ -29,33 +29,33 @@ export interface BackupData {
   client_count: number;
   cleaner_count: number;
   admin_count: number;
-  
+
   // Job metrics
   job_count: number;
   jobs_by_status: Record<string, number>;
-  
+
   // Financial metrics
   credit_ledger_entries: number;
   total_credit_supply: number;
-  
+
   // Payout metrics
   total_payouts: number;
   pending_payouts: number;
   paid_payouts: number;
   failed_payouts: number;
   total_paid_cents: number;
-  
+
   // Dispute metrics
   total_disputes: number;
   open_disputes: number;
   resolved_refund_disputes: number;
   resolved_no_refund_disputes: number;
-  
+
   // Timestamp
   snapshot_at: string;
 }
 
-export type BackupLabel = 
+export type BackupLabel =
   | "daily-summary"
   | "weekly-summary"
   | "monthly-summary"
@@ -74,7 +74,10 @@ export type BackupLabel =
  * This is NOT a full DB backup, but a reliable summary of state.
  * Use Neon/pg_dump for actual database backups.
  */
-export async function runBackupJob(label: BackupLabel = "daily-summary", notes?: string): Promise<BackupSnapshot> {
+export async function runBackupJob(
+  label: BackupLabel = "daily-summary",
+  notes?: string
+): Promise<BackupSnapshot> {
   // Aggregate all important metrics in a single efficient query
   const aggregateResult = await query<{
     user_count: string;
@@ -157,7 +160,7 @@ export async function runBackupJob(label: BackupLabel = "daily-summary", notes?:
   const statusResult = await query<{ status: string; count: string }>(
     `SELECT status, COUNT(*)::text as count FROM jobs GROUP BY status`
   );
-  
+
   const jobsByStatus: Record<string, number> = {};
   for (const row of statusResult.rows) {
     jobsByStatus[row.status] = Number(row.count);
@@ -233,10 +236,7 @@ export async function runBackupJob(label: BackupLabel = "daily-summary", notes?:
 /**
  * Get backup snapshots by label
  */
-export async function getBackupsByLabel(
-  label: BackupLabel,
-  limit = 10
-): Promise<BackupSnapshot[]> {
+export async function getBackupsByLabel(label: BackupLabel, limit = 10): Promise<BackupSnapshot[]> {
   const result = await query<{
     id: string;
     label: string;
@@ -357,4 +357,3 @@ export async function cleanupOldBackups(keepPerLabel = 30): Promise<number> {
 
   return deletedCount;
 }
-

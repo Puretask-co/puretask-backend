@@ -1,7 +1,7 @@
 // src/instrument.ts
 // Sentry initialization - MUST be the ONLY place Sentry.init() is called
 // This file must be required FIRST, before any other imports in index.ts
-// 
+//
 // Why this file exists:
 // - Sentry must be initialized exactly once, as early as possible
 // - This allows Sentry to properly instrument Express, HTTP, and database calls

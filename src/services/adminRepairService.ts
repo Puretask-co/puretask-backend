@@ -281,10 +281,7 @@ export async function forceCancelJob(
     client_id: string;
     cleaner_id: string | null;
     credit_amount: number;
-  }>(
-    `SELECT status, client_id, cleaner_id, credit_amount FROM jobs WHERE id = $1`,
-    [jobId]
-  );
+  }>(`SELECT status, client_id, cleaner_id, credit_amount FROM jobs WHERE id = $1`, [jobId]);
 
   const job = jobResult.rows[0];
   if (!job) {
@@ -294,10 +291,7 @@ export async function forceCancelJob(
   const oldStatus = job.status;
 
   // Update job
-  await query(
-    `UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1`,
-    [jobId]
-  );
+  await query(`UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [jobId]);
 
   // Refund credits if requested
   if (refundCredits && job.credit_amount > 0) {
@@ -427,7 +421,13 @@ export async function adjustCredits(
     metadata: { adjustment: amount, reason },
   });
 
-  logger.info("credits_adjusted", { userId, amount, oldBalance, newBalance: oldBalance + amount, adminId });
+  logger.info("credits_adjusted", {
+    userId,
+    amount,
+    oldBalance,
+    newBalance: oldBalance + amount,
+    adminId,
+  });
 
   return {
     success: true,
@@ -440,19 +440,13 @@ export async function adjustCredits(
 /**
  * Force process stuck payout
  */
-export async function forceProcessPayout(
-  payoutId: string,
-  adminId: string
-): Promise<RepairResult> {
+export async function forceProcessPayout(payoutId: string, adminId: string): Promise<RepairResult> {
   const payoutResult = await query<{
     id: string;
     cleaner_id: string;
     amount_cents: number;
     status: string;
-  }>(
-    `SELECT * FROM payouts WHERE id = $1`,
-    [payoutId]
-  );
+  }>(`SELECT * FROM payouts WHERE id = $1`, [payoutId]);
 
   const payout = payoutResult.rows[0];
   if (!payout) {
@@ -513,13 +507,18 @@ export async function runSystemHealthCheck(): Promise<{
     ledgerInconsistencies: LedgerInconsistency[];
   };
 }> {
-  const [stuckJobs, stuckPayouts, ledgerInconsistencies, pendingWebhooks, fraudAlerts] = await Promise.all([
-    findStuckJobs(),
-    findStuckPayouts(),
-    findLedgerInconsistencies(),
-    query<{ count: string }>(`SELECT COUNT(*)::text as count FROM webhook_failures WHERE status = 'pending'`),
-    query<{ count: string }>(`SELECT COUNT(*)::text as count FROM fraud_alerts WHERE status = 'open'`),
-  ]);
+  const [stuckJobs, stuckPayouts, ledgerInconsistencies, pendingWebhooks, fraudAlerts] =
+    await Promise.all([
+      findStuckJobs(),
+      findStuckPayouts(),
+      findLedgerInconsistencies(),
+      query<{ count: string }>(
+        `SELECT COUNT(*)::text as count FROM webhook_failures WHERE status = 'pending'`
+      ),
+      query<{ count: string }>(
+        `SELECT COUNT(*)::text as count FROM fraud_alerts WHERE status = 'open'`
+      ),
+    ]);
 
   return {
     stuckJobs: stuckJobs.length,
@@ -534,4 +533,3 @@ export async function runSystemHealthCheck(): Promise<{
     },
   };
 }
-

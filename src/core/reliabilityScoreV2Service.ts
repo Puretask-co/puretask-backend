@@ -10,31 +10,27 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import { CleanerEvent, CleanerMetrics } from './types';
-import { clampScore, computeReliabilityTier, ReliabilityTier } from './scoring';
-import { RELIABILITY_CONFIG as cfg } from './config';
-import { minutesDiff } from './timeBuckets';
+import { CleanerEvent, CleanerMetrics } from "./types";
+import { clampScore, computeReliabilityTier, ReliabilityTier } from "./scoring";
+import { RELIABILITY_CONFIG as cfg } from "./config";
+import { minutesDiff } from "./timeBuckets";
 
 // ============================================
 // Types
 // ============================================
 
 export type CleanerJobStatus =
-  | 'completed'
-  | 'cancelled_by_client'
-  | 'cancelled_by_cleaner'
-  | 'no_show_cleaner'
-  | 'no_show_client'
-  | 'disputed'
-  | 'upcoming';
+  | "completed"
+  | "cancelled_by_client"
+  | "cancelled_by_cleaner"
+  | "no_show_cleaner"
+  | "no_show_client"
+  | "disputed"
+  | "upcoming";
 
-export type DisputeOutcome =
-  | 'cleaner_at_fault'
-  | 'client_at_fault'
-  | 'neutral'
-  | 'none';
+export type DisputeOutcome = "cleaner_at_fault" | "client_at_fault" | "neutral" | "none";
 
-export type CancellationBucket = 'gt48' | '24_48' | 'lt24' | null;
+export type CancellationBucket = "gt48" | "24_48" | "lt24" | null;
 
 export interface ReliabilityInputJob {
   id: number;
@@ -50,7 +46,7 @@ export interface ReliabilityInputJob {
   respondedWithin2h: boolean;
   disputeOutcome: DisputeOutcome;
   inconvenienceScore: number | null;
-  inconvenienceCausedBy: 'cleaner' | 'client' | null;
+  inconvenienceCausedBy: "cleaner" | "client" | null;
   cleanerRequestedRescheduleLt24: boolean;
   cancellationBucketByCleaner: CancellationBucket;
 }
@@ -111,11 +107,10 @@ export class ReliabilityScoreV2Service {
     const totalCompletedJobsEver = await this.getTotalCompletedJobsForCleaner(cleanerId);
 
     // Compute score
-    const result = this.computeReliabilityScoreFromJobs(
-      jobsInWindow,
-      eventCounts,
-      { cleanerId, totalCompletedJobsEver }
-    );
+    const result = this.computeReliabilityScoreFromJobs(jobsInWindow, eventCounts, {
+      cleanerId,
+      totalCompletedJobsEver,
+    });
 
     // Persist
     await this.updateCleanerReliability(cleanerId, {
@@ -189,7 +184,7 @@ export class ReliabilityScoreV2Service {
       return {
         cleanerId,
         reliabilityScore: provisional,
-        tier: 'Semi Pro',
+        tier: "Semi Pro",
         baseBehaviorScore: provisional,
         streakBonus: 0,
         eventPenaltySum: 0,
@@ -220,7 +215,7 @@ export class ReliabilityScoreV2Service {
     const punctualityRate = attendedCount ? onTimeCheckinJobs / attendedCount : 1;
 
     // Photo compliance
-    const photoRelevantJobs = jobs.filter(j => j.photosRequired || j.photosCount > 0);
+    const photoRelevantJobs = jobs.filter((j) => j.photosRequired || j.photosCount > 0);
     const photoCompliantJobs = photoRelevantJobs.filter(this.isPhotoCompliant).length;
     const photoComplianceRate = photoRelevantJobs.length
       ? photoCompliantJobs / photoRelevantJobs.length
@@ -296,8 +291,7 @@ export class ReliabilityScoreV2Service {
 
     // Cleaner cancellations
     const cleanerCancellationPenalty =
-      Math.abs(penalties.cancel24_48) * cancels24_48 +
-      Math.abs(penalties.cancelLt24) * cancelsLt24;
+      Math.abs(penalties.cancel24_48) * cancels24_48 + Math.abs(penalties.cancelLt24) * cancelsLt24;
 
     // No-shows
     const noShowPenalty = Math.abs(penalties.noShow) * cleanerNoShows;
@@ -310,8 +304,10 @@ export class ReliabilityScoreV2Service {
 
     // Inconvenience patterns
     let inconveniencePenalty = 0;
-    if (highInconvenienceJobs >= 3) inconveniencePenalty += Math.abs(penalties.inconveniencePattern);
-    if (highInconvenienceJobs >= 5) inconveniencePenalty += Math.abs(penalties.inconveniencePatternHigh);
+    if (highInconvenienceJobs >= 3)
+      inconveniencePenalty += Math.abs(penalties.inconveniencePattern);
+    if (highInconvenienceJobs >= 5)
+      inconveniencePenalty += Math.abs(penalties.inconveniencePatternHigh);
 
     const eventPenaltySum =
       lateReschedulePenalty +
@@ -321,11 +317,7 @@ export class ReliabilityScoreV2Service {
       inconveniencePenalty;
 
     // ======== Final Score ========
-    const computedScore = clampScore(
-      baseBehaviorScore + streakBonus - eventPenaltySum,
-      0,
-      100
-    );
+    const computedScore = clampScore(baseBehaviorScore + streakBonus - eventPenaltySum, 0, 100);
 
     // Ramp-up for new cleaners
     const windowCompletedOrAttended = attendedCount + cleanerNoShowJobs;
@@ -373,15 +365,11 @@ export class ReliabilityScoreV2Service {
   // ============================================
 
   private static isAttended(job: ReliabilityInputJob): boolean {
-    return (
-      !!job.checkInAt ||
-      job.status === 'completed' ||
-      job.status === 'cancelled_by_client'
-    );
+    return !!job.checkInAt || job.status === "completed" || job.status === "cancelled_by_client";
   }
 
   private static isCleanerNoShow(job: ReliabilityInputJob): boolean {
-    return job.status === 'no_show_cleaner';
+    return job.status === "no_show_cleaner";
   }
 
   private static isOnTimeCheckin(job: ReliabilityInputJob): boolean {
@@ -399,20 +387,20 @@ export class ReliabilityScoreV2Service {
   }
 
   private static isCompletionOk(job: ReliabilityInputJob): boolean {
-    return !!job.checkOutAt && (job.status === 'completed' || job.status === 'disputed');
+    return !!job.checkOutAt && (job.status === "completed" || job.status === "disputed");
   }
 
   private static isCleanerCancellation(job: ReliabilityInputJob): boolean {
-    return job.status === 'cancelled_by_cleaner';
+    return job.status === "cancelled_by_cleaner";
   }
 
   private static isDisputeCleanerFault(job: ReliabilityInputJob): boolean {
-    return job.disputeOutcome === 'cleaner_at_fault';
+    return job.disputeOutcome === "cleaner_at_fault";
   }
 
   private static isHighInconvenienceCausedByCleaner(job: ReliabilityInputJob): boolean {
     return (
-      job.inconvenienceCausedBy === 'cleaner' &&
+      job.inconvenienceCausedBy === "cleaner" &&
       job.inconvenienceScore !== null &&
       job.inconvenienceScore >= 3
     );
@@ -426,13 +414,13 @@ export class ReliabilityScoreV2Service {
     maxJobs: number = 20
   ): number | null {
     const rated = jobs
-      .filter(j => j.rating !== null && j.ratingCreatedAt !== null)
-      .sort((a, b) => (a.ratingCreatedAt!.getTime() - b.ratingCreatedAt!.getTime()));
+      .filter((j) => j.rating !== null && j.ratingCreatedAt !== null)
+      .sort((a, b) => a.ratingCreatedAt!.getTime() - b.ratingCreatedAt!.getTime());
 
     if (rated.length === 0) return null;
 
     const recent = rated.slice(-maxJobs);
-    const ratings = recent.map(j => j.rating!) as number[];
+    const ratings = recent.map((j) => j.rating!) as number[];
 
     if (ratings.length <= 2) {
       const sum = ratings.reduce((s, r) => s + r, 0);
@@ -442,9 +430,7 @@ export class ReliabilityScoreV2Service {
     // Compute median
     const sorted = [...ratings].sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
-    const median = sorted.length % 2 === 0
-      ? (sorted[mid - 1] + sorted[mid]) / 2
-      : sorted[mid];
+    const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 
     // Find worst rating
     const minRating = Math.min(...ratings);
@@ -453,7 +439,7 @@ export class ReliabilityScoreV2Service {
     let processed = ratings;
     if (minRating <= median - 2.0) {
       let dropped = false;
-      processed = ratings.filter(r => {
+      processed = ratings.filter((r) => {
         if (!dropped && r === minRating) {
           dropped = true;
           return false;
@@ -493,18 +479,20 @@ export class ReliabilityScoreV2Service {
       const onTime = attended.filter(this.isOnTimeCheckin).length;
       const punctualityRate = attendedCount === 0 ? 1 : onTime / attendedCount;
 
-      const photoRelevant = block.filter(j => j.photosRequired || j.photosCount > 0);
+      const photoRelevant = block.filter((j) => j.photosRequired || j.photosCount > 0);
       const photoCompliant = photoRelevant.filter(this.isPhotoCompliant).length;
-      const photoComplianceRate = photoRelevant.length === 0
-        ? 1
-        : photoCompliant / photoRelevant.length;
+      const photoComplianceRate =
+        photoRelevant.length === 0 ? 1 : photoCompliant / photoRelevant.length;
 
       if (punctualityRate >= 0.9 && photoComplianceRate >= 0.9) {
         streakBlocks++;
       }
     }
 
-    const bonus = Math.min(cfg.streakBonus.maxBonus, streakBlocks * cfg.streakBonus.pointsPerPerfectBlock);
+    const bonus = Math.min(
+      cfg.streakBonus.maxBonus,
+      streakBlocks * cfg.streakBonus.pointsPerPerfectBlock
+    );
     return bonus;
   }
 
@@ -513,12 +501,12 @@ export class ReliabilityScoreV2Service {
    */
   private static deriveEventCounts(jobs: ReliabilityInputJob[]): EventCounts {
     return {
-      lateReschedulesLt24: jobs.filter(j => j.cleanerRequestedRescheduleLt24).length,
+      lateReschedulesLt24: jobs.filter((j) => j.cleanerRequestedRescheduleLt24).length,
       cancels24_48: jobs.filter(
-        j => this.isCleanerCancellation(j) && j.cancellationBucketByCleaner === '24_48'
+        (j) => this.isCleanerCancellation(j) && j.cancellationBucketByCleaner === "24_48"
       ).length,
       cancelsLt24: jobs.filter(
-        j => this.isCleanerCancellation(j) && j.cancellationBucketByCleaner === 'lt24'
+        (j) => this.isCleanerCancellation(j) && j.cancellationBucketByCleaner === "lt24"
       ).length,
       cleanerNoShows: jobs.filter(this.isCleanerNoShow).length,
       disputesCleanerFault: jobs.filter(this.isDisputeCleanerFault).length,
@@ -562,7 +550,7 @@ export class ReliabilityScoreV2Service {
       [String(cleanerId), since.toISOString(), maxJobs]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       id: Number(row.id),
       status: row.status as CleanerJobStatus,
       scheduledStart: new Date(row.scheduled_start),
@@ -591,10 +579,8 @@ export class ReliabilityScoreV2Service {
   }
 
   private static async getActiveCleaners(): Promise<{ id: number }[]> {
-    const result = await query<{ user_id: string }>(
-      `SELECT user_id FROM cleaner_profiles`
-    );
-    return result.rows.map(row => ({ id: Number(row.user_id) }));
+    const result = await query<{ user_id: string }>(`SELECT user_id FROM cleaner_profiles`);
+    return result.rows.map((row) => ({ id: Number(row.user_id) }));
   }
 
   private static async updateCleanerReliability(
@@ -605,7 +591,11 @@ export class ReliabilityScoreV2Service {
       `UPDATE cleaner_profiles
        SET reliability_score = $2, tier = $3, updated_at = NOW()
        WHERE user_id = $1`,
-      [String(cleanerId), data.reliabilityScore, data.reliabilityTier.toLowerCase().replace(' ', '_')]
+      [
+        String(cleanerId),
+        data.reliabilityScore,
+        data.reliabilityTier.toLowerCase().replace(" ", "_"),
+      ]
     );
   }
 
@@ -627,4 +617,3 @@ export class ReliabilityScoreV2Service {
     );
   }
 }
-

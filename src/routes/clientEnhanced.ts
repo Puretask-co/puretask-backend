@@ -5,7 +5,12 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
-import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import {
+  requireAuth,
+  requireRole,
+  AuthedRequest,
+  authedHandler,
+} from "../middleware/authCanonical";
 import { query } from "../db/client";
 
 const clientEnhancedRouter = Router();
@@ -97,8 +102,8 @@ clientEnhancedRouter.post(
         error: { code: "SAVE_DRAFT_FAILED", message: "Failed to save draft" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -115,32 +120,35 @@ clientEnhancedRouter.post(
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/bookings/draft", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
+clientEnhancedRouter.get(
+  "/bookings/draft",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
 
-    const result = await query(
-      `
+      const result = await query(
+        `
       SELECT metadata->'draft_booking' as draft_booking
       FROM client_profiles
       WHERE user_id = $1
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    const draft = result.rows[0]?.draft_booking || null;
+      const draft = result.rows[0]?.draft_booking || null;
 
-    res.json({ draft });
-  } catch (error) {
-    logger.error("get_draft_booking_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_DRAFT_FAILED", message: "Failed to get draft" },
-    });
-  }
-}));
+      res.json({ draft });
+    } catch (error) {
+      logger.error("get_draft_booking_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_DRAFT_FAILED", message: "Failed to get draft" },
+      });
+    }
+  })
+);
 
 // ============================================
 // DASHBOARD INSIGHTS
@@ -161,13 +169,15 @@ clientEnhancedRouter.get("/bookings/draft", authedHandler(async (req: AuthedRequ
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/dashboard/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
+clientEnhancedRouter.get(
+  "/dashboard/insights",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
 
-    // Get booking patterns
-    const bookingPatterns = await query(
-      `
+      // Get booking patterns
+      const bookingPatterns = await query(
+        `
       SELECT 
         EXTRACT(DOW FROM scheduled_start_at) as day_of_week,
         EXTRACT(HOUR FROM scheduled_start_at) as hour,
@@ -178,12 +188,12 @@ clientEnhancedRouter.get("/dashboard/insights", authedHandler(async (req: Authed
       ORDER BY count DESC
       LIMIT 3
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    // Get favorite cleaner
-    const favoriteCleaner = await query(
-      `
+      // Get favorite cleaner
+      const favoriteCleaner = await query(
+        `
       SELECT 
         fc.cleaner_id,
         u.email,
@@ -198,53 +208,54 @@ clientEnhancedRouter.get("/dashboard/insights", authedHandler(async (req: Authed
       ORDER BY booking_count DESC
       LIMIT 1
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    // Get last booking date
-    const lastBooking = await query(
-      `
+      // Get last booking date
+      const lastBooking = await query(
+        `
       SELECT scheduled_start_at, cleaner_id
       FROM jobs
       WHERE client_id = $1
       ORDER BY scheduled_start_at DESC
       LIMIT 1
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    // Get credit expiration (if applicable)
-    const creditExpiration = await query(
-      `
+      // Get credit expiration (if applicable)
+      const creditExpiration = await query(
+        `
       SELECT MIN(expires_at) as next_expiration
       FROM credit_ledger
       WHERE user_id = $1 AND expires_at > NOW() AND balance > 0
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    const insights = {
-      bookingPatterns: bookingPatterns.rows.map((row) => ({
-        dayOfWeek: parseInt(row.day_of_week),
-        hour: parseInt(row.hour),
-        count: parseInt(row.count),
-      })),
-      favoriteCleaner: favoriteCleaner.rows[0] || null,
-      lastBooking: lastBooking.rows[0] || null,
-      creditExpiration: creditExpiration.rows[0]?.next_expiration || null,
-    };
+      const insights = {
+        bookingPatterns: bookingPatterns.rows.map((row) => ({
+          dayOfWeek: parseInt(row.day_of_week),
+          hour: parseInt(row.hour),
+          count: parseInt(row.count),
+        })),
+        favoriteCleaner: favoriteCleaner.rows[0] || null,
+        lastBooking: lastBooking.rows[0] || null,
+        creditExpiration: creditExpiration.rows[0]?.next_expiration || null,
+      };
 
-    res.json({ insights });
-  } catch (error) {
-    logger.error("get_dashboard_insights_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
-    });
-  }
-}));
+      res.json({ insights });
+    } catch (error) {
+      logger.error("get_dashboard_insights_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -339,8 +350,8 @@ clientEnhancedRouter.get(
         error: { code: "GET_RECOMMENDATIONS_FAILED", message: "Failed to get recommendations" },
       });
     }
-  }
-));
+  })
+);
 
 // ============================================
 // SAVED SEARCHES
@@ -413,8 +424,8 @@ clientEnhancedRouter.post(
         error: { code: "SAVE_SEARCH_FAILED", message: "Failed to save search" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -431,32 +442,35 @@ clientEnhancedRouter.post(
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/search/saved", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
+clientEnhancedRouter.get(
+  "/search/saved",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
 
-    const result = await query(
-      `
+      const result = await query(
+        `
       SELECT metadata->'saved_searches' as saved_searches
       FROM client_profiles
       WHERE user_id = $1
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    const savedSearches = result.rows[0]?.saved_searches || [];
+      const savedSearches = result.rows[0]?.saved_searches || [];
 
-    res.json({ savedSearches });
-  } catch (error) {
-    logger.error("get_saved_searches_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_SAVED_SEARCHES_FAILED", message: "Failed to get saved searches" },
-    });
-  }
-}));
+      res.json({ savedSearches });
+    } catch (error) {
+      logger.error("get_saved_searches_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_SAVED_SEARCHES_FAILED", message: "Failed to get saved searches" },
+      });
+    }
+  })
+);
 
 // ============================================
 // FAVORITES ENHANCEMENTS
@@ -525,8 +539,8 @@ clientEnhancedRouter.get(
         },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -543,12 +557,14 @@ clientEnhancedRouter.get(
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/favorites/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
+clientEnhancedRouter.get(
+  "/favorites/insights",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
 
-    const insights = await query(
-      `
+      const insights = await query(
+        `
       SELECT 
         COUNT(DISTINCT fc.cleaner_id) as total_favorites,
         COUNT(DISTINCT j.id) as total_bookings_with_favorites,
@@ -558,12 +574,12 @@ clientEnhancedRouter.get("/favorites/insights", authedHandler(async (req: Authed
       LEFT JOIN jobs j ON j.cleaner_id = fc.cleaner_id AND j.client_id = $1
       WHERE fc.client_id = $1
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    // Get most booked favorite
-    const mostBooked = await query(
-      `
+      // Get most booked favorite
+      const mostBooked = await query(
+        `
       SELECT 
         fc.cleaner_id,
         cp.first_name || ' ' || COALESCE(cp.last_name, '') as name,
@@ -577,25 +593,26 @@ clientEnhancedRouter.get("/favorites/insights", authedHandler(async (req: Authed
       ORDER BY booking_count DESC
       LIMIT 1
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    res.json({
-      insights: {
-        ...insights.rows[0],
-        mostBookedFavorite: mostBooked.rows[0] || null,
-      },
-    });
-  } catch (error) {
-    logger.error("get_favorites_insights_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
-    });
-  }
-}));
+      res.json({
+        insights: {
+          ...insights.rows[0],
+          mostBookedFavorite: mostBooked.rows[0] || null,
+        },
+      });
+    } catch (error) {
+      logger.error("get_favorites_insights_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
+      });
+    }
+  })
+);
 
 // ============================================
 // RECURRING BOOKINGS ENHANCEMENTS
@@ -664,8 +681,8 @@ clientEnhancedRouter.post(
         error: { code: "SKIP_BOOKING_FAILED", message: "Failed to skip booking" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -751,8 +768,8 @@ clientEnhancedRouter.get(
         error: { code: "GET_SUGGESTIONS_FAILED", message: "Failed to get suggestions" },
       });
     }
-  }
-));
+  })
+);
 
 // ============================================
 // PROFILE PREFERENCES
@@ -835,8 +852,8 @@ clientEnhancedRouter.put(
         error: { code: "SAVE_PREFERENCES_FAILED", message: "Failed to save preferences" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -853,32 +870,35 @@ clientEnhancedRouter.put(
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/profile/preferences", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
+clientEnhancedRouter.get(
+  "/profile/preferences",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
 
-    const result = await query(
-      `
+      const result = await query(
+        `
       SELECT metadata->'preferences' as preferences
       FROM client_profiles
       WHERE user_id = $1
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    const preferences = result.rows[0]?.preferences || {};
+      const preferences = result.rows[0]?.preferences || {};
 
-    res.json({ preferences });
-  } catch (error) {
-    logger.error("get_preferences_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_PREFERENCES_FAILED", message: "Failed to get preferences" },
-    });
-  }
-}));
+      res.json({ preferences });
+    } catch (error) {
+      logger.error("get_preferences_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_PREFERENCES_FAILED", message: "Failed to get preferences" },
+      });
+    }
+  })
+);
 
 /**
  * @swagger
@@ -907,33 +927,36 @@ clientEnhancedRouter.get("/profile/preferences", authedHandler(async (req: Authe
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.post("/profile/photo", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
-    // Note: File upload would be handled by multer or similar
-    // This is a placeholder - actual implementation would handle file upload
-    const { photo_url } = req.body;
+clientEnhancedRouter.post(
+  "/profile/photo",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
+      // Note: File upload would be handled by multer or similar
+      // This is a placeholder - actual implementation would handle file upload
+      const { photo_url } = req.body;
 
-    await query(
-      `
+      await query(
+        `
       UPDATE client_profiles
       SET avatar_url = $1, updated_at = NOW()
       WHERE user_id = $2
       `,
-      [photo_url, clientId]
-    );
+        [photo_url, clientId]
+      );
 
-    res.json({ success: true, photo_url });
-  } catch (error) {
-    logger.error("upload_profile_photo_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "UPLOAD_PHOTO_FAILED", message: "Failed to upload photo" },
-    });
-  }
-}));
+      res.json({ success: true, photo_url });
+    } catch (error) {
+      logger.error("upload_profile_photo_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "UPLOAD_PHOTO_FAILED", message: "Failed to upload photo" },
+      });
+    }
+  })
+);
 
 // ============================================
 // REVIEWS ENHANCEMENTS
@@ -1006,8 +1029,8 @@ clientEnhancedRouter.post(
         error: { code: "ADD_PHOTOS_FAILED", message: "Failed to add photos" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -1024,12 +1047,14 @@ clientEnhancedRouter.post(
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/reviews/insights", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
+clientEnhancedRouter.get(
+  "/reviews/insights",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
 
-    const insights = await query(
-      `
+      const insights = await query(
+        `
       SELECT 
         COUNT(*) as total_reviews,
         AVG(rating)::numeric(3,2) as avg_rating_given,
@@ -1038,20 +1063,21 @@ clientEnhancedRouter.get("/reviews/insights", authedHandler(async (req: AuthedRe
       FROM reviews
       WHERE reviewer_id = $1 AND reviewer_type = 'client'
       `,
-      [clientId]
-    );
+        [clientId]
+      );
 
-    res.json({ insights: insights.rows[0] });
-  } catch (error) {
-    logger.error("get_review_insights_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
-    });
-  }
-}));
+      res.json({ insights: insights.rows[0] });
+    } catch (error) {
+      logger.error("get_review_insights_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_INSIGHTS_FAILED", message: "Failed to get insights" },
+      });
+    }
+  })
+);
 
 // ============================================
 // JOB ENHANCEMENTS
@@ -1079,13 +1105,15 @@ clientEnhancedRouter.get("/reviews/insights", authedHandler(async (req: AuthedRe
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/jobs/:id/live-status", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
-    const { id } = req.params;
+clientEnhancedRouter.get(
+  "/jobs/:id/live-status",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
+      const { id } = req.params;
 
-    const job = await query(
-      `
+      const job = await query(
+        `
       SELECT 
         j.*,
         j.status as current_status,
@@ -1101,26 +1129,27 @@ clientEnhancedRouter.get("/jobs/:id/live-status", authedHandler(async (req: Auth
       FROM jobs j
       WHERE j.id = $1::uuid AND j.client_id = $2
       `,
-      [id, clientId]
-    );
+        [id, clientId]
+      );
 
-    if (job.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "JOB_NOT_FOUND", message: "Job not found" },
+      if (job.rows.length === 0) {
+        return res.status(404).json({
+          error: { code: "JOB_NOT_FOUND", message: "Job not found" },
+        });
+      }
+
+      res.json({ job: job.rows[0] });
+    } catch (error) {
+      logger.error("get_live_status_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_STATUS_FAILED", message: "Failed to get status" },
       });
     }
-
-    res.json({ job: job.rows[0] });
-  } catch (error) {
-    logger.error("get_live_status_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_STATUS_FAILED", message: "Failed to get status" },
-    });
-  }
-}));
+  })
+);
 
 /**
  * @swagger
@@ -1198,8 +1227,8 @@ END:VCALENDAR`;
         error: { code: "GENERATE_CALENDAR_FAILED", message: "Failed to generate calendar" },
       });
     }
-  }
-));
+  })
+);
 
 /**
  * @swagger
@@ -1223,36 +1252,39 @@ END:VCALENDAR`;
  *       403:
  *         description: Forbidden - clients only
  */
-clientEnhancedRouter.get("/jobs/:id/share-link", authedHandler(async (req: AuthedRequest, res: Response) => {
-  try {
-    const clientId = req.user!.id;
-    const { id } = req.params;
+clientEnhancedRouter.get(
+  "/jobs/:id/share-link",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const clientId = req.user!.id;
+      const { id } = req.params;
 
-    const job = await query(
-      "SELECT id FROM jobs WHERE id = $1::uuid AND client_id = $2",
-      [id, clientId]
-    );
+      const job = await query("SELECT id FROM jobs WHERE id = $1::uuid AND client_id = $2", [
+        id,
+        clientId,
+      ]);
 
-    if (job.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "JOB_NOT_FOUND", message: "Job not found" },
+      if (job.rows.length === 0) {
+        return res.status(404).json({
+          error: { code: "JOB_NOT_FOUND", message: "Job not found" },
+        });
+      }
+
+      // Generate shareable link (would use a token in production)
+      const shareLink = `${process.env.FRONTEND_URL || "http://localhost:3001"}/bookings/${id}/share`;
+
+      res.json({ shareLink });
+    } catch (error) {
+      logger.error("get_share_link_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_SHARE_LINK_FAILED", message: "Failed to get share link" },
       });
     }
-
-    // Generate shareable link (would use a token in production)
-    const shareLink = `${process.env.FRONTEND_URL || "http://localhost:3001"}/bookings/${id}/share`;
-
-    res.json({ shareLink });
-  } catch (error) {
-    logger.error("get_share_link_failed", {
-      error: (error as Error).message,
-      userId: req.user?.id,
-    });
-    res.status(500).json({
-      error: { code: "GET_SHARE_LINK_FAILED", message: "Failed to get share link" },
-    });
-  }
-}));
+  })
+);
 
 // ============================================
 // CREDIT AUTO-REFILL
@@ -1331,7 +1363,7 @@ clientEnhancedRouter.post(
         error: { code: "SETUP_AUTO_REFILL_FAILED", message: "Failed to setup auto-refill" },
       });
     }
-  }
-));
+  })
+);
 
 export default clientEnhancedRouter;

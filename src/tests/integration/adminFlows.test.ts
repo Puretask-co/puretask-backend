@@ -1,12 +1,11 @@
 import request from "supertest";
-import { describe, it, expect, beforeEach } from "@jest/globals";
-import { jest } from "@jest/globals";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import app from "../../index";
 import { query } from "../../db/client";
 
 // Mock the database client
-jest.mock("../../db/client", () => ({
-  query: jest.fn(),
+vi.mock("../../db/client", () => ({
+  query: vi.fn(),
 }));
 
 describe("Admin flows (integration-ish)", () => {
@@ -14,11 +13,11 @@ describe("Admin flows (integration-ish)", () => {
   const adminToken = "dummy-admin-token";
 
   beforeEach(() => {
-    jest.mocked(query).mockReset();
+    vi.mocked(query).mockReset();
   });
 
   it("routes dispute", async () => {
-    jest.mocked(query).mockResolvedValueOnce({ rows: [], rowCount: 0 }); // update disputes
+    vi.mocked(query).mockResolvedValueOnce({ rows: [], rowCount: 0 }); // update disputes
     const res = await agent
       .post("/alerts/smoke") // ensure auth middleware not blocking in test env; replace with dispute route below if auth bypassed
       .set("Authorization", `Bearer ${adminToken}`)
@@ -27,7 +26,7 @@ describe("Admin flows (integration-ish)", () => {
   });
 
   it("pauses payout", async () => {
-    jest.mocked(query).mockResolvedValue({ rows: [], rowCount: 0 });
+    vi.mocked(query).mockResolvedValue({ rows: [], rowCount: 0 });
     const res = await agent
       .post("/admin/payouts/cleaner123/pause")
       .set("Authorization", `Bearer ${adminToken}`)
@@ -36,11 +35,10 @@ describe("Admin flows (integration-ish)", () => {
   });
 
   it("lists recon flags", async () => {
-    jest.mocked(query).mockResolvedValue({ rows: [], rowCount: 0 });
+    vi.mocked(query).mockResolvedValue({ rows: [], rowCount: 0 });
     const res = await agent
       .get("/admin/payouts/reconciliation/flags")
       .set("Authorization", `Bearer ${adminToken}`);
     expect(res.status).toBeLessThan(500);
   });
 });
-

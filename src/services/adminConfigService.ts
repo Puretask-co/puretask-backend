@@ -111,7 +111,12 @@ export async function createConfigVersion(params: {
       }
     }
 
-    const inserted = await client.query<{ id: string; version: number; status: string; effective_at: Date }>(
+    const inserted = await client.query<{
+      id: string;
+      version: number;
+      status: string;
+      effective_at: Date;
+    }>(
       `INSERT INTO admin_config_versions
         (config_type, version, region_id, status, effective_at, payload, change_summary, created_by)
        VALUES ($1, $2, $3, $4, COALESCE($5::timestamptz, now()), $6::jsonb, $7, $8)

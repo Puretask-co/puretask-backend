@@ -4,6 +4,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth, type AuthedRequest } from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 import { requireIdempotency } from "../lib/idempotency";
 import { sendSuccess, sendCreated } from "../lib/response";
 import { asyncHandler, sendError } from "../lib/errors";
@@ -209,10 +210,10 @@ jobsRouter.get(
  */
 jobsRouter.get(
   "/:jobId",
+  requireOwnership("job", "jobId"),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const job = await getJob(jobId);
-
     if (!job) {
       return sendError(res, {
         code: "NOT_FOUND",
@@ -220,24 +221,6 @@ jobsRouter.get(
         statusCode: 404,
       } as any);
     }
-
-    // Access control
-    const role = getRole(req);
-    if (role === "client" && job.client_id !== req.user!.id) {
-      return sendError(res, {
-        code: "FORBIDDEN",
-        message: "Not your job",
-        statusCode: 403,
-      } as any);
-    }
-    if (role === "cleaner" && job.cleaner_id !== req.user!.id && job.status !== "requested") {
-      return sendError(res, {
-        code: "FORBIDDEN",
-        message: "Not your job",
-        statusCode: 403,
-      } as any);
-    }
-
     sendSuccess(res, { job });
   })
 );
@@ -305,6 +288,7 @@ const updateJobSchema = z
 
 jobsRouter.patch(
   "/:jobId",
+  requireOwnership("job", "jobId"),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const body = updateJobSchema.parse(req.body);
@@ -356,6 +340,7 @@ jobsRouter.patch(
  */
 jobsRouter.delete(
   "/:jobId",
+  requireOwnership("job", "jobId"),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const deleted = await deleteJob(jobId, req.user!.id);
@@ -417,6 +402,7 @@ jobsRouter.delete(
  */
 jobsRouter.get(
   "/:jobId/events",
+  requireOwnership("job", "jobId"),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const events = await getEvents(jobId);
@@ -495,6 +481,7 @@ const transitionJobSchema = z.object({
 
 jobsRouter.post(
   "/:jobId/transition",
+  requireOwnership("job", "jobId"),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const body = transitionJobSchema.parse(req.body);
@@ -514,15 +501,16 @@ jobsRouter.post(
 /**
  * POST /jobs/:jobId/pay
  * Create a PaymentIntent for direct job charge (pay at booking)
- * 
+ *
  * This is a convenience endpoint that proxies to the payment service.
  * NOTE: Direct card payments include a surcharge (NON_CREDIT_SURCHARGE_PERCENT).
  *       Use wallet credits to avoid the surcharge.
- * 
+ *
  * Body: { stripeCustomerId?: string }
  */
 jobsRouter.post(
   "/:jobId/pay",
+  requireOwnership("job", "jobId"),
   requireIdempotency,
   asyncHandler(async (req: AuthedRequest, res) => {
     try {
@@ -563,7 +551,8 @@ jobsRouter.post(
       }
 
       // Get Stripe customer ID from client profile (optional)
-      const stripeCustomerId = req.body?.stripeCustomerId || (await getClientStripeCustomerId(clientId));
+      const stripeCustomerId =
+        req.body?.stripeCustomerId || (await getClientStripeCustomerId(clientId));
 
       // Create payment intent with surcharge
       const result = await createJobPaymentIntent({
@@ -591,13 +580,17 @@ jobsRouter.post(
           totalAmountFormatted: `$${(result.amountCents / 100).toFixed(2)}`,
         },
         // Helpful message
-        pricingNote: surchargePercent > 0
-          ? `Includes ${surchargePercent}% convenience fee. Use wallet credits to save $${(surchargeAmountCents / 100).toFixed(2)}!`
-          : undefined,
+        pricingNote:
+          surchargePercent > 0
+            ? `Includes ${surchargePercent}% convenience fee. Use wallet credits to save $${(surchargeAmountCents / 100).toFixed(2)}!`
+            : undefined,
       });
     } catch (err: unknown) {
       const error = err as Error & { statusCode?: number };
-      logger.error("POST /jobs/:jobId/pay failed", { error: error.message, jobId: req.params.jobId });
+      logger.error("POST /jobs/:jobId/pay failed", {
+        error: error.message,
+        jobId: req.params.jobId,
+      });
 
       if (error.statusCode === 403) {
         return res.status(403).json({
@@ -654,6 +647,7 @@ jobsRouter.post(
  */
 jobsRouter.get(
   "/:jobId/candidates",
+  requireOwnership("job", "jobId"),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const clientId = req.user!.id;
@@ -743,6 +737,7 @@ jobsRouter.get(
  */
 jobsRouter.post(
   "/:jobId/offer",
+  requireOwnership("job", "jobId"),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const clientId = req.user!.id;
@@ -830,6 +825,7 @@ jobsRouter.post(
  */
 jobsRouter.get(
   "/:jobId/pricing",
+  requireOwnership("job", "jobId"),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const clientId = req.user!.id;
@@ -875,9 +871,10 @@ jobsRouter.get(
       savings: {
         cents: surchargeAmountCents,
         formatted: `$${(surchargeAmountCents / 100).toFixed(2)}`,
-        message: surchargePercent > 0
-          ? `Save ${(surchargeAmountCents / 100).toFixed(2)} by using wallet credits!`
-          : undefined,
+        message:
+          surchargePercent > 0
+            ? `Save ${(surchargeAmountCents / 100).toFixed(2)} by using wallet credits!`
+            : undefined,
       },
     });
   })

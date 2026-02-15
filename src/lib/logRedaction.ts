@@ -71,7 +71,7 @@ export function hashEmail(email: string): string {
   if (!email || typeof email !== "string") return email;
   const [localPart, domain] = email.split("@");
   if (!domain) return email; // Not a valid email
-  
+
   // Hash the local part, keep domain
   const hash = Buffer.from(localPart).toString("base64").substring(0, 8);
   return `${hash}@${domain}`;
@@ -90,9 +90,7 @@ export function redactSensitiveFields<T extends Record<string, any>>(
 
   if (Array.isArray(obj)) {
     return obj.map((item) =>
-      typeof item === "object" && item !== null
-        ? redactSensitiveFields(item, maxDepth - 1)
-        : item
+      typeof item === "object" && item !== null ? redactSensitiveFields(item, maxDepth - 1) : item
     ) as unknown as T;
   }
 
@@ -102,9 +100,7 @@ export function redactSensitiveFields<T extends Record<string, any>>(
     const lowerKey = key.toLowerCase();
 
     // Check if field name indicates sensitive data
-    const isSensitive = REDACTED_FIELDS.some((field) =>
-      lowerKey.includes(field)
-    );
+    const isSensitive = REDACTED_FIELDS.some((field) => lowerKey.includes(field));
 
     if (isSensitive) {
       redacted[key] = "[REDACTED]";

@@ -19,10 +19,10 @@ import { sendAlert as sendAlertLib } from "../../lib/alerting";
 
 // Thresholds for alerting
 const ALERT_THRESHOLDS = {
-  STUCK_JOBS: 5,        // Alert if > 5 stuck jobs
-  STUCK_PAYOUTS: 10,    // Alert if > 10 stuck payouts
-  LEDGER_ISSUES: 1,     // Alert immediately on ledger issues
-  FRAUD_ALERTS: 1,      // Alert on any fraud alerts
+  STUCK_JOBS: 5, // Alert if > 5 stuck jobs
+  STUCK_PAYOUTS: 10, // Alert if > 10 stuck payouts
+  LEDGER_ISSUES: 1, // Alert immediately on ledger issues
+  FRAUD_ALERTS: 1, // Alert on any fraud alerts
   WEBHOOK_FAILURES: 20, // Alert if > 20 pending webhooks
 };
 
@@ -177,7 +177,9 @@ async function main(): Promise<void> {
 /**
  * Auto-handle certain types of stuck jobs
  */
-async function autoHandleStuckJobs(stuckJobs: Array<{ id: string; reason: string; hours_stuck: number }>): Promise<void> {
+async function autoHandleStuckJobs(
+  stuckJobs: Array<{ id: string; reason: string; hours_stuck: number }>
+): Promise<void> {
   for (const job of stuckJobs) {
     // Auto-approve jobs that have been awaiting approval for too long
     if (job.reason.includes("Awaiting approval for 7+ days") && job.hours_stuck > 24 * 7) {
@@ -185,7 +187,7 @@ async function autoHandleStuckJobs(stuckJobs: Array<{ id: string; reason: string
 
       // Import dynamically to avoid circular deps
       const { forceCompleteJob } = await import("../../services/adminRepairService");
-      
+
       try {
         await forceCompleteJob(job.id, "system", "Auto-approved after 7+ days awaiting approval");
       } catch (err) {
@@ -257,4 +259,3 @@ if (require.main === module) {
 }
 
 export { main as runStuckJobDetection };
-

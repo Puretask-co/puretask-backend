@@ -6,8 +6,15 @@
 
 import { withTransaction } from "../../db/client";
 import { isGamificationEnabled } from "../../lib/gamificationFeatureFlags";
-import { getCleanerProgression, getGoalDefinitions } from "../../services/gamificationProgressionService";
-import { expireRewards, expireChoices, computeChoiceExpiresAt } from "../../services/gamificationRewardService";
+import {
+  getCleanerProgression,
+  getGoalDefinitions,
+} from "../../services/gamificationProgressionService";
+import {
+  expireRewards,
+  expireChoices,
+  computeChoiceExpiresAt,
+} from "../../services/gamificationRewardService";
 import { CashBudgetService } from "../../services/cashBudgetService";
 import { isCashReward } from "../../services/rewardKindHelpers";
 import { BadgeService } from "../../services/badgeService";
@@ -133,7 +140,10 @@ async function grantRewardsForGoal(
       kind: rewardRaw.kind,
       name: rewardRaw.name,
       params: rewardRaw.params ?? {},
-      stacking_rule: (rewardRaw.stacking_rule || "no_stack") as "no_stack" | "extend_duration" | "extend_uses",
+      stacking_rule: (rewardRaw.stacking_rule || "no_stack") as
+        | "no_stack"
+        | "extend_duration"
+        | "extend_uses",
     };
 
     const choiceGroup = Object.values(choiceGroups).find((g) => g.options.includes(rewardId));
@@ -179,8 +189,10 @@ async function grantRewardsForGoal(
           cleaner_id: cleanerId,
           reward_id: rewardId,
           granted_at: (existingRows.rows[0] as { granted_at: Date }).granted_at.toISOString(),
-          ends_at: (existingRows.rows[0] as { ends_at: Date | null }).ends_at?.toISOString() ?? null,
-          uses_remaining: (existingRows.rows[0] as { uses_remaining: number | null }).uses_remaining,
+          ends_at:
+            (existingRows.rows[0] as { ends_at: Date | null }).ends_at?.toISOString() ?? null,
+          uses_remaining: (existingRows.rows[0] as { uses_remaining: number | null })
+            .uses_remaining,
           source: {
             source_type: "goal" as const,
             source_id: goalId,

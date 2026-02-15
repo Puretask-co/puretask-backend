@@ -14,8 +14,8 @@ import { runNoShowDetectionWorker } from "./v1-core/noShowDetection";
 import { runPhotoRetentionCleanup } from "./v2-operations/photoRetentionCleanup";
 import { runCreditEconomyMaintenance } from "./v2-operations/creditEconomyMaintenance";
 import { runPayoutRetry } from "./v2-operations/payoutRetry";
-import { main as runPayoutReconciliation } from "./v2-operations/payoutReconciliation";
-import { main as runBackupDaily } from "./v2-operations/backupDaily";
+import { runPayoutReconciliation } from "./v2-operations/payoutReconciliation";
+import { runBackupDaily } from "./v2-operations/backupDaily";
 
 // V3 Automation Workers
 import { runSubscriptionJobs } from "./v3-automation/subscriptionJobs";
@@ -67,7 +67,7 @@ type WorkerName =
 const workers: Record<string, () => Promise<unknown>> = {
   "auto-cancel": runAutoCancelWorker,
   "auto-expire": runAutoExpireWorker,
-  "payouts": runPayoutWeeklyWorker,
+  payouts: runPayoutWeeklyWorker,
   "payout-weekly": runPayoutWeeklyWorker,
   "retry-notifications": retryFailedNotifications,
   "webhook-retry": runWebhookRetryWorker,
@@ -141,4 +141,3 @@ if (require.main === module) {
       process.exit(1);
     });
 }
-

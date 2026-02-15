@@ -8,11 +8,7 @@ import { query } from "../db/client";
 type AnyJson = Record<string, unknown>;
 
 export class ProgressDebugService {
-  async getCleanerDebug(params: {
-    cleaner_id: string;
-    job_id?: string;
-    limit?: number;
-  }): Promise<{
+  async getCleanerDebug(params: { cleaner_id: string; job_id?: string; limit?: number }): Promise<{
     cleaner_id: string;
     status: unknown;
     recent_goals: unknown[];
@@ -32,7 +28,10 @@ export class ProgressDebugService {
       this.getRecentEvents(cleaner_id, job_id, limit),
     ]);
 
-    const diagnostics = this.buildDiagnostics(recentEvents as Array<{ event_type: string; occurred_at: string; payload: AnyJson }>, job_id);
+    const diagnostics = this.buildDiagnostics(
+      recentEvents as Array<{ event_type: string; occurred_at: string; payload: AnyJson }>,
+      job_id
+    );
 
     return {
       cleaner_id,
@@ -145,7 +144,9 @@ export class ProgressDebugService {
     const diags: AnyJson = {};
 
     // Meaningful login: session + action within 15m
-    const sessions = events.filter((e) => e.event_type === "session_started" || e.event_type === "session_start");
+    const sessions = events.filter(
+      (e) => e.event_type === "session_started" || e.event_type === "session_start"
+    );
     const actions = events.filter((e) => e.event_type === "meaningful_action");
     if (sessions.length > 0) {
       const s = sessions[0];
@@ -188,16 +189,16 @@ export class ProgressDebugService {
 
     // Photos: clock window
     const clockIn = events.find((e) => e.event_type === "clock_in" || e.event_type === "clockin");
-    const clockOut = events.find((e) => e.event_type === "clock_out" || e.event_type === "clockout");
+    const clockOut = events.find(
+      (e) => e.event_type === "clock_out" || e.event_type === "clockout"
+    );
     const photos = events.filter(
       (e) => e.event_type === "photo_uploaded" || e.event_type === "photo_upload"
     );
     if (clockIn && clockOut && photos.length > 0) {
       const start = new Date(clockIn.occurred_at).getTime();
       const end = new Date(clockOut.occurred_at).getTime();
-      const before = photos.find(
-        (p) => (p.payload?.kind ?? p.payload?.phase) === "before"
-      );
+      const before = photos.find((p) => (p.payload?.kind ?? p.payload?.phase) === "before");
       const after = photos.find((p) => (p.payload?.kind ?? p.payload?.phase) === "after");
       const beforeOk = before
         ? new Date(before.occurred_at).getTime() >= start &&
@@ -264,9 +265,10 @@ export class ProgressDebugService {
         declined_at: d.occurred_at,
         reason: d.payload?.reason ?? null,
         good_faith: Boolean(d.payload?.good_faith ?? false),
-        note: (d.payload?.good_faith ?? false)
-          ? "Good-faith decline (does not affect acceptance rate)."
-          : "Non-good-faith decline (affects acceptance rate).",
+        note:
+          (d.payload?.good_faith ?? false)
+            ? "Good-faith decline (does not affect acceptance rate)."
+            : "Non-good-faith decline (affects acceptance rate).",
       };
     }
 

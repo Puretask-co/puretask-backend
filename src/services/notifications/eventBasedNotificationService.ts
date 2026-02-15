@@ -4,11 +4,7 @@
 
 import { publishEvent } from "../../lib/events";
 import { logger } from "../../lib/logger";
-import {
-  NotificationPayload,
-  NotificationResult,
-  NotificationType,
-} from "./types";
+import { NotificationPayload, NotificationResult, NotificationType } from "./types";
 import {
   createCommunicationPayload,
   getTemplateIdFromEnvVar,
@@ -23,7 +19,7 @@ import { env } from "../../config/env";
 /**
  * Maps NotificationType to template keys (from email-registry.md)
  */
-const NOTIFICATION_TYPE_TO_TEMPLATE_KEY: Record<NotificationType, string> = {
+const NOTIFICATION_TYPE_TO_TEMPLATE_KEY: Partial<Record<NotificationType, string>> = {
   // Job lifecycle
   "job.created": "email.client.job_booked",
   "job.accepted": "email.client.job_accepted",
@@ -40,14 +36,14 @@ const NOTIFICATION_TYPE_TO_TEMPLATE_KEY: Record<NotificationType, string> = {
   "payout.processed": "email.cleaner.payout_sent",
   "payout.failed": "email.cleaner.payout_failed", // Note: may need to add this template
   // Account
-  "welcome": "email.user.welcome",
+  welcome: "email.user.welcome",
   "password.reset": "email.user.password_reset",
 };
 
 /**
  * Maps NotificationType to event names
  */
-const NOTIFICATION_TYPE_TO_EVENT_NAME: Record<NotificationType, string> = {
+const NOTIFICATION_TYPE_TO_EVENT_NAME: Partial<Record<NotificationType, string>> = {
   "job.created": "job.booked",
   "job.accepted": "job.accepted",
   "job.on_my_way": "cleaner.on_my_way",
@@ -61,7 +57,7 @@ const NOTIFICATION_TYPE_TO_EVENT_NAME: Record<NotificationType, string> = {
   "credits.low": "credits.low",
   "payout.processed": "payout.sent",
   "payout.failed": "payout.failed",
-  "welcome": "user.registered",
+  welcome: "user.registered",
   "password.reset": "user.password_reset_requested",
 };
 
@@ -130,6 +126,10 @@ export async function sendNotificationViaEvent(
 
     // Get event name from notification type
     const eventName = NOTIFICATION_TYPE_TO_EVENT_NAME[input.type];
+    if (!eventName) {
+      logger.error("unknown_event_for_notification_type", { type: input.type });
+      return { success: false, error: `No event mapping for type: ${input.type}` };
+    }
 
     // Extract jobId from data if present
     const jobId = (input.data as { jobId?: string })?.jobId || null;
@@ -172,5 +172,3 @@ export async function sendNotificationViaEvent(
     return { success: false, error: error.message };
   }
 }
-
-

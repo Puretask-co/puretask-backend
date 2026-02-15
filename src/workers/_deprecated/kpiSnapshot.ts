@@ -9,15 +9,17 @@ import { KpiSnapshot } from "../../types/db";
 /**
  * Get job counts by status for a date range
  */
-async function getJobCountsByStatus(dateFrom?: string, dateTo?: string): Promise<{
+async function getJobCountsByStatus(
+  dateFrom?: string,
+  dateTo?: string
+): Promise<{
   total: number;
   completed: number;
   disputed: number;
   cancelled: number;
 }> {
-  const dateFilter = dateFrom && dateTo
-    ? `AND created_at >= $1::timestamptz AND created_at <= $2::timestamptz`
-    : "";
+  const dateFilter =
+    dateFrom && dateTo ? `AND created_at >= $1::timestamptz AND created_at <= $2::timestamptz` : "";
   const params = dateFrom && dateTo ? [dateFrom, dateTo] : [];
 
   const result = await query<{
@@ -78,13 +80,7 @@ export async function captureDailySnapshot(date?: Date): Promise<KpiSnapshot> {
         cancelled_jobs = EXCLUDED.cancelled_jobs
       RETURNING *
     `,
-    [
-      dateStr,
-      counts.total,
-      counts.completed,
-      counts.disputed,
-      counts.cancelled,
-    ]
+    [dateStr, counts.total, counts.completed, counts.disputed, counts.cancelled]
   );
 
   const snapshot = result.rows[0];

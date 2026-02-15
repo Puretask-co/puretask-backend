@@ -6,6 +6,7 @@ import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
 import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 import { requireIdempotency } from "../lib/idempotency";
 import { sendSuccess } from "../lib/response";
 import {
@@ -60,7 +61,7 @@ trackingRouter.use(requireAuth);
  *                     cleanerLocation: { type: 'object', nullable: true }
  *                     timeline: { type: 'array', items: { type: 'object' } }
  */
-trackingRouter.get("/:jobId", async (req: AuthedRequest, res: Response) => {
+trackingRouter.get("/:jobId", requireOwnership("job", "jobId"), async (req: AuthedRequest, res: Response) => {
   try {
     const state = await getJobTrackingState(req.params.jobId);
     res.json({ tracking: state });
@@ -129,6 +130,7 @@ const locationSchema = z.object({
  */
 trackingRouter.post(
   "/:jobId/en-route",
+  requireOwnership("job", "jobId"),
   validateBody(z.object({ location: locationSchema })),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -190,6 +192,7 @@ trackingRouter.post(
  */
 trackingRouter.post(
   "/:jobId/arrived",
+  requireOwnership("job", "jobId"),
   validateBody(z.object({ location: locationSchema })),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -259,6 +262,7 @@ const checkInSchema = z.object({
 
 trackingRouter.post(
   "/:jobId/check-in",
+  requireOwnership("job", "jobId"),
   validateBody(checkInSchema),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -266,12 +270,7 @@ trackingRouter.post(
         return res.status(403).json({ error: { code: "FORBIDDEN", message: "Cleaners only" } });
       }
 
-      await checkIn(
-        req.params.jobId,
-        req.user.id,
-        req.body.location,
-        req.body.beforePhotos
-      );
+      await checkIn(req.params.jobId, req.user.id, req.body.location, req.body.beforePhotos);
       res.json({ success: true, status: "in_progress" });
     } catch (error) {
       const err = error as Error & { statusCode?: number };
@@ -329,6 +328,7 @@ const checkOutSchema = z.object({
 
 trackingRouter.post(
   "/:jobId/check-out",
+  requireOwnership("job", "jobId"),
   validateBody(checkOutSchema),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -336,12 +336,7 @@ trackingRouter.post(
         return res.status(403).json({ error: { code: "FORBIDDEN", message: "Cleaners only" } });
       }
 
-      await checkOut(
-        req.params.jobId,
-        req.user.id,
-        req.body.afterPhotos,
-        req.body.notes
-      );
+      await checkOut(req.params.jobId, req.user.id, req.body.afterPhotos, req.body.notes);
       res.json({ success: true, status: "awaiting_approval" });
     } catch (error) {
       const err = error as Error & { statusCode?: number };
@@ -397,6 +392,7 @@ trackingRouter.post(
  */
 trackingRouter.post(
   "/:jobId/location",
+  requireOwnership("job", "jobId"),
   validateBody(z.object({ location: locationSchema })),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -472,6 +468,7 @@ const approveSchema = z.object({
 
 trackingRouter.post(
   "/:jobId/approve",
+  requireOwnership("job", "jobId"),
   requireIdempotency,
   validateBody(approveSchema),
   async (req: AuthedRequest, res: Response) => {
@@ -543,6 +540,7 @@ const disputeSchema = z.object({
 
 trackingRouter.post(
   "/:jobId/dispute",
+  requireOwnership("job", "jobId"),
   validateBody(disputeSchema),
   async (req: AuthedRequest, res: Response) => {
     try {
@@ -550,12 +548,7 @@ trackingRouter.post(
         return res.status(403).json({ error: { code: "FORBIDDEN", message: "Clients only" } });
       }
 
-      await disputeJob(
-        req.params.jobId,
-        req.user.id,
-        req.body.reason,
-        req.body.requestedRefund
-      );
+      await disputeJob(req.params.jobId, req.user.id, req.body.reason, req.body.requestedRefund);
       res.json({ success: true, status: "disputed" });
     } catch (error) {
       const err = error as Error & { statusCode?: number };
@@ -568,4 +561,3 @@ trackingRouter.post(
 );
 
 export default trackingRouter;
-

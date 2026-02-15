@@ -3,7 +3,7 @@
 
 import { query } from "../../db/client";
 import { logger } from "../../lib/logger";
-import { ReliabilityTier } from '../scoring';
+import { ReliabilityTier } from "../scoring";
 
 // ============================================
 // Types
@@ -39,18 +39,17 @@ export interface CleanerEventRecord {
 
 /**
  * Task 1.1: db.cleanerMetrics.getByCleanerId(cleanerId)
- * 
+ *
  * Retrieves pre-aggregated metrics for a cleaner's rolling window
  * (last 30 jobs or 60 days).
- * 
+ *
  * If no record exists, computes it on-the-fly from jobs table.
  */
 export async function getCleanerMetricsById(cleanerId: number): Promise<CleanerMetricsRecord> {
   // First try to get from pre-aggregated table
-  const cached = await query<any>(
-    `SELECT * FROM cleaner_metrics WHERE cleaner_id = $1`,
-    [String(cleanerId)]
-  );
+  const cached = await query<any>(`SELECT * FROM cleaner_metrics WHERE cleaner_id = $1`, [
+    String(cleanerId),
+  ]);
 
   if (cached.rows.length > 0) {
     const row = cached.rows[0];
@@ -71,10 +70,10 @@ export async function getCleanerMetricsById(cleanerId: number): Promise<CleanerM
 
   // Compute from jobs table (rolling 60 days, max 30 jobs)
   const computed = await computeCleanerMetrics(cleanerId);
-  
+
   // Cache the result
   await upsertCleanerMetrics(computed);
-  
+
   return computed;
 }
 
@@ -112,7 +111,7 @@ async function computeCleanerMetrics(cleanerId: number): Promise<CleanerMetricsR
   );
 
   const row = result.rows[0] || {};
-  
+
   return {
     cleanerId,
     totalJobsWindow: Number(row.total_jobs || 0),
@@ -170,7 +169,7 @@ async function upsertCleanerMetrics(metrics: CleanerMetricsRecord): Promise<void
 
 /**
  * Task 1.2: db.cleanerEvents.sumWeightsSince(cleanerId, days)
- * 
+ *
  * Returns sum of all event weights (penalties/bonuses) for a cleaner
  * within the last N days.
  */
@@ -185,7 +184,7 @@ export async function sumCleanerEventWeightsSince(
      AND created_at >= NOW() - INTERVAL '1 day' * $2`,
     [String(cleanerId), days]
   );
-  
+
   return Number(result.rows[0]?.sum || 0);
 }
 
@@ -195,7 +194,7 @@ export async function sumCleanerEventWeightsSince(
 
 /**
  * Task 1.3: db.cleanerWeeklyStreaks.countStreaks(cleanerId, maxWeeks)
- * 
+ *
  * Counts how many "perfect weeks" the cleaner has had recently.
  * A perfect week = no cancellations, no no-shows, punctuality >= 90%, photo compliance >= 90%
  */
@@ -212,7 +211,7 @@ export async function countCleanerWeeklyStreaks(
      LIMIT $2`,
     [String(cleanerId), maxWeeks]
   );
-  
+
   return Number(result.rows[0]?.count || 0);
 }
 
@@ -226,7 +225,7 @@ export async function updateCleanerWeeklyStreak(
 ): Promise<boolean> {
   // Get jobs for this week
   const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-  
+
   const result = await query<any>(
     `SELECT
       COUNT(*) FILTER (WHERE status = 'cancelled_by_cleaner')::int as cancels,
@@ -245,8 +244,8 @@ export async function updateCleanerWeeklyStreak(
   );
 
   const row = result.rows[0] || {};
-  
-  const isStreak = 
+
+  const isStreak =
     Number(row.cancels || 0) === 0 &&
     Number(row.no_shows || 0) === 0 &&
     (row.punctuality_rate === null || Number(row.punctuality_rate) >= 0.9) &&
@@ -256,7 +255,7 @@ export async function updateCleanerWeeklyStreak(
     `INSERT INTO cleaner_weekly_streaks (cleaner_id, week_start, is_streak, created_at)
      VALUES ($1, $2, $3, NOW())
      ON CONFLICT (cleaner_id, week_start) DO UPDATE SET is_streak = $3`,
-    [String(cleanerId), weekStart.toISOString().split('T')[0], isStreak]
+    [String(cleanerId), weekStart.toISOString().split("T")[0], isStreak]
   );
 
   return isStreak;
@@ -268,15 +267,15 @@ export async function updateCleanerWeeklyStreak(
 
 /**
  * Task 1.4: db.cleaners.updateReliability(cleanerId, { reliabilityScore, reliabilityTier })
- * 
+ *
  * Updates the cleaner's reliability score and tier in their profile.
  */
 export async function updateCleanerReliability(
   cleanerId: number,
   data: { reliabilityScore: number; reliabilityTier: ReliabilityTier }
 ): Promise<void> {
-  const tierValue = data.reliabilityTier.toLowerCase().replace(' ', '_');
-  
+  const tierValue = data.reliabilityTier.toLowerCase().replace(" ", "_");
+
   await query(
     `UPDATE cleaner_profiles
      SET reliability_score = $2, tier = $3, updated_at = NOW()
@@ -297,7 +296,7 @@ export async function updateCleanerReliability(
 
 /**
  * Task 1.5: db.jobs.countForCleaner(cleanerId)
- * 
+ *
  * Returns the total number of completed jobs for a cleaner (all time).
  * Used for new cleaner ramp-up logic.
  */
@@ -309,7 +308,7 @@ export async function countJobsForCleaner(cleanerId: number): Promise<number> {
      AND status = 'completed'`,
     [String(cleanerId)]
   );
-  
+
   return Number(result.rows[0]?.count || 0);
 }
 
@@ -339,7 +338,7 @@ export async function insertCleanerEvent(event: {
       JSON.stringify(event.metadata || {}),
     ]
   );
-  
+
   return Number(result.rows[0].id);
 }
 
@@ -350,8 +349,8 @@ export async function getActiveCleaners(): Promise<{ id: number }[]> {
   const result = await query<{ user_id: string }>(
     `SELECT user_id FROM cleaner_profiles WHERE is_available = true`
   );
-  
-  return result.rows.map(row => ({ id: Number(row.user_id) }));
+
+  return result.rows.map((row) => ({ id: Number(row.user_id) }));
 }
 
 /**
@@ -361,4 +360,3 @@ export async function refreshCleanerMetrics(cleanerId: number): Promise<void> {
   const metrics = await computeCleanerMetrics(cleanerId);
   await upsertCleanerMetrics(metrics);
 }
-

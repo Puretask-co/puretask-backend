@@ -1,14 +1,14 @@
 // src/middleware/__tests__/authCanonical.test.ts
 // Unit tests for canonical auth middleware (requireAuth, requireRole)
 
-import { describe, it, expect, beforeEach } from "@jest/globals";
+import { beforeEach, vi } from "vitest";
 import { Request, Response, NextFunction } from "express";
 import { requireAuth, requireRole, requireAdmin, AuthedRequest } from "../authCanonical";
 import { verifyAuthToken } from "../../lib/auth";
 
-jest.mock("../../lib/auth");
-jest.mock("../../lib/logger", () => ({
-  logger: { warn: jest.fn(), error: jest.fn() },
+vi.mock("../../lib/auth");
+vi.mock("../../lib/logger", () => ({
+  logger: { warn: vi.fn(), error: vi.fn() },
 }));
 
 describe("requireAuth", () => {
@@ -19,18 +19,18 @@ describe("requireAuth", () => {
   beforeEach(() => {
     req = { headers: {}, path: "/test" };
     res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
     };
-    next = jest.fn();
-    jest.clearAllMocks();
+    next = vi.fn();
+    vi.clearAllMocks();
   });
 
   it("returns 401 when no authorization header", async () => {
     req.headers = {};
     await requireAuth(req as Request, res as Response, next);
     expect(res.status).toHaveBeenCalledWith(401);
-    expect((res.json as jest.Mock).mock.calls[0][0].error.code).toBe("UNAUTHENTICATED");
+    expect(vi.mocked(res.json).mock.calls[0][0].error.code).toBe("UNAUTHENTICATED");
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -43,17 +43,17 @@ describe("requireAuth", () => {
 
   it("returns 401 when token is invalid", async () => {
     req.headers = { authorization: "Bearer bad-token" };
-    (verifyAuthToken as jest.Mock).mockRejectedValue(new Error("invalid"));
+    vi.mocked(verifyAuthToken).mockRejectedValue(new Error("invalid"));
     await requireAuth(req as Request, res as Response, next);
     expect(res.status).toHaveBeenCalledWith(401);
-    expect((res.json as jest.Mock).mock.calls[0][0].error.code).toBe("INVALID_TOKEN");
+    expect(vi.mocked(res.json).mock.calls[0][0].error.code).toBe("INVALID_TOKEN");
     expect(next).not.toHaveBeenCalled();
   });
 
   it("attaches user and calls next when token is valid", async () => {
     req.headers = { authorization: "Bearer valid-token" };
     const mockUser = { id: "user-1", role: "client" as const, email: null };
-    (verifyAuthToken as jest.Mock).mockResolvedValue(mockUser);
+    vi.mocked(verifyAuthToken).mockResolvedValue(mockUser);
     await requireAuth(req as Request, res as Response, next);
     expect((req as AuthedRequest).user).toEqual({ id: "user-1", role: "client", email: null });
     expect(next).toHaveBeenCalled();
@@ -69,11 +69,11 @@ describe("requireRole", () => {
   beforeEach(() => {
     req = { path: "/test" };
     res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
     };
-    next = jest.fn();
-    jest.clearAllMocks();
+    next = vi.fn();
+    vi.clearAllMocks();
   });
 
   it("returns 401 when user is missing", () => {
@@ -89,7 +89,7 @@ describe("requireRole", () => {
     const middleware = requireRole("admin");
     middleware(req as Request, res as Response, next);
     expect(res.status).toHaveBeenCalledWith(403);
-    expect((res.json as jest.Mock).mock.calls[0][0].error.code).toBe("FORBIDDEN");
+    expect(vi.mocked(res.json).mock.calls[0][0].error.code).toBe("FORBIDDEN");
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -117,11 +117,11 @@ describe("requireAdmin", () => {
   beforeEach(() => {
     req = { path: "/admin" };
     res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
     };
-    next = jest.fn();
-    jest.clearAllMocks();
+    next = vi.fn();
+    vi.clearAllMocks();
   });
 
   it("returns 403 when user is not admin", () => {

@@ -120,7 +120,6 @@ matchingRouter.get("/jobs/:jobId/candidates", async (req: AuthedRequest, res) =>
         },
       })),
     });
-
   } catch (err) {
     logger.error("matching_candidates_error", {
       jobId,
@@ -158,7 +157,7 @@ matchingRouter.post("/jobs/:jobId/auto-assign", async (req: AuthedRequest, res) 
   const userRole = req.user?.role;
 
   // Only admins or system can auto-assign
-  if (userRole !== 'admin') {
+  if (userRole !== "admin") {
     return res.status(403).json({ error: "Unauthorized - only admins can auto-assign" });
   }
 
@@ -172,7 +171,7 @@ matchingRouter.post("/jobs/:jobId/auto-assign", async (req: AuthedRequest, res) 
     // Get recommended cleaner (auto-match mode)
     const matchingResult = await MatchingService.findCandidates(context);
     const candidates = matchingResult.candidates;
-    
+
     if (candidates.length === 0) {
       logger.warn("no_candidates_for_auto_assign", { jobId });
       return res.status(404).json({
@@ -218,7 +217,6 @@ matchingRouter.post("/jobs/:jobId/auto-assign", async (req: AuthedRequest, res) 
         isRepeatClient: bestMatch.isRepeatClient,
       },
     });
-
   } catch (err) {
     logger.error("auto_assign_error", {
       jobId,
@@ -240,14 +238,13 @@ matchingRouter.get("/jobs/:jobId/history", async (req: AuthedRequest, res) => {
 
     return res.json({
       jobId,
-      recommendations: history.map(h => ({
+      recommendations: history.map((h) => ({
         cleanerId: h.cleanerId,
         matchScore: Math.round(h.matchScore * 100) / 100,
         rank: h.rank,
         generatedAt: h.generatedAt.toISOString(),
       })),
     });
-
   } catch (err) {
     logger.error("match_history_error", {
       jobId,
@@ -275,10 +272,10 @@ matchingRouter.get("/explain/:jobId/:cleanerId", async (req: AuthedRequest, res)
     // Get all candidates to find this cleaner
     const matchingResult = await MatchingService.findCandidates(context);
     const ranked = matchingResult.candidates;
-    
-    const cleanerResult = ranked.find(r => r.cleaner.id === cleanerId);
+
+    const cleanerResult = ranked.find((r) => r.cleaner.id === cleanerId);
     if (!cleanerResult) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: "Cleaner not found in candidate pool",
         possibleReasons: [
           "Cleaner is not available at the requested time",
@@ -301,9 +298,9 @@ matchingRouter.get("/explain/:jobId/:cleanerId", async (req: AuthedRequest, res)
     if (cleanerResult.distanceKm < 5) {
       explanation.push(`Close proximity (${Math.round(cleanerResult.distanceKm)}km away)`);
     }
-    if (cleanerResult.cleaner.reliabilityTier === 'Elite') {
+    if (cleanerResult.cleaner.reliabilityTier === "Elite") {
       explanation.push("Elite tier cleaner - top performer");
-    } else if (cleanerResult.cleaner.reliabilityTier === 'Pro') {
+    } else if (cleanerResult.cleaner.reliabilityTier === "Pro") {
       explanation.push("Pro tier cleaner - highly rated");
     }
 
@@ -311,7 +308,7 @@ matchingRouter.get("/explain/:jobId/:cleanerId", async (req: AuthedRequest, res)
       jobId,
       cleanerId,
       matchScore: Math.round(cleanerResult.score * 100) / 100,
-      rank: ranked.findIndex(r => r.cleaner.id === cleanerId) + 1,
+      rank: ranked.findIndex((r) => r.cleaner.id === cleanerId) + 1,
       explanation,
       breakdown: {
         reliability: {
@@ -324,7 +321,7 @@ matchingRouter.get("/explain/:jobId/:cleanerId", async (req: AuthedRequest, res)
         },
         repeatClient: {
           score: cleanerResult.factors.repeatClientBonus,
-          description: cleanerResult.isRepeatClient 
+          description: cleanerResult.isRepeatClient
             ? "Bonus for previous successful jobs with you"
             : "No prior history with this client",
         },
@@ -336,13 +333,13 @@ matchingRouter.get("/explain/:jobId/:cleanerId", async (req: AuthedRequest, res)
         },
         riskAlignment: {
           score: -Math.round(cleanerResult.factors.riskPenalty * 100) / 100,
-          description: cleanerResult.factors.riskPenalty > 0
-            ? "Adjustment based on client risk profile"
-            : "Good risk alignment",
+          description:
+            cleanerResult.factors.riskPenalty > 0
+              ? "Adjustment based on client risk profile"
+              : "Good risk alignment",
         },
       },
     });
-
   } catch (err) {
     logger.error("match_explain_error", {
       jobId,

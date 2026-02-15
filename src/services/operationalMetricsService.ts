@@ -83,9 +83,7 @@ export interface TrendMetrics {
 // Core Metrics Function
 // ============================================
 
-export async function getOperationalMetrics(
-  daysBack: number = 30
-): Promise<OperationalMetrics> {
+export async function getOperationalMetrics(daysBack: number = 30): Promise<OperationalMetrics> {
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - daysBack);
@@ -273,7 +271,8 @@ export async function getOperationalMetrics(
   const completionRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0;
   const disputeRatePer100 = totalJobs > 0 ? (disputedJobs / totalJobs) * 100 : 0;
   const reconciliationFlagRate = totalPayouts > 0 ? (payoutsWithFlags / totalPayouts) * 100 : 0;
-  const webhookFailureRate = webhookEventsReceived > 0 ? (webhookEventsFailed / webhookEventsReceived) * 100 : 0;
+  const webhookFailureRate =
+    webhookEventsReceived > 0 ? (webhookEventsFailed / webhookEventsReceived) * 100 : 0;
   const paymentSuccessRate = piCreated > 0 ? (piSucceeded / piCreated) * 100 : 0;
   const lowFlexBadgeRate = activeCleaners > 0 ? (withLowFlex / activeCleaners) * 100 : 0;
   const highRiskRate = activeClients > 0 ? (highRiskClients / activeClients) * 100 : 0;
@@ -319,7 +318,8 @@ export async function getOperationalMetrics(
       avgReliabilityScore: Math.round(avgReliability * 100) / 100,
       withLowFlexBadge: withLowFlex,
       lowFlexBadgeRate: Math.round(lowFlexBadgeRate * 100) / 100,
-      avgJobsPerCleaner: activeCleaners > 0 ? Math.round((cleanerTotalJobs / activeCleaners) * 100) / 100 : 0,
+      avgJobsPerCleaner:
+        activeCleaners > 0 ? Math.round((cleanerTotalJobs / activeCleaners) * 100) / 100 : 0,
     },
     clients: {
       active: activeClients,
@@ -476,7 +476,11 @@ export interface SystemHealthSnapshot {
   checks: {
     database: { status: "ok" | "error"; latencyMs: number };
     stripeWebhooks: { status: "ok" | "degraded" | "error"; failureRateLast1h: number };
-    payoutProcessing: { status: "ok" | "degraded" | "error"; pendingCount: number; oldestPendingHours: number };
+    payoutProcessing: {
+      status: "ok" | "degraded" | "error";
+      pendingCount: number;
+      oldestPendingHours: number;
+    };
     jobProcessing: { status: "ok" | "degraded" | "error"; stuckCount: number };
     reconciliation: { status: "ok" | "warning" | "error"; unresolvedFlags: number };
   };
@@ -599,8 +603,15 @@ export async function getSystemHealthSnapshot(): Promise<SystemHealthSnapshot> {
     status: overallStatus,
     checks: {
       database: { status: dbStatus, latencyMs: dbLatency },
-      stripeWebhooks: { status: webhookStatus, failureRateLast1h: Math.round(webhookFailRate * 100) / 100 },
-      payoutProcessing: { status: payoutStatus, pendingCount: pendingPayouts, oldestPendingHours: Math.round(oldestPendingHours * 100) / 100 },
+      stripeWebhooks: {
+        status: webhookStatus,
+        failureRateLast1h: Math.round(webhookFailRate * 100) / 100,
+      },
+      payoutProcessing: {
+        status: payoutStatus,
+        pendingCount: pendingPayouts,
+        oldestPendingHours: Math.round(oldestPendingHours * 100) / 100,
+      },
       jobProcessing: { status: jobStatus, stuckCount },
       reconciliation: { status: reconStatus, unresolvedFlags },
     },
@@ -629,4 +640,3 @@ export async function logOperationalSnapshot(): Promise<void> {
     logger.error("operational_metrics_snapshot_failed", { error });
   }
 }
-

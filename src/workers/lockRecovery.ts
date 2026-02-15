@@ -37,9 +37,7 @@ export async function recoverExpiredJobLocks(): Promise<number> {
 /**
  * Recover expired worker runs
  */
-export async function recoverExpiredWorkerRuns(
-  lockTimeoutMinutes: number = 60
-): Promise<number> {
+export async function recoverExpiredWorkerRuns(lockTimeoutMinutes: number = 60): Promise<number> {
   logger.info("worker_run_recovery_started", { lockTimeoutMinutes });
 
   try {

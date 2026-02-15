@@ -85,27 +85,24 @@ notificationsRouter.delete("/:id", async (_req: AuthedRequest, res: Response) =>
  *       200:
  *         description: Notification preferences
  */
-notificationsRouter.get(
-  "/preferences",
-  async (req: AuthedRequest, res: Response) => {
-    try {
-      const userId = req.user!.id;
-      const preferences = await getNotificationPreferences(userId);
-      res.json({ preferences });
-    } catch (error) {
-      logger.error("get_notification_preferences_failed", {
-        error: (error as Error).message,
-        userId: req.user?.id,
-      });
-      res.status(500).json({
-        error: {
-          code: "GET_PREFERENCES_FAILED",
-          message: (error as Error).message,
-        },
-      });
-    }
+notificationsRouter.get("/preferences", async (req: AuthedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const preferences = await getNotificationPreferences(userId);
+    res.json({ preferences });
+  } catch (error) {
+    logger.error("get_notification_preferences_failed", {
+      error: (error as Error).message,
+      userId: req.user?.id,
+    });
+    res.status(500).json({
+      error: {
+        code: "GET_PREFERENCES_FAILED",
+        message: (error as Error).message,
+      },
+    });
   }
-);
+});
 
 /**
  * @swagger
@@ -225,80 +222,73 @@ notificationsRouter.post(
  * DELETE /notifications/push-token
  * Remove push notification token (logout)
  */
-notificationsRouter.delete(
-  "/push-token",
-  async (req: AuthedRequest, res: Response) => {
-    try {
-      const userId = req.user!.id;
+notificationsRouter.delete("/push-token", async (req: AuthedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
 
-      await query(
-        `
+    await query(
+      `
           UPDATE users
           SET push_token = NULL,
               updated_at = NOW()
           WHERE id = $1
         `,
-        [userId]
-      );
+      [userId]
+    );
 
-      logger.info("push_token_removed", { userId });
+    logger.info("push_token_removed", { userId });
 
-      res.json({ success: true });
-    } catch (error) {
-      logger.error("remove_push_token_failed", {
-        error: (error as Error).message,
-        userId: req.user?.id,
-      });
-      res.status(500).json({
-        error: {
-          code: "REMOVE_PUSH_TOKEN_FAILED",
-          message: (error as Error).message,
-        },
-      });
-    }
+    res.json({ success: true });
+  } catch (error) {
+    logger.error("remove_push_token_failed", {
+      error: (error as Error).message,
+      userId: req.user?.id,
+    });
+    res.status(500).json({
+      error: {
+        code: "REMOVE_PUSH_TOKEN_FAILED",
+        message: (error as Error).message,
+      },
+    });
   }
-);
+});
 
 /**
  * GET /notifications/history
  * Get notification history for current user
  */
-notificationsRouter.get(
-  "/history",
-  async (req: AuthedRequest, res: Response) => {
-    try {
-      const userId = req.user!.id;
-      const { limit = "50", offset = "0" } = req.query;
+notificationsRouter.get("/history", async (req: AuthedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const { limit = "50", offset = "0" } = req.query;
 
-      const result = await query(
-        `
+    const result = await query(
+      `
           SELECT id, type, channel, success, created_at
           FROM notification_log
           WHERE user_id = $1
           ORDER BY created_at DESC
           LIMIT $2 OFFSET $3
         `,
-        [userId, parseInt(limit as string, 10), parseInt(offset as string, 10)]
-      );
+      [userId, parseInt(limit as string, 10), parseInt(offset as string, 10)]
+    );
 
-      res.json({
-        notifications: result.rows,
-        count: result.rows.length,
-      });
-    } catch (error) {
-      logger.error("get_notification_history_failed", {
-        error: (error as Error).message,
-        userId: req.user?.id,
-      });
-      res.status(500).json({
-        error: {
-          code: "GET_HISTORY_FAILED",
-          message: (error as Error).message,
-        },
-      });
-    }
+    res.json({
+      notifications: result.rows,
+      count: result.rows.length,
+    });
+  } catch (error) {
+    logger.error("get_notification_history_failed", {
+      error: (error as Error).message,
+      userId: req.user?.id,
+    });
+    res.status(500).json({
+      error: {
+        code: "GET_HISTORY_FAILED",
+        message: (error as Error).message,
+      },
+    });
   }
-);
+});
 
 export default notificationsRouter;
-
