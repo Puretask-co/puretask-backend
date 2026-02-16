@@ -182,11 +182,11 @@ router.get(
       ) booking_stats ON booking_stats.client_email = cp.user_email
       LEFT JOIN (
         SELECT 
-          client_id,
-          SUM(amount) as credit_balance
+          user_id,
+          SUM(delta_credits) as credit_balance
         FROM credit_ledger
-        GROUP BY client_id
-      ) credit_stats ON credit_stats.client_id = cp.user_id
+        GROUP BY user_id
+      ) credit_stats ON credit_stats.user_id = cp.user_id
       LEFT JOIN (
         SELECT 
           user_id,
@@ -277,12 +277,12 @@ router.get(
       ) booking_stats ON booking_stats.client_email = cp.user_email
       LEFT JOIN (
         SELECT 
-          client_id,
-          SUM(amount) as credit_balance,
-          SUM(amount) FILTER (WHERE amount > 0) as total_credits_granted
+          user_id,
+          SUM(delta_credits) as credit_balance,
+          SUM(delta_credits) FILTER (WHERE delta_credits > 0) as total_credits_granted
         FROM credit_ledger
-        GROUP BY client_id
-      ) credit_stats ON credit_stats.client_id = cp.user_id
+        GROUP BY user_id
+      ) credit_stats ON credit_stats.user_id = cp.user_id
       LEFT JOIN (
         SELECT 
           user_id,

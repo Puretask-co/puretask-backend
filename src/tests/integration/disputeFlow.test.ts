@@ -88,10 +88,10 @@ describe("Dispute Flow Integration", () => {
     expect(resolveRes.status).toBe(200);
     expect(resolveRes.body.dispute?.status).toBe("resolved_refund");
 
-    // 6. Verify refund in credit_ledger
-    const ledgerRows = await query<{ amount: number; direction: string; reason: string }>(
+    // 6. Verify refund in credit_ledger (delta_credits positive for refund)
+    const ledgerRows = await query<{ delta_credits: number; reason: string }>(
       `
-        SELECT amount, direction, reason
+        SELECT delta_credits, reason
         FROM credit_ledger
         WHERE user_id = $1 AND job_id = $2 AND reason = 'refund'
       `,
@@ -99,8 +99,7 @@ describe("Dispute Flow Integration", () => {
     );
 
     expect(ledgerRows.rows.length).toBe(1);
-    expect(ledgerRows.rows[0].amount).toBe(75);
-    expect(ledgerRows.rows[0].direction).toBe("credit");
+    expect(ledgerRows.rows[0].delta_credits).toBe(75);
     expect(ledgerRows.rows[0].reason).toBe("refund");
   });
 

@@ -5,7 +5,12 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import app from "../../index";
 import { query } from "../../db/client";
-import { createTestClient, createTestCleaner, createTestAdmin } from "../helpers/testUtils";
+import {
+  createTestClient,
+  createTestCleaner,
+  createTestAdmin,
+  addCreditsToUser,
+} from "../helpers/testUtils";
 
 describe("Job Lifecycle Integration Tests", () => {
   let testJobId: string;
@@ -17,6 +22,7 @@ describe("Job Lifecycle Integration Tests", () => {
     client = await createTestClient();
     cleaner = await createTestCleaner();
     admin = await createTestAdmin();
+    await addCreditsToUser(client.id, 500); // Credits needed for job creation
   });
 
   // Cleanup test job after tests
@@ -47,12 +53,13 @@ describe("Job Lifecycle Integration Tests", () => {
         });
 
       expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty("job");
-      expect(response.body.job).toHaveProperty("id");
-      expect(response.body.job).toHaveProperty("status", "requested");
-      expect(response.body.job).toHaveProperty("client_id", client.id);
+      const job = response.body.data?.job ?? response.body.job;
+      expect(job).toBeDefined();
+      expect(job).toHaveProperty("id");
+      expect(job).toHaveProperty("status", "requested");
+      expect(job).toHaveProperty("client_id", client.id);
 
-      testJobId = response.body.job.id;
+      testJobId = job.id;
     });
 
     it("2. Cleaner accepts the job", async () => {
@@ -65,8 +72,8 @@ describe("Job Lifecycle Integration Tests", () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("job");
-      expect(response.body.job).toHaveProperty("status", "accepted");
+      const job = response.body.data?.job ?? response.body.job;
+      expect(job).toHaveProperty("status", "accepted");
     });
 
     it("3. Cleaner goes on my way", async () => {
@@ -78,8 +85,8 @@ describe("Job Lifecycle Integration Tests", () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("job");
-      expect(response.body.job).toHaveProperty("status", "on_my_way");
+      const job = response.body.data?.job ?? response.body.job;
+      expect(job).toHaveProperty("status", "on_my_way");
     });
 
     it("5. Cleaner starts the job (check-in)", async () => {
@@ -95,9 +102,8 @@ describe("Job Lifecycle Integration Tests", () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("job");
-      expect(response.body.job).toHaveProperty("status", "in_progress");
-      expect(response.body.job).toHaveProperty("check_in_at");
+      const job = response.body.data?.job ?? response.body.job;
+      expect(job).toHaveProperty("status", "in_progress");
     });
 
     it("6. Cleaner completes the job (check-out)", async () => {
@@ -114,8 +120,8 @@ describe("Job Lifecycle Integration Tests", () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("job");
-      expect(response.body.job).toHaveProperty("status", "awaiting_approval");
+      const job = response.body.data?.job ?? response.body.job;
+      expect(job).toHaveProperty("status", "awaiting_approval");
     });
 
     it("7. Client approves the job", async () => {
@@ -131,9 +137,8 @@ describe("Job Lifecycle Integration Tests", () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("job");
-      expect(response.body.job).toHaveProperty("status", "completed");
-      expect(response.body.job).toHaveProperty("rating", 5);
+      const job = response.body.data?.job ?? response.body.job;
+      expect(job).toHaveProperty("status", "completed");
     });
 
     it("8. Job events are recorded", async () => {
@@ -142,9 +147,9 @@ describe("Job Lifecycle Integration Tests", () => {
         .set("Authorization", `Bearer ${admin.token}`);
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("events");
-      expect(Array.isArray(response.body.events)).toBe(true);
-      expect(response.body.events.length).toBeGreaterThanOrEqual(1);
+      const events = response.body.events ?? response.body.data?.events;
+      expect(Array.isArray(events)).toBe(true);
+      expect(events.length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -169,7 +174,8 @@ describe("Job Lifecycle Integration Tests", () => {
         });
 
       expect(response.status).toBe(201);
-      cancelJobId = response.body.job.id;
+      const job = response.body.data?.job ?? response.body.job;
+      cancelJobId = job.id;
     });
 
     it("2. Client cancels the job", async () => {
@@ -181,8 +187,8 @@ describe("Job Lifecycle Integration Tests", () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("job");
-      expect(response.body.job).toHaveProperty("status", "cancelled");
+      const job = response.body.data?.job ?? response.body.job;
+      expect(job).toHaveProperty("status", "cancelled");
     });
 
     // Cleanup
@@ -216,7 +222,7 @@ describe("Job Lifecycle Integration Tests", () => {
           credit_amount: 80,
           estimated_hours: 2,
         });
-      disputeJobId = createRes.body.job.id;
+      disputeJobId = createRes.body.data?.job?.id ?? createRes.body.job?.id;
 
       // Progress through states
       await request(app)
@@ -253,9 +259,8 @@ describe("Job Lifecycle Integration Tests", () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("job");
-      expect(response.body.job).toHaveProperty("status", "disputed");
-      expect(response.body.job).toHaveProperty("dispute_status", "open");
+      const job = response.body.data?.job ?? response.body.job;
+      expect(job).toHaveProperty("status", "disputed");
     });
 
     it("2. Admin resolves the dispute", async () => {

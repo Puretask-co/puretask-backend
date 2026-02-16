@@ -78,13 +78,27 @@ All route files now use `requireAuth`, `requireRole`, `requireAdmin`, `requireCl
 - `/auth/register` - Public registration
 - `/holidays/*` - Public holiday data
 
-## Enforcement Rules
+## Ownership Verification (Resource-Level)
 
-1. **All mutating routes MUST use `requireAuth`**
-2. **All role-sensitive routes MUST use `requireRole`**
-3. **Webhooks MUST use signature verification, NOT JWT**
-4. **No route may use legacy `authMiddleware`**
-5. **Dev and prod behavior MUST be identical**
+Beyond auth/role, routes that access resources by ID must ensure the user owns or is authorized for that resource. Ownership is enforced in **services**, not routes.
+
+**Pattern:** Service fetches resource, compares `resource.client_id` or `resource.cleaner_id` (or equivalent) with `req.user.id`, throws 403 if mismatch. Example: `jobTrackingService.approveJob` checks `job.client_id === clientId`.
+
+**High-priority routes to verify:** Jobs (`/jobs/:id`, PATCH/complete/cancel), messages (`/messages/job/:jobId`), photos (`/photos/job/:jobId`), tracking, payments, cancellation, reschedule, matching, v2 properties/teams. Admin routes are exempt (admin can access any resource).
+
+**Audit status:** Pending systematic verification. Key services (jobTrackingService, jobsService) enforce ownership; others should be traced when adding features.
+
+## Admin RBAC (Planned)
+
+**Current state:** All admin routes use `requireAdmin` — single role, full access.
+
+**Planned roles (future):**
+- `admin` — Full access (current)
+- `support_agent` — Read-only + resolve disputes, view risk; no credits, payouts, or config
+- `support_lead` — support_agent + approve refunds, escalate disputes
+- `ops_finance` — Payouts, credits, finance; no user suspension or config
+
+**Implementation:** Add `requireAdminRole(roles: string[])` that checks `req.user.role` against allowed set. Extend `users.role` enum or add `users.admin_role` column. Document in ARCHITECTURE when implemented.
 
 ## Next Steps
 

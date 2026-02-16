@@ -153,25 +153,10 @@ async function calculateCancellationRisk(
  * Calculate payment failure risk (0-30 points)
  */
 async function calculatePaymentFailureRisk(
-  userId: string
+  _userId: string
 ): Promise<{ score: number; factor: RiskFactor }> {
-  // Check for failed payments in stripe_events or payment_intents
-  // For now, we'll use a simple query on credit_ledger to detect payment issues
-  // In production, you'd query Stripe events table
-
-  // Simplified: check for negative balances that weren't resolved
-  const result = await query<{ failures: string }>(
-    `
-    SELECT COUNT(*)::text as failures
-    FROM credit_ledger cl
-    WHERE cl.user_id = $1
-      AND cl.reason = 'payment_failed'
-      AND cl.created_at > NOW() - INTERVAL '90 days'
-    `,
-    [userId]
-  );
-
-  const failures = Number(result.rows[0]?.failures || 0);
+  // credit_reason enum has no 'payment_failed'; use payment_intents if needed later
+  const failures = 0;
 
   let score = 0;
   let severity: "low" | "medium" | "high" = "low";

@@ -20,7 +20,10 @@ async function main(): Promise<void> {
     });
     throw error;
   } finally {
-    await pool.end();
+    // Only close pool when run standalone; scheduler/durable worker share the pool
+    if (require.main === module) {
+      await pool.end();
+    }
   }
 }
 

@@ -9,7 +9,8 @@
 
 - **Prereqs:** Secrets in Railway (or target); no secrets in repo. Env validated at startup (`src/config/env.ts`).
 - **DB:** Run migrations in order. Fresh DB: `npm run db:migrate` (or `psql $DATABASE_URL -f DB/migrations/000_CONSOLIDATED_SCHEMA.sql`). Existing: apply `001`…`056` and `hardening/*` in order. See [DB/migrations/README.md](../DB/migrations/README.md).
-- **App:** Build `npm run build`; start `npm start`. Workers: run per [package.json](../package.json) scripts (e.g. `worker:scheduler`, `worker:durable-jobs`).
+- **App:** Build `npm run build`; start `npm start`. Workers: run per [package.json](../package.json) scripts.
+- **Workers (CRONS_ENQUEUE_ONLY):** If `CRONS_ENQUEUE_ONLY=true`, the scheduler enqueues only; you must run `worker:durable-jobs` or `worker:durable-jobs:loop` as a separate process. Otherwise enqueued jobs never run.
 - **CI:** Push to main/develop runs lint, tests, security scan, migrations check (`.github/workflows/`).
 
 ### 1.1 Production schema alignment (existing Neon DB)
@@ -39,6 +40,15 @@ PRODUCTION_DATABASE_URL="..." npm run db:verify:production
 - `src/tests/integration/jobLifecycle.test.ts` — Full job flow (create → accept → start → complete → approve; cancellation; dispute).
 - `src/tests/smoke/*` — Smoke tests for jobs, messages, credits, events.
 - Run: `npm run test:integration` and `npm run test:smoke`.
+
+### 1.3 Worker schedule (scheduler vs durable worker)
+
+| Mode | Scheduler (`worker:scheduler`) | Durable worker (`worker:durable-jobs`) |
+|------|--------------------------------|----------------------------------------|
+| `CRONS_ENQUEUE_ONLY=false` | Runs workers directly on cron schedule | Not needed |
+| `CRONS_ENQUEUE_ONLY=true` | Enqueues jobs to `durable_jobs` table only | Must run separately; processes enqueued jobs |
+
+**Scheduled workers** (from `src/workers/scheduler.ts`): auto-cancel (*/5 min), retry-notifications (*/10), webhook-retry (*/5), lock-recovery (*/15), auto-expire (hourly), kpi-daily (1 AM), nightly-scores (2 AM), goal-checker (2 AM), subscription-jobs (2 AM), reliability-recalc (3 AM), cleaning-scores (3 AM), backup-daily (3 AM), credit-economy (4 AM), photo-cleanup (5 AM), onboarding-reminders (*/6 h), payout-retry (*/30), payout-reconciliation (6 AM), payout-weekly (Sun midnight), expire-boosts, weekly-summary, job-reminders, no-show-detection, governor-metrics. See `WORKER_SCHEDULES` in scheduler.ts for full list.
 
 ---
 
@@ -158,6 +168,6 @@ Cash bonuses can be paused if the region budget cap is reached, cash rewards are
 
 - **Checklists:** [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md)
 - **Phase status:** [00-CRITICAL/PHASE_*_STATUS.md](./00-CRITICAL/)
-- **Backup/restore:** [BACKUP_RESTORE.md](./sections/BACKUP_RESTORE.md)
+- **Backup/restore:** [BACKUP_RESTORE.md](./BACKUP_RESTORE.md)
 
 **Last updated:** 2026-02-02

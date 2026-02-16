@@ -170,7 +170,7 @@ export async function createJob(options: {
         client_notes,
         cleaning_type
       )
-      VALUES ($1, 'requested', $2, $3, $4, $5, $6, $7, $8, $9, 'basic'::cleaning_type)
+      VALUES ($1, 'requested', $2, $3, $4, $5, $6, $7, $8, $9, 'basic')
       RETURNING *
     `,
     [

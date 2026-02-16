@@ -1923,7 +1923,7 @@ SELECT
   u.email AS client_email,
   u.first_name AS client_first_name,
   u.last_name AS client_last_name,
-  cp.phone AS client_phone,
+  u.phone AS client_phone,
   
   -- Job stats
   COUNT(DISTINCT j.id) AS jobs_completed,
@@ -1969,7 +1969,7 @@ GROUP BY
   u.email, 
   u.first_name, 
   u.last_name,
-  cp.phone,
+  u.phone,
   crs.risk_band,
   ccn.is_favorite,
   ccn.notes,

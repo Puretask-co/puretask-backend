@@ -178,6 +178,10 @@ export const env = {
 function validateEnvironment(): void {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const isTest =
+    env.NODE_ENV === "test" ||
+    process.env.RUNNING_TESTS === "true" ||
+    typeof process.env.VITEST_WORKER_ID !== "undefined";
 
   // Check Stripe mode consistency
   if (env.STRIPE_SECRET_KEY) {
@@ -190,16 +194,12 @@ function validateEnvironment(): void {
 
     // Production safety: warn if test mode in production
     if (env.NODE_ENV === "production" && isTestMode) {
-      warnings.push(
-        "⚠️  WARNING: Using Stripe test key in production! This will not process real payments."
-      );
+      warnings.push("Using Stripe test key in production — real payments will not process.");
     }
 
     // Development safety: warn if live mode in development
     if (env.NODE_ENV === "development" && isLiveMode) {
-      warnings.push(
-        "⚠️  WARNING: Using Stripe live key in development! This will process real payments."
-      );
+      warnings.push("Using Stripe live key in development — this will process real payments.");
     }
   }
 
@@ -209,45 +209,54 @@ function validateEnvironment(): void {
   }
 
   // Check for SSL mode (required for Neon and most cloud databases)
-  if (!env.DATABASE_URL.includes("sslmode=")) {
+  const hasSslMode = env.DATABASE_URL.includes("sslmode=");
+  const hasRequireOrPrefer =
+    env.DATABASE_URL.includes("sslmode=require") || env.DATABASE_URL.includes("sslmode=prefer");
+  if (!hasSslMode) {
     warnings.push(
-      "⚠️  WARNING: DATABASE_URL missing sslmode parameter. Neon and most cloud databases require SSL. Add ?sslmode=require to your connection string."
+      "DATABASE_URL missing sslmode. Add ?sslmode=require (Neon and cloud DBs require SSL)."
     );
-  } else if (
-    !env.DATABASE_URL.includes("sslmode=require") &&
-    !env.DATABASE_URL.includes("sslmode=prefer")
-  ) {
-    warnings.push(
-      "⚠️  WARNING: DATABASE_URL sslmode is not 'require' or 'prefer'. For production, use ?sslmode=require"
-    );
+  } else if (!hasRequireOrPrefer) {
+    warnings.push("DATABASE_URL sslmode should be 'require' or 'prefer'. Use ?sslmode=require in production.");
   }
 
   // Check JWT secret strength in production
   if (env.NODE_ENV === "production" && env.JWT_SECRET.length < 32) {
-    warnings.push("⚠️  WARNING: JWT_SECRET should be at least 32 characters in production");
+    warnings.push("JWT_SECRET should be at least 32 characters in production.");
+  }
+
+  // Production: Sentry recommended for error visibility
+  if (env.NODE_ENV === "production" && !env.SENTRY_DSN) {
+    warnings.push(
+      "SENTRY_DSN not set — production errors will not be captured. Set in Railway for error tracking."
+    );
+  }
+
+  // Production: single SSL reminder (avoid duplicate with generic sslmode check above)
+  if (env.NODE_ENV === "production" && !env.DATABASE_URL.includes("sslmode=require")) {
+    warnings.push("Production DATABASE_URL should include ?sslmode=require for encrypted connections.");
+  }
+
+  // CRONS_ENQUEUE_ONLY: durable job worker must run separately (skip in test to reduce noise)
+  if (!isTest && env.CRONS_ENQUEUE_ONLY && env.WORKERS_ENABLED) {
+    warnings.push(
+      "CRONS_ENQUEUE_ONLY=true — run worker:durable-jobs or worker:durable-jobs:loop as a separate process."
+    );
   }
 
   // Check guard flags in production
   if (env.NODE_ENV === "production") {
-    if (!env.BOOKINGS_ENABLED) {
-      warnings.push("⚠️  INFO: Bookings are DISABLED in production");
-    }
-    if (!env.PAYOUTS_ENABLED) {
-      warnings.push("⚠️  INFO: Payouts are DISABLED in production");
-    }
-    if (!env.CREDITS_ENABLED) {
-      warnings.push("⚠️  INFO: Credits are DISABLED in production");
-    }
-    if (!env.WORKERS_ENABLED) {
-      warnings.push("⚠️  INFO: Workers are DISABLED in production");
-    }
+    if (!env.BOOKINGS_ENABLED) warnings.push("Bookings are DISABLED in production.");
+    if (!env.PAYOUTS_ENABLED) warnings.push("Payouts are DISABLED in production.");
+    if (!env.CREDITS_ENABLED) warnings.push("Credits are DISABLED in production.");
+    if (!env.WORKERS_ENABLED) warnings.push("Workers are DISABLED in production.");
   }
 
-  // Log warnings
-  if (warnings.length > 0) {
+  // Log warnings (skip banner in test to keep output clean)
+  if (warnings.length > 0 && !isTest) {
     console.warn("\n" + "=".repeat(60));
     console.warn("ENVIRONMENT WARNINGS:");
-    warnings.forEach((w) => console.warn(w));
+    warnings.forEach((w) => console.warn("⚠️  " + w));
     console.warn("=".repeat(60) + "\n");
   }
 

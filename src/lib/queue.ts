@@ -42,14 +42,23 @@ export type JobHandler<T> = (payload: T) => Promise<void>;
 // ============================================
 
 export const QUEUE_NAMES = {
+  // Active: have handlers in queueProcessor.ts
   CALENDAR_SYNC: "calendar_sync",
   AI_CHECKLIST: "ai_checklist",
   AI_DISPUTE: "ai_dispute",
+  // Reserved: defined for future use; weekly/subscription/notifications handled by durable_jobs scheduler
   WEEKLY_REPORT: "weekly_report",
   SUBSCRIPTION_JOB: "subscription_job",
   NOTIFICATION: "notification",
   WEBHOOK_RETRY: "webhook_retry",
 } as const;
+
+/** Queues that have registered handlers and are processed by queueProcessor */
+export const HANDLED_QUEUE_NAMES = [
+  QUEUE_NAMES.CALENDAR_SYNC,
+  QUEUE_NAMES.AI_CHECKLIST,
+  QUEUE_NAMES.AI_DISPUTE,
+] as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 

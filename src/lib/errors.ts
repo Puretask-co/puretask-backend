@@ -114,11 +114,18 @@ export const Errors = {
  * Use this to send consistent error responses
  * Includes requestId from request context
  */
+/** Response may have requestId set by middleware (index, requestContext). */
+function getRequestId(res: Response, context?: Record<string, unknown>): string | undefined {
+  const fromLocals = res.locals?.requestId;
+  if (typeof fromLocals === "string") return fromLocals;
+  const fromContext = context?.requestId;
+  if (typeof fromContext === "string") return fromContext;
+  const fromRes = (res as Response & { requestId?: string }).requestId;
+  return typeof fromRes === "string" ? fromRes : undefined;
+}
+
 export function sendError(res: Response, error: unknown, context?: Record<string, unknown>): void {
-  // Get requestId from response locals or context
-  const requestId = (res.locals?.requestId ||
-    (context as any)?.requestId ||
-    (res as any).requestId) as string | undefined;
+  const requestId = getRequestId(res, context);
 
   // Handle AppError
   if (error instanceof AppError) {

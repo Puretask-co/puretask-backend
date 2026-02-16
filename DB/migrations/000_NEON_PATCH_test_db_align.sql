@@ -186,3 +186,16 @@ BEGIN
   ALTER TYPE job_event_type ADD VALUE 'job.auto_assigned';
 EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
 END $$;
+
+-- 12. Referral leaderboard view (matches 015_referrals_and_boosts.sql)
+CREATE OR REPLACE VIEW referral_leaderboard AS
+SELECT 
+  r.referrer_id,
+  u.email,
+  COUNT(*) as total_referrals,
+  COUNT(*) FILTER (WHERE r.status = 'rewarded') as successful_referrals,
+  COALESCE(SUM(r.referrer_reward) FILTER (WHERE r.status = 'rewarded'), 0) as total_credits_earned
+FROM referrals r
+JOIN users u ON u.id = r.referrer_id
+GROUP BY r.referrer_id, u.email
+ORDER BY successful_referrals DESC;

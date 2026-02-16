@@ -2,13 +2,16 @@
 // Main admin router that combines all admin sub-routes
 
 import { Router, Response } from "express";
+import { z } from "zod";
 import {
   requireAuth,
   requireAdmin,
   AuthedRequest,
   authedHandler,
 } from "../../middleware/authCanonical";
-import { getAdminKPIs, listJobsForAdmin } from "../../services/adminService";
+import { validateQuery } from "../../lib/validation";
+import { getAdminKPIs, listJobsForAdmin, getJobEventsForAdmin } from "../../services/adminService";
+import { getOpsDashboard } from "../../services/opsDashboardService";
 import { logger } from "../../lib/logger";
 import analyticsRouter from "./analytics";
 import bookingsRouter from "./bookings";
@@ -28,6 +31,22 @@ const adminRouter = Router();
 adminRouter.use(requireAuth);
 adminRouter.use(requireAdmin);
 
+// Ops dashboard: unified disputes, webhooks, risk view
+adminRouter.get(
+  "/ops",
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    try {
+      const dashboard = await getOpsDashboard();
+      res.json(dashboard);
+    } catch (error) {
+      logger.error("get_ops_dashboard_failed", { error: (error as Error).message });
+      res
+        .status(500)
+        .json({ error: { code: "GET_OPS_FAILED", message: (error as Error).message } });
+    }
+  })
+);
+
 // Root-level admin routes (before /jobs sub-router so GET /admin/jobs list is handled)
 adminRouter.get(
   "/kpis",
@@ -45,27 +64,32 @@ adminRouter.get(
   })
 );
 
+const listJobsQuerySchema = z.object({
+  status: z.string().optional(),
+  clientId: z.string().optional(),
+  cleanerId: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+  cursor: z.string().optional(),
+});
+
 adminRouter.get(
   "/jobs",
+  validateQuery(listJobsQuerySchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
-      const {
-        status,
-        clientId,
-        cleanerId,
-        dateFrom,
-        dateTo,
-        limit = "50",
-        offset = "0",
-      } = req.query;
+      const q = req.query as unknown as z.infer<typeof listJobsQuerySchema>;
       const result = await listJobsForAdmin({
-        status: status as any,
-        clientId: clientId as string | undefined,
-        cleanerId: cleanerId as string | undefined,
-        dateFrom: dateFrom as string | undefined,
-        dateTo: dateTo as string | undefined,
-        limit: parseInt(limit as string, 10),
-        offset: parseInt(offset as string, 10),
+        status: q.status as any,
+        clientId: q.clientId || undefined,
+        cleanerId: q.cleanerId || undefined,
+        dateFrom: q.dateFrom,
+        dateTo: q.dateTo,
+        limit: q.limit,
+        offset: q.offset,
+        cursor: q.cursor,
       });
       res.json(result);
     } catch (error) {
@@ -73,6 +97,27 @@ adminRouter.get(
       res
         .status(500)
         .json({ error: { code: "LIST_JOBS_FAILED", message: (error as Error).message } });
+    }
+  })
+);
+
+// Admin job detail + events (before /jobs sub-router so :jobId matches)
+adminRouter.get(
+  "/jobs/:jobId/events",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { jobId } = req.params;
+      const limit = parseInt((req.query.limit as string) || "100", 10);
+      const events = await getJobEventsForAdmin(jobId, limit);
+      res.json({ jobId, events, count: events.length });
+    } catch (error) {
+      logger.error("get_admin_job_events_failed", {
+        error: (error as Error).message,
+        jobId: req.params.jobId,
+      });
+      res
+        .status(500)
+        .json({ error: { code: "GET_JOB_EVENTS_FAILED", message: (error as Error).message } });
     }
   })
 );

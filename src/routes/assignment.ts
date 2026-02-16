@@ -3,6 +3,7 @@
 
 import { Router } from "express";
 import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 import { getJob } from "../services/jobsService";
 import { getWaveEligibleCleaners } from "../services/jobMatchingService";
 
@@ -52,6 +53,7 @@ assignmentRouter.use(requireAuth);
  */
 assignmentRouter.get(
   "/:jobId/wave",
+  requireOwnership("job", "jobId"),
   authedHandler(async (req: AuthedRequest, res) => {
     try {
       const { jobId } = req.params;

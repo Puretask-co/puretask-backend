@@ -3,7 +3,7 @@
 
 import request from "supertest";
 import express, { Request, Response } from "express";
-import { requireAuth, AuthedRequest } from "../../../middleware/authCanonical";
+import { requireAuth, requireRole, AuthedRequest } from "../../../middleware/authCanonical";
 import { vi } from "vitest";
 import * as authLib from "../../../lib/auth";
 
@@ -15,6 +15,12 @@ app.use(express.json());
 
 // Minimal protected route (mirrors real usage)
 app.get("/protected", requireAuth, (req: Request, res: Response) => {
+  const user = (req as AuthedRequest).user;
+  res.status(200).json({ ok: true, userId: user.id, role: user.role });
+});
+
+// Admin-only route for 403 testing
+app.get("/admin-only", requireAuth, requireRole("admin", "super_admin"), (req: Request, res: Response) => {
   const user = (req as AuthedRequest).user;
   res.status(200).json({ ok: true, userId: user.id, role: user.role });
 });
@@ -52,5 +58,23 @@ describe("Protected route auth (Phase 2 smoke)", () => {
     expect(res.body?.ok).toBe(true);
     expect(res.body?.userId).toBe("user-1");
     expect(res.body?.role).toBe("client");
+  });
+
+  it("returns 403 when client token accesses admin-only route", async () => {
+    const mockUser = { id: "user-1", role: "client" as const, email: null };
+    vi.mocked(authLib.verifyAuthToken).mockResolvedValue(mockUser);
+    const res = await request(app).get("/admin-only").set("Authorization", "Bearer valid-token");
+    expect(res.status).toBe(403);
+    expect(res.body?.error?.code).toBe("FORBIDDEN");
+    expect(res.body?.error?.message).toMatch(/requires one of/i);
+  });
+
+  it("returns 200 when admin token accesses admin-only route", async () => {
+    const mockUser = { id: "admin-1", role: "admin" as const, email: null };
+    vi.mocked(authLib.verifyAuthToken).mockResolvedValue(mockUser);
+    const res = await request(app).get("/admin-only").set("Authorization", "Bearer valid-token");
+    expect(res.status).toBe(200);
+    expect(res.body?.ok).toBe(true);
+    expect(res.body?.role).toBe("admin");
   });
 });

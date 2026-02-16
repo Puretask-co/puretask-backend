@@ -23,6 +23,7 @@
 | [DECISIONS.md](./DECISIONS.md) | Architectural and product decisions (from logs) |
 | [FOUNDER_BACKEND_REFERENCE.md](./FOUNDER_BACKEND_REFERENCE.md) | Founder-level deep dive: what each piece is, where/when/how/why we use it, best practices. |
 | [FOUNDER_REFERENCE_CANDIDATES.md](./FOUNDER_REFERENCE_CANDIDATES.md) | List of systems, features, and functions to document in the same style (events, notifications, auth, payments, etc.). |
+| [PROJECT_REVIEW_FULL.md](./PROJECT_REVIEW_FULL.md) | Complete project review: systems, workers, features, tests — what's done, what remains, detailed descriptions. |
 
 ## Runbooks (detailed)
 

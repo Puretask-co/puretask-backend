@@ -5,7 +5,7 @@
 
 import { pool } from "../../db/client";
 import { logger } from "../../lib/logger";
-import { queueService, QUEUE_NAMES, processQueue } from "../../lib/queue";
+import { queueService, QUEUE_NAMES, HANDLED_QUEUE_NAMES, processQueue } from "../../lib/queue";
 import { syncJobToCalendar } from "../../services/calendarService";
 import { generateChecklist, generateDisputeSuggestion } from "../../services/aiService";
 
@@ -70,9 +70,7 @@ queueService.registerHandler(
 const POLL_INTERVAL_MS = 5000; // 5 seconds
 
 async function processAllQueues(): Promise<void> {
-  const queues = Object.values(QUEUE_NAMES);
-
-  for (const queueName of queues) {
+  for (const queueName of HANDLED_QUEUE_NAMES) {
     try {
       const result = await processQueue(queueName, 10);
       if (result.processed > 0) {

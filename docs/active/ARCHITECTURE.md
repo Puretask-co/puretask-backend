@@ -1,7 +1,7 @@
 # PureTask Backend — Architecture
 
 **Purpose:** High-level structure and key flows for maintainability (Section 9).  
-**See also:** [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md), [CONTRIBUTING.md](./CONTRIBUTING.md), runbooks in [sections/](./sections/).
+**See also:** [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md), [CONTRIBUTING.md](./CONTRIBUTING.md), [COST_MAP.md](./COST_MAP.md), runbooks in [sections/](./sections/).
 
 ---
 
@@ -92,6 +92,16 @@
 - **Phases:** [00-CRITICAL/PHASE_*_STATUS.md](./00-CRITICAL/)
 - **Runbooks:** [sections/SECTION_*.md](./sections/)
 - **DB:** [DB/migrations/README.md](../DB/migrations/README.md), [DB/docs/INDEX_MAP.md](../DB/docs/INDEX_MAP.md)
+
+---
+
+## 6. Planned improvements (backlog)
+
+- **Ownership audit:** Verify all routes that access resources by ID enforce ownership (client/cleaner/admin) via `requireOwnership` or equivalent.
+- **Zod validation:** Add `validateBody`/`validateQuery` to more routes for consistent input validation.
+- **Cursor pagination:** Add cursor-based pagination to high-cardinality lists (jobs, users) for stable performance.
+- **Admin RBAC:** Document or add role support (e.g. `support_agent`, `support_lead`, `ops_finance`) for fine-grained admin access.
+- **Ops dashboard:** Unified view for disputes, webhooks, risk, and system health.
 
 ---
 

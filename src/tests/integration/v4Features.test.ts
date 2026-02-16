@@ -250,7 +250,7 @@ describe("V4 Features Integration Tests", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.generatedAt).toBeDefined();
-      expect(res.body.metrics).toBeDefined();
+      expect(res.body.dashboard ?? res.body.metrics).toBeDefined();
     });
   });
 
@@ -510,7 +510,7 @@ describe("V4 Features Integration Tests", () => {
       // Job creation may fail if insufficient credits or validation fails
       // Just verify we can get candidates if job exists
       if (jobRes.status === 201) {
-        const jobId = jobRes.body.job.id;
+        const jobId = jobRes.body.data?.job?.id ?? jobRes.body.job?.id;
 
         // Get candidates (should include boosted cleaner)
         const candidatesRes = await request(app)
@@ -518,11 +518,13 @@ describe("V4 Features Integration Tests", () => {
           .set("Authorization", `Bearer ${client.token}`);
 
         expect(candidatesRes.status).toBe(200);
-        expect(candidatesRes.body.candidates).toBeDefined();
-        expect(Array.isArray(candidatesRes.body.candidates)).toBe(true);
+        const candidates =
+          candidatesRes.body.data?.candidates ?? candidatesRes.body.candidates;
+        expect(candidates).toBeDefined();
+        expect(Array.isArray(candidates)).toBe(true);
 
         // Check if boosted cleaner has boost info in reasons
-        const boostedCandidate = candidatesRes.body.candidates.find(
+        const boostedCandidate = candidates.find(
           (c: any) => c.cleanerId === cleaner.id
         );
 

@@ -68,6 +68,12 @@
 
 ---
 
+## 📊 Monitoring (Production)
+
+- [ ] `SENTRY_DSN` - Sentry project DSN for error tracking and performance (recommended in production)
+
+---
+
 ## 🎛️ Feature Flags (Optional)
 
 - [ ] `NODE_ENV` - "development" or "production"
@@ -76,6 +82,24 @@
 - [ ] `CREDITS_ENABLED` - Default: true
 - [ ] `WORKERS_ENABLED` - Default: true
 - [ ] `USE_EVENT_BASED_NOTIFICATIONS` - Default: true (if n8n configured)
+
+---
+
+---
+
+## 🚀 Production (Railway) Checklist
+
+Before going live, ensure:
+
+- [ ] `NODE_ENV=production`
+- [ ] `STRIPE_SECRET_KEY` starts with `sk_live_` (not `sk_test_`)
+- [ ] `STRIPE_WEBHOOK_SECRET` matches Stripe Dashboard webhook for your prod URL (e.g. `https://api.puretask.com/api/webhooks/stripe/webhook`)
+- [ ] `DATABASE_URL` includes `?sslmode=require`
+- [ ] `SENTRY_DSN` set (Sentry project DSN for error tracking)
+- [ ] `JWT_SECRET` at least 32 characters
+- [ ] All required vars from the list above
+
+If `CRONS_ENQUEUE_ONLY=true`, also run the durable job worker as a separate Railway service or cron: `npm run worker:durable-jobs` or `npm run worker:durable-jobs:loop`.
 
 ---
 

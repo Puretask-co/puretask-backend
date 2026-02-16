@@ -96,6 +96,35 @@ router.post(
 - Services can use `query()` from `src/db/client.ts`
 - Use parameterized queries (never template literals in SQL)
 
+### Pagination
+- **Offset pagination:** Use `LIMIT`/`OFFSET` with `page`/`limit` for low-cardinality lists.
+- **Cursor pagination (preferred for high-cardinality):** Use `cursor` (e.g. `created_at` + `id`) and `limit`. Return `nextCursor` in response; omit when no more pages. Candidates: `/jobs` (list), `/admin/clients`, `/admin/cleaners`, `/admin/bookings`, `/messages/job/:jobId`.
+
+### How to add a new route
+
+1. Create or extend a router in `src/routes/` (e.g. `client.ts`, `jobs.ts`).
+2. Use `requireAuth` (and `requireRole` if role-restricted).
+3. Use `validateBody` / `validateQuery` / `validateParams` for input.
+4. Use `asyncHandler` and call a service; return via `sendSuccess` / `sendError`.
+5. Mount router in `src/index.ts` under `/api/v1/...`.
+6. Add route to Route Protection Table (`docs/active/ROUTE_PROTECTION_TABLE.md`).
+
+### How to add a new service
+
+1. Create `src/services/yourService.ts`.
+2. Import `query` or `withTransaction` from `src/db/client`.
+3. Export pure business logic functions; no Express types.
+4. Use parameterized queries (`$1`, `$2`, …); never SQL template literals.
+5. Call from routes; do not call routes from services.
+
+### How to add a new worker
+
+1. Create worker in `src/workers/` (e.g. `v1-core/`, `v2-operations/`).
+2. Export a `runX()` async function.
+3. Register in `src/workers/workerHandlers.ts` (add to `registerWorkerHandlers`).
+4. Add schedule to `WORKER_SCHEDULES` in `src/workers/scheduler.ts` (cron expression, description).
+5. When `CRONS_ENQUEUE_ONLY=true`, scheduler enqueues; durable job worker runs handlers. Ensure handler is registered.
+
 ### Integration Clients
 - **Stripe**: Use `stripe` from `src/integrations/stripe.ts`
 - **SendGrid**: Use `getSendGridClient()` from `src/integrations/sendgrid.ts`

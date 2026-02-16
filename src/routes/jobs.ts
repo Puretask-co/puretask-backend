@@ -3,6 +3,7 @@
 
 import { Router } from "express";
 import { z } from "zod";
+import { validateBody } from "../lib/validation";
 import { requireAuth, type AuthedRequest } from "../middleware/authCanonical";
 import { requireOwnership } from "../lib/ownership";
 import { requireIdempotency } from "../lib/idempotency";
@@ -124,8 +125,9 @@ const createJobSchema = z.object({
 jobsRouter.post(
   "/",
   requireIdempotency,
+  validateBody(createJobSchema),
   asyncHandler(async (req: AuthedRequest, res) => {
-    const body = createJobSchema.parse(req.body);
+    const body = req.body as z.infer<typeof createJobSchema>;
 
     const job = await createJob({
       clientId: req.user!.id,

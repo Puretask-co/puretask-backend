@@ -33,6 +33,7 @@
     "test:performance": "ts-node tests/performance/benchmarks.ts",
     "db:migrate": "node scripts/run-migration.js DB/migrations/000_COMPLETE_CONSOLIDATED_SCHEMA.sql",
     "db:setup:test": "node scripts/setup-test-db.js",
+    "db:reset:test": "node scripts/reset-test-db.js",
     "db:patch:production": "node scripts/run-production-schema-patch.js",
     "db:verify:production": "node scripts/verify-production-schema.js",
     "db:validate:migrations": "node scripts/validate-migrations.js",
@@ -54,6 +55,8 @@
     "worker:durable-jobs": "ts-node src/workers/runDurableJobWorker.ts",
     "worker:durable-jobs:loop": "ts-node src/workers/runDurableJobWorker.ts --loop",
     "worker:governor-metrics": "ts-node src/workers/gamification/computeGovernorMetrics.ts",
+    "worker:cleaning-scores": "ts-node src/workers/reliability/cleaningScores.ts",
+    "worker:goal-checker": "ts-node src/workers/v2-operations/goalChecker.ts",
     "seed:gamification": "ts-node scripts/seed_gamification_config.ts",
     "seed:gamification:dry-run": "ts-node scripts/seed_gamification_config.ts --dry-run"
   },

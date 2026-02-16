@@ -45,17 +45,7 @@
           {
             "name": "src/middleware/auth",
             "message": "Legacy auth middleware is deprecated. Use requireAuth from 'src/middleware/authCanonical' instead."
-          }
-        ],
-        "patterns": [
-          {
-            "group": ["**/middleware/auth"],
-            "message": "Legacy auth middleware is deprecated. Use requireAuth from '../middleware/authCanonical' instead."
-          }
-        ]
-      },
-      {
-        "paths": [
+          },
           {
             "name": "../db/client",
             "message": "Direct DB access from routes is not allowed. Use services instead."
@@ -75,9 +65,8 @@
         ],
         "patterns": [
           {
-            "group": ["**/routes/**"],
-            "importNames": ["query", "withTransaction"],
-            "message": "Direct DB access from routes is not allowed. Use services instead."
+            "group": ["**/middleware/auth"],
+            "message": "Legacy auth middleware is deprecated. Use requireAuth from '../middleware/authCanonical' instead."
           }
         ]
       }

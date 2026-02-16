@@ -75,6 +75,18 @@ export const WORKER_SCHEDULES: WorkerSchedule[] = [
     enabled: true,
   },
   {
+    workerName: "cleaning-scores",
+    cronExpression: "0 3 * * *", // Daily at 3 AM
+    description: "Recalculate cleaning scores for all properties",
+    enabled: true,
+  },
+  {
+    workerName: "goal-checker",
+    cronExpression: "0 2 * * *", // Daily at 2 AM (before reliability-recalc)
+    description: "Check and award completed cleaner goals (V2 goals)",
+    enabled: true,
+  },
+  {
     workerName: "backup-daily",
     cronExpression: "0 3 * * *", // Daily at 3 AM
     description: "Daily backup",

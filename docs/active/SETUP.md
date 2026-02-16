@@ -49,6 +49,15 @@ Frontend, n8n, and workers are separate; see ARCHITECTURE and RUNBOOK for how th
 
 ## Testing
 
+### Run tests
+
+- `npm run test` — Run all tests (vitest)
+- `npm run test:smoke` — Smoke tests only
+- `npm run test:integration` — Integration tests only
+- `npm run test:coverage` — With coverage report
+
+Unit tests and contract tests use mocks where needed (auth, DB). Integration and smoke tests require `TEST_DATABASE_URL` or `DATABASE_URL` and `JWT_SECRET`.
+
 ### Environment variables for tests
 
 | Test suite | Required env vars | Optional |

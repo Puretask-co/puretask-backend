@@ -144,7 +144,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     created_at: string;
   }>(
     `
-      SELECT id, amount, reason, job_id, created_at
+      SELECT id, delta_credits as amount, reason, job_id, created_at
       FROM credit_ledger
       WHERE user_id = $1
       ORDER BY created_at DESC

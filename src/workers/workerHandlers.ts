@@ -33,6 +33,7 @@ export function registerWorkerHandlers(): void {
     "job-reminders",
     "no-show-detection",
     "governor-metrics",
+    "goal-checker",
   ];
 
   for (const name of workerNames) {

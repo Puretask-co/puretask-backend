@@ -1,14 +1,20 @@
 // src/routes/admin/risk.ts
 import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
 import {
   requireAuth,
   requireAdmin,
   AuthedRequest,
   authedHandler,
 } from "../../middleware/authCanonical";
+import { validateBody } from "../../lib/validation";
 import { query } from "../../db/client";
 import { logger } from "../../lib/logger";
 import { RiskManagementData } from "../../types/admin";
+import {
+  getRiskReviewQueue,
+  getUserRiskProfile,
+} from "../../services/riskService";
 
 const router = Router();
 
@@ -225,15 +231,26 @@ router.get(
   })
 );
 
+const createRiskFlagSchema = z.object({
+  userId: z.string().min(1),
+  flagType: z.string().min(1),
+  reason: z.string().optional(),
+  severity: z.enum(["low", "medium", "high"]).default("medium"),
+  metadata: z.record(z.unknown()).optional(),
+});
+
 /**
  * POST /admin/risk/flags
  * Create a new risk flag
  */
 router.post(
   "/flags",
+  validateBody(createRiskFlagSchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
-      const { userId, flagType, reason, severity, metadata } = req.body;
+      const { userId, flagType, reason, severity, metadata } = req.body as z.infer<
+        typeof createRiskFlagSchema
+      >;
 
       const result = await query(
         `INSERT INTO risk_flags 
@@ -487,6 +504,52 @@ router.get(
     } catch (error) {
       logger.error("Error fetching risk stats", { error });
       res.status(500).json({ error: "Failed to fetch risk stats" });
+    }
+  })
+);
+
+/**
+ * GET /admin/risk/review - Risk review queue (users with flags)
+ */
+router.get(
+  "/review",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const queue = await getRiskReviewQueue();
+      res.json({ queue, count: queue.length });
+    } catch (error) {
+      logger.error("Error fetching risk review queue", { error });
+      res.status(500).json({ error: "Failed to fetch risk review queue" });
+    }
+  })
+);
+
+/**
+ * GET /admin/risk/:userId - User risk profile (role from query)
+ */
+router.get(
+  "/:userId",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const role = (req.query.role as "client" | "cleaner") || "client";
+      const profile = await getUserRiskProfile(userId, role);
+      res.json({
+        profile: {
+          userId: profile.userId,
+          userRole: profile.userRole,
+          riskScore: profile.riskScore,
+          flags: profile.flags,
+          factors: profile.factors,
+          calculatedAt: profile.calculatedAt,
+        },
+      });
+    } catch (error: any) {
+      logger.error("Error fetching user risk profile", { error, userId: req.params.userId });
+      res.status(500).json({
+        error: "Failed to fetch risk profile",
+        message: process.env.NODE_ENV === "test" ? error?.message : undefined,
+      });
     }
   })
 );

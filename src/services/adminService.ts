@@ -320,6 +320,7 @@ export async function getJobEventsForAdmin(
 
 /**
  * List all jobs with filters (admin)
+ * Supports cursor-based pagination via cursor param (base64 JSON {created_at, id})
  */
 export async function listJobsForAdmin(filters: {
   status?: JobStatus;
@@ -329,8 +330,9 @@ export async function listJobsForAdmin(filters: {
   dateTo?: string;
   limit?: number;
   offset?: number;
-}): Promise<{ jobs: Job[]; total: number }> {
-  const { status, clientId, cleanerId, dateFrom, dateTo, limit = 50, offset = 0 } = filters;
+  cursor?: string;
+}): Promise<{ jobs: Job[]; total: number; nextCursor?: string; hasMore?: boolean }> {
+  const { status, clientId, cleanerId, dateFrom, dateTo, limit = 50, offset = 0, cursor } = filters;
 
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -357,30 +359,61 @@ export async function listJobsForAdmin(filters: {
     params.push(dateTo);
   }
 
+  // Cursor-based keyset pagination
+  if (cursor) {
+    try {
+      const decoded = JSON.parse(Buffer.from(cursor, "base64").toString("utf8"));
+      if (decoded.created_at && decoded.id) {
+        conditions.push(`(created_at, id) < ($${paramIndex++}::timestamptz, $${paramIndex++}::uuid)`);
+        params.push(decoded.created_at, decoded.id);
+      }
+    } catch {
+      // Invalid cursor - ignore
+    }
+  }
+
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  // Get total count
-  const countResult = await query<{ count: string }>(
-    `SELECT COUNT(*) as count FROM jobs ${whereClause}`,
-    params
-  );
-  const total = parseInt(countResult.rows[0]?.count || "0", 10);
+  // Get total count (skip when using cursor for performance)
+  let total = 0;
+  if (!cursor) {
+    const countResult = await query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM jobs ${whereClause}`,
+      params
+    );
+    total = parseInt(countResult.rows[0]?.count || "0", 10);
+  }
 
-  // Get jobs
+  const fetchLimit = cursor ? limit + 1 : limit;
   const jobsResult = await query<Job>(
     `
       SELECT *
       FROM jobs
       ${whereClause}
-      ORDER BY created_at DESC
+      ORDER BY created_at DESC, id DESC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}
     `,
-    [...params, limit, offset]
+    [...params, fetchLimit, cursor ? 0 : offset]
   );
 
+  let jobs = jobsResult.rows;
+  let nextCursor: string | undefined;
+  let hasMore = false;
+
+  if (cursor && jobs.length > limit) {
+    hasMore = true;
+    jobs = jobs.slice(0, limit);
+    const last = jobs[jobs.length - 1];
+    nextCursor = Buffer.from(
+      JSON.stringify({ created_at: last.created_at, id: last.id }),
+      "utf8"
+    ).toString("base64");
+  }
+
   return {
-    jobs: jobsResult.rows,
+    jobs,
     total,
+    ...(nextCursor && { nextCursor, hasMore }),
   };
 }
 

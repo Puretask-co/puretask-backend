@@ -52,9 +52,9 @@ describe("Credit System Integration", () => {
         creditAmount: 100,
       });
 
-      const entries = await query<{ amount: number; direction: string; reason: string }>(
+      const entries = await query<{ delta_credits: number; reason: string }>(
         `
-          SELECT amount, direction, reason
+          SELECT delta_credits, reason
           FROM credit_ledger
           WHERE user_id = $1 AND reason = 'purchase'
           ORDER BY created_at DESC
@@ -64,8 +64,7 @@ describe("Credit System Integration", () => {
       );
 
       expect(entries.rows.length).toBeGreaterThan(0);
-      expect(entries.rows[0].amount).toBe(100);
-      expect(entries.rows[0].direction).toBe("credit");
+      expect(entries.rows[0].delta_credits).toBe(100);
     });
   });
 
@@ -94,15 +93,14 @@ describe("Credit System Integration", () => {
       const balanceAfter = await getUserCreditBalance(client.id);
       expect(balanceAfter).toBe(balanceBefore - 150);
 
-      // Verify escrow entry
-      const jobId = res.body.job.id;
-      const entries = await query<{ amount: number; direction: string; reason: string }>(
-        `SELECT amount, direction, reason FROM credit_ledger WHERE job_id = $1 AND reason = 'job_escrow'`,
+      // Verify escrow entry (delta_credits is negative for escrow debit)
+      const jobId = res.body.data?.job?.id ?? res.body.job?.id;
+      const entries = await query<{ delta_credits: number; reason: string }>(
+        `SELECT delta_credits, reason FROM credit_ledger WHERE job_id = $1 AND reason = 'job_escrow'`,
         [jobId]
       );
       expect(entries.rows.length).toBe(1);
-      expect(entries.rows[0].amount).toBe(150);
-      expect(entries.rows[0].direction).toBe("debit");
+      expect(entries.rows[0].delta_credits).toBe(-150);
     });
 
     it("prevents job creation with insufficient credits", async () => {
@@ -146,7 +144,7 @@ describe("Credit System Integration", () => {
         throw new Error(`Job creation failed (${jobRes.status}): ${JSON.stringify(jobRes.body)}`);
       }
 
-      const jobId = jobRes.body.job.id;
+      const jobId = jobRes.body.data?.job?.id ?? jobRes.body.job?.id;
 
       // Fast-forward to awaiting_approval with cleaner assigned
       await transitionJobTo(jobId, "awaiting_approval", cleaner.id);
@@ -163,13 +161,12 @@ describe("Credit System Integration", () => {
       expect(cleanerBalanceAfter).toBe(cleanerBalanceBefore + 100);
 
       // Verify release entry
-      const entries = await query<{ amount: number; direction: string }>(
-        `SELECT amount, direction FROM credit_ledger WHERE user_id = $1 AND job_id = $2 AND reason = 'job_release'`,
+      const entries = await query<{ delta_credits: number }>(
+        `SELECT delta_credits FROM credit_ledger WHERE user_id = $1 AND job_id = $2 AND reason = 'job_release'`,
         [cleaner.id, jobId]
       );
       expect(entries.rows.length).toBe(1);
-      expect(entries.rows[0].amount).toBe(100);
-      expect(entries.rows[0].direction).toBe("credit");
+      expect(entries.rows[0].delta_credits).toBe(100);
     });
   });
 
@@ -194,7 +191,7 @@ describe("Credit System Integration", () => {
         throw new Error(`Job creation failed (${jobRes.status}): ${JSON.stringify(jobRes.body)}`);
       }
 
-      const jobId = jobRes.body.job.id;
+      const jobId = jobRes.body.data?.job?.id ?? jobRes.body.job?.id;
       const balanceAfterCreate = await getUserCreditBalance(client.id);
       expect(balanceAfterCreate).toBe(balanceBefore - 80);
 
@@ -210,13 +207,12 @@ describe("Credit System Integration", () => {
       expect(balanceAfterCancel).toBe(balanceBefore); // Full refund
 
       // Verify refund entry
-      const entries = await query<{ amount: number; direction: string }>(
-        `SELECT amount, direction FROM credit_ledger WHERE user_id = $1 AND job_id = $2 AND reason = 'refund'`,
+      const entries = await query<{ delta_credits: number }>(
+        `SELECT delta_credits FROM credit_ledger WHERE user_id = $1 AND job_id = $2 AND reason = 'refund'`,
         [client.id, jobId]
       );
       expect(entries.rows.length).toBe(1);
-      expect(entries.rows[0].amount).toBe(80);
-      expect(entries.rows[0].direction).toBe("credit");
+      expect(entries.rows[0].delta_credits).toBe(80);
     });
   });
 
