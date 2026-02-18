@@ -10,7 +10,7 @@ import {
   AuthedRequest,
   authedHandler,
 } from "../middleware/authCanonical";
-import { validateBody } from "../lib/validation";
+import { validateBody, validateQuery } from "../lib/validation";
 import { z } from "zod";
 import {
   getAdminKPIs,
@@ -857,27 +857,46 @@ adminRouter.get(
  *         schema:
  *           type: integer
  *           default: 0
+ *       - in: query
+ *         name: cursor
+ *         schema:
+ *           type: string
+ *         description: Cursor for keyset pagination (base64)
  *     responses:
  *       200:
  *         description: List of users
  */
+const listUsersQuerySchema = z.object({
+  role: z.enum(["client", "cleaner", "admin"]).optional(),
+  search: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+  cursor: z.string().optional(),
+});
+
 adminRouter.get(
   "/users",
   requireAdmin,
+  validateQuery(listUsersQuerySchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
-      const { role, search, limit = "50", offset = "0" } = req.query;
+      const q = req.query as unknown as z.infer<typeof listUsersQuerySchema>;
 
       const result = await listUsers({
-        role: role as any,
-        search: search as string,
-        limit: parseInt(limit as string, 10),
-        offset: parseInt(offset as string, 10),
+        role: q.role,
+        search: q.search,
+        limit: q.limit,
+        offset: q.offset,
+        cursor: q.cursor,
       });
 
       // Sanitize users to exclude password_hash
       const sanitizedUsers = result.users.map((user) => sanitizeUserForAdmin(user));
-      res.json({ users: sanitizedUsers, total: result.total });
+      res.json({
+        users: sanitizedUsers,
+        total: result.total,
+        ...(result.nextCursor && { nextCursor: result.nextCursor, hasMore: result.hasMore }),
+      });
     } catch (error) {
       logger.error("list_users_failed", { error: (error as Error).message });
       res.status(500).json({

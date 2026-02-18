@@ -34,8 +34,11 @@ Railway auto-deploys on push to the linked branch unless disabled.
 
 ## CI/CD
 
-- **GitHub Actions** — Lint, test, build on push/PR (`.github/workflows/ci.yml`).
+- **GitHub Actions** — Lint, test, build on push/PR (`.github/workflows/ci.yml`, `.github/workflows/test.yml`).
+- **Migrations check** — `.github/workflows/migrations.yml` applies consolidated schema on fresh Postgres; runs on push/PR to main/develop.
 - **Deploy trigger** — Railway deploys on push to main (or configured branch).
+- **Staging (optional)** — Create a second Railway service or project with `DATABASE_URL` pointing to a staging Neon branch. Deploy develop → staging; merge main → production.
+- **Coverage** — CI runs `npm run test:coverage`; reports in `coverage/`. Add `CODECOV_TOKEN` secret and `lcov.info` will be uploaded. Badge: `[![codecov](https://codecov.io/gh/OWNER/REPO/graph/badge.svg)](https://codecov.io/gh/OWNER/REPO)`.
 
 ### Branch protection (recommended)
 
@@ -91,6 +94,13 @@ When a deploy causes errors:
 
 Full steps: [docs/runbooks/rollback-deploy.md](../runbooks/rollback-deploy.md).
 
+### Migration safety
+
+- Run migrations check locally: `DATABASE_URL=... npm run db:setup:test` then `npm run test`.
+- CI `migrations.yml` applies `000_CONSOLIDATED_SCHEMA.sql` on fresh DB; passes if tables exist.
+- For additive migrations: apply forward; older code can run with new schema.
+- For breaking changes: deploy in two phases (add column → deploy code that uses it → remove old column).
+
 ## Production verification checklist
 
 Before going live or after deploy, verify:
@@ -102,3 +112,9 @@ Before going live or after deploy, verify:
 | **Branch protection** | GitHub → Settings → Branches; confirm rule exists and status checks required |
 | **Health** | `GET /health` and `GET /health/ready` return 200 |
 | **DB connectivity** | Health ready check includes DB ping |
+
+## Launch readiness (Section 14)
+
+- **Feature flags:** `admin_feature_flags` (gamification), env kill switches (`BOOKINGS_ENABLED`, `PAYOUTS_ENABLED`, etc.). See RUNBOOK § 3.2.
+- **Rollout plan:** Staging → internal dogfood → city pilot → scale. See RUNBOOK § 5.
+- **Incident runbook:** RUNBOOK § 3.1; SECURITY_INCIDENT_RESPONSE.md for secrets exposure.

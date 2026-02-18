@@ -70,6 +70,7 @@ import notificationsRouter from "./routes/notifications";
 // V4 FEATURE — AI ASSISTANT (communication automation & scheduling)
 import aiRouter from "./routes/ai";
 import userDataRouter from "./routes/userData";
+import trustAdapterRouter from "./routes/trustAdapter";
 
 // ============================================
 // Sentry is already initialized in instrument.ts (required at top of file)
@@ -300,6 +301,9 @@ app.use("/api/v1", apiRouter);
 const webhooksRouter = express.Router();
 webhooksRouter.use("/stripe", stripeRouter);
 app.use("/api/webhooks", webhooksRouter);
+
+// Trust-Fintech adapter: /api/credits, /api/billing, /api/appointments (for frontend Trust hooks)
+app.use("/api", trustAdapterRouter);
 
 // ============================================
 // 404 Handler

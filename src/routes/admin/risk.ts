@@ -3,11 +3,11 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import {
   requireAuth,
-  requireAdmin,
+  requireSupportRole,
   AuthedRequest,
   authedHandler,
 } from "../../middleware/authCanonical";
-import { validateBody } from "../../lib/validation";
+import { validateBody, validateQuery } from "../../lib/validation";
 import { query } from "../../db/client";
 import { logger } from "../../lib/logger";
 import { RiskManagementData } from "../../types/admin";
@@ -19,7 +19,7 @@ import {
 const router = Router();
 
 router.use(requireAuth);
-router.use(requireAdmin);
+router.use(requireSupportRole); // support_agent, support_lead, ops_finance, admin for risk view/flags
 
 /**
  * @swagger
@@ -172,16 +172,26 @@ router.get(
   })
 );
 
+const listFlagsQuerySchema = z.object({
+  userId: z.string().optional(),
+  severity: z.string().optional(),
+  active: z.enum(["true", "false"]).default("true"),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
 /**
  * GET /admin/risk/flags
  * Get all risk flags with filters
  */
 router.get(
   "/flags",
+  validateQuery(listFlagsQuerySchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
-      const { userId, severity, active = "true", page = "1", limit = "50" } = req.query;
-      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+      const q = req.query as unknown as z.infer<typeof listFlagsQuerySchema>;
+      const { userId, severity, active, page, limit } = q;
+      const offset = (page - 1) * limit;
 
       const conditions: string[] = ["1=1"];
       const params: any[] = [];
@@ -220,7 +230,7 @@ router.get(
       WHERE ${whereClause}
       ORDER BY rf.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-        [...params, parseInt(limit as string), offset]
+        [...params, limit, offset]
       );
 
       res.json({ flags: flags.rows });

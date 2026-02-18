@@ -5,6 +5,7 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import {
   requireAuth,
+  requireSupportRole,
   requireAdmin,
   AuthedRequest,
   authedHandler,
@@ -29,7 +30,7 @@ import gamificationControlRouter from "./gamificationControl";
 
 const adminRouter = Router();
 adminRouter.use(requireAuth);
-adminRouter.use(requireAdmin);
+adminRouter.use(requireSupportRole); // support_agent, support_lead, ops_finance, admin
 
 // Ops dashboard: unified disputes, webhooks, risk view
 adminRouter.get(
@@ -47,9 +48,15 @@ adminRouter.get(
   })
 );
 
+const kpisQuerySchema = z.object({
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+});
+
 // Root-level admin routes (before /jobs sub-router so GET /admin/jobs list is handled)
 adminRouter.get(
   "/kpis",
+  validateQuery(kpisQuerySchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { dateFrom, dateTo } = req.query;
@@ -63,6 +70,10 @@ adminRouter.get(
     }
   })
 );
+
+const jobEventsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(100),
+});
 
 const listJobsQuerySchema = z.object({
   status: z.string().optional(),
@@ -104,10 +115,12 @@ adminRouter.get(
 // Admin job detail + events (before /jobs sub-router so :jobId matches)
 adminRouter.get(
   "/jobs/:jobId/events",
+  validateQuery(jobEventsQuerySchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { jobId } = req.params;
-      const limit = parseInt((req.query.limit as string) || "100", 10);
+      const q = req.query as unknown as z.infer<typeof jobEventsQuerySchema>;
+      const limit = q.limit;
       const events = await getJobEventsForAdmin(jobId, limit);
       res.json({ jobId, events, count: events.length });
     } catch (error) {
@@ -129,12 +142,12 @@ adminRouter.use("/analytics", analyticsRouter);
 adminRouter.use("/bookings", bookingsRouter);
 adminRouter.use("/cleaners", cleanersRouter);
 adminRouter.use("/clients", clientsRouter);
-adminRouter.use("/finance", financeRouter);
+adminRouter.use("/finance", financeRouter); // financeRouter enforces requireFinanceRole
 adminRouter.use("/risk", riskRouter);
 adminRouter.use("/messages", messagesRouter);
-adminRouter.use("/system", systemRouter);
-adminRouter.use("/settings", settingsRouter);
-adminRouter.use("/level-tuning", levelTuningRouter);
-adminRouter.use("/gamification", gamificationControlRouter);
+adminRouter.use("/system", systemRouter); // systemRouter enforces requireAdmin
+adminRouter.use("/settings", settingsRouter); // settingsRouter enforces requireAdmin
+adminRouter.use("/level-tuning", levelTuningRouter); // levelTuningRouter enforces requireAdmin
+adminRouter.use("/gamification", gamificationControlRouter); // gamificationControlRouter enforces requireAdmin
 
 export default adminRouter;

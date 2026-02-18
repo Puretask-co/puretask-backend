@@ -116,7 +116,9 @@ export async function getCleanerProgression(
   const goals = (goalsRaw as Array<{ enabled?: boolean }>)
     .filter((g) => g.enabled !== false)
     .map((g) => toGoalDefinition(g as Parameters<typeof toGoalDefinition>[0]));
-  const levels = (levelsRaw as Parameters<typeof toLevelDefinition>[]).map(toLevelDefinition);
+  const levels = (levelsRaw as Array<Parameters<typeof toLevelDefinition>[0]>).map((level) =>
+    toLevelDefinition(level)
+  );
   const levelGoals = goals.filter((g) => g.level === currentLevel);
 
   const goalProgress = await evaluateGoals(provider, cleanerId, levelGoals, now);

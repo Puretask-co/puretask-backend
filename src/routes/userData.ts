@@ -222,7 +222,9 @@ userDataRouter.get(
     const type = req.params.type as "privacy_policy" | "terms_of_service" | "marketing";
 
     if (!["privacy_policy", "terms_of_service", "marketing"].includes(type)) {
-      return sendError(res, new Error("Invalid consent type"), 400);
+      const err = new Error("Invalid consent type");
+      (err as Error & { statusCode?: number }).statusCode = 400;
+      return sendError(res, err);
     }
 
     try {

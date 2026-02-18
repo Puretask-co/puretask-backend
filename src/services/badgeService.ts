@@ -172,13 +172,13 @@ export class BadgeService {
         [cleanerId]
       );
       return (r.rows ?? []).map((row: Record<string, unknown>) => ({
-        badge_id: row.badge_id,
+        badge_id: String(row.badge_id ?? ""),
         earned_at: (row.earned_at as Date)?.toISOString?.() ?? String(row.earned_at),
-        name: row.name,
-        description: row.description,
-        category: row.category,
-        icon_key: row.icon_key,
-        is_profile_visible: row.is_profile_visible,
+        name: String(row.name ?? ""),
+        description: String(row.description ?? ""),
+        category: String(row.category ?? ""),
+        icon_key: row.icon_key as string | null,
+        is_profile_visible: Boolean(row.is_profile_visible),
       }));
     } catch {
       return [];
@@ -209,10 +209,10 @@ export class BadgeService {
         [cleanerId, cappedLimit]
       );
       return (r.rows ?? []).map((row: Record<string, unknown>) => ({
-        type: row.type,
-        ref_id: row.ref_id,
-        title: row.title,
-        subtitle: row.subtitle,
+        type: String(row.type ?? ""),
+        ref_id: row.ref_id as string | null,
+        title: String(row.title ?? ""),
+        subtitle: row.subtitle as string | null,
         meta: (row.meta as Record<string, unknown>) ?? {},
         created_at: (row.created_at as Date)?.toISOString?.() ?? String(row.created_at),
       }));

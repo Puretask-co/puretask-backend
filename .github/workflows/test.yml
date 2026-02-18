@@ -54,7 +54,7 @@ jobs:
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || secrets.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/puretask_test' }}
         run: npm run db:setup:test
 
-      - name: Run tests
+      - name: Run tests with coverage
         env:
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || secrets.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/puretask_test' }}
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-jwt-secret-min-32-chars-for-ci' }}
@@ -62,5 +62,13 @@ jobs:
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder' }}
           N8N_WEBHOOK_SECRET: ${{ secrets.N8N_WEBHOOK_SECRET || 'test-n8n-secret' }}
           NODE_ENV: test
-        run: npm run test
+        run: npm run test:coverage
         # Add TEST_DATABASE_URL or DATABASE_URL to repo secrets for integration/smoke tests.
+
+      - name: Upload coverage to Codecov (optional)
+        if: success()
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN || '' }}

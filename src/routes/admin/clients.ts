@@ -2,18 +2,21 @@
 import { Router, Response, NextFunction, Request } from "express";
 import {
   requireAuth,
-  requireAdmin,
+  requireSupportRole,
+  requireFinanceRole,
   AuthedRequest,
   authedHandler,
 } from "../../middleware/authCanonical";
+import { validateQuery } from "../../lib/validation";
 import { query } from "../../db/client";
+import { z } from "zod";
 import { logger } from "../../lib/logger";
 import { ClientManagementItem } from "../../types/admin";
 
 const router = Router();
 
 router.use(requireAuth);
-router.use(requireAdmin);
+router.use(requireSupportRole); // support_agent+ can view; credit grant needs requireFinanceRole
 
 /**
  * @swagger
@@ -56,22 +59,29 @@ router.use(requireAdmin);
  *       200:
  *         description: List of clients
  */
+const listClientsQuerySchema = z.object({
+  status: z.enum(["active", "inactive"]).optional(),
+  search: z.string().optional(),
+  minBookings: z.coerce.number().int().min(0).optional(),
+  hasRiskFlags: z.enum(["true", "false"]).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  sortBy: z.enum(["name", "email", "bookings", "spent", "createdAt"]).default("createdAt"),
+  sortOrder: z.enum(["ASC", "DESC"]).default("DESC"),
+  cursor: z.string().optional(), // base64 JSON { created_at, user_id } for keyset (when sortBy=createdAt)
+});
+
 router.get(
   "/",
+  validateQuery(listClientsQuerySchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
-      const {
-        status,
-        search,
-        minBookings,
-        hasRiskFlags,
-        page = "1",
-        limit = "50",
-        sortBy = "createdAt",
-        sortOrder = "DESC",
-      } = req.query;
+      const q = req.query as unknown as z.infer<typeof listClientsQuerySchema>;
+      const { status, search, minBookings, hasRiskFlags, page, limit, sortBy, sortOrder, cursor } =
+        q;
 
-      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+      const useCursor = cursor && sortBy === "createdAt";
+      const offset = useCursor ? 0 : (page - 1) * limit;
 
       const conditions: string[] = ["1=1"];
       const params: any[] = [];
@@ -101,14 +111,29 @@ router.get(
         paramIndex++;
       }
 
-      if (minBookings) {
+      if (minBookings != null) {
         conditions.push(`booking_stats.total_bookings >= $${paramIndex}`);
-        params.push(parseInt(minBookings as string));
+        params.push(minBookings);
         paramIndex++;
       }
 
       if (hasRiskFlags === "true") {
         conditions.push(`risk_stats.flag_count > 0`);
+      }
+
+      if (useCursor && cursor) {
+        try {
+          const decoded = JSON.parse(Buffer.from(cursor, "base64").toString("utf8"));
+          if (decoded.created_at && decoded.user_id) {
+            const op = sortOrder === "DESC" ? "<" : ">";
+            conditions.push(
+              `(cp.created_at, cp.user_id) ${op} ($${paramIndex++}::timestamptz, $${paramIndex++}::text)`
+            );
+            params.push(decoded.created_at, decoded.user_id);
+          }
+        } catch {
+          // Invalid cursor - ignore
+        }
       }
 
       const whereClause = conditions.join(" AND ");
@@ -121,11 +146,13 @@ router.get(
         createdAt: "cp.created_at",
       };
 
-      const sortColumn = validSortColumns[sortBy as string] || "cp.created_at";
-      const order = sortOrder === "ASC" ? "ASC" : "DESC";
+      const sortColumn = validSortColumns[sortBy] || "cp.created_at";
+      const order = sortOrder;
 
-      // Get total count
-      const countResult = await query(
+      // Get total count (skip when using cursor for performance)
+      let totalCount = 0;
+      if (!useCursor) {
+        const countResult = await query(
         `SELECT COUNT(*) as total
        FROM client_profiles cp
        JOIN users u ON u.id = cp.user_id
@@ -139,10 +166,12 @@ router.get(
          GROUP BY user_id
        ) risk_stats ON risk_stats.user_id = cp.user_id
        WHERE ${whereClause}`,
-        params
-      );
+          params
+        );
+        totalCount = parseInt(countResult.rows[0].total);
+      }
 
-      const totalCount = parseInt(countResult.rows[0].total);
+      const fetchLimit = useCursor ? limit + 1 : limit;
 
       // Get clients
       const clientsResult = await query(
@@ -197,12 +226,12 @@ router.get(
         GROUP BY user_id
       ) risk_stats ON risk_stats.user_id = cp.user_id
       WHERE ${whereClause}
-      ORDER BY ${sortColumn} ${order}
+      ORDER BY ${sortColumn} ${order}, cp.user_id
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-        [...params, parseInt(limit as string), offset]
+        [...params, fetchLimit, offset]
       );
 
-      const clients: ClientManagementItem[] = clientsResult.rows.map((row) => ({
+      let clients: ClientManagementItem[] = clientsResult.rows.map((row) => ({
         id: row.id,
         userId: row.user_id,
         fullName: row.full_name,
@@ -217,14 +246,27 @@ router.get(
         lastBookingAt: row.last_booking_at,
       }));
 
+      let nextCursor: string | undefined;
+      let hasMore = false;
+      if (useCursor && clients.length > limit) {
+        hasMore = true;
+        clients = clients.slice(0, limit);
+        const last = clients[clients.length - 1];
+        nextCursor = Buffer.from(
+          JSON.stringify({ created_at: last.createdAt, user_id: last.userId }),
+          "utf8"
+        ).toString("base64");
+      }
+
       res.json({
         clients,
         pagination: {
-          page: parseInt(page as string),
-          limit: parseInt(limit as string),
+          page,
+          limit,
           total: totalCount,
-          pages: Math.ceil(totalCount / parseInt(limit as string)),
+          pages: useCursor ? undefined : Math.ceil(totalCount / limit),
         },
+        ...(nextCursor && { nextCursor, hasMore }),
       });
 
       logger.info("Admin clients list retrieved", {
@@ -380,10 +422,11 @@ router.get(
 
 /**
  * POST /admin/clients/:id/credit
- * Grant or deduct credits for a client
+ * Grant or deduct credits for a client (ops_finance, admin only)
  */
 router.post(
   "/:id/credit",
+  requireFinanceRole,
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { id } = req.params;

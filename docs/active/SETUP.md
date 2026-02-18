@@ -41,6 +41,10 @@ Optional for local: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `N8N_WEBHOOK_S
 
 Frontend, n8n, and workers are separate; see ARCHITECTURE and RUNBOOK for how they connect.
 
+### Trust-Fintech frontend
+
+The Trust-Fintech frontend expects `NEXT_PUBLIC_API_BASE_URL=http://localhost:4000`. The backend exposes Trust contract at `/api/credits`, `/api/billing`, `/api/appointments`. Ensure `Authorization: Bearer <token>` is sent. Check-in/check-out require photos; use `/tracking/:jobId/check-in` and `/tracking/:jobId/check-out` for those.
+
 ## Common setup problems
 
 - **Port in use** — Change `PORT` in `.env` or stop the process using the port.

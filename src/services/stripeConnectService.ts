@@ -1,6 +1,7 @@
 // src/services/stripeConnectService.ts
 // Stripe Connect onboarding for cleaners
 
+import type Stripe from "stripe";
 import { stripe } from "../integrations/stripe";
 import { query } from "../db/client";
 import { logger } from "../lib/logger";

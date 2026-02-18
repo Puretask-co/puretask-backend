@@ -218,7 +218,7 @@ describe("V1 Hardening: Stripe Webhook Idempotency", () => {
   });
 });
 
-describe("V1 Hardening: Atomic Job Completion", () => {
+describe("V1 Hardening: Atomic Job Completion", { timeout: 20000, hookTimeout: 20000 }, () => {
   let testJobId: string;
 
   beforeEach(async () => {

@@ -162,7 +162,7 @@ router.get("/messages/history", async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const { limit = 50, offset = 0, message_type, channel, start_date, end_date } = req.query;
 
-    let query = `
+    let sql = `
       SELECT 
         id,
         message_content as content,
@@ -187,32 +187,32 @@ router.get("/messages/history", async (req: AuthedRequest, res) => {
 
     if (message_type) {
       paramCount++;
-      query += ` AND message_type = $${paramCount}`;
+      sql += ` AND message_type = $${paramCount}`;
       params.push(message_type);
     }
 
     if (channel) {
       paramCount++;
-      query += ` AND channel = $${paramCount}`;
+      sql += ` AND channel = $${paramCount}`;
       params.push(channel);
     }
 
     if (start_date) {
       paramCount++;
-      query += ` AND sent_at >= $${paramCount}`;
+      sql += ` AND sent_at >= $${paramCount}`;
       params.push(start_date);
     }
 
     if (end_date) {
       paramCount++;
-      query += ` AND sent_at <= $${paramCount}`;
+      sql += ` AND sent_at <= $${paramCount}`;
       params.push(end_date);
     }
 
-    query += ` ORDER BY sent_at DESC LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
+    sql += ` ORDER BY sent_at DESC LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
     params.push(limit, offset);
 
-    const result = await query(query, params);
+    const result = await query(sql, params);
 
     // Get total count
     const countResult = await query(
@@ -220,11 +220,12 @@ router.get("/messages/history", async (req: AuthedRequest, res) => {
       [cleanerId]
     );
 
+    const countRow = countResult.rows[0] as { count: string };
     res.json({
       messages: result.rows,
-      total: parseInt(countResult.rows[0].count),
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string),
+      total: parseInt(countRow?.count ?? "0", 10),
+      limit: parseInt(String(limit), 10),
+      offset: parseInt(String(offset), 10),
     });
   } catch (error: any) {
     console.error("Error fetching message history:", error);

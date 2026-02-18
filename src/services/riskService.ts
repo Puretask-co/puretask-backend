@@ -156,7 +156,7 @@ async function calculatePaymentFailureRisk(
   _userId: string
 ): Promise<{ score: number; factor: RiskFactor }> {
   // credit_reason enum has no 'payment_failed'; use payment_intents if needed later
-  const failures = 0;
+  const failures: number = 0;
 
   let score = 0;
   let severity: "low" | "medium" | "high" = "low";

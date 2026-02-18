@@ -4,7 +4,7 @@
  * Handles: onboarding progress, achievements, certifications, template library
  */
 
-import { Router, Response, NextFunction } from "express";
+import { Router, Response, NextFunction, RequestHandler } from "express";
 import { z } from "zod";
 import { query } from "../db/client";
 import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
@@ -500,7 +500,7 @@ router.post(
  *       200:
  *         description: completionPercentage, wizardCompleted, currentStep, etc.
  */
-router.get("/onboarding/progress", async (req: AuthedRequest, res) => {
+router.get("/onboarding/progress", (async (req: AuthedRequest, res) => {
   try {
     const cleanerId = req.user!.id;
 
@@ -546,7 +546,7 @@ router.get("/onboarding/progress", async (req: AuthedRequest, res) => {
       error: { code: "INTERNAL_ERROR", message: "Failed to fetch progress" },
     });
   }
-});
+}) as RequestHandler);
 
 /**
  * @swagger

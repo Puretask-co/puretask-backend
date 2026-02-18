@@ -2,7 +2,7 @@
 import { Router, Response, NextFunction } from "express";
 import {
   requireAuth,
-  requireAdmin,
+  requireFinanceRole,
   AuthedRequest,
   authedHandler,
 } from "../../middleware/authCanonical";
@@ -13,7 +13,7 @@ import { FinanceCenterData } from "../../types/admin";
 const router = Router();
 
 router.use(requireAuth);
-router.use(requireAdmin);
+router.use(requireFinanceRole); // ops_finance, admin for payouts/credits
 
 /**
  * @swagger

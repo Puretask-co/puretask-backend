@@ -121,9 +121,15 @@ export class NextBestActionService {
         reward_id: rid,
         kind,
         label: this.rewardLabel(r),
-        duration_days: (r.params as AnyJson)?.duration_days ?? null,
+        duration_days:
+          typeof (r.params as AnyJson)?.duration_days === "number"
+            ? ((r.params as AnyJson).duration_days as number)
+            : null,
         amount_cents: this.rewardAmountCents(r),
-        uses: (r.params as AnyJson)?.uses ?? null,
+        uses:
+          typeof (r.params as AnyJson)?.uses === "number"
+            ? ((r.params as AnyJson).uses as number)
+            : null,
       };
     });
 

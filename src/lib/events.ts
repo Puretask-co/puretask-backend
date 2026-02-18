@@ -91,9 +91,10 @@ export async function publishEvent(input: PublishEventInput): Promise<void> {
   // });
 
   // Forward to n8n webhook if configured (non-blocking, errors are logged but don't fail the request)
+  const n8nActorType = (actorType as string) === "super_admin" ? "admin" : actorType;
   forwardEventToN8nWebhook({
     jobId,
-    actorType,
+    actorType: n8nActorType,
     actorId,
     eventName,
     payload,

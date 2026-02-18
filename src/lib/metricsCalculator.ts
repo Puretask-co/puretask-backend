@@ -435,7 +435,8 @@ async function computeAvgPercent(
   window: MetricWindow | null
 ): Promise<MetricResult> {
   const stars = await computeAvgStars(cleanerId, window, {});
-  return { value: Math.round((stars.value / 5) * 100), unit: "percent" };
+  const numVal = typeof stars.value === "number" ? stars.value : 0;
+  return { value: Math.round((numVal / 5) * 100), unit: "percent" };
 }
 
 async function computeFiveStarCount(

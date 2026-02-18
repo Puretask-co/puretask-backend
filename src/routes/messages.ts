@@ -262,10 +262,12 @@ messagesRouter.post(
       const { jobId } = req.params;
       const { body, receiverId } = req.body;
 
+      const senderRole =
+        req.user!.role === "super_admin" ? "admin" : (req.user!.role as import("../types/db").ActorType);
       const message = await sendMessage({
         jobId,
         senderId: req.user!.id,
-        senderRole: req.user!.role,
+        senderRole,
         receiverId,
         body,
       });

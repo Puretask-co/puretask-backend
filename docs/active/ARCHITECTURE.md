@@ -9,7 +9,8 @@
 
 - **Runtime:** Node.js 20+, TypeScript
 - **API:** Express
-- **DB:** PostgreSQL (Neon); access via `src/db/client.ts` (pool, query, withTransaction)
+- **DB:** PostgreSQL (Neon); access via `src/db/client.ts` (pool, query, withTransaction). Indexes on jobs, users, cleaner_profiles, credit_ledger, payouts, job_events, etc. (see `000_COMPLETE_CONSOLIDATED_SCHEMA.sql`).
+- **Redis (optional):** `REDIS_URL` + `USE_REDIS_RATE_LIMITING=true` for distributed rate limiting and `src/lib/cache.ts`; falls back to in-memory if unavailable.
 - **Auth:** JWT; canonical middleware in `src/middleware/authCanonical.ts` (requireAuth, requireRole, requireAdmin, requireSuperAdmin)
 - **Payments:** Stripe (Connect, Payment Intents, webhooks)
 - **Workers:** ts-node scripts; scheduler in `src/workers/scheduler.ts`; durable jobs in `src/workers/durableJobWorker.ts`
@@ -37,6 +38,8 @@
 - **Payments:** Payment intents and ledger updates via `paymentService` / `payoutsService`; state machine in [PAYMENT_STATE_MACHINE.md](./sections/PAYMENT_STATE_MACHINE.md).
 - **Background work:** Cron or scheduler invokes workers; Section 6 durable jobs: enqueue via `durableJobService.enqueue`, process via `durableJobWorker` (claim → handler → complete/fail).
 - **Cleaner Level System:** Behavior-driven gamification (Level 1–10). Levels = permission gates; goals = real rewards (cash, priority visibility, fee reductions). Goal evaluation runs on job completion (`jobTrackingService` approve, `jobsService` event handling) and login (`recordCleanerLogin` on auth). Service: `cleanerLevelService`; routes: `GET /cleaner/level/progress`, `POST /cleaner/level/record-login`. DB: migration 043 (`cleaner_level_definitions`, `cleaner_level_goals`, `cleaner_level_progress`, `cleaner_goal_completions`, `cleaner_rewards_granted`, `cleaner_login_days`, `cleaner_active_boosts`).
+- **Trust-Fintech adapter:** Routes at `/api/credits`, `/api/billing`, `/api/appointments` match the Trust frontend hooks contract (useCreditsTrust, useBillingTrust, useLiveAppointmentTrust). Maps to existing credits, invoice, and job/tracking services. See `src/routes/trustAdapter.ts`.
+
 - **Gamification Engine (Step 5–9):** JSON-config-driven evaluators for goals, levels, rewards. `src/lib/gamification/`: goal_evaluator, level_evaluator, reward_granter, metricProviderAdapter. Metrics from `metricsCalculator.ts`. Progression: `gamificationProgressionService`, `gamificationRewardService`. Routes: `GET /cleaner/level/progression`, `POST /cleaner/rewards/select`, `GET /cleaner/rewards/active`, `GET /cleaner/rewards/choices`, `GET /cleaner/rewards/effects`. Worker: `processCleanerGamification` (expires rewards/choices, persists progress, grants rewards idempotently). DB: migration 048, 050. Reward effects (Step 9): `rewardEffectsService`, `matchingRankerService`, `feePolicyService` — visibility multiplier, early exposure, fee discounts, instant payout waivers; maintenance pause neutralizes effects.
 
 ---

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
 import { requireAuth, AuthedRequest } from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 
 // Services
 import {
@@ -188,7 +189,7 @@ v2Router.get("/properties", async (req: AuthedRequest, res: Response) => {
  *       404:
  *         description: Property not found
  */
-v2Router.get("/properties/:id", async (req: AuthedRequest, res: Response) => {
+v2Router.get("/properties/:id", requireOwnership("property", "id"), async (req: AuthedRequest, res: Response) => {
   try {
     const property = await getPropertyById(
       Number(req.params.id),
@@ -225,7 +226,7 @@ v2Router.get("/properties/:id", async (req: AuthedRequest, res: Response) => {
  *       200:
  *         description: Cleaning suggestions
  */
-v2Router.get("/properties/:id/suggestions", async (req: AuthedRequest, res: Response) => {
+v2Router.get("/properties/:id/suggestions", requireOwnership("property", "id"), async (req: AuthedRequest, res: Response) => {
   try {
     const suggestions = await getPropertySuggestions(Number(req.params.id));
     res.json({ suggestions });
@@ -277,7 +278,7 @@ v2Router.get("/properties/:id/suggestions", async (req: AuthedRequest, res: Resp
  *       403:
  *         description: Forbidden - clients only
  */
-v2Router.patch("/properties/:id", async (req: AuthedRequest, res: Response) => {
+v2Router.patch("/properties/:id", requireOwnership("property", "id"), async (req: AuthedRequest, res: Response) => {
   try {
     if (req.user?.role !== "client") {
       return res.status(403).json({ error: { code: "FORBIDDEN", message: "Clients only" } });
@@ -314,7 +315,7 @@ v2Router.patch("/properties/:id", async (req: AuthedRequest, res: Response) => {
  *       403:
  *         description: Forbidden - clients only
  */
-v2Router.delete("/properties/:id", async (req: AuthedRequest, res: Response) => {
+v2Router.delete("/properties/:id", requireOwnership("property", "id"), async (req: AuthedRequest, res: Response) => {
   try {
     if (req.user?.role !== "client") {
       return res.status(403).json({ error: { code: "FORBIDDEN", message: "Clients only" } });

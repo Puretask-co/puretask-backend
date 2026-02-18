@@ -5,6 +5,7 @@
  */
 
 import { withTransaction } from "../../db/client";
+import type { PoolClient } from "pg";
 import { isGamificationEnabled } from "../../lib/gamificationFeatureFlags";
 import {
   getCleanerProgression,
@@ -38,7 +39,7 @@ export async function processCleanerGamification(cleanerId: string): Promise<voi
   await expireRewards();
   await expireChoices();
 
-  await withTransaction(async (client) => {
+  await withTransaction(async (client: PoolClient) => {
     const levelRow = await client.query<{ current_level: number }>(
       `SELECT current_level FROM cleaner_level_progress WHERE cleaner_id = $1`,
       [cleanerId]
@@ -262,7 +263,7 @@ async function grantRewardsForGoal(
       );
 
       if (is_cash && amount_cents > 0) {
-        await cashBudget.recordCashGrantWithClient(client, {
+        await cashBudget.recordCashGrantWithClient(client as PoolClient, {
           cleaner_id: cleanerId,
           region_id: null,
           reward_id: rewardId,

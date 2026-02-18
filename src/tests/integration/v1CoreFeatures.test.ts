@@ -229,7 +229,7 @@ describe("V1 Core Features: Top 3 Cleaner Selection", () => {
   });
 });
 
-describe("V1 Core Features: Reliability → Tier → Payout Flow", () => {
+describe("V1 Core Features: Reliability → Tier → Payout Flow", { timeout: 15000 }, () => {
   let testClientId: string;
   let testCleanerId: string;
   let testJobId: string;

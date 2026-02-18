@@ -37,7 +37,7 @@ export async function recordEvent(evt: EventRecord): Promise<void> {
     payload, idempotency_key
   ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)${conflictClause}`;
 
-  await query([
+  await query(sql, [
     eventId,
     evt.event_type,
     evt.occurred_at,

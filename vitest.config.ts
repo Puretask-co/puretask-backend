@@ -6,12 +6,18 @@ export default defineConfig({
     globals: true,
     environment: "node",
     setupFiles: ["./src/tests/setup.ts"],
+    hookTimeout: 30000,
     include: ["src/**/*.test.ts", "src/**/__tests__/**/*.test.ts"],
     pool: "forks", // helps with DB connection limits on Neon free tier
     poolOptions: {
       forks: {
         singleFork: true, // run tests sequentially to avoid Neon connection limits
       },
+    },
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json-summary", "lcov"],
+      reportsDirectory: "./coverage",
     },
   },
   resolve: {

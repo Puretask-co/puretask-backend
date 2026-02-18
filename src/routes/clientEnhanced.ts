@@ -11,6 +11,7 @@ import {
   AuthedRequest,
   authedHandler,
 } from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 import { query } from "../db/client";
 
 const clientEnhancedRouter = Router();
@@ -1107,6 +1108,7 @@ clientEnhancedRouter.get(
  */
 clientEnhancedRouter.get(
   "/jobs/:id/live-status",
+  requireOwnership("job", "id"),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
@@ -1179,6 +1181,7 @@ clientEnhancedRouter.get(
  */
 clientEnhancedRouter.post(
   "/jobs/:id/add-to-calendar",
+  requireOwnership("job", "id"),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;
@@ -1254,6 +1257,7 @@ END:VCALENDAR`;
  */
 clientEnhancedRouter.get(
   "/jobs/:id/share-link",
+  requireOwnership("job", "id"),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const clientId = req.user!.id;

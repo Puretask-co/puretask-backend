@@ -5,7 +5,7 @@
 
 import { Router } from "express";
 import { requireAuth } from "../middleware/authCanonical";
-import { db } from "../lib/db";
+import { query } from "../db/client";
 
 const router = Router();
 
@@ -52,9 +52,9 @@ const router = Router();
 router.get("/global", requireAuth, async (req, res) => {
   try {
     const { q, limit = 10 } = req.query;
-    const query = (q as string)?.toLowerCase().trim();
+    const searchTerm = (q as string)?.toLowerCase().trim() ?? "";
 
-    if (!query || query.length < 2) {
+    if (!searchTerm || searchTerm.length < 2) {
       return res.json({ results: [] });
     }
 
@@ -67,10 +67,10 @@ router.get("/global", requireAuth, async (req, res) => {
        WHERE role = 'cleaner'
        AND (LOWER(full_name) LIKE $1 OR LOWER(email) LIKE $1)
        LIMIT $2`,
-      [`%${query}%`, Math.floor(Number(limit) / 4)]
+      [`%${searchTerm}%`, Math.floor(Number(limit) / 4)]
     );
 
-    cleaners.rows.forEach((row) => {
+    cleaners.rows.forEach((row: { id: string; full_name: string; email: string }) => {
       results.push({
         type: "cleaner",
         id: row.id,
@@ -89,11 +89,11 @@ router.get("/global", requireAuth, async (req, res) => {
          ${req.user?.role === "client" ? "AND j.client_id = $3" : ""}
          LIMIT $2`,
         req.user?.role === "client"
-          ? [`%${query}%`, Math.floor(Number(limit) / 4), req.user.id]
-          : [`%${query}%`, Math.floor(Number(limit) / 4)]
+          ? [`%${searchTerm}%`, Math.floor(Number(limit) / 4), req.user.id]
+          : [`%${searchTerm}%`, Math.floor(Number(limit) / 4)]
       );
 
-      bookings.rows.forEach((row) => {
+      bookings.rows.forEach((row: { id: string; address: string; service_type: string }) => {
         results.push({
           type: "booking",
           id: row.id,
@@ -112,10 +112,10 @@ router.get("/global", requireAuth, async (req, res) => {
          WHERE role = 'client'
          AND (LOWER(full_name) LIKE $1 OR LOWER(email) LIKE $1)
          LIMIT $2`,
-        [`%${query}%`, Math.floor(Number(limit) / 4)]
+        [`%${searchTerm}%`, Math.floor(Number(limit) / 4)]
       );
 
-      clients.rows.forEach((row) => {
+      clients.rows.forEach((row: { id: string; full_name: string; email: string }) => {
         results.push({
           type: "client",
           id: row.id,
@@ -174,9 +174,9 @@ router.get("/global", requireAuth, async (req, res) => {
 router.get("/autocomplete", requireAuth, async (req, res) => {
   try {
     const { q, limit = 8 } = req.query;
-    const query = (q as string)?.toLowerCase().trim();
+    const searchTerm = (q as string)?.toLowerCase().trim() ?? "";
 
-    if (!query || query.length < 2) {
+    if (!searchTerm || searchTerm.length < 2) {
       return res.json({ suggestions: [] });
     }
 
@@ -189,10 +189,10 @@ router.get("/autocomplete", requireAuth, async (req, res) => {
        WHERE role = 'cleaner'
        AND LOWER(full_name) LIKE $1
        LIMIT $2`,
-      [`%${query}%`, Math.floor(Number(limit) / 2)]
+      [`%${searchTerm}%`, Math.floor(Number(limit) / 2)]
     );
 
-    cleaners.rows.forEach((row) => {
+    cleaners.rows.forEach((row: { id: string; text: string }) => {
       suggestions.push({
         id: row.id,
         text: row.text,
@@ -203,7 +203,7 @@ router.get("/autocomplete", requireAuth, async (req, res) => {
     // Service type suggestions
     const services = ["standard", "deep", "move_in_out", "airbnb"];
     const matchingServices = services
-      .filter((s) => s.toLowerCase().includes(query))
+      .filter((s) => s.toLowerCase().includes(searchTerm))
       .slice(0, 3)
       .map((s) => ({
         id: `service-${s}`,

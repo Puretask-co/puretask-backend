@@ -47,12 +47,12 @@ export async function sendOTP(
     );
 
     // Send via Twilio if configured
-    if (twilioClient && env.TWILIO_PHONE_NUMBER) {
+    if (twilioClient && env.TWILIO_FROM_NUMBER) {
       try {
         await twilioClient.messages.create({
           body: `Your PureTask verification code is: ${otpCode}. This code expires in 10 minutes.`,
           to: phoneNumber,
-          from: env.TWILIO_PHONE_NUMBER,
+          from: env.TWILIO_FROM_NUMBER,
         });
         logger.info("otp_sent", { userId, phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, "*") });
       } catch (twilioError: any) {

@@ -230,7 +230,7 @@ export function getQuickTemplates(): {
   if (!_quickTemplates) {
     _quickTemplates = loadJson<typeof _quickTemplates>("quickTemplates.json");
   }
-  return _quickTemplates;
+  return _quickTemplates ?? { templates: [] };
 }
 
 /**
@@ -242,7 +242,7 @@ export function getBestPractices(): {
   if (!_bestPractices) {
     _bestPractices = loadJson<typeof _bestPractices>("bestPractices.json");
   }
-  return _bestPractices;
+  return _bestPractices ?? { cards: [] };
 }
 
 /**
@@ -252,7 +252,7 @@ export function getSeasonalRules(): { rules: Array<Record<string, unknown>> } {
   if (!_seasonalRules) {
     _seasonalRules = loadJson<typeof _seasonalRules>("seasonalRules.json");
   }
-  return _seasonalRules;
+  return _seasonalRules ?? { rules: [] };
 }
 
 /**
@@ -262,7 +262,7 @@ export function getRewardUnlocksByLevel(): Record<string, { unlocks: string[]; n
   if (!_rewardUnlocksByLevel) {
     _rewardUnlocksByLevel = loadJson<typeof _rewardUnlocksByLevel>("rewardUnlocksByLevel.json");
   }
-  return _rewardUnlocksByLevel;
+  return _rewardUnlocksByLevel ?? {};
 }
 
 /**
@@ -275,7 +275,7 @@ export function getChoiceRewardGroups(): Record<
   if (!_choiceRewardGroups) {
     _choiceRewardGroups = loadJson<typeof _choiceRewardGroups>("choiceRewardGroups.json");
   }
-  return _choiceRewardGroups;
+  return _choiceRewardGroups ?? {};
 }
 
 /**

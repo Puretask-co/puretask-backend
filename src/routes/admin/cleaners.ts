@@ -2,6 +2,7 @@
 import { Router, Response, NextFunction, Request } from "express";
 import {
   requireAuth,
+  requireSupportRole,
   requireAdmin,
   AuthedRequest,
   authedHandler,
@@ -13,7 +14,7 @@ import { CleanerManagementItem } from "../../types/admin";
 const router = Router();
 
 router.use(requireAuth);
-router.use(requireAdmin);
+router.use(requireSupportRole); // support_agent+ can view; suspend/tier need requireAdmin
 
 /**
  * @swagger
@@ -295,6 +296,7 @@ router.get(
  */
 router.patch(
   "/:id/verified-badge",
+  requireAdmin,
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { id } = req.params;
@@ -333,6 +335,7 @@ router.patch(
  */
 router.patch(
   "/:id/tier",
+  requireAdmin,
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { id } = req.params;
@@ -419,10 +422,11 @@ router.get(
 
 /**
  * POST /admin/cleaners/:id/suspend
- * Suspend a cleaner account
+ * Suspend a cleaner account (admin only)
  */
 router.post(
   "/:id/suspend",
+  requireAdmin,
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const { id } = req.params;

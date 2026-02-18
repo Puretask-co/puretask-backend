@@ -11,6 +11,7 @@ import {
   AuthedRequest,
   authedHandler,
 } from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 import { query } from "../db/client";
 
 const cleanerEnhancedRouter = Router();
@@ -461,6 +462,7 @@ cleanerEnhancedRouter.post(
  */
 cleanerEnhancedRouter.get(
   "/jobs/:id/matching-score",
+  requireOwnership("job", "id"),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;
@@ -678,6 +680,7 @@ const trackTimeSchema = z.object({
 
 cleanerEnhancedRouter.post(
   "/jobs/:id/track-time",
+  requireOwnership("job", "id"),
   validateBody(trackTimeSchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
@@ -762,6 +765,7 @@ const trackExpenseSchema = z.object({
 
 cleanerEnhancedRouter.post(
   "/jobs/:id/expenses",
+  requireOwnership("job", "id"),
   validateBody(trackExpenseSchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
@@ -821,6 +825,7 @@ cleanerEnhancedRouter.post(
  */
 cleanerEnhancedRouter.get(
   "/jobs/:id/directions",
+  requireOwnership("job", "id"),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
       const cleanerId = req.user!.id;

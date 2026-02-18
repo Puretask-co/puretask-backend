@@ -16,3 +16,5 @@
 | [IN_APP_COPY_CLIENT.md](./IN_APP_COPY_CLIENT.md) | IC-safe bullets for client app |
 
 Create each file when the content is ready; until then, the list in MASTER_CHECKLIST is the source of what was produced.
+
+**Section 13 status:** TOS consolidation, IC safeguards, Privacy Policy, retention, AB5 analysis, and in-app copy are tracked in MASTER_CHECKLIST § Legal. Implement per priority; counsel review before production.

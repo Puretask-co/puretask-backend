@@ -2,6 +2,7 @@
 // Credits purchase flow with Stripe
 // Matches 001_init.sql + 002_supplementary.sql schema
 
+import type Stripe from "stripe";
 import { stripe } from "../integrations/stripe";
 import { query } from "../db/client";
 import { env } from "../config/env";

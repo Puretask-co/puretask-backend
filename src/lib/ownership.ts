@@ -11,7 +11,7 @@ import type { AuthedRequest } from "../middleware/authCanonical";
  * Ensure a user owns a resource or has the required role
  */
 export async function ensureOwnership(
-  resourceType: "job" | "user" | "payout" | "invoice" | "photo",
+  resourceType: "job" | "user" | "payout" | "invoice" | "photo" | "property",
   resourceId: string,
   userId: string,
   role: UserRole
@@ -91,6 +91,24 @@ export async function ensureOwnership(
       break;
     }
 
+    case "property": {
+      const propId = resourceId.match(/^\d+$/) ? parseInt(resourceId, 10) : NaN;
+      if (isNaN(propId)) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Property not found", 404);
+      }
+      const propResult = await query<{ client_id: string }>(
+        `SELECT client_id FROM properties WHERE id = $1`,
+        [propId]
+      );
+      if (propResult.rows.length === 0) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Property not found", 404);
+      }
+      if (role === "client" && propResult.rows[0].client_id !== userId) {
+        throw new AppError(ErrorCode.FORBIDDEN, "You do not own this property", 403);
+      }
+      break;
+    }
+
     case "photo": {
       const result = await query<{ cleaner_id: string; job_id: string }>(
         `SELECT cleaner_id, job_id FROM job_photos WHERE id = $1`,
@@ -126,7 +144,7 @@ export async function ensureOwnership(
  * Use after requireAuth. Param name = key in req.params (e.g. "jobId", "photoId").
  */
 export function requireOwnership(
-  resourceType: "job" | "user" | "payout" | "invoice" | "photo",
+  resourceType: "job" | "user" | "payout" | "invoice" | "photo" | "property",
   paramName: string
 ): RequestHandler {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -166,7 +184,7 @@ export function requireOwnership(
  * Check if a user owns a resource (returns boolean, doesn't throw)
  */
 export async function checkOwnership(
-  resourceType: "job" | "user" | "payout" | "invoice" | "photo",
+  resourceType: "job" | "user" | "payout" | "invoice" | "photo" | "property",
   resourceId: string,
   userId: string,
   role: UserRole

@@ -13,6 +13,7 @@ import {
 } from "../services/paymentService";
 import { queueWebhookForRetry } from "../services/webhookRetryService";
 import { requireAuth, requireClient, AuthedRequest } from "../middleware/authCanonical";
+import { requireOwnership } from "../lib/ownership";
 import { validateBody } from "../lib/validation";
 import { z } from "zod";
 
@@ -151,7 +152,7 @@ stripeRouter.post("/webhook", async (req: Request, res: Response) => {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, getStripeWebhookSecret());
+    event = stripe.webhooks.constructEvent(req.body, sig, env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     logger.error("stripe_webhook_signature_verification_failed", {
       error: (err as Error).message,
@@ -230,6 +231,7 @@ stripeRouter.post("/webhook", async (req: Request, res: Response) => {
 stripeRouter.get(
   "/payment-intent/:jobId",
   requireAuth,
+  requireOwnership("job", "jobId"),
   async (req: AuthedRequest, res: Response) => {
     try {
       const { jobId } = req.params;

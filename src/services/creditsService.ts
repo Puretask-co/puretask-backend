@@ -261,6 +261,69 @@ export async function getCreditHistory(
 }
 
 /**
+ * Trust-Fintech: Get credit ledger entries with filters (from, to, type, status, search, limit)
+ */
+export interface CreditLedgerFilters {
+  from?: string;
+  to?: string;
+  type?: string;
+  status?: string;
+  search?: string;
+  limit?: number;
+}
+
+export async function getCreditLedgerFiltered(
+  userId: string,
+  filters: CreditLedgerFilters = {}
+): Promise<CreditLedgerEntry[]> {
+  const { from, to, type, search, limit = 50 } = filters;
+  const params: (string | number)[] = [userId];
+  let paramIdx = 2;
+  const conditions: string[] = ["user_id = $1"];
+
+  if (from) {
+    conditions.push(`created_at >= $${paramIdx}`);
+    params.push(from);
+    paramIdx++;
+  }
+  if (to) {
+    conditions.push(`created_at <= $${paramIdx}`);
+    params.push(to);
+    paramIdx++;
+  }
+  if (type) {
+    conditions.push(`reason = $${paramIdx}`);
+    params.push(type);
+    paramIdx++;
+  }
+  if (search) {
+    conditions.push(
+      `(id::text ILIKE $${paramIdx} OR COALESCE(job_id::text, '') ILIKE $${paramIdx})`
+    );
+    params.push(`%${search}%`);
+    paramIdx++;
+  }
+
+  const lim = Math.max(1, Math.min(200, limit));
+  params.push(lim);
+
+  const limitParam = paramIdx;
+
+  const result = await query<CreditLedgerEntry>(
+    `
+      SELECT *
+      FROM credit_ledger
+      WHERE ${conditions.join(" AND ")}
+      ORDER BY created_at DESC
+      LIMIT $${limitParam}
+    `,
+    params
+  );
+
+  return result.rows;
+}
+
+/**
  * Get credit history with running balance
  */
 export async function getCreditHistoryWithBalance(

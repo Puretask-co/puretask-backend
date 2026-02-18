@@ -87,7 +87,23 @@ echo $DATABASE_URL
 - Verify `JWT_SECRET` matches
 - Check token format (Bearer token)
 
-**Users Logged Out**:
+**Users Logged Out / "Signed Out" When Clicking Links**:
+
+Classic pattern: you log in successfully, click around, some pages fail to load, and you're redirected to login as if signed out. This is almost always the **frontend not sending the JWT** on every request.
+
+- **Cause:** Frontend apiClient does not attach `Authorization: Bearer <token>` to all requests. Protected routes get 401 → frontend treats as "unauthenticated" → redirects to login.
+- **Backend behavior:** This API returns 401 JSON when token is missing or invalid. It does not redirect.
+- **Frontend fix:** Ensure apiClient attaches the token from storage on every request:
+  ```js
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  headers: {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    "Content-Type": "application/json",
+  }
+  ```
+- **Verify:** DevTools → Network → inspect a failing request. Check Request Headers for `Authorization: Bearer ...`. If missing, fix apiClient. Also check Application → Local Storage for `token`.
+
+**Users Logged Out (other)**:
 - Check token expiration
 - Verify token version matches user
 - Check for token invalidation
@@ -357,3 +373,9 @@ For a consolidated view of all canonical docs (ARCHITECTURE, SETUP, CONTRIBUTING
 - Monitor during deployments
 - Keep backups current
 - Document all changes
+
+### Integration Test Timeouts
+If `V1 Core Features: Reliability → Tier → Payout Flow` tests timeout (5000ms), they use a 15000ms timeout. Slow DB (e.g. Neon free tier) may still fail; increase timeout in the describe block if needed.
+
+### npm Audit (Dev Dependencies)
+`npm audit` may report 6 moderate vulnerabilities in esbuild/vite/vitest (dev server SSRF). These affect only dev/test tooling, not production. No safe fix; `npm audit fix --force` would upgrade vitest to v4 (breaking). Accept for now or plan vitest v4 migration.

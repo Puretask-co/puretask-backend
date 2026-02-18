@@ -72,7 +72,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/puretask_test
         run: npm run db:setup:test
       
-      - name: Run tests
+      - name: Run tests with coverage
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/puretask_test
@@ -82,11 +82,7 @@ jobs:
           N8N_WEBHOOK_SECRET: test-n8n-secret-for-ci
           REDIS_URL: ""
           USE_REDIS_RATE_LIMITING: "false"
-        run: npm test
-      
-      - name: Generate coverage report
-        if: always()
-        run: npm run test:coverage:report || true
+        run: npm run test:coverage
       
       - name: Upload test results
         if: always()

@@ -270,6 +270,7 @@ export async function cleanupTestData(): Promise<void> {
     `DELETE FROM disputes WHERE client_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
     `DELETE FROM job_events WHERE job_id IN (SELECT id FROM jobs WHERE client_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com'))`,
     `DELETE FROM jobs WHERE client_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
+    `DELETE FROM properties WHERE client_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
     `DELETE FROM cleaner_profiles WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
     `DELETE FROM client_profiles WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.puretask.com')`,
     `DELETE FROM users WHERE email LIKE '%@test.puretask.com'`,

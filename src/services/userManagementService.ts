@@ -53,6 +53,7 @@ export interface UserListFilters {
   search?: string; // email search
   limit?: number;
   offset?: number;
+  cursor?: string; // base64 JSON { created_at, id } for keyset pagination
 }
 
 // ============================================
@@ -60,13 +61,16 @@ export interface UserListFilters {
 // ============================================
 
 /**
- * List all users with optional filters
+ * List all users with optional filters.
+ * Supports cursor-based pagination via cursor param (base64 JSON { created_at, id }).
  */
 export async function listUsers(filters: UserListFilters = {}): Promise<{
   users: UserWithProfile[];
   total: number;
+  nextCursor?: string;
+  hasMore?: boolean;
 }> {
-  const { role, search, limit = 50, offset = 0 } = filters;
+  const { role, search, limit = 50, offset = 0, cursor } = filters;
 
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -82,14 +86,32 @@ export async function listUsers(filters: UserListFilters = {}): Promise<{
     params.push(`%${search}%`);
   }
 
+  // Cursor-based keyset pagination
+  if (cursor) {
+    try {
+      const decoded = JSON.parse(Buffer.from(cursor, "base64").toString("utf8"));
+      if (decoded.created_at && decoded.id) {
+        conditions.push(`(u.created_at, u.id) < ($${paramIndex++}::timestamptz, $${paramIndex++}::text)`);
+        params.push(decoded.created_at, decoded.id);
+      }
+    } catch {
+      // Invalid cursor - ignore
+    }
+  }
+
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  // Get total count
-  const countResult = await query<{ count: string }>(
-    `SELECT COUNT(*) as count FROM users u ${whereClause}`,
-    params
-  );
-  const total = Number(countResult.rows[0]?.count || 0);
+  // Get total count (skip when using cursor for performance)
+  let total = 0;
+  if (!cursor) {
+    const countResult = await query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM users u ${whereClause}`,
+      params
+    );
+    total = Number(countResult.rows[0]?.count || 0);
+  }
+
+  const fetchLimit = cursor ? limit + 1 : limit;
 
   // Get users with profiles and balance
   const usersResult = await query<
@@ -115,18 +137,34 @@ export async function listUsers(filters: UserListFilters = {}): Promise<{
       LEFT JOIN credit_ledger cl ON cl.user_id = u.id
       ${whereClause}
       GROUP BY u.id, cp.id, clp.id
-      ORDER BY u.created_at DESC
+      ORDER BY u.created_at DESC, u.id
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}
     `,
-    [...params, limit, offset]
+    [...params, fetchLimit, cursor ? 0 : offset]
   );
 
-  const users = usersResult.rows.map((row) => ({
+  let users = usersResult.rows.map((row) => ({
     ...row,
     credit_balance: Number(row.balance || 0),
   }));
 
-  return { users, total };
+  let nextCursor: string | undefined;
+  let hasMore = false;
+  if (cursor && users.length > limit) {
+    hasMore = true;
+    users = users.slice(0, limit);
+    const last = users[users.length - 1];
+    nextCursor = Buffer.from(
+      JSON.stringify({ created_at: last.created_at, id: last.id }),
+      "utf8"
+    ).toString("base64");
+  }
+
+  return {
+    users,
+    total,
+    ...(nextCursor && { nextCursor, hasMore }),
+  };
 }
 
 // ============================================

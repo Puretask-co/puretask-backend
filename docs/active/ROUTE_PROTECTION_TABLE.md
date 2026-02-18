@@ -88,17 +88,23 @@ Beyond auth/role, routes that access resources by ID must ensure the user owns o
 
 **Audit status:** Pending systematic verification. Key services (jobTrackingService, jobsService) enforce ownership; others should be traced when adding features.
 
-## Admin RBAC (Planned)
+## Admin RBAC (Implemented)
 
-**Current state:** All admin routes use `requireAdmin` — single role, full access.
+**Current state:** Admin routes use role-based access via `requireSupportRole`, `requireFinanceRole`, `requireAdmin`.
 
-**Planned roles (future):**
-- `admin` — Full access (current)
-- `support_agent` — Read-only + resolve disputes, view risk; no credits, payouts, or config
+**Roles (users.role enum, migration 044_admin_rbac):**
+- `admin` — Full access
+- `super_admin` — System config, settings reset
+- `support_agent` — View risk, clients, cleaners; resolve disputes
 - `support_lead` — support_agent + approve refunds, escalate disputes
 - `ops_finance` — Payouts, credits, finance; no user suspension or config
 
-**Implementation:** Add `requireAdminRole(roles: string[])` that checks `req.user.role` against allowed set. Extend `users.role` enum or add `users.admin_role` column. Document in ARCHITECTURE when implemented.
+**Enforcement:**
+- Base admin area: `requireSupportRole` (support_agent+)
+- Finance (payouts, credits): `requireFinanceRole` (ops_finance, admin)
+- Client credit grant: `requireFinanceRole`
+- Cleaner suspend, tier, verified-badge: `requireAdmin`
+- System, settings, level-tuning, gamification: `requireAdmin`
 
 ## Next Steps
 
