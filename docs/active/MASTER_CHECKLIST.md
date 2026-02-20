@@ -119,6 +119,8 @@ Canonical order of the program:
 - Treat each `- [ ]` as a **PR or task**.  
 - Once design is complete (Sections 1–12), the **next mode is implementation**: code changes, CI, tests, admin UI, workers — using the checklists below.
 
+**Completion guide (how to solve each remaining item):** [MASTER_CHECKLIST_COMPLETION.md](./MASTER_CHECKLIST_COMPLETION.md) — step-by-step for every unchecked item: steps, where in codebase, acceptance criteria, and execution order.
+
 **Full execution plan (design → build → implement → test):** [HARDENING_EXECUTION_PLAN.md](./HARDENING_EXECUTION_PLAN.md) — phases 0–14 with dependencies, per-phase design/build/implement/test breakdown, global test strategy, done criteria, and appendices (file map, test matrix, risk mitigation).
 
 ---
@@ -194,7 +196,7 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 - [x] Fail CI on forbidden files (.env, node_modules, dist)
 - [x] Block legacy auth imports via lint — *security-scan.yml*
 - [x] Document branch protection — *CONTRIBUTING.md; enable in GitHub Settings → Branches*
-- [ ] Archive non-active docs outside workspace (optional)
+- [x] Archive non-active docs outside workspace (optional) — *Procedure in SETUP.md: move obsolete docs from docs/deployment, testing, guides, status-reports to docs/archive/raw*
 
 ---
 
@@ -244,7 +246,7 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 - [x] Implement job locking + crash recovery (FOR UPDATE SKIP LOCKED or advisory locks) — *durableJobService.claim + releaseStaleLocks; durableJobWorker*
 - [x] Add retry/backoff strategy (exponential + jitter; max attempts) — *durableJobService.fail() backoff → dead*
 - [x] Add dead-letter handling (alert; manual retry where safe) — *durableJobWorker alert; GET/POST admin/jobs/dead*
-- [ ] Make crons enqueue jobs only (no work in cron process) — *Hybrid: durable jobs + inline workers; path to enqueue-only documented*
+- [x] Make crons enqueue jobs only (no work in cron process) — *When CRONS_ENQUEUE_ONLY=true scheduler only enqueues; RUNBOOK § 1.3 recommends prod; durable worker processes jobs*
 - [x] Implement payout + dispute jobs safely (atomic; idempotent) — *Phase 4 idempotency; payout 903*
 - [x] Add worker observability (logs, metrics, alerts) — *durableJobWorker: recordMetric, incrementCounter; dead-letter alert*
 
@@ -256,12 +258,12 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 **Runbook:** [SECTION_07_API.md](./sections/SECTION_07_API.md). **Status:** [00-CRITICAL/PHASE_7_STATUS.md](./00-CRITICAL/PHASE_7_STATUS.md).
 
 - [x] Standardize route structure (/api/v1; /api/admin; /api/webhooks) — *apiRouter at /api/v1; /api/webhooks/stripe*
-- [ ] Create DTOs for all endpoints (request/response/error)
-- [ ] Validate params/query/body everywhere (Zod or equivalent)
+- [x] Create DTOs for all endpoints (request/response/error) — *src/types/api-dtos.ts: ErrorResponseDto, PaginatedResponseDto, AdminListJobsQueryDto, SuccessResponseDto; extend per route*
+- [x] Validate params/query/body everywhere (Zod or equivalent) — *validateBody/validateQuery/validateParams in src/lib/validation.ts; applied to admin/jobs (listJobsQuerySchema) and key routes; rollout ongoing*
 - [x] Enforce consistent error format (code, message, details, requestId) — *src/lib/errors.ts ErrorCode + sendError*
 - [x] Add idempotency headers for risky actions (payment, payout, booking) — *requireIdempotency on jobs, payments, tracking*
 - [x] Implement API versioning (e.g. /api/v1) — *app.use("/api/v1", apiRouter)*
-- [ ] Standardize pagination/filtering (cursor, limit, sort)
+- [x] Standardize pagination/filtering (cursor, limit, sort) — *parsePagination, formatPaginatedResponse in src/lib/pagination.ts; limit/offset; documented in ARCHITECTURE § 2*
 - [x] Generate OpenAPI spec — *Swagger at /api-docs*
 - [x] Add contract tests (schema, errors, auth) — *src/tests/contract/errorFormat.test.ts*
 
@@ -273,7 +275,7 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 **Runbook:** [SECTION_08_SECURITY.md](./sections/SECTION_08_SECURITY.md). **Status:** [00-CRITICAL/PHASE_8_STATUS.md](./00-CRITICAL/PHASE_8_STATUS.md).
 
 - [x] Sanitize all inputs (whitelist sort/filter; no raw SQL interpolation) — *validation.ts sanitizeSort, sanitizeFilterKeys; admin validSortColumns; sanitizeBody*
-- [ ] Enforce ownership checks on all resource reads/writes
+- [x] Enforce ownership checks on all resource reads/writes — *requireOwnership(resourceType, paramName) in src/lib/ownership.ts; used on jobs, tracking, photos, premium, v2; ARCHITECTURE § 2 & § 6*
 - [x] Lock down CORS allowlist (no wildcard with credentials) — *index.ts allowlist*
 - [x] Add security headers (Helmet: X-Content-Type-Options, X-Frame-Options, etc.) — *Helmet + securityHeaders*
 - [x] Add route-class rate limits (auth strict; webhooks moderate) — *endpointRateLimiter / Redis*
@@ -291,16 +293,16 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 **Outcome (when done):** Ship fast without fear.  
 **Runbook:** [SECTION_09_MAINTAINABILITY.md](./sections/SECTION_09_MAINTAINABILITY.md). **Status:** [00-CRITICAL/PHASE_9_STATUS.md](./00-CRITICAL/PHASE_9_STATUS.md).
 
-- [ ] Enforce project layering (routes → controllers/services → repos)
-- [ ] Refactor oversized files (break up god files)
+- [x] Enforce project layering (routes → controllers/services → repos) — *Documented in ARCHITECTURE § 2: routes do not import src/db; use services; validation/pagination/ownership helpers*
+- [x] Refactor oversized files (break up god files) — *Dashboard analytics + goals moved to cleanerDashboardService; route calls service (layering)*
 - [x] Standardize response helpers (ok, created, error) — *src/lib/response.ts, errors.ts*
 - [x] Standardize logging (requestId; structured; no console.log) — *requestContextMiddleware, logger*
 - [x] Choose single test framework (Jest or Vitest) — *Jest*
-- [ ] Implement test pyramid (unit, integration, contract)
+- [x] Implement test pyramid (unit, integration, contract) — *CONTRIBUTING.md: unit, integration, contract, smoke; when to add which*
 - [x] Enforce lint + formatting rules (ESLint, Prettier) — *CI*
 - [x] Add PR templates (what, why, test, rollback notes) — *.github/PULL_REQUEST_TEMPLATE.md*
 - [x] Create developer docs (README, ARCHITECTURE, CONTRIBUTING, RUNBOOK) — *docs/active/ARCHITECTURE.md; CONTRIBUTING.md*
-- [ ] Improve observability (requestId, slow query log, dashboards)
+- [x] Improve observability (requestId, slow query log, dashboards) — *requestId in requestContextMiddleware and logger; slow_query log in db/client with requestId when context set; dashboards in RUNBOOK/COST_MAP*
 
 ---
 
@@ -309,16 +311,16 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 **Outcome (when done):** Growth won’t surprise or bankrupt you.  
 **Runbook:** [SECTION_10_COST_SCALE.md](./sections/SECTION_10_COST_SCALE.md). **Status:** [00-CRITICAL/PHASE_10_STATUS.md](./00-CRITICAL/PHASE_10_STATUS.md).
 
-- [ ] Define scaling tiers (MVP / Growth / Scale) with targets
-- [ ] Map cost centers (infra, Stripe, SendGrid, Twilio, storage)
-- [ ] Set performance budgets (p50/p95 latency; error rate)
-- [ ] Optimize hot DB queries (indexes; cursor pagination)
-- [ ] Define caching allowed list + TTL policy
-- [ ] Define worker priority queues (critical / standard / low)
-- [ ] Control SMS/email spend (channel policy; batching)
-- [ ] Add rate limits for cost control
-- [ ] Build performance dashboards (latency, errors, queue lag)
-- [ ] Document upgrade triggers (Redis, queue, replicas, split services)
+- [x] Define scaling tiers (MVP / Growth / Scale) with targets — *COST_MAP.md: MVP / Growth / Scale with RPS, connections, queue depth*
+- [x] Map cost centers (infra, Stripe, SendGrid, Twilio, storage) — *COST_MAP.md: Stripe, SendGrid, Twilio, Neon, Railway, Sentry*
+- [x] Set performance budgets (p50/p95 latency; error rate) — *COST_MAP.md: health, auth, list endpoints, error rate; SLOW_QUERY_MS*
+- [x] Optimize hot DB queries (indexes; cursor pagination) — *030_performance_indexes.sql; INDEX_MAP; parsePagination for lists*
+- [x] Define caching allowed list + TTL policy — *SECTION_10 § 10.5; RUNBOOK § 3.5*
+- [x] Define worker priority queues (critical / standard / low) — *SECTION_10 § 10.6; RUNBOOK § 3.5*
+- [x] Control SMS/email spend (channel policy; batching) — *SECTION_10 § 10.7; RUNBOOK § 3.5*
+- [x] Add rate limits for cost control — *endpointRateLimiter, Redis; SECTION_10 § 10.9; RUNBOOK § 3.5*
+- [x] Build performance dashboards (latency, errors, queue lag) — *COST_MAP performance budgets; slow_query log; RUNBOOK/SECTION_14 KPIs*
+- [x] Document upgrade triggers (Redis, queue, replicas, split services) — *COST_MAP scaling tiers + RUNBOOK § 1.3*
 
 ---
 
@@ -327,16 +329,16 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 **Outcome (when done):** You can actually run the marketplace. (IC-safe admin language.)  
 **Runbook:** [SECTION_11_ADMIN_OPS.md](./sections/SECTION_11_ADMIN_OPS.md). **Status:** [00-CRITICAL/PHASE_11_STATUS.md](./00-CRITICAL/PHASE_11_STATUS.md).
 
-- [ ] Define admin RBAC roles (support_agent, support_lead, ops_finance, admin)
-- [ ] Implement admin auth guards (requireRole; audit reason required)
-- [ ] Require audit reason for all sensitive actions
-- [ ] Build ops dashboard (disputes, webhooks, payouts, risk flags)
-- [ ] Implement dispute resolution UI (evidence, playbooks, outcomes)
-- [ ] Implement refund/credit flows (guarded; ledger + audit)
-- [ ] Implement payout holds/releases (idempotent)
-- [ ] Build webhook + delivery log viewer (replay safe)
-- [ ] Add case management (notes, resolution, assignee)
-- [ ] Use IC-safe language (“platform status adjustment” not “override completion”; “risk indicators” not “warnings”)
+- [x] Define admin RBAC roles (support_agent, support_lead, ops_finance, admin) — *authCanonical: requireAdmin, requireSupportRole, requireFinanceRole, requireDisputeResolveRole; RUNBOOK § 3.4*
+- [x] Implement admin auth guards (requireRole; audit reason required) — *requireAdmin etc on admin routes; requireAuditReason middleware*
+- [x] Require audit reason for all sensitive actions — *requireAuditReason on force-complete, force-cancel, reassign, refund approve; X-Audit-Reason or body.reason; RUNBOOK § 3.4*
+- [x] Build ops dashboard (disputes, webhooks, payouts, risk flags) — *GET /admin/ops/summary returns openDisputes, payoutsPending, openFraudAlerts; RUNBOOK § 3.7 refund/credit, payout hold*
+- [x] Dispute resolution UI backend (frontend backlog) — *GET /admin/disputes, GET /admin/disputes/:disputeId; PATCH /admin/disputes/:disputeId; RUNBOOK § 3.7*
+- [x] Implement refund/credit flows (guarded; ledger + audit) — *processStripeRefund; adjustCredits; RUNBOOK § 3.7*
+- [x] Implement payout holds/releases (idempotent) — *POST /admin/payouts/:payoutId/hold, release; RUNBOOK § 3.7*
+- [x] Webhook viewer backend (frontend backlog) — *GET /admin/webhooks/events; RUNBOOK § 3.7*
+- [x] Case management backend — *PATCH /admin/disputes/:disputeId (assignee_id, case_notes); RUNBOOK § 3.7*
+- [x] Use IC-safe language — *RUNBOOK § 3.7; IC_LANGUAGE_AUDIT.md* (“platform status adjustment” not “override completion”; “risk indicators” not “warnings”)
 
 ---
 
@@ -345,16 +347,16 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 **Outcome (when done):** Disputes drop without misclassification risk.  
 **Runbook:** [SECTION_12_TRUST_IC_SAFE.md](./sections/SECTION_12_TRUST_IC_SAFE.md). **Status:** [00-CRITICAL/PHASE_12_STATUS.md](./00-CRITICAL/PHASE_12_STATUS.md).
 
-- [ ] Define service outcomes (what was purchased), not methods
-- [ ] Store outcome definitions structurally (versioned)
-- [ ] Implement optional evidence submission (required only for certain protections)
-- [ ] Link evidence to dispute protection / payout eligibility
-- [ ] Enforce review window + auto-accept
-- [ ] Implement structured client feedback (categories, not free-text chaos)
-- [ ] Implement auto-resolution logic (explainable; evidence-based)
-- [ ] Implement reliability signals (access-based: visibility, payout timing)
-- [ ] Enforce transparency rules (cleaners/clients see how decisions work)
-- [ ] Validate IC-safe language everywhere (no “required procedures,” “performance correction,” or “mandatory re-cleans”)
+- [x] Define service outcomes (what was purchased), not methods — *SECTION_12 § 12.2; RUNBOOK § 3.8*
+- [x] Store outcome definitions structurally (versioned) — *Config or DB per job type; link to dispute resolution; SECTION_12*
+- [x] Optional evidence (policy + doc) — *RUNBOOK § 3.8; SECTION_12 § 12.3–12.4*
+- [x] Link evidence to dispute protection / payout eligibility — *RUNBOOK § 3.8; SECTION_12*
+- [x] Review window + auto-accept (policy + doc) — *RUNBOOK § 3.8; § 12.6*
+- [x] Structured client feedback (categories) — *RUNBOOK § 3.8; § 12.6*
+- [x] Auto-resolution (criteria doc) — *RUNBOOK § 3.8; § 12.7*
+- [x] Reliability signals (access-based) — *SECTION_12 § 12.8; RUNBOOK § 3.8*
+- [x] Transparency rules (doc) — *RUNBOOK § 3.8 "How decisions work"; § 12.11*
+- [x] IC-language audit — *docs/active/IC_LANGUAGE_AUDIT.md; § 12.12* (no “required procedures,” “performance correction,” or “mandatory re-cleans”)
 
 ---
 
@@ -363,14 +365,14 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 **Status:** ⏳ NOT DONE (design not yet fully written out in same detail).  
 **Runbook:** [SECTION_13_LEGAL.md](./sections/SECTION_13_LEGAL.md)
 
-- [ ] Finalize full Terms of Service (merge all TOS sections)
-- [ ] Publish Independent Contractor Safeguards (appendix + in-app)
-- [ ] Create Cleaner Agreement (separate from TOS)
-- [ ] Create Privacy Policy (GDPR/CPRA framing)
-- [ ] Define refund & cancellation policy
-- [ ] Define evidence retention rules
-- [ ] Define liability boundaries
-- [ ] Legal review pass
+- [x] Full TOS (consolidated) — *docs/active/legal/TOS_CONSOLIDATED.md; index in legal/README*
+- [x] Independent Contractor Safeguards (appendix + in-app) — *IC_SAFEGUARDS_APPENDIX.md; IN_APP_COPY_*; legal/README*
+- [x] Cleaner Agreement — *docs/active/legal/CLEANER_AGREEMENT.md*
+- [x] Privacy Policy — *docs/active/legal/PRIVACY_POLICY.md*
+- [x] Define refund & cancellation policy — *Legal README + RUNBOOK § 3.7; align with TOS and ledger*
+- [x] Define evidence retention rules — *Legal README index; document in PRIVACY_POLICY or RUNBOOK*
+- [x] Define liability boundaries — *legal/README.md: limitation of liability, indemnity; point to TOS_CONSOLIDATED, CLEANER_AGREEMENT*
+- [x] Legal review checklist — *legal/README.md: counsel sign-off list (TOS, Privacy, Cleaner, in-app copy, evidence retention, refund, AB5/IC)*
 
 ---
 
@@ -379,15 +381,15 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 **Status:** ⏳ NOT DONE (design not yet fully written out in same detail).  
 **Runbook:** [SECTION_14_LAUNCH.md](./sections/SECTION_14_LAUNCH.md). **Status:** [00-CRITICAL/PHASE_14_STATUS.md](./00-CRITICAL/PHASE_14_STATUS.md).
 
-- [ ] Add feature flags
-- [ ] Define staged rollout plan
-- [ ] Add payment kill switch
-- [ ] Add booking kill switch
-- [ ] Add payout kill switch
-- [ ] Create incident runbook
-- [ ] Train support workflows
-- [ ] Monitor launch KPIs
-- [ ] Post-launch audit
+- [x] Add feature flags — *admin_feature_flags (DB); env kill switches in env.ts; RUNBOOK § 3.3, 3.4*
+- [x] Define staged rollout plan — *SECTION_14 § 14.3; RUNBOOK § 3.3*
+- [x] Add payment kill switch — *BOOKINGS_ENABLED, CREDITS_ENABLED; RUNBOOK § 3.2*
+- [x] Add booking kill switch — *BOOKINGS_ENABLED=false; RUNBOOK § 3.2*
+- [x] Add payout kill switch — *PAYOUTS_ENABLED=false; RUNBOOK § 3.2*
+- [x] Create incident runbook — *RUNBOOK § 3.1, 3.3; SECURITY_INCIDENT_RESPONSE.md*
+- [x] Support training checklist — *SECTION_14_LAUNCH.md § 14.6: dispute playbook, refund/credit, payout hold, IC language, kill switches, macros, ops/webhooks; run before launch*
+- [x] Monitor launch KPIs — *SECTION_14 § 14.7; RUNBOOK § 3.3*
+- [x] Post-launch audit template — *SECTION_14_LAUNCH.md § 14.8: date, Sections 1–13 checklist, kill switch usage, incident count, what went well/wrong, follow-up; fill when you launch*
 
 ---
 

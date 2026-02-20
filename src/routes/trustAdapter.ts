@@ -14,11 +14,15 @@ import { requireOwnership } from "../lib/ownership";
 import { validateQuery, validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
 import { getUserBalance, getCreditLedgerFiltered } from "../services/creditsService";
+import { createCreditCheckoutSession } from "../services/creditsPurchaseService";
 import {
   getClientInvoices,
   getInvoiceWithLineItems,
+  payInvoiceWithCredits,
+  payInvoiceWithCard,
   type InvoiceStatus,
 } from "../services/invoiceService";
+import { getCleanerReliabilityInfo } from "../services/reliabilityService";
 import { query } from "../db/client";
 import type { CreditReason } from "../types/db";
 
@@ -159,6 +163,42 @@ function describeLedgerReason(reason: CreditReason, jobId: string | null): strin
   }
 }
 
+/** Trust contract: POST /credits/checkout → { checkoutUrl } (spec: not under /api; we expose under /api for consistency) */
+const checkoutBodySchema = z.object({
+  packageId: z.string(),
+  successUrl: z.string().url(),
+  cancelUrl: z.string().url(),
+});
+
+router.post(
+  "/credits/checkout",
+  requireAuth,
+  requireRole("client"),
+  validateBody(checkoutBodySchema),
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { packageId, successUrl, cancelUrl } = req.body;
+      const session = await createCreditCheckoutSession({
+        userId: req.user!.id,
+        packageId,
+        successUrl,
+        cancelUrl,
+      });
+      res.json({ checkoutUrl: session.url });
+    } catch (error) {
+      logger.error("trust_credits_checkout_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      if ((error as Error).message === "Invalid credit package") {
+        res.status(400).json({ message: "Invalid credit package" });
+        return;
+      }
+      res.status(500).json({ message: "Failed to create checkout" });
+    }
+  })
+);
+
 // ============================================
 // TRUST BILLING (client invoices)
 // ============================================
@@ -178,6 +218,23 @@ router.get(
         offset: 0,
       });
 
+      const ids = result.invoices.map((inv) => inv.id);
+      const lineItemsByInvoice: Record<string, { id: string; label: string; amount: number }[]> = {};
+      if (ids.length > 0) {
+        const items = await query<{ invoice_id: string; id: string; description: string; total_cents: number }>(
+          `SELECT invoice_id, id, description, total_cents FROM invoice_line_items WHERE invoice_id = ANY($1)`,
+          [ids]
+        );
+        for (const row of items.rows) {
+          if (!lineItemsByInvoice[row.invoice_id]) lineItemsByInvoice[row.invoice_id] = [];
+          lineItemsByInvoice[row.invoice_id].push({
+            id: row.id,
+            label: row.description,
+            amount: row.total_cents / 100,
+          });
+        }
+      }
+
       const invoices = result.invoices.map((inv) => ({
         id: inv.id,
         createdAtISO: inv.created_at,
@@ -188,7 +245,7 @@ router.get(
         currency: "USD",
         bookingId: inv.job_id ?? undefined,
         receiptUrl: "",
-        lineItems: [], // filled on detail fetch
+        lineItems: lineItemsByInvoice[inv.id] ?? [],
         paymentMethodSummary: inv.paid_via ? `${inv.paid_via} ••••` : undefined,
       }));
 
@@ -249,6 +306,41 @@ router.get(
         userId: req.user?.id,
       });
       res.status(500).json({ message: "Failed to get invoice" });
+    }
+  })
+);
+
+/** Trust contract: POST /client/invoices/:id/pay → { ok: true } */
+const payInvoiceBodySchema = z.object({
+  payment_method: z.enum(["credits", "card"]),
+});
+
+router.post(
+  "/client/invoices/:id/pay",
+  requireAuth,
+  requireRole("client"),
+  requireOwnership("invoice", "id"),
+  validateBody(payInvoiceBodySchema),
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { payment_method } = req.body;
+      const clientId = req.user!.id;
+
+      if (payment_method === "credits") {
+        await payInvoiceWithCredits(id, clientId);
+      } else {
+        await payInvoiceWithCard(id, clientId);
+      }
+      res.json({ ok: true });
+    } catch (error) {
+      logger.error("trust_invoice_pay_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+        invoiceId: req.params.id,
+      });
+      const err = error as Error & { statusCode?: number };
+      res.status(err.statusCode ?? 500).json({ message: err.message ?? "Failed to pay invoice" });
     }
   })
 );
@@ -455,6 +547,130 @@ router.post(
         userId: req.user?.id,
       });
       res.status(500).json({ message: "Failed to record event" });
+    }
+  })
+);
+
+// ============================================
+// TRUST RELIABILITY (client views cleaner)
+// ============================================
+
+/**
+ * GET /api/cleaners/:cleanerId/reliability
+ * Trust contract: { reliability: { score, tier, breakdown?, explainers? } }
+ */
+router.get(
+  "/cleaners/:cleanerId/reliability",
+  requireAuth,
+  requireRole("client"),
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { cleanerId } = req.params;
+      const info = await getCleanerReliabilityInfo(cleanerId);
+      const explainers: string[] = [
+        `Score: ${info.score}%`,
+        `Tier: ${info.tier}`,
+        `Completed jobs (90d): ${info.stats.completed_jobs}`,
+        `Total jobs (90d): ${info.stats.total_jobs}`,
+      ];
+      if (info.stats.avg_rating != null) {
+        explainers.push(`Average rating: ${info.stats.avg_rating.toFixed(1)}`);
+      }
+      res.json({
+        reliability: {
+          score: info.score,
+          tier: info.tier,
+          breakdown: info.stats,
+          explainers,
+        },
+      });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      if (err.statusCode === 404) {
+        return res.status(404).json({ message: "Cleaner not found" });
+      }
+      logger.error("trust_reliability_failed", {
+        error: (err as Error).message,
+        userId: req.user?.id,
+        cleanerId: req.params.cleanerId,
+      });
+      res.status(500).json({ message: "Failed to get reliability" });
+    }
+  })
+);
+
+// ============================================
+// Trust root routes (spec exact paths, no /api prefix)
+// POST /credits/checkout → { checkoutUrl }
+// GET /cleaners/:cleanerId/reliability → { reliability }
+// ============================================
+export const trustRootRouter = Router();
+
+trustRootRouter.post(
+  "/credits/checkout",
+  requireAuth,
+  requireRole("client"),
+  validateBody(checkoutBodySchema),
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { packageId, successUrl, cancelUrl } = req.body;
+      const session = await createCreditCheckoutSession({
+        userId: req.user!.id,
+        packageId,
+        successUrl,
+        cancelUrl,
+      });
+      res.json({ checkoutUrl: session.url });
+    } catch (error) {
+      logger.error("trust_credits_checkout_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      if ((error as Error).message === "Invalid credit package") {
+        res.status(400).json({ message: "Invalid credit package" });
+        return;
+      }
+      res.status(500).json({ message: "Failed to create checkout" });
+    }
+  })
+);
+
+trustRootRouter.get(
+  "/cleaners/:cleanerId/reliability",
+  requireAuth,
+  requireRole("client"),
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { cleanerId } = req.params;
+      const info = await getCleanerReliabilityInfo(cleanerId);
+      const explainers: string[] = [
+        `Score: ${info.score}%`,
+        `Tier: ${info.tier}`,
+        `Completed jobs (90d): ${info.stats.completed_jobs}`,
+        `Total jobs (90d): ${info.stats.total_jobs}`,
+      ];
+      if (info.stats.avg_rating != null) {
+        explainers.push(`Average rating: ${info.stats.avg_rating.toFixed(1)}`);
+      }
+      res.json({
+        reliability: {
+          score: info.score,
+          tier: info.tier,
+          breakdown: info.stats,
+          explainers,
+        },
+      });
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      if (err.statusCode === 404) {
+        return res.status(404).json({ message: "Cleaner not found" });
+      }
+      logger.error("trust_reliability_failed", {
+        error: (err as Error).message,
+        userId: req.user?.id,
+        cleanerId: req.params.cleanerId,
+      });
+      res.status(500).json({ message: "Failed to get reliability" });
     }
   })
 );

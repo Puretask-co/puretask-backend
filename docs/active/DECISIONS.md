@@ -18,6 +18,7 @@ Hand-curated list (~10â€“30). Each entry: **Decision** â€” **Why** â�
 - **Sentry init once (instrument.js)** â€” Why: correct tracing, no double-capture â€” Tradeoff: must preload before app
 - **Layering: routes thin, services own logic** â€” Why: testability, clear boundaries â€” Tradeoff: more files, no DB in routes
 - **Cleaner Level System: goals over XP, levels as gates** — Why: behavior control, tangible rewards (cash, visibility, fee reduction), no abstract points — Tradeoff: goal evaluation on each completion/login adds minor latency (async)
+- **Gamification docs: bundle content as canonical for rules and constants** — Why: bundle docs (PURETASK_GAMIFICATION_CURSOR_CONTEXT, event_contract_v1, metrics_contract_v1, spec_enforcement_matrix_v1) are more complete than backend’s original gamification sections: they define canonical rules (meaningful login 15 min, message 25 chars/template/reply 24h, photo/on-time/good-faith), key constants table, and full event/metric contracts. Backend ARCHITECTURE keeps code/schema paths; we merged the bundle’s rules and constants into ARCHITECTURE and RUNBOOK so one source of truth exists. Bundle SQL migrations are not run (043–056 already apply). — Tradeoff: two doc locations (canonical docs + gamification_bundle/docs) with canonical docs holding the distilled rules; full contracts stay in gamification_bundle/docs.
 
 ---
 ## Extracted from archive (auto)

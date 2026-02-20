@@ -233,9 +233,23 @@ authRouter.post("/login", async (req, res: Response) => {
       });
     }
 
-    const status = error.statusCode ?? 500;
+    // DB connection/timeout → 503 so frontend can show "retry"
+    const isConnectionError =
+      error.message?.includes("connection") ||
+      error.message?.includes("timeout") ||
+      error.message?.includes("terminated");
+    const status = error.statusCode ?? (isConnectionError ? 503 : 500);
+    const message =
+      status === 503
+        ? "Service temporarily unavailable. Please try again in a moment."
+        : error.message;
+
+    if (status >= 500) {
+      logger.error("login_error", { status, code: error.code, message: error.message });
+    }
+
     res.status(status).json({
-      error: { code: error.code ?? "LOGIN_FAILED", message: error.message },
+      error: { code: error.code ?? "LOGIN_FAILED", message },
     });
   }
 });
@@ -332,6 +346,14 @@ authRouter.put("/profile", auth(), async (req, res: Response) => {
       error: { code: error.code ?? "UPDATE_FAILED", message: error.message },
     });
   }
+});
+
+/**
+ * POST /auth/logout
+ * Logout current session. Frontend should discard token; backend returns success.
+ */
+authRouter.post("/logout", auth(), async (_req, res: Response) => {
+  res.json({ success: true, message: "Logged out" });
 });
 
 /**

@@ -11,6 +11,8 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 // Now safe to import everything else
+import { createServer } from "http";
+import { Server as SocketIOServer } from "socket.io";
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
@@ -23,6 +25,7 @@ import { endpointRateLimiter, additionalSecurityHeaders, sanitizeBody } from "./
 import { requestContextMiddleware, enrichRequestContext } from "./middleware/requestContext";
 import { redactHeaders } from "./lib/logRedaction";
 import { metrics } from "./lib/metrics";
+import { setSocketIO } from "./lib/socket";
 
 // Import routes
 import healthRouter from "./routes/health";
@@ -70,7 +73,9 @@ import notificationsRouter from "./routes/notifications";
 // V4 FEATURE — AI ASSISTANT (communication automation & scheduling)
 import aiRouter from "./routes/ai";
 import userDataRouter from "./routes/userData";
-import trustAdapterRouter from "./routes/trustAdapter";
+import usersRouter from "./routes/users";
+import trustAdapterRouter, { trustRootRouter } from "./routes/trustAdapter";
+import { bookingsStubRouter, cleanersRouter } from "./routes/dashboardStubs";
 
 // ============================================
 // Sentry is already initialized in instrument.ts (required at top of file)
@@ -291,7 +296,13 @@ apiRouter.use("/notifications", notificationsRouter);
 apiRouter.use("/alerts", alertsRouter);
 apiRouter.use("/ai", aiRouter);
 apiRouter.use("/user", userDataRouter);
+apiRouter.use("/users", usersRouter);
+apiRouter.use("/bookings", bookingsStubRouter);
+apiRouter.use("/cleaners", cleanersRouter);
 apiRouter.use(eventsRouter);
+
+// Trust spec exact paths at root (no /api): POST /credits/checkout, GET /cleaners/:id/reliability
+app.use(trustRootRouter);
 
 // Mount at root (backward compat) and /api/v1 (Section 7)
 app.use("/", apiRouter);
@@ -378,7 +389,11 @@ const isTestMode =
   process.env.VITEST === "true" ||
   typeof process.env.VITEST_WORKER_ID !== "undefined";
 
-let server: ReturnType<typeof app.listen> | null = null;
+// Frontend origin for Socket.IO (default 3001 to match FRONTEND_URL; set FRONTEND_ORIGIN to override)
+const FRONTEND_ORIGIN =
+  process.env.FRONTEND_ORIGIN || env.FRONTEND_URL || "http://localhost:3001";
+
+let httpServer: ReturnType<typeof createServer> | null = null;
 
 if (!isTestMode) {
   const PORT = env.PORT;
@@ -391,15 +406,42 @@ if (!isTestMode) {
     });
   });
 
-  // Bind to 0.0.0.0 for Railway/Docker compatibility
-  server = app.listen(PORT, "0.0.0.0", () => {
+  const appHttpServer = createServer(app);
+
+  const io = new SocketIOServer(appHttpServer, {
+    cors: {
+      origin: FRONTEND_ORIGIN,
+      credentials: true,
+    },
+  });
+
+  io.on("connection", (socket) => {
+    logger.info("socket_connected", { socketId: socket.id });
+
+    socket.on("join_booking", (bookingId: string) => {
+      socket.join(`booking:${bookingId}`);
+    });
+
+    socket.on("leave_booking", (bookingId: string) => {
+      socket.leave(`booking:${bookingId}`);
+    });
+
+    socket.on("disconnect", (reason) => {
+      logger.info("socket_disconnected", { socketId: socket.id, reason });
+    });
+  });
+
+  setSocketIO(io);
+
+  httpServer = appHttpServer;
+  httpServer.listen(PORT, "0.0.0.0", () => {
     logger.info("server_started", {
       port: PORT,
       host: "0.0.0.0",
       env: env.NODE_ENV,
       timestamp: new Date().toISOString(),
     });
-    console.log(`🚀 PureTask Backend running on 0.0.0.0:${PORT}`);
+    console.log(`✅ API + Socket.IO running on http://localhost:${PORT}`);
   });
 
   // ============================================
@@ -411,8 +453,8 @@ if (!isTestMode) {
     // Close Redis connection
     await closeRedis();
 
-    if (server) {
-      server.close(() => {
+    if (httpServer) {
+      httpServer.close(() => {
         logger.info("server_closed");
         process.exit(0);
       });

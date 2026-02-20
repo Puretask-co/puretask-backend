@@ -207,6 +207,25 @@ jobsRouter.get(
   })
 );
 
+/** GET /jobs/me — frontend alias for "my jobs" (same as GET /jobs) */
+jobsRouter.get(
+  "/me",
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const role = getRole(req);
+    if (role === "client") {
+      const jobs = await listJobsForClient(req.user!.id);
+      return sendSuccess(res, { jobs });
+    }
+    if (role === "cleaner") {
+      const assigned = await listJobsForCleaner(req.user!.id);
+      const available = await listAvailableJobs();
+      return sendSuccess(res, { assigned, available });
+    }
+    const jobs = await listJobsForClient(req.user!.id);
+    return sendSuccess(res, { jobs });
+  })
+);
+
 /**
  * GET /jobs/:jobId
  */

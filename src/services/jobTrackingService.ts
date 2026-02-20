@@ -599,13 +599,15 @@ export async function approveJob(
 }
 
 /**
- * Client disputes completed job
+ * Client disputes completed job.
+ * Optional category (Section 12 structured feedback) stored as reason_code.
  */
 export async function disputeJob(
   jobId: string,
   clientId: string,
   reason: string,
-  requestedRefund: "full" | "partial" | "none"
+  requestedRefund: "full" | "partial" | "none",
+  category?: string
 ): Promise<void> {
   const job = await verifyClientJob(jobId, clientId);
 
@@ -613,13 +615,13 @@ export async function disputeJob(
     throw Object.assign(new Error("Cannot dispute job in current status"), { statusCode: 400 });
   }
 
-  // Create dispute
+  // Create dispute (reason_code = optional structured category)
   await query(
     `
-      INSERT INTO disputes (job_id, client_id, client_notes, status, metadata)
-      VALUES ($1, $2, $3, 'open', $4::jsonb)
+      INSERT INTO disputes (job_id, client_id, client_notes, status, metadata, reason_code)
+      VALUES ($1, $2, $3, 'open', $4::jsonb, $5)
     `,
-    [jobId, clientId, reason, JSON.stringify({ requestedRefund })]
+    [jobId, clientId, reason, JSON.stringify({ requestedRefund }), category ?? null]
   );
 
   // Update job status

@@ -533,9 +533,17 @@ trackingRouter.post(
  *       403:
  *         description: Forbidden - clients only
  */
+const DISPUTE_CATEGORIES = [
+  "missed_area",
+  "quality_issue",
+  "damages_claim",
+  "no_show",
+  "other",
+] as const;
 const disputeSchema = z.object({
   reason: z.string().min(10),
   requestedRefund: z.enum(["full", "partial", "none"]),
+  category: z.enum(DISPUTE_CATEGORIES).optional(),
 });
 
 trackingRouter.post(
@@ -548,7 +556,13 @@ trackingRouter.post(
         return res.status(403).json({ error: { code: "FORBIDDEN", message: "Clients only" } });
       }
 
-      await disputeJob(req.params.jobId, req.user.id, req.body.reason, req.body.requestedRefund);
+      await disputeJob(
+        req.params.jobId,
+        req.user.id,
+        req.body.reason,
+        req.body.requestedRefund,
+        req.body.category
+      );
       res.json({ success: true, status: "disputed" });
     } catch (error) {
       const err = error as Error & { statusCode?: number };

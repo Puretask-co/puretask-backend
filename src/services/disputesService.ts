@@ -8,16 +8,28 @@ import { publishEvent } from "../lib/events";
 import { env } from "../config/env";
 import { Dispute, DisputeStatus, Job } from "../types/db";
 
+/** Section 12: Structured feedback categories for disputes (RUNBOOK § 3.8) */
+export const DISPUTE_CATEGORIES = [
+  "missed_area",
+  "quality_issue",
+  "damages_claim",
+  "no_show",
+  "other",
+] as const;
+export type DisputeCategory = (typeof DISPUTE_CATEGORIES)[number];
+
 /**
  * Create a dispute for a job
- * Per Damage & Claims Policy: Disputes must be filed within 48 hours of job completion
+ * Per Damage & Claims Policy: Disputes must be filed within 48 hours of job completion.
+ * Optional category (reason_code) for structured feedback — Section 12.
  */
 export async function createDispute(options: {
   jobId: string;
   clientId: string;
   clientNotes: string;
+  category?: DisputeCategory | string;
 }): Promise<Dispute> {
-  const { jobId, clientId, clientNotes } = options;
+  const { jobId, clientId, clientNotes, category } = options;
 
   // Verify job exists and is in awaiting_approval status
   const jobResult = await query<Job>(`SELECT * FROM jobs WHERE id = $1`, [jobId]);
@@ -56,7 +68,7 @@ export async function createDispute(options: {
     }
   }
 
-  // Create dispute with window tracking
+  // Create dispute with window tracking; optional reason_code (structured category)
   const result = await query<Dispute>(
     `
       INSERT INTO disputes (
@@ -65,12 +77,13 @@ export async function createDispute(options: {
         client_notes,
         status,
         job_completed_at,
-        within_window
+        within_window,
+        reason_code
       )
-      VALUES ($1, $2, $3, 'open', $4, $5)
+      VALUES ($1, $2, $3, 'open', $4, $5, $6)
       RETURNING *
     `,
-    [jobId, clientId, clientNotes, job.actual_end_at, withinWindow]
+    [jobId, clientId, clientNotes, job.actual_end_at, withinWindow, category ?? null]
   );
 
   const dispute = result.rows[0];
@@ -96,6 +109,7 @@ export async function createDispute(options: {
     jobId,
     clientId,
     withinWindow,
+    category: category ?? undefined,
   });
 
   return dispute;

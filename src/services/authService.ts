@@ -121,10 +121,14 @@ export async function registerUser(input: RegisterInput): Promise<User> {
 /**
  * Authenticate user with email and password
  * Returns user if credentials are valid
+ * Email is normalized to lowercase so login is case-insensitive.
  */
 export async function loginUser(email: string, password: string): Promise<User> {
-  // Find user by email
-  const result = await query<User>(`SELECT * FROM users WHERE email = $1`, [email]);
+  const normalizedEmail = email.trim().toLowerCase();
+  const result = await query<User>(
+    `SELECT * FROM users WHERE LOWER(email) = $1`,
+    [normalizedEmail]
+  );
 
   const user = result.rows[0];
 

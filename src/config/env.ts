@@ -85,6 +85,10 @@ export const env = {
   DISPUTE_WINDOW_HOURS: process.env.DISPUTE_WINDOW_HOURS
     ? Number(process.env.DISPUTE_WINDOW_HOURS)
     : 48,
+  /** Section 12: Hours after job completion before auto-accept (client review window). If unset, auto-expire worker uses DISPUTE_WINDOW_HOURS then 48. */
+  REVIEW_WINDOW_HOURS: process.env.REVIEW_WINDOW_HOURS
+    ? Number(process.env.REVIEW_WINDOW_HOURS)
+    : undefined,
   CLEANER_NOSHOW_BONUS_CREDITS: process.env.CLEANER_NOSHOW_BONUS_CREDITS
     ? Number(process.env.CLEANER_NOSHOW_BONUS_CREDITS)
     : 50,

@@ -1,6 +1,6 @@
 import { Pool, PoolClient } from "pg";
 import { env } from "../config/env";
-import { logger } from "../lib/logger";
+import { logger, getRequestContext } from "../lib/logger";
 
 // Detect test environment
 const isTestEnv =
@@ -15,7 +15,8 @@ export const pool = new Pool({
   // Connection pool settings for better reliability
   max: isTestEnv ? 5 : 20, // Very few connections in test environment (Neon free tier limit)
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: isTestEnv ? 15000 : 10000, // Longer timeout in tests (Neon can be slow)
+  // Neon cold start can take 5–15s; use 20s in dev so login doesn't timeout
+  connectionTimeoutMillis: isTestEnv ? 15000 : 20000,
   // Retry settings
   allowExitOnIdle: true, // Allow process to exit when pool is idle
 });
@@ -34,6 +35,7 @@ export async function query<T extends Record<string, any> = any>(
       thresholdMs: SLOW_QUERY_MS,
       rowCount: res.rowCount,
       queryPreview: text.substring(0, 100) + (text.length > 100 ? "..." : ""),
+      ...(getRequestContext()?.requestId ? { requestId: getRequestContext()?.requestId } : {}),
     });
   }
   return res;

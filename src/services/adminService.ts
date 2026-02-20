@@ -617,3 +617,107 @@ export async function getDisputeDetail(disputeId: string): Promise<JobTimeline |
   const dispute = disputeResult.rows[0];
   return getJobDetails(dispute.job_id);
 }
+
+/**
+ * Ops dashboard summary (Section 11): counts for disputes, payouts, fraud alerts.
+ */
+export interface OpsSummary {
+  openDisputes: number;
+  payoutsPending: number;
+  openFraudAlerts: number;
+}
+
+export async function getOpsSummary(): Promise<OpsSummary> {
+  const [disputes, payouts, fraud] = await Promise.all([
+    query<{ count: string }>(`SELECT COUNT(*) as count FROM disputes WHERE status = 'open'`, []),
+    query<{ count: string }>(`SELECT COUNT(*) as count FROM payouts WHERE status = 'pending'`, []),
+    query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM fraud_alerts WHERE resolved_at IS NULL`,
+      []
+    ),
+  ]);
+  return {
+    openDisputes: parseInt(disputes.rows[0]?.count ?? "0", 10),
+    payoutsPending: parseInt(payouts.rows[0]?.count ?? "0", 10),
+    openFraudAlerts: parseInt(fraud.rows[0]?.count ?? "0", 10),
+  };
+}
+
+/**
+ * Section 11: Webhook viewer — list webhook_events (read-only; replay is separate).
+ */
+export interface WebhookEventRow {
+  id: string;
+  provider: string;
+  event_id: string;
+  event_type: string | null;
+  received_at: string;
+  signature_verified: boolean;
+  processing_status: string;
+  attempt_count: number;
+  last_error: string | null;
+  processed_at: string | null;
+}
+
+export async function listWebhookEvents(params: {
+  limit: number;
+  offset: number;
+  processing_status?: string;
+  provider?: string;
+}): Promise<{ events: WebhookEventRow[]; total: number }> {
+  const { limit, offset, processing_status, provider } = params;
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+  let idx = 1;
+  if (processing_status) {
+    conditions.push(`processing_status = $${idx++}`);
+    values.push(processing_status);
+  }
+  if (provider) {
+    conditions.push(`provider = $${idx++}`);
+    values.push(provider);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  const countResult = await query<{ count: string }>(
+    `SELECT COUNT(*)::text as count FROM webhook_events ${where}`,
+    values
+  );
+  const total = parseInt(countResult.rows[0]?.count ?? "0", 10);
+  values.push(limit, offset);
+  const result = await query<WebhookEventRow>(
+    `SELECT id, provider, event_id, event_type, received_at::text as received_at,
+            signature_verified, processing_status, attempt_count, last_error, processed_at::text as processed_at
+     FROM webhook_events ${where}
+     ORDER BY received_at DESC
+     LIMIT $${idx++} OFFSET $${idx}`,
+    values
+  );
+  return { events: result.rows, total };
+}
+
+/**
+ * Section 11: Case management — update dispute metadata (assignee, case notes).
+ */
+export async function updateDisputeCase(
+  disputeId: string,
+  updates: { assignee_id?: string; case_notes?: string }
+): Promise<Dispute | null> {
+  const existing = await query<{ metadata: Record<string, unknown> }>(
+    `SELECT metadata FROM disputes WHERE id = $1`,
+    [disputeId]
+  );
+  if (existing.rows.length === 0) return null;
+  const meta = (existing.rows[0].metadata as Record<string, unknown>) || {};
+  if (updates.assignee_id !== undefined) meta.assignee_id = updates.assignee_id;
+  if (updates.case_notes !== undefined) {
+    const notes = Array.isArray(meta.case_notes) ? (meta.case_notes as string[]) : [];
+    notes.push(`${new Date().toISOString()}: ${updates.case_notes}`);
+    meta.case_notes = notes;
+  }
+  await query(
+    `UPDATE disputes SET metadata = $2, updated_at = NOW() WHERE id = $1`,
+    [disputeId, JSON.stringify(meta)]
+  );
+  const updated = await query<Dispute>(`SELECT * FROM disputes WHERE id = $1`, [disputeId]);
+  return updated.rows[0] ?? null;
+}

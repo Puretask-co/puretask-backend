@@ -48,6 +48,8 @@ PRODUCTION_DATABASE_URL="..." npm run db:verify:production
 | `CRONS_ENQUEUE_ONLY=false` | Runs workers directly on cron schedule | Not needed |
 | `CRONS_ENQUEUE_ONLY=true` | Enqueues jobs to `durable_jobs` table only | Must run separately; processes enqueued jobs |
 
+**Production recommendation (Section 6):** Set `CRONS_ENQUEUE_ONLY=true` in production so crons only enqueue; run `npm run worker:durable-jobs:loop` (or equivalent) as a separate process. This avoids long-running work in the cron process and uses the durable job table for retries and dead-letter handling.
+
 **Scheduled workers** (from `src/workers/scheduler.ts`): auto-cancel (*/5 min), retry-notifications (*/10), webhook-retry (*/5), lock-recovery (*/15), auto-expire (hourly), kpi-daily (1 AM), nightly-scores (2 AM), goal-checker (2 AM), subscription-jobs (2 AM), reliability-recalc (3 AM), cleaning-scores (3 AM), backup-daily (3 AM), credit-economy (4 AM), photo-cleanup (5 AM), onboarding-reminders (*/6 h), payout-retry (*/30), payout-reconciliation (6 AM), payout-weekly (Sun midnight), expire-boosts, weekly-summary, job-reminders, no-show-detection, governor-metrics. See `WORKER_SCHEDULES` in scheduler.ts for full list.
 
 ---
@@ -79,11 +81,55 @@ PRODUCTION_DATABASE_URL="..." npm run db:verify:production
 
 ### 3.2 Kill switches (env)
 
-- `BOOKINGS_ENABLED=false` — Disable booking creation
+- `BOOKINGS_ENABLED=false` — Disable booking creation (Section 14)
 - `PAYOUTS_ENABLED=false` — Disable payouts (default in prod until opt-in)
 - `CREDITS_ENABLED=false` — Disable credit purchases
 - `REFUNDS_ENABLED=false` — Disable refunds
 - `WORKERS_ENABLED=false` — Disable background workers
+
+To disable all new payments in an emergency: set `BOOKINGS_ENABLED=false` (stops new bookings) and `PAYOUTS_ENABLED=false` (stops payout processing). Existing payment intents can still complete unless you also disable at Stripe.
+
+### 3.3 Launch checklist (Section 14)
+
+- **Feature flags:** `admin_feature_flags` (DB); env kill switches: `BOOKINGS_ENABLED`, `PAYOUTS_ENABLED`, `CREDITS_ENABLED`, `REFUNDS_ENABLED`, `WORKERS_ENABLED`. See § 3.2.
+- **Staged rollout:** Internal → beta → limited geo → full. Document phases and success/rollback criteria in [SECTION_14_LAUNCH.md](./sections/SECTION_14_LAUNCH.md).
+- **Incident runbook:** § 3.1 above; [SECURITY_INCIDENT_RESPONSE.md](./00-CRITICAL/SECURITY_INCIDENT_RESPONSE.md) for secrets.
+- **Support training:** Dispute playbooks, refund/credit flows, IC-safe language. RUNBOOK § 4 support macros.
+- **Launch KPIs:** Error rate, p95 latency, webhook success, queue lag, payout success; bookings/day, dispute rate. See SECTION_14 § 14.7.
+- **Post-launch audit:** After first week/month; checklist of Sections 1–13; kill switch usage; incident count. § 14.8.
+
+### 3.4 Feature flags (Section 14)
+
+Runtime feature toggles live in `admin_feature_flags` (DB) and are loaded by `RuntimeConfigLoader`. Use for A/B, regional rollouts, and gamification toggles. Admin: `GET/POST /admin/gamification/flags`. Env kill switches (above) are for emergency; feature flags are for gradual rollout.
+
+### 3.5 Section 10 — Caching, workers, SMS/email, rate limits
+
+- **Caching:** Allowed list and TTL: see [SECTION_10_COST_SCALE.md](./sections/SECTION_10_COST_SCALE.md) § 10.5. Do not cache balances, job state, payout eligibility.
+- **Worker priority:** Critical (payments, payouts, dispute actions), standard (notifications), low (cleanup, analytics). See SECTION_10 § 10.6.
+- **SMS/email control:** SMS for high-urgency only; email for transactional; batch where possible. See SECTION_10 § 10.7.
+- **Rate limits:** Per-user and per-IP; strict on search, auth, booking. See SECTION_10 § 10.9 and `src/lib/security.ts` / Redis rate limiter.
+
+### 3.7 Admin RBAC and audit reason (Section 11)
+
+- **Roles:** `requireAdmin` (admin, super_admin), `requireSupportRole`, `requireFinanceRole`, `requireDisputeResolveRole` in `src/middleware/authCanonical.ts`. Use the most restrictive role per route.
+- **Audit reason:** Sensitive admin actions (force-complete, force-cancel, reassign, refund approve, payout actions, dead-letter retry) require `X-Audit-Reason` header or body `auditReason`/`reason` (min 3 chars). Middleware: `requireAuditReason` from `src/middleware/requireAuditReason.ts`. All such actions are logged to `admin_audit_log`.
+- **Ops summary:** `GET /admin/ops/summary` returns `{ openDisputes, payoutsPending, openFraudAlerts }` for dashboard at a glance.
+- **Refund/credit flows:** Refunds go through `processStripeRefund` / refund processor; credit adjustments via `adjustCredits` with audit reason. Ledger and audit log updated.
+- **Payout holds/releases:** `POST /admin/payouts/:payoutId/hold`, `POST /admin/payouts/hold/:adjustmentId/release`; idempotent; require audit reason.
+- **IC-safe language (Section 11):** Use “platform status adjustment,” “risk indicators,” “participation conditions”; avoid “required procedures,” “performance correction,” “mandatory re-cleans,” “override completion,” “warnings” in admin UI and API messages. Audit copy per SECTION_11.
+- **Dispute resolution UI (backend):** Dispute list/detail: `GET /admin/disputes`, `GET /admin/disputes/:disputeId`. Case management: `PATCH /admin/disputes/:disputeId` (body: `assignee_id?`, `case_notes?`; requires audit reason). Case notes in dispute `metadata.case_notes`; assignee in `metadata.assignee_id`. Frontend: build dispute resolution UI and case assignment on these endpoints.
+- **Webhook viewer (backend):** `GET /admin/webhooks/events` (query: `limit`, `offset`, `processing_status?`, `provider?`). Returns `{ events, total }` from `webhook_events` (no raw payload in list). Frontend webhook viewer can be built on this API.
+
+### 3.8 Section 12 — Outcomes and evidence
+
+- **Service outcomes:** Define per job type what was purchased (outcome), not how work is done. Store in config or DB; use for dispute resolution and client/cleaner transparency. See [SECTION_12_TRUST_IC_SAFE.md](./sections/SECTION_12_TRUST_IC_SAFE.md) § 12.2.
+- **Evidence (optional but conditional):** Photos/checklists optional for basic completion; required for certain protections (payout protection, dispute priority). Document in product/legal; link evidence to dispute eligibility and explainable auto-resolution. § 12.3–12.4.
+- **Review window:** Env `REVIEW_WINDOW_HOURS` (optional; defaults to `DISPUTE_WINDOW_HOURS` or 48 in auto-expire worker). After this many hours in `awaiting_approval`, the `auto-expire` worker auto-approves the job and releases escrow. See `src/workers/v1-core/autoExpireAwaitingApproval.ts` and `src/config/env.ts`. § 12.6.
+- **Structured feedback:** Dispute category optional on dispute creation: `createDispute({ ..., category })` and `POST /tracking/:jobId/dispute` body `category` (enum: missed_area, quality_issue, damages_claim, no_show, other). Stored in `disputes.reason_code`. See `disputesService.DISPUTE_CATEGORIES`. § 12.6.
+- **Auto-resolution:** Criteria (e.g. evidence present, category, timing) documented in SECTION_12; implement or stub in dispute flow; must be explainable (why outcome was chosen). § 12.7.
+- **Reliability signals:** Implemented (scores, access-based); used for visibility, payout timing, platform protections. See SECTION_12 § 12.8; do not frame as employment performance. § 12.8.
+- **Transparency:** “How decisions work” — cleaners: how reliability is calculated, how to regain protections; clients: what was included, how disputes are reviewed. Document in RUNBOOK or static policy page; optional GET `/policies/decisions` or link from app. § 12.11.
+- **IC-language audit:** [IC_LANGUAGE_AUDIT.md](./IC_LANGUAGE_AUDIT.md) — phrases to avoid, preferred phrasing, where audited, remaining app copy to audit. Use for all new copy and pre-release pass.
 
 ---
 
@@ -110,6 +156,10 @@ Messages count if: (1) you used a Quick Template, (2) the message is 25+ charact
 
 **“Why didn’t my login/streak count?”**  
 A login day counts when you take at least one meaningful action within 15 minutes of opening the app (open job request, accept/decline, send message, upload photos, update availability). Opening and closing the app doesn’t count.
+
+**Gamification bundle reference:** Event/metric contracts and bundle specs: [docs/active/gamification_bundle/](gamification_bundle/README.md); contract JSON in `src/config/cleanerLevels/contracts/`; reference code in `src/gamification-bundle/`.
+
+**Key constants (quick reference):** Meaningful action window 15 min | Message: 25 chars OR template OR reply within 24 h | On-time: ±15 min, GPS 250 m | Short notice good-faith &lt; 18 h | Good-faith limit 6 per 7 days | Distance good-faith: 10 mi radius, penalty-free ≥ 11 mi. Full table: ARCHITECTURE §3.5.
 
 **“Why didn’t my photos count?”**  
 Photos must include at least 1 before + 1 after, with timestamps between clock-in and clock-out.

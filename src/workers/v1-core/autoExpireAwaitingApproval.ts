@@ -11,9 +11,13 @@ import { publishEvent } from "../../lib/events";
 import { releaseJobCreditsToCleaner } from "../../services/creditsService";
 import { recordEarningsForCompletedJob } from "../../services/payoutsService";
 import { Job } from "../../types/db";
+import { env } from "../../config/env";
 
-// Configuration
-const AUTO_APPROVE_HOURS = parseInt(process.env.AUTO_APPROVE_HOURS || "24", 10);
+// Configuration: Section 12 review window — REVIEW_WINDOW_HOURS || DISPUTE_WINDOW_HOURS || AUTO_APPROVE_HOURS || 48
+const AUTO_APPROVE_HOURS =
+  (env.REVIEW_WINDOW_HOURS ??
+    env.DISPUTE_WINDOW_HOURS ??
+    parseInt(process.env.AUTO_APPROVE_HOURS || "24", 10)) ?? 48;
 const BATCH_SIZE = 50;
 
 interface ExpirableJob {
@@ -36,11 +40,11 @@ async function findJobsToAutoApprove(): Promise<ExpirableJob[]> {
       SELECT id, client_id, cleaner_id, status, credit_amount, actual_end_at
       FROM jobs
       WHERE status = 'awaiting_approval'
-        AND actual_end_at < NOW() - INTERVAL '${AUTO_APPROVE_HOURS} hours'
+        AND actual_end_at < NOW() - (($1::text || ' hours')::interval)
       ORDER BY actual_end_at ASC
-      LIMIT $1
+      LIMIT $2
     `,
-    [BATCH_SIZE]
+    [AUTO_APPROVE_HOURS, BATCH_SIZE]
   );
 
   return result.rows;

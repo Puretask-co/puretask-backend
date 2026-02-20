@@ -84,11 +84,17 @@ router.post(
 - Include `requestId` in logs (automatic via context)
 - Log at appropriate levels: `info`, `warn`, `error`, `debug`
 
-### Testing
-- **Framework**: Jest (standardized)
-- **Test structure**: `src/tests/unit/`, `src/tests/integration/`, `src/tests/smoke/`
-- **Run tests**: `npm test`
-- **Coverage**: Aim for 50%+ coverage on critical paths
+### Testing (test pyramid — Section 9)
+
+- **Framework**: Vitest (with Jest-compatible API where used)
+- **Test structure**:
+  - **Unit**: `src/**/__tests__/*.test.ts` or `src/tests/unit/` — business logic, auth helpers, validation, idempotency. Fast; no DB.
+  - **Integration**: `src/tests/integration/` — API + DB; use `TEST_DATABASE_URL`. Run with `npm run test:integration`.
+  - **Contract**: `src/tests/contract/` — error format, auth (401/403), response shapes. Ensures clients can rely on API contract.
+  - **Smoke**: `src/tests/smoke/` — critical paths against running app.
+- **When to add which**: New business logic → unit test. New or changed API route → integration or contract test. Critical flow → smoke test.
+- **Run tests**: `npm test` (all), `npm run test:integration`, `npm run test:smoke`
+- **Coverage**: Aim for 50%+ on critical paths (payments, auth, ledger)
 
 ### Database Access
 - **Never** import `query` or `withTransaction` directly in routes

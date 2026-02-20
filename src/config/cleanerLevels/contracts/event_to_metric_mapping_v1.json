@@ -1,0 +1,77 @@
+{
+  "jobs.completed.count": [
+    "job.completed"
+  ],
+  "jobs.completed.split_counts": [
+    "job.completed"
+  ],
+  "jobs.on_time.count": [
+    "job.clock_in"
+  ],
+  "jobs.on_time.rate_percent": [
+    "job.clock_in"
+  ],
+  "jobs.on_time.streak": [],
+  "jobs.clock_in_out.success.count": [
+    "job.clock_in",
+    "job.clock_out"
+  ],
+  "jobs.clock_in_out.missing.count": [
+    "job.clock_out"
+  ],
+  "jobs.photos.valid.count": [
+    "job.photo_uploaded"
+  ],
+  "jobs.rescheduled.count": [],
+  "jobs.cancelled_by_cleaner.count": [],
+  "jobs.addons.completed.count": [
+    "job.addon_completed"
+  ],
+  "messages.sent_to_clients.meaningful.count": [
+    "message.received",
+    "message.sent"
+  ],
+  "engagement.meaningful_login_days.count": [
+    "availability.updated",
+    "engagement.meaningful_action",
+    "engagement.session_started"
+  ],
+  "engagement.login_streak_days": [
+    "engagement.meaningful_action",
+    "engagement.session_started"
+  ],
+  "job_requests.accepted.count": [
+    "job_request.decision"
+  ],
+  "job_requests.acceptance_rate_percent": [
+    "job_request.decision"
+  ],
+  "clients.repeat_clients.count": [],
+  "clients.count_with_min_jobs": [],
+  "clients.max_jobs_with_single_client": [],
+  "ratings.avg_stars": [
+    "rating.received"
+  ],
+  "ratings.five_star.count": [
+    "rating.received"
+  ],
+  "disputes.opened.count": [
+    "dispute.opened"
+  ],
+  "disputes.lost.count": [
+    "dispute.resolved"
+  ],
+  "disputes.open_or_lost.count": [
+    "dispute.opened",
+    "dispute.resolved"
+  ],
+  "disputes.lost.rate_percent_lifetime": [
+    "dispute.resolved"
+  ],
+  "reliability.percentile": [],
+  "badges.composite.review_whisperer": [],
+  "badges.composite.tip_jar_energy": [],
+  "tips.received.count": [
+    "tip.received"
+  ]
+}

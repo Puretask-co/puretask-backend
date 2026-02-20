@@ -10,10 +10,12 @@ import {
   AuthedRequest,
   authedHandler,
 } from "../middleware/authCanonical";
+import { requireAuditReason } from "../middleware/requireAuditReason";
 import { validateBody, validateQuery } from "../lib/validation";
 import { z } from "zod";
 import {
   getAdminKPIs,
+  getOpsSummary,
   resolveDispute,
   overrideJobStatus,
   getDisputes,
@@ -23,6 +25,8 @@ import {
   listJobsForAdmin,
   getKpiHistory,
   getJobDetails,
+  listWebhookEvents,
+  updateDisputeCase,
 } from "../services/adminService";
 import {
   listUsers,
@@ -133,6 +137,58 @@ adminRouter.get(
           code: "GET_KPIS_FAILED",
           message: (error as Error).message,
         },
+      });
+    }
+  })
+);
+
+/**
+ * GET /admin/ops/summary — Section 11: Ops dashboard summary (open disputes, pending payouts, fraud alerts)
+ */
+adminRouter.get(
+  "/ops/summary",
+  requireAdmin,
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    try {
+      const summary = await getOpsSummary();
+      res.json(summary);
+    } catch (error) {
+      logger.error("get_ops_summary_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_OPS_SUMMARY_FAILED", message: (error as Error).message },
+      });
+    }
+  })
+);
+
+/**
+ * GET /admin/webhooks/events — Section 11: Webhook viewer (read-only list).
+ * Query: limit, offset, processing_status (pending|done|failed), provider (e.g. stripe).
+ */
+const listWebhooksQuerySchema = z.object({
+  limit: z.string().regex(/^\d+$/).optional().default("50"),
+  offset: z.string().regex(/^\d+$/).optional().default("0"),
+  processing_status: z.enum(["pending", "processing", "done", "failed"]).optional(),
+  provider: z.string().max(64).optional(),
+});
+adminRouter.get(
+  "/webhooks/events",
+  requireAdmin,
+  validateQuery(listWebhooksQuerySchema),
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const q = req.query as z.infer<typeof listWebhooksQuerySchema>;
+      const result = await listWebhookEvents({
+        limit: Math.min(parseInt(q.limit ?? "50", 10), 100),
+        offset: Math.max(parseInt(q.offset ?? "0", 10), 0),
+        processing_status: q.processing_status,
+        provider: q.provider,
+      });
+      res.json(result);
+    } catch (error) {
+      logger.error("list_webhook_events_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "LIST_WEBHOOK_EVENTS_FAILED", message: (error as Error).message },
       });
     }
   })
@@ -253,29 +309,34 @@ adminRouter.get(
  *       401:
  *         description: Unauthorized - admin only
  */
+const listJobsQuerySchema = z.object({
+  status: z.string().optional(),
+  clientId: z.string().uuid().optional(),
+  cleanerId: z.string().uuid().optional(),
+  dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  limit: z.string().regex(/^\d+$/).optional().default("50"),
+  offset: z.string().regex(/^\d+$/).optional().default("0"),
+});
+
 adminRouter.get(
   "/jobs",
   requireAdmin,
+  validateQuery(listJobsQuerySchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
-      const {
-        status,
-        clientId,
-        cleanerId,
-        dateFrom,
-        dateTo,
-        limit = "50",
-        offset = "0",
-      } = req.query;
+      const q = req.query as z.infer<typeof listJobsQuerySchema>;
+      const limit = Math.min(parseInt(q.limit ?? "50", 10), 100);
+      const offset = Math.max(parseInt(q.offset ?? "0", 10), 0);
 
       const result = await listJobsForAdmin({
-        status: status as any,
-        clientId: clientId as string | undefined,
-        cleanerId: cleanerId as string | undefined,
-        dateFrom: dateFrom as string | undefined,
-        dateTo: dateTo as string | undefined,
-        limit: parseInt(limit as string, 10),
-        offset: parseInt(offset as string, 10),
+        status: q.status as any,
+        clientId: q.clientId,
+        cleanerId: q.cleanerId,
+        dateFrom: q.dateFrom,
+        dateTo: q.dateTo,
+        limit,
+        offset,
       });
 
       res.json(result);
@@ -560,6 +621,40 @@ adminRouter.get(
           code: "GET_DISPUTE_DETAIL_FAILED",
           message: (error as Error).message,
         },
+      });
+    }
+  })
+);
+
+/**
+ * PATCH /admin/disputes/:disputeId — Section 11: Case management (assignee, case notes).
+ */
+const updateDisputeCaseSchema = z.object({
+  assignee_id: z.string().uuid().optional(),
+  case_notes: z.string().min(1).max(2000).optional(),
+});
+adminRouter.patch(
+  "/disputes/:disputeId",
+  requireSupportRole,
+  requireAuditReason,
+  validateBody(updateDisputeCaseSchema),
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { disputeId } = req.params;
+      const updates = req.body as { assignee_id?: string; case_notes?: string };
+      const dispute = await updateDisputeCase(disputeId, updates);
+      if (!dispute) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Dispute not found" } });
+        return;
+      }
+      res.json(dispute);
+    } catch (error) {
+      logger.error("update_dispute_case_failed", {
+        error: (error as Error).message,
+        disputeId: req.params.disputeId,
+      });
+      res.status(500).json({
+        error: { code: "UPDATE_DISPUTE_CASE_FAILED", message: (error as Error).message },
       });
     }
   })
@@ -1787,6 +1882,7 @@ async function handleApproveRefund(req: AuthedRequest, res: Response): Promise<v
 adminRouter.post(
   "/refunds/:jobId/approve",
   requireAdmin,
+  requireAuditReason,
   validateBody(approveRefundSchema),
   authedHandler(handleApproveRefund)
 );
@@ -1995,6 +2091,7 @@ async function handleForceCompleteJob(req: AuthedRequest, res: Response): Promis
 adminRouter.post(
   "/repair/job/:jobId/force-complete",
   requireAdmin,
+  requireAuditReason,
   validateBody(forceCompleteSchema),
   authedHandler(handleForceCompleteJob)
 );
@@ -2056,6 +2153,7 @@ async function handleForceCancelJob(req: AuthedRequest, res: Response): Promise<
 adminRouter.post(
   "/repair/job/:jobId/force-cancel",
   requireAdmin,
+  requireAuditReason,
   validateBody(forceCancelSchema),
   authedHandler(handleForceCancelJob)
 );
@@ -2118,6 +2216,7 @@ async function handleReassignJob(req: AuthedRequest, res: Response): Promise<voi
 adminRouter.post(
   "/repair/job/:jobId/reassign",
   requireAdmin,
+  requireAuditReason,
   validateBody(reassignSchema),
   authedHandler(handleReassignJob)
 );

@@ -246,6 +246,33 @@ creditsRouter.get(
   })
 );
 
+/** GET /credits/ledger — frontend alias (params: from, to, type, status, page, limit) */
+creditsRouter.get(
+  "/ledger",
+  requireRole("client"),
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const { limit = "50", page = "1" } = req.query;
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 50));
+      const history = await getCreditHistory(req.user!.id, limitNum);
+      res.json({
+        entries: history,
+        page: Math.max(1, parseInt(page as string, 10) || 1),
+        per_page: limitNum,
+        total: history.length,
+      });
+    } catch (error) {
+      logger.error("get_ledger_failed", {
+        error: (error as Error).message,
+        userId: req.user?.id,
+      });
+      res.status(500).json({
+        error: { code: "GET_LEDGER_FAILED", message: "Failed to get ledger" },
+      });
+    }
+  })
+);
+
 /**
  * @swagger
  * /credits/purchases:

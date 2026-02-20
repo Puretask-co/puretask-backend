@@ -6,6 +6,108 @@
 
 ---
 
+## Exact backend structure for production
+
+This is the **exact** process layout and commands for running the PureTask backend in production.
+
+### Processes (what to run)
+
+| Process | Command | Purpose |
+|--------|---------|---------|
+| **API server** | `npm run build` then `npm start` | Serves HTTP + Socket.IO. Entry: `node -r ./dist/instrument.js ./dist/index.js`. |
+| **Scheduler** | `npm run worker:scheduler` | Either runs workers inline (cron) or **enqueues** to `durable_jobs` when `CRONS_ENQUEUE_ONLY=true`. |
+| **Durable job worker** | `npm run worker:durable-jobs:loop` | **Required** if `CRONS_ENQUEUE_ONLY=true`. Consumes `durable_jobs` and runs enqueued workers. |
+
+**Production recommendation:** Run **three** separate processes (or three Railway services):
+
+1. **API** — `npm run build && npm start` (long-running).
+2. **Scheduler** — `npm run worker:scheduler` (long-running; enqueues only when `CRONS_ENQUEUE_ONLY=true`).
+3. **Worker** — `npm run worker:durable-jobs:loop` (long-running; processes the queue).
+
+If `CRONS_ENQUEUE_ONLY=false`, you can run only **API** + **Scheduler** (scheduler runs workers directly on cron; no separate worker process).
+
+### Build and start commands
+
+```bash
+# One-time build (or in CI/Railway build step)
+npm ci
+npm run build
+
+# Start API (production)
+npm start
+# → node -r ./dist/instrument.js ./dist/index.js
+
+# Start scheduler (separate process)
+npm run worker:scheduler
+# → ts-node src/workers/scheduler.ts
+
+# Start durable worker (separate process; required when CRONS_ENQUEUE_ONLY=true)
+npm run worker:durable-jobs:loop
+# → ts-node src/workers/runDurableJobWorker.ts --loop
+```
+
+### Required environment variables (production)
+
+| Variable | Required | Notes |
+|----------|----------|--------|
+| `NODE_ENV` | Yes | `production` |
+| `PORT` | Yes | e.g. `4000` (Railway sets automatically) |
+| `DATABASE_URL` | Yes | Postgres connection string (Neon: use `?sslmode=require`) |
+| `JWT_SECRET` | Yes | Long random string (≥64 chars) |
+| `STRIPE_SECRET_KEY` | Yes | Live key in prod |
+| `STRIPE_WEBHOOK_SECRET` | Yes | From Stripe webhook endpoint |
+| `N8N_WEBHOOK_SECRET` | Yes | For n8n event verification |
+| `FRONTEND_URL` | Yes | Production frontend origin (for CORS and links), e.g. `https://app.puretask.com` |
+| `APP_URL` | Recommended | Same as frontend or API base URL for email links |
+| `SENTRY_DSN` | Recommended | Error tracking |
+| `CRONS_ENQUEUE_ONLY` | Recommended | `true` in prod so scheduler only enqueues; run worker separately |
+| `PAYOUTS_ENABLED` | Optional | `true` when ready to process payouts (default `false`) |
+| `REDIS_URL` | Optional | For rate limiting; if unset, in-memory limiter is used |
+
+Optional: `JWT_EXPIRES_IN`, `SENDGRID_*`, `TWILIO_*`, `WORKERS_ENABLED`, `BOOKINGS_ENABLED`, etc. See `src/config/env.ts` and `.env.example`.
+
+### Railway layout (example)
+
+| Service | Build | Start | Env |
+|---------|--------|--------|-----|
+| **api** | `npm ci && npm run build` | `npm start` | All vars; `PORT` from Railway |
+| **scheduler** | `npm ci && npm run build` | `node -r ./dist/instrument.js ./dist/workers/scheduler.js` | Same as api; no `PORT` needed |
+| **worker** | `npm ci && npm run build` | `node -r ./dist/instrument.js ./dist/workers/runDurableJobWorker.js --loop` | Same as api; `CRONS_ENQUEUE_ONLY=true` |
+
+If using **compiled JS** for scheduler/worker, point to `dist/` (e.g. `node dist/workers/scheduler.js`). If using ts-node in prod, use `npm run worker:scheduler` and `npm run worker:durable-jobs:loop` (ensure `ts-node` is a dependency).
+
+### Directory / artifact layout (after build)
+
+```
+puretask-backend/
+├── dist/                    # Compiled output (npm run build)
+│   ├── index.js             # API entry
+│   ├── instrument.js        # Sentry (required by npm start)
+│   ├── config/
+│   ├── routes/
+│   ├── services/
+│   ├── workers/
+│   │   ├── scheduler.js
+│   │   └── runDurableJobWorker.js
+│   └── ...
+├── node_modules/
+├── package.json
+├── .env                     # Not in repo; set in Railway/host
+└── DB/migrations/           # For migration runs
+```
+
+### Health and readiness
+
+- **Liveness:** `GET /health` → 200, `{ ok: true }`.
+- **Readiness:** `GET /health/ready` → 200 when DB is reachable.
+- Use these for Railway (or any platform) health checks and load balancer probes.
+
+### One-line summary
+
+**Production = API process + Scheduler process + Durable worker process** (with `CRONS_ENQUEUE_ONLY=true`), same env (including `DATABASE_URL`, `JWT_SECRET`, Stripe, `FRONTEND_URL`), build once with `npm run build`, start API with `npm start`, scheduler with `worker:scheduler`, worker with `worker:durable-jobs:loop`.
+
+---
+
 ## Environments
 
 - **local** — Development on your machine (see SETUP.md).
@@ -118,3 +220,54 @@ Before going live or after deploy, verify:
 - **Feature flags:** `admin_feature_flags` (gamification), env kill switches (`BOOKINGS_ENABLED`, `PAYOUTS_ENABLED`, etc.). See RUNBOOK § 3.2.
 - **Rollout plan:** Staging → internal dogfood → city pilot → scale. See RUNBOOK § 5.
 - **Incident runbook:** RUNBOOK § 3.1; SECURITY_INCIDENT_RESPONSE.md for secrets exposure.
+
+---
+
+## Pre-launch preparation (step-by-step)
+
+**Time:** ~30 min local prep, ~2.5 h for first full deploy. Use this before first production deploy or when bringing a new environment up.
+
+### 1. Apply database indexes (~5 min)
+
+- Run: `psql $DATABASE_URL -f DB/migrations/030_performance_indexes.sql` (or run the file in Neon SQL Editor).
+- Expect: multiple `CREATE INDEX`; NOTICE about 35+ indexes.
+
+### 2. Restart backend (~1 min)
+
+- Stop: Ctrl+C in the terminal running the backend.
+- Start: `npm run dev` (local) or use your normal start command so new routes/config are loaded.
+
+### 3. Test API (~2 min)
+
+- Health: `GET /health` and `GET /health/ready` return 200.
+- From frontend repo (if available): run API smoke tests (e.g. `npx ts-node tests/api/quick-api-test.ts` or equivalent) and confirm search/auth/jobs as needed.
+
+### 4. Manual UI smoke test (~10 min)
+
+- Open frontend (e.g. `http://localhost:3001`).
+- Test: login, search/browse, navigation, mobile view (F12 → device toolbar). Check console for errors.
+
+### 5. Production config (env vars)
+
+- **Backend (e.g. Railway):** `NODE_ENV=production`, `DATABASE_URL`, `JWT_SECRET` (new, long), Stripe **live** keys and `STRIPE_WEBHOOK_SECRET`, `FRONTEND_URL` / `APP_URL`, optional: `REDIS_URL`, `SENDGRID_*`, `SENTRY_DSN`.
+- **Frontend (e.g. Vercel):** `NEXT_PUBLIC_API_URL` (production API URL), `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (live), `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_ENVIRONMENT=production`.
+
+### 6. Deploy order
+
+1. Push backend → deploy backend (e.g. Railway). Verify: `curl https://<api-url>/health` → 200.
+2. Set frontend `NEXT_PUBLIC_API_URL` to that API URL → push frontend → deploy (e.g. Vercel).
+3. (Optional) Custom domain: add domain in Vercel/Railway, add DNS records at registrar, then update CORS origins in backend to include production domain and redeploy.
+
+### 7. Post-deploy checks
+
+- Health and ready: 200.
+- Frontend: load site, login, search, key flows; confirm no CORS/404/500 in network tab.
+- Stripe webhook: send test event from Stripe Dashboard; backend returns 200.
+
+### Hosting reference
+
+- **Backend:** Railway (Hobby/Pro). Deploy from GitHub; set env vars; use health URL for frontend.
+- **Frontend:** Vercel (Free/Pro). Import repo; set `NEXT_PUBLIC_API_URL` and other public env; deploy.
+- **Domain:** Optional; add in Vercel/Railway and point DNS.
+
+Detailed troubleshooting (DB index failures, deploy failures, CORS, 404s): see TROUBLESHOOTING.md and Rollback above.

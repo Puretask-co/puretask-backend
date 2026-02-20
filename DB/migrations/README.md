@@ -28,6 +28,7 @@ That's it! Your database is ready. The consolidated schema includes migrations 0
 | `000_NEON_PATCH_test_db_align.sql` | **Schema alignment** - FKs, columns, enums for existing Neon DBs (test + production). Run via `npm run db:patch:production` for prod. |
 | `000_SEED_TEST_DATA.sql` | Test data for development |
 | `001_init.sql` → `025_...` | Historical incremental migrations (for reference) |
+| `bundle_reference/` | Gamification bundle SQL (reference only; do not run; applied via 043–056) |
 
 ---
 

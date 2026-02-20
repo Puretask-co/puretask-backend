@@ -49,7 +49,7 @@ These URLs are built by the backend (see `src/lib/urlBuilder.ts` and related cod
 | `/verify-email?token=...` | Email verification (emailVerificationService, APP_URL). |
 | `/reset-password?token=...` | Password reset (passwordResetService, APP_URL). |
 
-**API surface:** The backend exposes many routes under `/client/`, `/cleaner/`, `/auth/`, `/jobs/`, etc. The frontend should call these (with auth where required) and render the responses. See API docs or `src/routes/` for the full list.
+**API surface:** The backend exposes many routes under `/client/`, `/cleaner/`, `/auth/`, `/jobs/`, etc. The frontend should call these (with auth where required) and render the responses. For the **full list of endpoints the frontend expects**, see [FRONTEND_API_EXPECTATIONS.md](./FRONTEND_API_EXPECTATIONS.md). For implementation details see API docs or `src/routes/`.
 
 ---
 

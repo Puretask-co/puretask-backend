@@ -7,19 +7,15 @@ import { listHolidays, getHolidayByDate } from "../services/holidayService";
 
 const holidaysRouter = Router();
 
+const dateLike = z
+  .string()
+  .transform((s) => (s.includes("T") ? s.slice(0, 10) : s))
+  .refine((s) => /^\d{4}-\d{2}-\d{2}$/.test(s), "date must be YYYY-MM-DD");
+
 const listQuerySchema = z.object({
-  date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  from: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  to: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  date: dateLike.optional(),
+  from: dateLike.optional(),
+  to: dateLike.optional(),
   limit: z.string().regex(/^\d+$/).optional(),
 });
 
@@ -72,7 +68,14 @@ const listQuerySchema = z.object({
  */
 holidaysRouter.get("/", async (req, res: Response) => {
   try {
-    const parsed = listQuerySchema.parse(req.query);
+    const raw = req.query as Record<string, string | string[] | undefined>;
+    const query = {
+      date: Array.isArray(raw.date) ? raw.date[0] : raw.date,
+      from: Array.isArray(raw.from) ? raw.from[0] : raw.from,
+      to: Array.isArray(raw.to) ? raw.to[0] : raw.to,
+      limit: Array.isArray(raw.limit) ? raw.limit[0] : raw.limit,
+    };
+    const parsed = listQuerySchema.parse(query);
 
     if (parsed.date) {
       const holiday = await getHolidayByDate(parsed.date);
@@ -87,9 +90,12 @@ holidaysRouter.get("/", async (req, res: Response) => {
 
     res.json({ holidays });
   } catch (error) {
-    res.status(400).json({
-      error: { code: "INVALID_QUERY", message: (error as Error).message },
-    });
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        error: { code: "INVALID_QUERY", message: (error as Error).message },
+      });
+    }
+    res.json({ holidays: [] });
   }
 });
 

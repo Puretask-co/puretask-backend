@@ -1,0 +1,590 @@
+{
+  "version": "v1",
+  "generated_at": "2026-02-02T13:35:27.607557Z",
+  "metrics": [
+    {
+      "key": "jobs.completed.count",
+      "title": "Completed jobs count",
+      "unit": "count",
+      "sources": [
+        "jobs (status=completed)"
+      ],
+      "calculation": "Count of jobs where status='completed'. Optionally filter by cleaning_type and/or time_slot.",
+      "supported_windows": [
+        "lifetime",
+        "days",
+        "last_jobs"
+      ],
+      "edge_cases": [
+        "Exclude test jobs. If job is voided/refunded and marked invalid, exclude via jobs.is_valid=false."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "jobs.completed.split_counts",
+      "title": "Completed jobs split counts",
+      "unit": "object",
+      "sources": [
+        "jobs (status=completed)"
+      ],
+      "calculation": "Return object with counts by cleaning_type for the window. Example: {basic:10, deep:10}. Goal evaluator compares each required key.",
+      "supported_windows": [
+        "lifetime",
+        "days",
+        "last_jobs"
+      ],
+      "edge_cases": [
+        "If cleaning_type missing, bucket as 'unknown' and do not count toward specific type requirements."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "jobs.on_time.count",
+      "title": "On-time jobs count",
+      "unit": "count",
+      "sources": [
+        "jobs",
+        "job_clock_events",
+        "job_schedule",
+        "geo"
+      ],
+      "calculation": "Count completed jobs where clock_in_time is between (scheduled_start - before_minutes) and (scheduled_start + after_minutes) AND distance(clock_in_gps, job_location) <= gps_radius_meters.",
+      "supported_windows": [
+        "lifetime",
+        "days",
+        "last_jobs"
+      ],
+      "edge_cases": [
+        "If scheduled_start missing, on_time=false. If clock_in missing, on_time=false. GPS distance uses haversine on lat/lng."
+      ],
+      "depends_on": [
+        "jobs.clock_in_out.success.count"
+      ],
+      "config_params": [
+        "rules.on_time.gps_radius_meters (250)",
+        "rules.on_time.window_minutes_before (15)",
+        "rules.on_time.window_minutes_after (15)"
+      ]
+    },
+    {
+      "key": "jobs.on_time.rate_percent",
+      "title": "On-time rate percent",
+      "unit": "percent",
+      "sources": [
+        "jobs",
+        "job_clock_events",
+        "job_schedule",
+        "geo"
+      ],
+      "calculation": "Compute 100 * (on_time_completed_jobs / eligible_completed_jobs) over the window. Eligible=jobs with required schedule and clock_in data.",
+      "supported_windows": [
+        "days",
+        "last_jobs"
+      ],
+      "edge_cases": [
+        "If eligible_completed_jobs=0 return null and mark goal as not evaluable."
+      ],
+      "depends_on": [
+        "jobs.on_time.count",
+        "jobs.completed.count"
+      ],
+      "config_params": []
+    },
+    {
+      "key": "jobs.on_time.streak",
+      "title": "On-time streak",
+      "unit": "count",
+      "sources": [
+        "jobs",
+        "job_clock_events",
+        "job_schedule",
+        "geo"
+      ],
+      "calculation": "Max consecutive on-time completed jobs, ordered by completed_at descending, until first non-on-time job breaks streak.",
+      "supported_windows": [
+        "lifetime"
+      ],
+      "edge_cases": [
+        "Ignore incomplete jobs. If no completed jobs, streak=0."
+      ],
+      "depends_on": [
+        "jobs.on_time.count"
+      ],
+      "config_params": []
+    },
+    {
+      "key": "jobs.clock_in_out.success.count",
+      "title": "Clock-in/out success count",
+      "unit": "count",
+      "sources": [
+        "job_clock_events",
+        "jobs",
+        "geo"
+      ],
+      "calculation": "Count jobs where both clock_in and clock_out exist AND both GPS points are within gps_radius_meters of job_location.",
+      "supported_windows": [
+        "lifetime",
+        "days",
+        "last_jobs"
+      ],
+      "edge_cases": [
+        "If either clock event missing or GPS invalid => not success. Use the same gps_radius_meters as on-time."
+      ],
+      "depends_on": [],
+      "config_params": [
+        "rules.on_time.gps_radius_meters (250)"
+      ]
+    },
+    {
+      "key": "jobs.clock_in_out.missing.count",
+      "title": "Clock-in/out missing count",
+      "unit": "count",
+      "sources": [
+        "job_clock_events",
+        "jobs"
+      ],
+      "calculation": "Count completed jobs missing either clock_in or clock_out event.",
+      "supported_windows": [
+        "days",
+        "last_jobs",
+        "lifetime"
+      ],
+      "edge_cases": [
+        "If job is cancelled before start, exclude from this metric by jobs.status!='completed'."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "jobs.photos.valid.count",
+      "title": "Jobs with valid photo verification",
+      "unit": "count",
+      "sources": [
+        "job_photos",
+        "job_clock_events",
+        "jobs"
+      ],
+      "calculation": "Count jobs where there is >=1 before photo and >=1 after photo AND each photo timestamp is between clock_in_time and clock_out_time.",
+      "supported_windows": [
+        "lifetime",
+        "days",
+        "last_jobs"
+      ],
+      "edge_cases": [
+        "If clock_in/out missing, photo_valid=false. If timestamps missing, photo_valid=false. Photos may be customer-approved separately but validation here is timestamp + presence only."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "jobs.rescheduled.count",
+      "title": "Rescheduled jobs count",
+      "unit": "count",
+      "sources": [
+        "jobs",
+        "job_schedule_changes"
+      ],
+      "calculation": "Count jobs with at least one schedule change initiated after acceptance (reschedule event).",
+      "supported_windows": [
+        "days",
+        "last_jobs",
+        "lifetime"
+      ],
+      "edge_cases": [
+        "Exclude platform-initiated reschedules due to system outages if flagged job_schedule_changes.system_initiated=true."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "jobs.cancelled_by_cleaner.count",
+      "title": "Cleaner-initiated cancellations count",
+      "unit": "count",
+      "sources": [
+        "jobs",
+        "job_cancellations"
+      ],
+      "calculation": "Count jobs where cancellation_initiator='cleaner'. Includes cancellations after acceptance.",
+      "supported_windows": [
+        "days",
+        "last_jobs",
+        "lifetime"
+      ],
+      "edge_cases": [
+        "Exclude cancellations due to platform error if flagged. Include no-shows if modeled as cleaner cancellation."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "jobs.addons.completed.count",
+      "title": "Completed add-ons count",
+      "unit": "count",
+      "sources": [
+        "job_addons",
+        "jobs"
+      ],
+      "calculation": "Count add-on line items where selected_by_customer=true AND completion_status='completed'. (Each add-on item counts as 1.)",
+      "supported_windows": [
+        "lifetime",
+        "days",
+        "last_jobs"
+      ],
+      "edge_cases": [
+        "If your product defines add-on completion at job-level, then count each add-on attached to the job when job_completed and addon_verified=true."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "messages.sent_to_clients.meaningful.count",
+      "title": "Meaningful messages sent to clients",
+      "unit": "count",
+      "sources": [
+        "messages"
+      ],
+      "calculation": "Count outbound cleaner->client messages that satisfy meaningful criteria: template_id not null OR length>=min_chars OR client replies within reply_within_hours.",
+      "supported_windows": [
+        "days",
+        "last_jobs",
+        "lifetime"
+      ],
+      "edge_cases": [
+        "If message deleted, still counts if delivered. Reply detection: any client message thread within reply window."
+      ],
+      "depends_on": [],
+      "config_params": [
+        "rules.meaningful_message.min_chars (25)",
+        "rules.meaningful_message.reply_within_hours (24)"
+      ]
+    },
+    {
+      "key": "engagement.meaningful_login_days.count",
+      "title": "Meaningful login days",
+      "unit": "count",
+      "sources": [
+        "engagement_sessions",
+        "engagement_events"
+      ],
+      "calculation": "Count distinct calendar days (cleaner local time) where session_start occurred AND within meaningful_action_window_minutes there is >=1 meaningful_action event (as defined in config).",
+      "supported_windows": [
+        "days",
+        "lifetime"
+      ],
+      "edge_cases": [
+        "If multiple sessions per day, count once. Use cleaner timezone; fallback to region timezone."
+      ],
+      "depends_on": [],
+      "config_params": [
+        "rules.meaningful_login.meaningful_action_window_minutes (15)"
+      ]
+    },
+    {
+      "key": "engagement.login_streak_days",
+      "title": "Meaningful login streak (days)",
+      "unit": "count",
+      "sources": [
+        "engagement_sessions",
+        "engagement_events"
+      ],
+      "calculation": "Compute consecutive meaningful login days up to today (or up to last meaningful day) by checking contiguous dates with meaningful_login=true.",
+      "supported_windows": [
+        "lifetime"
+      ],
+      "edge_cases": [
+        "Streak breaks on missing day. Use cleaner local time."
+      ],
+      "depends_on": [
+        "engagement.meaningful_login_days.count"
+      ],
+      "config_params": [
+        "rules.meaningful_login.meaningful_action_window_minutes (15)"
+      ]
+    },
+    {
+      "key": "job_requests.accepted.count",
+      "title": "Job requests accepted count",
+      "unit": "count",
+      "sources": [
+        "job_requests"
+      ],
+      "calculation": "Count job requests where decision='accepted' within window.",
+      "supported_windows": [
+        "days",
+        "lifetime",
+        "last_jobs"
+      ],
+      "edge_cases": [
+        "If request expires without decision, exclude. If accepted then later cancelled, still counts as accept unless explicitly reversed."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "job_requests.acceptance_rate_percent",
+      "title": "Acceptance rate percent",
+      "unit": "percent",
+      "sources": [
+        "job_requests",
+        "good_faith_declines",
+        "cleaner_settings",
+        "jobs",
+        "availability"
+      ],
+      "calculation": "Compute 100 * accepts / (accepts + declines_non_good_faith). A decline is non-good-faith if not classified as good-faith OR classified good-faith but cleaner exceeded good_faith_limit_per_7_days at time of decline.",
+      "supported_windows": [
+        "days"
+      ],
+      "edge_cases": [
+        "If denominator=0, return null. Good-faith classifier uses distance>=11mi, outside availability, job mismatch, safety concern (optional photo but note required), access/logistics mismatch, short notice <18h."
+      ],
+      "depends_on": [],
+      "config_params": [
+        "good_faith_declines.limit_per_7_days (6)",
+        "good_faith_declines.reasons.short_notice.hours_to_start_lt (18)",
+        "good_faith_declines.reasons.distance_too_far.job_distance_miles_gte (11.0) given default travel radius 10"
+      ]
+    },
+    {
+      "key": "clients.repeat_clients.count",
+      "title": "Repeat clients count",
+      "unit": "count",
+      "sources": [
+        "jobs",
+        "clients"
+      ],
+      "calculation": "Count unique clients with >=min_completed_jobs_per_client completed jobs with the cleaner within the window (default min=2 unless overridden by goal filter).",
+      "supported_windows": [
+        "lifetime",
+        "days"
+      ],
+      "edge_cases": [
+        "Client identity is stable via client_id. Exclude refunded/invalid jobs."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "clients.count_with_min_jobs",
+      "title": "Clients meeting minimum completed jobs",
+      "unit": "count",
+      "sources": [
+        "jobs",
+        "clients"
+      ],
+      "calculation": "Count unique clients where completed_jobs_with_cleaner >= filters.min_completed_jobs_per_client.",
+      "supported_windows": [
+        "lifetime",
+        "days"
+      ],
+      "edge_cases": [
+        "Used for higher-level loyalty goals."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "clients.max_jobs_with_single_client",
+      "title": "Max jobs with a single client",
+      "unit": "count",
+      "sources": [
+        "jobs",
+        "clients"
+      ],
+      "calculation": "Compute the maximum number of completed jobs among all clients for this cleaner (lifetime).",
+      "supported_windows": [
+        "lifetime"
+      ],
+      "edge_cases": [
+        "If no clients, value=0."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "ratings.avg_stars",
+      "title": "Average star rating",
+      "unit": "stars",
+      "sources": [
+        "ratings"
+      ],
+      "calculation": "Average of star ratings (1\u20135) over window for completed jobs. Cleaner UI uses stars; internal normalized percent = (avg/5)*100.",
+      "supported_windows": [
+        "days",
+        "last_jobs",
+        "lifetime"
+      ],
+      "edge_cases": [
+        "Exclude null/removed ratings. If no ratings in window, return null."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "ratings.five_star.count",
+      "title": "Five-star ratings count",
+      "unit": "count",
+      "sources": [
+        "ratings"
+      ],
+      "calculation": "Count ratings where stars=5 over window.",
+      "supported_windows": [
+        "days",
+        "last_jobs",
+        "lifetime"
+      ],
+      "edge_cases": [
+        "Only include ratings tied to completed jobs."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "disputes.opened.count",
+      "title": "Disputes opened count",
+      "unit": "count",
+      "sources": [
+        "disputes"
+      ],
+      "calculation": "Count disputes opened for the cleaner's jobs over window.",
+      "supported_windows": [
+        "days",
+        "last_jobs",
+        "lifetime"
+      ],
+      "edge_cases": [
+        "Include disputes regardless of outcome. Exclude disputes that are later marked invalid by admin."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "disputes.lost.count",
+      "title": "Lost disputes count",
+      "unit": "count",
+      "sources": [
+        "disputes"
+      ],
+      "calculation": "Count disputes with outcome='lost' for the cleaner over window.",
+      "supported_windows": [
+        "days",
+        "last_jobs",
+        "lifetime"
+      ],
+      "edge_cases": [
+        "If dispute pending, not counted as lost. If dispute reopened, outcome determined by final resolution."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "disputes.open_or_lost.count",
+      "title": "Open or lost disputes count",
+      "unit": "count",
+      "sources": [
+        "disputes"
+      ],
+      "calculation": "Count disputes where status in ('open','lost') over window. Used for stricter maintenance rules.",
+      "supported_windows": [
+        "days",
+        "last_jobs"
+      ],
+      "edge_cases": [
+        "Treat 'won' and 'dismissed' as not counted."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "disputes.lost.rate_percent_lifetime",
+      "title": "Lifetime lost dispute rate percent",
+      "unit": "percent",
+      "sources": [
+        "disputes",
+        "jobs"
+      ],
+      "calculation": "Compute 100 * lifetime_lost_disputes / lifetime_completed_jobs. (Completed jobs excludes invalid/refunded.)",
+      "supported_windows": [
+        "lifetime"
+      ],
+      "edge_cases": [
+        "If lifetime_completed_jobs=0 return null. This is stricter than dispute-free windows."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "reliability.percentile",
+      "title": "Reliability percentile (lower is better)",
+      "unit": "percentile",
+      "sources": [
+        "reliability_scores"
+      ],
+      "calculation": "Compute percentile rank of cleaner's reliability_score within active cleaner population for region (or platform-wide). 1 means top 1%.",
+      "supported_windows": [
+        "days"
+      ],
+      "edge_cases": [
+        "Define population: cleaners active in last 30 days. If insufficient population in region, use platform-wide."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "badges.composite.review_whisperer",
+      "title": "Composite: Review Whisperer",
+      "unit": "bool",
+      "sources": [
+        "messages",
+        "ratings"
+      ],
+      "calculation": "True if (template 'request_review' used >=15) AND (reviews_received_count >=5) within last 60 days.",
+      "supported_windows": [
+        "days"
+      ],
+      "edge_cases": [
+        "Template IDs come from quick_templates. If messaging not available, badge disabled."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "badges.composite.tip_jar_energy",
+      "title": "Composite: Tip Jar Energy",
+      "unit": "bool",
+      "sources": [
+        "messages",
+        "tips"
+      ],
+      "calculation": "True if (template 'request_tip' used >=10) AND (tips_received_count >=3) within last 90 days.",
+      "supported_windows": [
+        "days"
+      ],
+      "edge_cases": [
+        "If tips data not tracked, replace with proxy: customer 'tip acknowledged' events."
+      ],
+      "depends_on": [],
+      "config_params": []
+    },
+    {
+      "key": "tips.received.count",
+      "title": "Tips received count",
+      "unit": "count",
+      "sources": [
+        "tips"
+      ],
+      "calculation": "Count tips received by cleaner over window.",
+      "supported_windows": [
+        "days",
+        "lifetime"
+      ],
+      "edge_cases": [
+        "If tipping not implemented yet, stub metric returns 0 and composite badge stays false."
+      ],
+      "depends_on": [],
+      "config_params": []
+    }
+  ]
+}

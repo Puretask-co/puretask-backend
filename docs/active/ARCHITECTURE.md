@@ -27,7 +27,7 @@
 | **Middleware** | Auth, validation, context, security | `src/middleware/`, `src/lib/` |
 | **Workers** | Background jobs, crons | `src/workers/` |
 
-**Rule:** Routes do not talk to the DB directly; they call services. Validation uses Zod and `validateBody` / `validateQuery` / `validateParams` from `src/lib/validation.ts`.
+**Rule:** Routes do not talk to the DB directly; they call services. Do not import from `src/db/client` or use `query` in route files. Validation uses Zod and `validateBody` / `validateQuery` / `validateParams` from `src/lib/validation.ts`. Pagination: use `parsePagination` from `src/lib/pagination.ts` for list endpoints. Ownership: use `requireOwnership(resourceType, paramName)` from `src/lib/ownership.ts` for any route that accesses a resource by ID (job, payout, invoice, photo, property); admins bypass automatically.
 
 ---
 
@@ -78,6 +78,58 @@
 - **Support / Ops (Step 17):** `ProgressDebugService` for “why didn’t it count?” diagnostics from `pt_event_log`. Ops views: `ops_cleaner_gamification_snapshot`, `ops_cleaner_goal_counts`, `ops_cleaner_active_rewards_summary`. Route: `GET /admin/gamification/cleaners/:id/progress-debug`. Support macros and in-app explainers in [RUNBOOK.md](./RUNBOOK.md).
 - **Marketplace Health Governor (Step 18):** `region_marketplace_metrics`, `region_governor_state`, `region_governor_audit`. `MarketplaceGovernorService` classifies region and outputs safe knobs. Runtime: `GET /api/v1/governor/state?region_id=...`. Admin: `GET /admin/gamification/governor/region`, `POST .../governor/metrics/insert`, `/governor/compute`, `/governor/override`, `/governor/config/upsert`.
 
+**Gamification bundle reference:** The PureTask Gamification Master Bundle (goals, events, metrics contracts, reference code) is merged into this repo: docs and run order in [docs/active/gamification_bundle/](gamification_bundle/README.md), reference SQL in [DB/migrations/bundle_reference/](../../DB/migrations/bundle_reference/README.md), reference implementation in [src/gamification-bundle/](../../src/gamification-bundle/README.md), contract JSON in `src/config/cleanerLevels/contracts/`. Production schema comes from 043–056 and the consolidated schema, not from the bundle SQL files. Full event and metrics contracts, and the spec-enforcement matrix, are in [gamification_bundle/docs/](gamification_bundle/docs/) (event_contract_v1.md, metrics_contract_v1.md, spec_enforcement_matrix_v1.md). Runtime config: active config versions loaded on boot and polled every 2 min; rollback creates a new active version (history immutable). See [gamification_bundle/docs/runtime_config_loading.md](gamification_bundle/docs/runtime_config_loading.md).
+
+---
+
+## 3.4 Trust API (Fintech hooks)
+
+All Trust endpoints live under **`/api`** and require **`Authorization: Bearer <token>`**. Role and participant checks are enforced per route. Implemented in `src/routes/trustAdapter.ts`.
+
+| Method | Path | Role | Contract |
+|--------|------|------|----------|
+| GET | /api/credits/balance | client | `{ balance, currency, lastUpdatedISO }` |
+| GET | /api/credits/ledger | client | `{ entries }` (filters: from, to, type, status, search, limit) |
+| POST | /api/credits/checkout | client | Body: packageId, successUrl, cancelUrl → `{ checkoutUrl }` |
+| GET | /api/billing/invoices | client | `{ invoices }` (each with lineItems) |
+| GET | /api/billing/invoices/:id | client (owner) | Full invoice + lineItems |
+| POST | /api/client/invoices/:id/pay | client (owner) | Body: payment_method (credits \| card) → `{ ok: true }` |
+| GET | /api/appointments/:bookingId/live | client or assigned cleaner | state, etaISO, gps, photos, checklist, events |
+| POST | /api/appointments/:bookingId/events | cleaner (assigned) | Body: type (en_route, arrived, note…), gps?, note? → `{ ok: true }` |
+| GET | /api/cleaners/:cleanerId/reliability | client | `{ reliability: { score, tier, breakdown, explainers } }` |
+
+**Spec-exact paths (no /api prefix):** For frontends that call the exact spec paths, the same contract is also available at root: **POST /credits/checkout** → `{ checkoutUrl }`, **GET /cleaners/:cleanerId/reliability** → `{ reliability }` (mounted via `trustRootRouter` before the main API router).
+
+Credits ledger is append-only; balance is derived. Invoice payment by credits creates ledger entries. CORS allows `Content-Type` and `Authorization`; frontend origin (e.g. `http://localhost:3000`) is allowlisted.
+
+---
+
+## 3.5 Gamification canonical rules and key constants (source: bundle)
+
+**Locked product truths:** Levels never go down. Progress/rewards can pause if maintenance fails (level remains). Customers always choose cleaners. Boosts are ranking multipliers / early exposure (never guarantees). Goals give tangible rewards; leveling up itself is minimal. Anti-gaming enforced for login, messaging, photos.
+
+**Meaningful login:** A login day counts only if within **15 minutes** of opening the app the cleaner performs ≥1 meaningful action: open job request detail, accept/decline, send meaningful message, status taps (on my way/arrived/complete), upload photos, update availability.
+
+**Meaningful message:** Counts if sent using a quick template, OR ≥ 25 chars, OR customer replies within 24 hours. Quick templates include thank you, reschedule offer, request review, request tip, plus operational (on my way, arrived, starting now, finished/photos attached).
+
+**Photo verification:** ≥ 1 BEFORE and ≥ 1 AFTER photo; timestamps between clock-in and clock-out. No extra room/angle requirements.
+
+**On-time + GPS:** On-time if clock-in within **±15 minutes** of scheduled start; GPS within **250 m** of job. Clock-in success requires both clock-in and clock-out within radius.
+
+**Good-faith declines (acceptance rate):** Declines do not hurt acceptance if: distance too far (e.g. travel radius 10 mi, job ≥ 11 mi), time conflict (outside availability), job mismatch (service not offered), safety concern (note required if no photo), access/logistics mismatch, short notice (start &lt; 18 hours away). Limit **6 good-faith declines per 7 days**; beyond that they count. Formula: `accepts / (accepts + declines_non_good_faith)`.
+
+**Add-ons:** Level 4 core 30 add-ons, Level 5 core 45, Level 6 core 60; rewards are add-on-job visibility focused.
+
+| Constant | Value |
+|----------|--------|
+| Meaningful action window | 15 minutes |
+| Meaningful message | 25 chars OR template OR client reply within 24 h |
+| On-time window | ±15 minutes |
+| GPS radius | 250 m |
+| Short notice (good-faith) | &lt; 18 hours |
+| Good-faith decline allowance | 6 per 7 days |
+| Distance good-faith | travel radius 10 mi; penalty-free at ≥ 11 mi |
+
 ---
 
 ## 4. Security
@@ -100,10 +152,10 @@
 
 ## 6. Planned improvements (backlog)
 
-- **Ownership audit:** Verify all routes that access resources by ID enforce ownership (client/cleaner/admin) via `requireOwnership` or equivalent.
-- **Zod validation:** Add `validateBody`/`validateQuery` to more routes for consistent input validation.
-- **Cursor pagination:** Add cursor-based pagination to high-cardinality lists (jobs, users) for stable performance.
-- **Admin RBAC:** Document or add role support (e.g. `support_agent`, `support_lead`, `ops_finance`) for fine-grained admin access.
+- **Ownership:** Enforced via `requireOwnership("job"|"user"|"payout"|"invoice"|"photo"|"property", paramName)` in jobs, tracking, photos, premium, etc. Add to any new route that fetches by ID. See RUNBOOK § 3.4 for admin audit reason.
+- **Zod validation:** Add `validateBody`/`validateQuery`/`validateParams` to more routes for consistent input validation.
+- **Pagination:** `parsePagination(req)` and `formatPaginatedResponse` in `src/lib/pagination.ts`; apply to admin list endpoints. Cursor-based pagination for very large lists is a future enhancement.
+- **Admin RBAC:** Roles in use: requireAdmin, requireSupportRole, requireFinanceRole, requireDisputeResolveRole. Sensitive actions require `requireAuditReason` (X-Audit-Reason or body.reason). See RUNBOOK § 3.4.
 - **Ops dashboard:** Unified view for disputes, webhooks, risk, and system health.
 
 ---

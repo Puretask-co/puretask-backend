@@ -63,6 +63,18 @@
 - **Topics:** How to use admin dispute UI; how to issue refund/credit; when to escalate; IC-safe language; playbook usage.  
 - **Deliverable:** Training material or session; support team can resolve common scenarios.
 
+**Support training checklist (run before launch):**
+
+| Topic | What to train |
+|-------|----------------|
+| Dispute playbook | Categories (missed area, quality, damages, etc.); evidence review; resolution options (refund, credit, deny, hold payout); when to escalate. SECTION_11 playbooks; RUNBOOK § 3.7. |
+| Refund/credit flow | Refund limits by role; ledger + audit reason; RUNBOOK § 3.7 refund/credit flows. |
+| Payout hold/release | When to hold; how to release; idempotent endpoints; audit reason required. RUNBOOK § 3.7. |
+| IC-safe language | No “required procedures,” “performance correction,” “warnings,” “PIP.” Use “platform status adjustment,” “risk indicators,” “participation conditions.” [IC_LANGUAGE_AUDIT.md](../IC_LANGUAGE_AUDIT.md). |
+| Kill switches | What BOOKINGS_ENABLED, PAYOUTS_ENABLED, REFUNDS_ENABLED do; when to use; who can flip. RUNBOOK § 3.2. |
+| Support macros | RUNBOOK § 4.2 — “Why is my progress paused?”, “Why didn’t my message count?”, etc. Copy-paste answers for cleaners. |
+| Ops summary & webhooks | GET /admin/ops/summary; GET /admin/webhooks/events; when to check failed webhooks or payout backlog. RUNBOOK § 3.1, § 3.7. |
+
 ---
 
 ## 14.7 Launch KPIs & Monitoring
@@ -79,6 +91,35 @@
 - **Timing:** e.g. 1 week and 1 month after full launch.  
 - **Content:** What went wrong; what went right; checklist of Sections 1–13 compliance; kill switch usage; incident count.  
 - **Deliverable:** Post-launch audit report template or first run.
+
+**Post-launch audit template (fill when you launch):**
+
+- **Audit date:** _______________
+- **Period covered:** e.g. First 7 days / First 30 days after launch
+
+**Checklist (Sections 1–13):**
+
+- [ ] Section 1 — Secrets & incident response: no leaks; rotation runbook known.
+- [ ] Section 2 — Auth: no prod breakage; canonical auth on all protected routes.
+- [ ] Section 3 — CI/repo: migrations check; no stray secrets.
+- [ ] Section 4 — Stripe/webhooks: no double charges; webhook idempotency; failed events reviewed.
+- [ ] Section 5 — DB: migrations applied; schema aligned.
+- [ ] Section 6 — Workers: crons/durable jobs running; no silent failures.
+- [ ] Section 7 — API: contracts stable; validation in place.
+- [ ] Section 8 — Security: rate limits, hardening in place.
+- [ ] Section 9 — Maintainability: tests, docs, velocity acceptable.
+- [ ] Section 10 — Cost/scale: within budget; no surprise load.
+- [ ] Section 11 — Admin/support: dispute resolution, webhook viewer, case management used; audit reasons present.
+- [ ] Section 12 — Trust/IC: outcomes and evidence; IC-language audit followed; no misclassification risk.
+- [ ] Section 13 — Legal: TOS, Privacy, Cleaner Agreement, liability, legal review checklist completed.
+
+**Operational:**
+
+- Kill switches used? (Y/N) If yes: which, when, outcome. _______________
+- Incident count (payment, auth, outage, security): _______________
+- What went well: _______________
+- What went wrong: _______________
+- Follow-up actions: _______________
 
 ---
 

@@ -57,7 +57,10 @@ echo $DATABASE_URL
 
 ### Solutions
 
-**Connection Timeout**:
+**POST /auth/login returns 500 "Connection terminated due to connection timeout"**  
+Health passes but login fails: the backend is up; the failure is when the login handler talks to the DB (e.g. Neon). Check: (1) `DATABASE_URL` is set and correct, (2) Neon project is not paused (cold start can take a few seconds), (3) firewall/network allows outbound HTTPS to Neon. Retry login after a few seconds; if using Neon free tier, the first request after idle may be slow.
+
+**Connection Timeout** (general):
 - Check database server status
 - Verify DATABASE_URL is correct
 - Check network connectivity
@@ -379,3 +382,30 @@ If `V1 Core Features: Reliability → Tier → Payout Flow` tests timeout (5000m
 
 ### npm Audit (Dev Dependencies)
 `npm audit` may report 6 moderate vulnerabilities in esbuild/vite/vitest (dev server SSRF). These affect only dev/test tooling, not production. No safe fix; `npm audit fix --force` would upgrade vitest to v4 (breaking). Accept for now or plan vitest v4 migration.
+
+### Next.js viewport / themeColor warnings (frontend repo)
+Next.js App Router does **not** support `viewport` or `themeColor` inside `export const metadata`. You get a framework warning and a large stack trace when navigating to routes that declare them there (e.g. `/notifications`, `/cleaner/dashboard`).
+
+**Fix (in the frontend repo):** Move viewport and themeColor into a separate export.
+
+1. In the route file (e.g. `src/app/notifications/layout.tsx` or `src/app/notifications/page.tsx`):
+
+```ts
+import type { Metadata, Viewport } from "next";
+
+export const metadata: Metadata = {
+  title: "Notifications",
+  // keep other metadata (description, openGraph, etc.) — remove viewport and themeColor
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0f172a",
+};
+```
+
+2. Remove `viewport` and `themeColor` from the `metadata` object.
+
+**Find all occurrences in the frontend:**  
+`rg "export const metadata|viewport:|themeColor:" src/app -n` — any file with `viewport:` or `themeColor:` inside metadata should use `export const viewport` instead.
