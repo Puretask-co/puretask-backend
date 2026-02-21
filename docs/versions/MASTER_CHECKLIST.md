@@ -4,6 +4,8 @@
 Living Document – Progress Tracking  
 Use this to track completion across all versions. Check off items as you complete them.
 
+**Related:** For a single consolidated list of all TODOs by priority (Critical / High / Medium / Low), see [PRIORITIZED_BACKLOG.md](./PRIORITIZED_BACKLOG.md) (36 items: 6 critical, 8 high, 12 medium, 10 low).
+
 **Legend:**
 - ✅ = Complete
 - 🟡 = In Progress

@@ -417,6 +417,7 @@ if (!isTestMode) {
 
   io.on("connection", (socket) => {
     logger.info("socket_connected", { socketId: socket.id });
+    console.log("✅ Socket connected:", socket.id);
 
     socket.on("join_booking", (bookingId: string) => {
       socket.join(`booking:${bookingId}`);
@@ -426,8 +427,9 @@ if (!isTestMode) {
       socket.leave(`booking:${bookingId}`);
     });
 
-    socket.on("disconnect", (reason) => {
+    socket.on("disconnect", (reason: string) => {
       logger.info("socket_disconnected", { socketId: socket.id, reason });
+      console.log("⚠ Socket disconnected:", socket.id, reason);
     });
   });
 

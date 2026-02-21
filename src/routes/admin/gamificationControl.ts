@@ -18,6 +18,12 @@ import * as adminGovernor from "../../services/adminGovernorService";
 import { MarketplaceGovernorService } from "../../services/marketplaceGovernorService";
 import * as adminFlags from "../../services/adminFeatureFlagService";
 import { getRuntimeConfigLoader } from "../../services/runtimeConfigLoader";
+import * as gamificationFlags from "../../services/adminGamificationFlagsService";
+import * as gamificationGoals from "../../services/adminGamificationGoalsService";
+import * as gamificationRewards from "../../services/adminGamificationRewardsService";
+import * as gamificationChoices from "../../services/adminGamificationChoicesService";
+import * as gamificationGovernor from "../../services/adminGamificationGovernorService";
+import * as gamificationAbuse from "../../services/adminGamificationAbuseService";
 
 const router = Router();
 router.use(requireAuth);
@@ -217,14 +223,180 @@ router.post(
   })
 );
 
-// ---- Feature flags ----
+// ---- Feature flags (frontend spec: GET/PATCH /admin/gamification/flags) ----
 router.get(
   "/flags",
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    const flags = await gamificationFlags.getGamificationFlags();
+    res.json(flags);
+  })
+);
+
+router.patch(
+  "/flags",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const flags = await gamificationFlags.patchGamificationFlags(body, getActorId(req));
+    res.json(flags);
+  })
+);
+
+// Legacy list flags (raw)
+router.get(
+  "/flags/raw",
   authedHandler(async (req: AuthedRequest, res: Response) => {
     const key = (req.query.key as string) || undefined;
     const regionId = (req.query.region_id as string) || undefined;
     const flags = await adminFlags.listFeatureFlags(key || null, regionId || null);
     res.json({ ok: true, flags });
+  })
+);
+
+// ---- Goals library (frontend spec) ----
+router.get(
+  "/goals",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const level = req.query.level != null ? Number(req.query.level) : undefined;
+    const type = (req.query.type as "core" | "stretch" | "maintenance") || undefined;
+    const enabled = req.query.enabled === "true" ? true : req.query.enabled === "false" ? false : undefined;
+    const goals = await gamificationGoals.listGoals({ level, type, enabled });
+    res.json({ goals });
+  })
+);
+router.get(
+  "/goals/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const goal = await gamificationGoals.getGoalById(req.params.id);
+    if (!goal) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Goal not found" } });
+    res.json(goal);
+  })
+);
+router.post(
+  "/goals",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const goal = await gamificationGoals.createGoal(req.body ?? {});
+    res.status(201).json(goal);
+  })
+);
+router.patch(
+  "/goals/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const goal = await gamificationGoals.updateGoal(req.params.id, req.body ?? {});
+    if (!goal) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Goal not found" } });
+    res.json(goal);
+  })
+);
+
+// ---- Rewards library (frontend spec) ----
+router.get(
+  "/rewards",
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    const rewards = await gamificationRewards.listRewards();
+    res.json({ rewards });
+  })
+);
+router.get(
+  "/rewards/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const reward = await gamificationRewards.getRewardById(req.params.id);
+    if (!reward) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Reward not found" } });
+    res.json(reward);
+  })
+);
+router.post(
+  "/rewards",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const reward = await gamificationRewards.createReward(req.body ?? {});
+    res.status(201).json(reward);
+  })
+);
+router.patch(
+  "/rewards/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const reward = await gamificationRewards.updateReward(req.params.id, req.body ?? {});
+    if (!reward) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Reward not found" } });
+    res.json(reward);
+  })
+);
+
+// ---- Choice groups (frontend spec) ----
+router.get(
+  "/choices",
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    const choice_groups = await gamificationChoices.listChoiceGroups();
+    res.json({ choice_groups });
+  })
+);
+router.get(
+  "/choices/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const group = await gamificationChoices.getChoiceGroupById(req.params.id);
+    if (!group) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Choice group not found" } });
+    res.json(group);
+  })
+);
+router.post(
+  "/choices",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const group = await gamificationChoices.createChoiceGroup(req.body ?? {});
+      res.status(201).json(group);
+    } catch (e) {
+      return res.status(422).json({ error: { code: "UNPROCESSABLE_ENTITY", message: String((e as Error).message) } });
+    }
+  })
+);
+router.patch(
+  "/choices/:id",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const group = await gamificationChoices.updateChoiceGroup(req.params.id, req.body ?? {});
+      if (!group) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Choice group not found" } });
+      res.json(group);
+    } catch (e) {
+      return res.status(422).json({ error: { code: "UNPROCESSABLE_ENTITY", message: String((e as Error).message) } });
+    }
+  })
+);
+
+// ---- Governor (frontend spec: GET/PATCH /admin/gamification/governor) ----
+router.get(
+  "/governor",
+  authedHandler(async (_req: AuthedRequest, res: Response) => {
+    const doc = await gamificationGovernor.getGovernorDoc();
+    res.json(doc);
+  })
+);
+router.patch(
+  "/governor",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const doc = await gamificationGovernor.patchGovernorDoc(req.body ?? {}, getActorId(req));
+    res.json(doc);
+  })
+);
+
+// ---- Abuse (frontend spec) ----
+router.get(
+  "/abuse",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const type = (req.query.type as gamificationAbuse.AbuseSignalType) || undefined;
+    const page = req.query.page != null ? Number(req.query.page) : undefined;
+    const per_page = req.query.per_page != null ? Number(req.query.per_page) : undefined;
+    const out = await gamificationAbuse.listAbuse({ type, page, per_page });
+    res.json(out);
+  })
+);
+router.post(
+  "/abuse/:cleanerId/pause-rewards",
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    const cleanerId = req.params.cleanerId;
+    const reason = (req.body as { reason?: string })?.reason;
+    await gamificationAbuse.pauseRewardsForCleaner({
+      cleanerId,
+      reason,
+      adminId: getActorId(req),
+    });
+    res.status(204).send();
   })
 );
 

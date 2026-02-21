@@ -24,14 +24,13 @@
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Known issues and fixes |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Railway / production deploy and rollback |
 | [DECISIONS.md](./DECISIONS.md) | Architectural and product decisions (from logs) |
-| [FOUNDER_BACKEND_REFERENCE.md](./FOUNDER_BACKEND_REFERENCE.md) | Founder-level deep dive: what each piece is, where/when/how/why we use it, best practices. |
+| [FOUNDER_BACKEND_REFERENCE.md](./FOUNDER_BACKEND_REFERENCE.md) | Index to founder-level deep dives (founder/*.md): what each piece is, where/when/how/why we use it. |
 | [FOUNDER_REFERENCE_CANDIDATES.md](./FOUNDER_REFERENCE_CANDIDATES.md) | List of systems, features, and functions to document in the same style (events, notifications, auth, payments, etc.). |
-| [PROJECT_REVIEW_FULL.md](./PROJECT_REVIEW_FULL.md) | Complete project review: systems, workers, features, tests — what's done, what remains, detailed descriptions. |
+| [PROJECT_REVIEW_FULL.md (archived)](../archive/raw/misc/PROJECT_REVIEW_FULL.md) | Complete project review: systems, workers, features, tests — what's done, what remains (archived). |
 
 ## Runbooks (detailed)
 
-- [Rollback a deploy](../runbooks/rollback-deploy.md)
-- [Handle a production incident](../runbooks/handle-incident.md)
+See [RUNBOOK.md](./RUNBOOK.md) for deploy, rollback, and incident response. Detailed runbooks (archived): [rollback-deploy](../archive/raw/runbooks/rollback-deploy.md), [handle-incident](../archive/raw/runbooks/handle-incident.md), [restore-from-backup](../archive/raw/runbooks/restore-from-backup.md).
 
 ## Save points (checkpoints)
 
@@ -44,7 +43,19 @@ History was rewritten (2026-01-31) to remove an exposed secret from SECURITY_GUA
 
 To restore this exact state: `git checkout docs-governance-checkpoint-2026-01-31` or `git checkout production-ready-backup`.
 
+## Reference (consolidated)
+
+| Doc | Purpose |
+|-----|---------|
+| [BACKUP_RESTORE.md](./BACKUP_RESTORE.md) | Backup strategy, setup, restore procedures, integrity checks |
+| [CI_CD_SETUP.md](./CI_CD_SETUP.md) | CI/CD pipelines, env vars, migrations in CI, deploy options |
+| [NOTIFICATIONS.md](./NOTIFICATIONS.md) | Notification system: sender flow, dedupe, templates, maturity |
+| [API_REFERENCE.md](./API_REFERENCE.md) | Swagger/OpenAPI access, spec comparison, exact endpoint list |
+| [CONSOLIDATION_GUIDE.md](./CONSOLIDATION_GUIDE.md) | Which docs were combined and how (synthesize, not concatenate) |
+| [MASTER_CHECKLIST_EXECUTION.md](./MASTER_CHECKLIST_EXECUTION.md) | **How to complete every task** in the V1–V5 Master Checklist: what each task does, why it matters, and how to do it (use with [MASTER_CHECKLIST.md](../versions/MASTER_CHECKLIST.md)). |
+| [PRIORITIZED_BACKLOG.md](../versions/PRIORITIZED_BACKLOG.md) | **Full consolidated TODO list** by priority: Critical (6), High (8), Medium (12), Low (10) — 36 items from repo + docs. |
+
 ## Archived history
 
-Raw historical notes live in `docs/archive/raw/` and are not edited.  
+Raw historical notes live in `docs/archive/raw/` and are not edited. Consolidated source files from the 2026-02 merge live in `docs/archive/raw/consolidated-sources/`.  
 MD inventory reports: run `powershell -ExecutionPolicy Bypass -File scripts\classify-md.ps1` → `docs/_md_inventory/md_report.md`.

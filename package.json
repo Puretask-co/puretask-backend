@@ -26,6 +26,7 @@
     "test:coverage": "vitest run --coverage",
     "analyze:bundle": "node scripts/analyze-bundle.js",
     "security:scan": "node scripts/secret-scan.js",
+    "security:full-audit": "npm audit --audit-level=moderate && npm run security:scan",
     "backup:verify": "ts-node scripts/verify-backup.ts",
     "docs:postman": "ts-node scripts/generate-postman-collection.ts",
     "monitoring:verify": "ts-node scripts/verify-monitoring.ts",

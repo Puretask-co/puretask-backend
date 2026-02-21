@@ -22,6 +22,28 @@ Hand-curated list (~10â€“30). Each entry: **Decision** â€” **Why** â�
 - **Documents switch: uploaded bundle as canonical gamification spec** — Why: the uploaded bundle is the source of truth for gamification. We made the switch by: (1) declaring gamification_bundle/README.md the index and PURETASK_GAMIFICATION_CURSOR_CONTEXT.md the lead doc; (2) pointing ARCHITECTURE §3, RUNBOOK §4, SETUP, and docs/active/README.md to the bundle; (3) keeping implementation (code, DB) unchanged. — Tradeoff: single canonical spec location; implementation docs reference it.
 
 ---
+
+## Documentation consolidation (done 2026-02)
+
+**Approach:** We **synthesized** (gathered all ideas and important information into one coherent doc per topic), not concatenated. See **CONSOLIDATION_GUIDE.md** for the plan and which docs were combined.
+
+**Completed:** Backup & restore → `BACKUP_RESTORE.md`; CI/CD → `CI_CD_SETUP.md`; Notifications (4 files) → `NOTIFICATIONS.md`; API (3 files) → `API_REFERENCE.md`; Founder reference → `FOUNDER_BACKEND_REFERENCE.md` is now an index linking to `founder/*.md` (full single-doc version archived). Source files archived to `docs/archive/raw/consolidated-sources/` (01-HIGH/, 02-MEDIUM/, FOUNDER_BACKEND_REFERENCE_FULL.md).
+
+**Not combined (kept as-is):** RUNBOOK + DEPLOYMENT; Legal; Gamification bundle docs; 01-HIGH/02-MEDIUM/03-LOW folder structure for remaining files. Table below kept as historical reference.
+
+| Candidate | Files to combine | Target / note |
+|-----------|------------------|---------------|
+| **Backup & restore** | `docs/active/BACKUP_RESTORE.md`, `01-HIGH/BACKUP_SETUP.md`, `01-HIGH/BACKUP_RESTORE_PROCEDURE.md` | Merge into single `BACKUP_RESTORE.md`: strategy + setup + restore steps. 01-HIGH versions are longer and have "plain English" sections; fold the best into active and archive the 01-HIGH pair. |
+| **CI/CD** | `docs/active/CI_CD_SETUP.md`, `01-HIGH/CI_CD_SETUP.md` | One file only. 01-HIGH version is longer and has glossary; merge any missing workflow detail into active `CI_CD_SETUP.md` and remove or archive the duplicate. |
+| **RUNBOOK + DEPLOYMENT** | `RUNBOOK.md`, `DEPLOYMENT.md` | Optional. Both cover deploy, rollback, production. Could become one "Ops & deployment" doc; current split (RUNBOOK = ops/incident, DEPLOYMENT = Railway/process layout) is also fine. |
+| **Notifications (02-MEDIUM)** | `NOTIFICATION_DEDUPE_STRATEGY.md`, `NOTIFICATION_MATURITY_UPGRADES.md`, `NOTIFICATION_SENDER_ANALYSIS.md`, `NOTIFICATION_TEMPLATES_OUTLINE.md` | One `NOTIFICATIONS.md` with sections: dedupe, maturity/sender, templates. Reduces four files to one reference. |
+| **API (02-MEDIUM)** | `API_DOCUMENTATION.md`, `API_SPEC_COMPARISON.md`, `API_EXACT_ENDPOINTS.md` | One `API_REFERENCE.md`: how we document the API + spec comparison + exact endpoints. Complements canonical `BACKEND_ENDPOINTS.md`. |
+| **Founder reference** | `FOUNDER_BACKEND_REFERENCE.md` (single long doc) + `founder/*.md` (36 topic files) | Either: (A) merge all `founder/*.md` into `FOUNDER_BACKEND_REFERENCE.md` as sections (one very long doc), or (B) keep `founder/` as chapters and make `FOUNDER_BACKEND_REFERENCE.md` a short index that links to them. Avoid duplicating the same content in both. |
+| **Legal** | `legal/README.md` + `legal/*.md` (TOS, PRIVACY_POLICY, CLEANER_AGREEMENT, etc.) | Usually kept separate for counsel and liability clarity. Optional: one `LEGAL.md` with an index and sections for each artifact; current structure is already an index + files. |
+| **Gamification bundle docs** | `gamification_bundle/docs/*.md` (README, event_contract, metrics_contract, enforcement, etc.) | Optional: one `GAMIFICATION_SPEC.md` with sections. Current split is good for modular updates; combine only if you want a single long spec. |
+| **01-HIGH / 02-MEDIUM / 03-LOW** | All files under these priority folders | Either merge each folder’s content into the relevant canonical doc (e.g. 01-HIGH backup → BACKUP_RESTORE; 01-HIGH CI_CD → CI_CD_SETUP), or turn each folder into one "HIGH/MEDIUM/LOW backlog" doc that links to or embeds the current files. Reduces many small files to a few. |
+
+---
 ## Extracted from archive (auto)
 
 Raw lines matched from `docs/archive/raw`. For quick reference use the curated list above. Re-run `scripts\generate-decisions.ps1` to refresh.

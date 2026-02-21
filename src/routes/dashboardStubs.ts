@@ -78,7 +78,7 @@ cleanersRouter.get(
   })
 );
 
-/** GET /cleaners/:id — cleaner profile (minimal for frontend) */
+/** GET /cleaners/:id — cleaner profile (minimal for frontend); includes level and badges per GAMIFICATION_FRONTEND_BACKEND_SPEC */
 cleanersRouter.get(
   "/:id",
   requireAuth,
@@ -96,14 +96,37 @@ cleanersRouter.get(
         return res.status(404).json({ error: { code: "NOT_FOUND", message: "Cleaner not found" } });
       }
       const r = result.rows[0] as any;
-      res.json({
+      const cleaner: Record<string, unknown> = {
         id: r.id,
         email: r.email,
         name: [r.first_name, r.last_name].filter(Boolean).join(" ") || r.email,
         avatar_url: r.avatar_url,
         bio: r.bio,
         base_rate_cph: r.base_rate_cph,
-      });
+      };
+      const [levelRow, badgesRow] = await Promise.all([
+        query(
+          `SELECT current_level FROM cleaner_level_progress WHERE cleaner_id = $1`,
+          [id]
+        ).catch(() => ({ rows: [] })),
+        query(
+          `SELECT bd.id, bd.name, bd.icon_key
+           FROM cleaner_badges cb
+           JOIN badge_definitions bd ON bd.id = cb.badge_id AND bd.is_profile_visible = true
+           WHERE cb.cleaner_id = $1
+           ORDER BY cb.earned_at DESC
+           LIMIT 5`,
+          [id]
+        ).catch(() => ({ rows: [] })),
+      ]);
+      const level = (levelRow.rows[0] as { current_level: number } | undefined)?.current_level;
+      if (level != null) cleaner.level = level;
+      if (badgesRow.rows.length > 0) {
+        cleaner.badges = (badgesRow.rows as Array<{ id: string; name: string; icon_key: string | null }>).map(
+          (b) => ({ id: b.id, name: b.name, icon: b.icon_key ?? undefined })
+        );
+      }
+      res.json({ cleaner });
     } catch (e) {
       res.status(500).json({ error: { code: "GET_CLEANER_FAILED", message: (e as Error).message } });
     }

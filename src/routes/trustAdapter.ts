@@ -13,6 +13,7 @@ import {
 import { requireOwnership } from "../lib/ownership";
 import { validateQuery, validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
+import { getSocketIO } from "../lib/socket";
 import { getUserBalance, getCreditLedgerFiltered } from "../services/creditsService";
 import { createCreditCheckoutSession } from "../services/creditsPurchaseService";
 import {
@@ -399,7 +400,7 @@ router.get(
           if (typeof p.latitude === "number" && typeof p.longitude === "number") {
             gps.push({
               id: e.id,
-              event: "location",
+              event: "arrived" as const,
               atISO: e.created_at,
               lat: p.latitude,
               lng: p.longitude,
@@ -426,17 +427,19 @@ router.get(
         bookingId,
       ]);
 
+      // Trust spec: photos use kind 'before'|'after', createdAtISO, uploadedBy
       const photos = photosResult.rows.map((p) => ({
         id: p.id,
-        type: p.type,
+        kind: (p.type === "before" || p.type === "after" ? p.type : "after") as "before" | "after",
         url: p.url,
-        atISO: p.created_at,
+        createdAtISO: p.created_at,
+        uploadedBy: "cleaner" as const,
       }));
 
       const checklist = [
-        { id: "c1", label: "Kitchen", completed: photos.some((p) => p.type === "after") },
-        { id: "c2", label: "Bathrooms", completed: false },
-        { id: "c3", label: "Floors", completed: false },
+        { id: "c1", label: "Kitchen", completed: photosResult.rows.some((p) => p.type === "after"), completedAtISO: undefined as string | undefined },
+        { id: "c2", label: "Bathrooms", completed: false, completedAtISO: undefined as string | undefined },
+        { id: "c3", label: "Floors", completed: false, completedAtISO: undefined as string | undefined },
       ];
 
       const etaISO =
@@ -540,6 +543,24 @@ router.post(
         });
       }
 
+      // Emit real-time update to clients in this booking room
+      const io = getSocketIO();
+      if (io) {
+        const statusRow = await query<{ status: string }>(
+          `SELECT status FROM jobs WHERE id = $1`,
+          [bookingId]
+        );
+        const liveState = statusRow.rows[0]
+          ? jobStatusToTrustState[statusRow.rows[0].status] ?? "scheduled"
+          : "scheduled";
+        io.to(`booking:${bookingId}`).emit("appointment_event", {
+          bookingId,
+          state: liveState,
+          event: { type, note, gps },
+          atISO: new Date().toISOString(),
+        });
+      }
+
       res.json({ ok: true });
     } catch (error) {
       logger.error("trust_appointment_event_failed", {
@@ -559,6 +580,13 @@ router.post(
  * GET /api/cleaners/:cleanerId/reliability
  * Trust contract: { reliability: { score, tier, breakdown?, explainers? } }
  */
+const tierToTrustTier: Record<string, "Excellent" | "Good" | "Watch" | "Risk"> = {
+  platinum: "Excellent",
+  gold: "Good",
+  silver: "Watch",
+  bronze: "Risk",
+};
+
 router.get(
   "/cleaners/:cleanerId/reliability",
   requireAuth,
@@ -576,12 +604,23 @@ router.get(
       if (info.stats.avg_rating != null) {
         explainers.push(`Average rating: ${info.stats.avg_rating.toFixed(1)}`);
       }
+      const total = info.stats.total_jobs || 1;
+      const completionPct = (info.stats.completed_jobs / total) * 100;
+      const cancellationPct = (info.stats.cancelled_jobs / total) * 100;
+      const qualityPct = info.stats.avg_rating != null ? info.stats.avg_rating * 20 : 0;
       res.json({
         reliability: {
           score: info.score,
-          tier: info.tier,
-          breakdown: info.stats,
+          tier: tierToTrustTier[info.tier.toLowerCase()] ?? "Good",
+          breakdown: {
+            onTimePct: 0,
+            completionPct: Math.round(completionPct * 100) / 100,
+            cancellationPct: Math.round(cancellationPct * 100) / 100,
+            communicationPct: 0,
+            qualityPct: Math.round(qualityPct * 100) / 100,
+          },
           explainers,
+          lastUpdatedISO: new Date().toISOString(),
         },
       });
     } catch (error) {
@@ -652,12 +691,23 @@ trustRootRouter.get(
       if (info.stats.avg_rating != null) {
         explainers.push(`Average rating: ${info.stats.avg_rating.toFixed(1)}`);
       }
+      const total = info.stats.total_jobs || 1;
+      const completionPct = (info.stats.completed_jobs / total) * 100;
+      const cancellationPct = (info.stats.cancelled_jobs / total) * 100;
+      const qualityPct = info.stats.avg_rating != null ? info.stats.avg_rating * 20 : 0;
       res.json({
         reliability: {
           score: info.score,
-          tier: info.tier,
-          breakdown: info.stats,
+          tier: tierToTrustTier[info.tier.toLowerCase()] ?? "Good",
+          breakdown: {
+            onTimePct: 0,
+            completionPct: Math.round(completionPct * 100) / 100,
+            cancellationPct: Math.round(cancellationPct * 100) / 100,
+            communicationPct: 0,
+            qualityPct: Math.round(qualityPct * 100) / 100,
+          },
           explainers,
+          lastUpdatedISO: new Date().toISOString(),
         },
       });
     } catch (error) {
