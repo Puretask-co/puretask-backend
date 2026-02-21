@@ -1,4 +1,4 @@
-﻿// src/services/paymentService.ts
+// src/services/paymentService.ts
 // Stripe payment integration service with dual payment flows:
 // 1. Wallet Mode: Buy credits separately, use them to book jobs
 // 2. Job Charge Mode: Pay for a specific job at booking time
@@ -713,6 +713,7 @@ async function handlePaymentIntentSucceeded(
   );
 
   // Record metrics
+  // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional dynamic import for test env
   const { metrics } = require("../lib/metrics");
   const amountCents = pi.amount;
   metrics.paymentProcessed(amountCents, true);

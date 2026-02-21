@@ -21,25 +21,25 @@ export function setupGracefulShutdown(server: Server): void {
     logger.info("shutdown_initiated", { signal });
 
     // Stop accepting new connections
-    server.close(async (err) => {
-      if (err) {
-        logger.error("server_close_error", { error: err.message });
-        process.exit(1);
-      }
+    server.close((err) => {
+      void (async (closeErr: Error | undefined) => {
+        if (closeErr) {
+          logger.error("server_close_error", { error: closeErr.message });
+          process.exit(1);
+        }
 
-      logger.info("server_closed", { message: "No longer accepting connections" });
+        logger.info("server_closed", { message: "No longer accepting connections" });
 
-      try {
-        // Close database pool
-        await pool.end();
-        logger.info("database_pool_closed");
-
-        logger.info("shutdown_complete");
-        process.exit(0);
-      } catch (error) {
-        logger.error("shutdown_error", { error: (error as Error).message });
-        process.exit(1);
-      }
+        try {
+          await pool.end();
+          logger.info("database_pool_closed");
+          logger.info("shutdown_complete");
+          process.exit(0);
+        } catch (error) {
+          logger.error("shutdown_error", { error: (error as Error).message });
+          process.exit(1);
+        }
+      })(err);
     });
 
     // Force shutdown after timeout
@@ -50,8 +50,12 @@ export function setupGracefulShutdown(server: Server): void {
   };
 
   // Handle various shutdown signals
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => {
+    void shutdown("SIGTERM");
+  });
+  process.on("SIGINT", () => {
+    void shutdown("SIGINT");
+  });
 
   // Handle uncaught exceptions
   process.on("uncaughtException", (error) => {
@@ -59,11 +63,11 @@ export function setupGracefulShutdown(server: Server): void {
       error: error.message,
       stack: error.stack,
     });
-    shutdown("uncaughtException");
+    void shutdown("uncaughtException");
   });
 
   // Handle unhandled rejections
-  process.on("unhandledRejection", (reason, promise) => {
+  process.on("unhandledRejection", (reason, _promise) => {
     logger.error("unhandled_rejection", {
       reason: String(reason),
     });

@@ -100,16 +100,20 @@ async function main(): Promise<void> {
   };
 
   // Handle graceful shutdown
-  process.on("SIGTERM", async () => {
-    logger.info("queue_processor_shutting_down");
-    await pool.end();
-    process.exit(0);
+  process.on("SIGTERM", () => {
+    void (async () => {
+      logger.info("queue_processor_shutting_down");
+      await pool.end();
+      process.exit(0);
+    })();
   });
 
-  process.on("SIGINT", async () => {
-    logger.info("queue_processor_interrupted");
-    await pool.end();
-    process.exit(0);
+  process.on("SIGINT", () => {
+    void (async () => {
+      logger.info("queue_processor_interrupted");
+      await pool.end();
+      process.exit(0);
+    })();
   });
 
   await runLoop();

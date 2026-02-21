@@ -105,16 +105,18 @@ export function createRedisRateLimiter(options: RateLimitOptions) {
 
       // If skipSuccessfulRequests, remove on successful response
       if (skipSuccessfulRequests) {
-        res.on("finish", async () => {
-          if (res.statusCode < 400) {
-            try {
-              await redis.zRem(key, requestId);
-            } catch (err) {
-              logger.error("rate_limit_redis_cleanup_failed", {
-                error: (err as Error).message,
-              });
+        res.on("finish", () => {
+          void (async () => {
+            if (res.statusCode < 400) {
+              try {
+                await redis.zRem(key, requestId);
+              } catch (err) {
+                logger.error("rate_limit_redis_cleanup_failed", {
+                  error: (err as Error).message,
+                });
+              }
             }
-          }
+          })();
         });
       }
 

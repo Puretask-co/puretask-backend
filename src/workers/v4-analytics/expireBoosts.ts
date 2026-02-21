@@ -32,7 +32,7 @@ async function main(): Promise<void> {
 if (require.main === module) {
   main()
     .then(() => {
-      console.log("Expire boosts worker completed");
+      logger.info("expire_boosts_worker_completed");
       process.exit(0);
     })
     .catch((error) => {

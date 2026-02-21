@@ -571,7 +571,7 @@ export async function approveJob(
         });
       });
       // Step 6b: Check level goals (async, non-critical)
-      import("./cleanerLevelService").then(({ checkAndProcessGoals }) =>
+      void import("./cleanerLevelService").then(({ checkAndProcessGoals }) =>
         updatedJob.cleaner_id
           ? checkAndProcessGoals(updatedJob.cleaner_id).catch((err) => {
               logger.error("level_goals_check_failed_after_approval", {

@@ -358,6 +358,7 @@ export async function processPendingPayouts(): Promise<{
 
       // Record metrics (optional - skip if module unavailable in test env)
       try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional in test env
         const { metrics } = require("../lib/metrics");
         for (const payout of payouts) {
           metrics.payoutProcessed(payout.amount_cents, true);
@@ -400,6 +401,7 @@ export async function processPendingPayouts(): Promise<{
 
       // Record metrics for failed payouts (optional - skip if module unavailable in tests)
       try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional in test env
         const { metrics } = require("../lib/metrics");
         for (const payout of payouts) {
           metrics.payoutProcessed(payout.amount_cents, false);

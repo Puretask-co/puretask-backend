@@ -150,13 +150,13 @@ export async function runAutoExpireWorker(): Promise<{ approved: number; failed:
 if (require.main === module) {
   runAutoExpireWorker()
     .then((result) => {
-      console.log("Auto-expire worker completed:", result);
-      pool.end();
+      logger.info("auto_expire_worker_completed", { result });
+      void pool.end();
       process.exit(0);
     })
     .catch((error) => {
       console.error("Auto-expire worker failed:", error);
-      pool.end();
+      void pool.end();
       process.exit(1);
     });
 }

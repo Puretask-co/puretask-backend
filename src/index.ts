@@ -171,6 +171,7 @@ app.use(sanitizeBody);
 // ============================================
 // Use Redis-based rate limiting in production if enabled, otherwise use in-memory
 if (env.USE_REDIS_RATE_LIMITING && env.REDIS_URL) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic conditional load
   const { productionGeneralRateLimiter } = require("./lib/rateLimitRedis");
   app.use(productionGeneralRateLimiter);
   logger.info("rate_limiting_redis_enabled");
@@ -417,19 +418,17 @@ if (!isTestMode) {
 
   io.on("connection", (socket) => {
     logger.info("socket_connected", { socketId: socket.id });
-    console.log("✅ Socket connected:", socket.id);
 
     socket.on("join_booking", (bookingId: string) => {
-      socket.join(`booking:${bookingId}`);
+      void socket.join(`booking:${bookingId}`);
     });
 
     socket.on("leave_booking", (bookingId: string) => {
-      socket.leave(`booking:${bookingId}`);
+      void socket.leave(`booking:${bookingId}`);
     });
 
     socket.on("disconnect", (reason: string) => {
       logger.info("socket_disconnected", { socketId: socket.id, reason });
-      console.log("⚠ Socket disconnected:", socket.id, reason);
     });
   });
 
@@ -443,7 +442,6 @@ if (!isTestMode) {
       env: env.NODE_ENV,
       timestamp: new Date().toISOString(),
     });
-    console.log(`✅ API + Socket.IO running on http://localhost:${PORT}`);
   });
 
   // ============================================
@@ -471,8 +469,12 @@ if (!isTestMode) {
     }
   };
 
-  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+  process.on("SIGTERM", () => {
+    void gracefulShutdown("SIGTERM");
+  });
+  process.on("SIGINT", () => {
+    void gracefulShutdown("SIGINT");
+  });
 }
 
 // Export for testing

@@ -147,36 +147,39 @@ export function requireOwnership(
   resourceType: "job" | "user" | "payout" | "invoice" | "photo" | "property",
   paramName: string
 ): RequestHandler {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const authed = req as AuthedRequest;
-    if (!authed.user?.id) {
-      res.status(401).json({
-        error: { code: "UNAUTHENTICATED", message: "Authentication required" },
-      });
-      return;
-    }
-    const resourceId = (req.params as Record<string, string>)[paramName];
-    if (!resourceId) {
-      res.status(400).json({
-        error: { code: "VALIDATION_ERROR", message: `Missing param: ${paramName}` },
-      });
-      return;
-    }
-    try {
-      await ensureOwnership(
-        resourceType,
-        resourceId,
-        authed.user.id,
-        authed.user.role as UserRole
-      );
-      next();
-    } catch (err: any) {
-      const code = err?.code ?? "FORBIDDEN";
-      const status = err?.statusCode ?? 403;
-      res.status(status).json({
-        error: { code, message: err?.message ?? "Access denied" },
-      });
-    }
+  return (req: Request, res: Response, next: NextFunction): void => {
+    void (async (): Promise<void> => {
+      const authed = req as AuthedRequest;
+      if (!authed.user?.id) {
+        res.status(401).json({
+          error: { code: "UNAUTHENTICATED", message: "Authentication required" },
+        });
+        return;
+      }
+      const resourceId = (req.params as Record<string, string>)[paramName];
+      if (!resourceId) {
+        res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: `Missing param: ${paramName}` },
+        });
+        return;
+      }
+      try {
+        await ensureOwnership(
+          resourceType,
+          resourceId,
+          authed.user.id,
+          authed.user.role as UserRole
+        );
+        next();
+      } catch (err: unknown) {
+        const e = err as { code?: string; statusCode?: number; message?: string };
+        const code = e?.code ?? "FORBIDDEN";
+        const status = e?.statusCode ?? 403;
+        res.status(status).json({
+          error: { code, message: e?.message ?? "Access denied" },
+        });
+      }
+    })();
   };
 }
 
