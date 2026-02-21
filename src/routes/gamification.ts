@@ -10,7 +10,11 @@ import { query } from "../db/client";
 import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { requireRole } from "../middleware/jwtAuth";
 import { getLevelProgress, recordCleanerLogin } from "../services/cleanerLevelService";
-import { recordEvent, recordSessionStart } from "../services/eventIngestionService";
+import {
+  recordEvent,
+  recordSessionStart,
+  EventContractValidationError,
+} from "../services/eventIngestionService";
 import { getCleanerProgression } from "../services/gamificationProgressionService";
 import {
   selectChoiceReward,
@@ -436,6 +440,16 @@ router.post(
       });
       res.json({ ok: true });
     } catch (error: unknown) {
+      if (error instanceof EventContractValidationError) {
+        res.status(400).json({
+          error: {
+            code: "EVENT_CONTRACT_VIOLATION",
+            message: error.message,
+            details: error.errors,
+          },
+        });
+        return;
+      }
       console.error("Error recording event:", error);
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Failed to record event" },
@@ -539,12 +553,14 @@ router.get("/onboarding/progress", (async (req: AuthedRequest, res) => {
       });
     }
 
-    res.json(result.rows[0]);
-  } catch (error: any) {
+    return res.json(result.rows[0]);
+  } catch (error: unknown) {
     console.error("Error fetching onboarding progress:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to fetch progress" },
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch progress" },
+      });
+    }
   }
 }) as RequestHandler);
 

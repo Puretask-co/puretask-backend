@@ -184,6 +184,7 @@ export async function evaluateGoal(
 
 /**
  * Evaluate many goals.
+ * Run sequentially by default; swap to Promise.all with concurrency limiter if needed.
  */
 export async function evaluateGoals(
   provider: MetricProvider,

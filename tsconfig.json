@@ -12,5 +12,5 @@
     "skipLibCheck": true
   },
   "include": ["src"],
-  "exclude": ["src/tests", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": ["src/tests", "**/*.test.ts", "**/*.spec.ts","src/gamification-bundle/**"]
 }

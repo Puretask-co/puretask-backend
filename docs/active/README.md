@@ -10,8 +10,11 @@
 
 | Doc | Purpose |
 |-----|---------|
-| [SETUP.md](./SETUP.md) | Run locally: clone, env, migrate, run |
+| [SETUP.md](./SETUP.md) | Run locally: clone, env, migrate, run. **What to do next:** see SETUP.md § “What to do next — detailed guide” (build, DB, env, run app, tests, deploy, optional 057 and follow-ups). |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | How the system fits together (layers, flow, DB, integrations) |
+| [gamification_bundle/](./gamification_bundle/README.md) | **Gamification canonical spec** (uploaded bundle): rules, events, metrics, enforcement. Lead doc in `docs/PURETASK_GAMIFICATION_CURSOR_CONTEXT.md`. |
+| [GAMIFICATION_BUNDLE_INTEGRATION_GUIDE.md](./GAMIFICATION_BUNDLE_INTEGRATION_GUIDE.md) | **How to add the bundle into the current system:** step-by-step (you cannot "just add all the code on"; this guide explains why and the exact steps). |
+| [GAMIFICATION_BUNDLE_IMPLEMENTATION_GUIDE.md](./GAMIFICATION_BUNDLE_IMPLEMENTATION_GUIDE.md) | **Detailed implementation guide:** file paths, code snippets, and verification for every step (withClient, config bridge, RBAC, admin services, progression/reward, worker, tests). |
 
 ## Operations
 

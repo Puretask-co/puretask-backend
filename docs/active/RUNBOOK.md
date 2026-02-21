@@ -157,7 +157,7 @@ Messages count if: (1) you used a Quick Template, (2) the message is 25+ charact
 **“Why didn’t my login/streak count?”**  
 A login day counts when you take at least one meaningful action within 15 minutes of opening the app (open job request, accept/decline, send message, upload photos, update availability). Opening and closing the app doesn’t count.
 
-**Gamification bundle reference:** Event/metric contracts and bundle specs: [docs/active/gamification_bundle/](gamification_bundle/README.md); contract JSON in `src/config/cleanerLevels/contracts/`; reference code in `src/gamification-bundle/`.
+**Canonical gamification spec:** Rules, event stream, and metrics are defined in the uploaded bundle. **Lead doc:** [gamification_bundle/docs/PURETASK_GAMIFICATION_CURSOR_CONTEXT.md](gamification_bundle/docs/PURETASK_GAMIFICATION_CURSOR_CONTEXT.md). **Full index:** [gamification_bundle/README.md](gamification_bundle/README.md) (event contract, metrics contract, spec-enforcement matrix). Contract JSON: `src/config/cleanerLevels/contracts/`.
 
 **Key constants (quick reference):** Meaningful action window 15 min | Message: 25 chars OR template OR reply within 24 h | On-time: ±15 min, GPS 250 m | Short notice good-faith &lt; 18 h | Good-faith limit 6 per 7 days | Distance good-faith: 10 mi radius, penalty-free ≥ 11 mi. Full table: ARCHITECTURE §3.5.
 
@@ -177,6 +177,13 @@ Cash bonuses can be paused if the region budget cap is reached, cash rewards are
 - **Meaningful message:** Counts if you use a Quick Template, write 25+ characters, or the client replies.
 - **Photos:** Count when you upload 1 before + 1 after between clock-in and clock-out.
 - **Visibility rewards:** Improve where you appear in the list; never guarantee jobs.
+
+### 4.4 New data switch and event contract
+
+- **Event contract:** Incoming events (e.g. `POST /cleaner/events`) can be validated against `event_contract_v1.json` by setting `STRICT_EVENT_CONTRACT=true`. When set, only contract-allowed `event_type` values and valid `source` are accepted; invalid events return 400 with `EVENT_CONTRACT_VIOLATION`. See `docs/active/BUNDLE_SWITCH_GAP_ANALYSIS.md`.
+- **Production with STRICT_EVENT_CONTRACT:** Ensure `event_contract_v1.json` is available at runtime (loader tries `__dirname`, then `src/.../contracts/` and `dist/.../contracts/` under `process.cwd()`). Copy `src/config/cleanerLevels/contracts/*.json` into your deploy (e.g. into the same path under `dist/`) or run with working directory so one of those paths exists. See DEPLOYMENT for build notes.
+- **Migration 057 (pt_safety_reports):** Run `057_pt_safety_reports.sql` only if you need event-style safety reports for the gamification/event pipeline. Optional; file is in `DB/migrations/`. See SETUP “Fresh DB path” and BUNDLE_SWITCH_GAP_ANALYSIS §5.2.
+- **Suggestions (from gap analysis):** Prefer fresh DB + consolidated migration when possible; gamification worker logs `gamification_worker_run` / `gamification_worker_complete`; keep DECISIONS.md updated. Integration test skips are documented in TROUBLESHOOTING.
 
 ---
 

@@ -119,7 +119,7 @@ Canonical order of the program:
 - Treat each `- [ ]` as a **PR or task**.  
 - Once design is complete (Sections 1–12), the **next mode is implementation**: code changes, CI, tests, admin UI, workers — using the checklists below.
 
-**Completion guide (how to solve each remaining item):** [MASTER_CHECKLIST_COMPLETION.md](./MASTER_CHECKLIST_COMPLETION.md) — step-by-step for every unchecked item: steps, where in codebase, acceptance criteria, and execution order.
+  **Completion guide (how to solve each remaining item):** [MASTER_CHECKLIST_COMPLETION.md](./MASTER_CHECKLIST_COMPLETION.md) — step-by-step for every unchecked item: steps, where in codebase, acceptance criteria, and execution order.
 
 **Full execution plan (design → build → implement → test):** [HARDENING_EXECUTION_PLAN.md](./HARDENING_EXECUTION_PLAN.md) — phases 0–14 with dependencies, per-phase design/build/implement/test breakdown, global test strategy, done criteria, and appendices (file map, test matrix, risk mitigation).
 

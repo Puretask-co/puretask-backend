@@ -58,3 +58,6 @@ export async function withTransaction<T>(callback: (client: PoolClient) => Promi
     client.release();
   }
 }
+
+/** Bundle-style adapter: use withTransaction so bundle-derived code can use the same DB. */
+export { withClient } from "./bundleAdapter";

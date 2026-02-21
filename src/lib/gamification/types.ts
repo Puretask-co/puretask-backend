@@ -30,9 +30,9 @@ export interface GoalDefinition {
 }
 
 export interface LevelRequirements {
-  core_require_all: boolean;
-  stretch_required_count: number;
-  maintenance_require_all: boolean;
+  core_require_all: boolean; // true
+  stretch_required_count: number; // usually 1
+  maintenance_require_all: boolean; // true for most levels; false for L8/L9 per spec
 }
 
 export interface LevelDefinition {
@@ -59,7 +59,7 @@ export interface ChoiceRewardGroup {
 export interface GoalProgressResult {
   goal_id: string;
   complete: boolean;
-  progress_ratio: number;
+  progress_ratio: number; // 0..1
   current_value: MetricValue;
   target_value: number | boolean | Record<string, number>;
   remaining?: number | Record<string, number> | null;
@@ -69,7 +69,7 @@ export interface GoalProgressResult {
 export interface LevelEvaluationResult {
   cleaner_id: string;
   current_level: number;
-  eligible_for_level: number;
+  eligible_for_level: number; // highest eligible level based on progress (>= current)
   next_level: number | null;
   paused: boolean;
   pause_reasons: string[];
@@ -83,16 +83,20 @@ export interface RewardGrant {
   grant_id: string;
   cleaner_id: string;
   reward_id: string;
-  granted_at: string;
-  ends_at: string | null;
+  granted_at: string; // ISO
+  ends_at: string | null; // ISO or null if permanent
   uses_remaining: number | null;
   source: {
     source_type: "goal" | "level" | "admin";
-    source_id: string;
+    source_id: string; // goal id or level id
   };
 }
 
 export interface MetricProvider {
+  /**
+   * Return metric value for a cleaner. Implementations may read from DB, event log, cache, etc.
+   * The provider is responsible for applying window & filters where possible.
+   */
   getMetric(params: {
     cleaner_id: string;
     metric_key: string;

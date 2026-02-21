@@ -78,6 +78,8 @@ If using **compiled JS** for scheduler/worker, point to `dist/` (e.g. `node dist
 
 ### Directory / artifact layout (after build)
 
+When using **STRICT_EVENT_CONTRACT=true**, the event contract JSON must be loadable at runtime. **Build already copies** contract JSON: `npm run build` runs `scripts/copy-contracts-to-dist.js` after `tsc`, so `dist/config/cleanerLevels/contracts/*.json` are present. See RUNBOOK §4.4.
+
 ```
 puretask-backend/
 ├── dist/                    # Compiled output (npm run build)

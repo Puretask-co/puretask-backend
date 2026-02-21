@@ -2,11 +2,23 @@
  * PureTask Gamification — Event Ingestion Service
  *
  * Writes events to pt_event_log for metrics computation.
- * See docs/active/EVENT_CONTRACT.md
+ * See docs/active/EVENT_CONTRACT.md and docs/active/BUNDLE_SWITCH_GAP_ANALYSIS.md.
  */
 
 import { v4 as uuidv4 } from "uuid";
 import { query } from "../db/client";
+import { validateEventForContract } from "../config/cleanerLevels/contracts/eventContractLoader";
+
+/** Thrown when STRICT_EVENT_CONTRACT is set and event does not match event_contract_v1.json. */
+export class EventContractValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly errors: string[]
+  ) {
+    super(message);
+    this.name = "EventContractValidationError";
+  }
+}
 
 export type EventSource = "mobile" | "web" | "server" | "admin" | "system";
 
@@ -25,8 +37,19 @@ export interface EventRecord {
 
 /**
  * Record a single event. When idempotency_key is provided, duplicates are ignored.
+ * When STRICT_EVENT_CONTRACT=true, events must match event_contract_v1.json (event_type allowlist, source).
  */
 export async function recordEvent(evt: EventRecord): Promise<void> {
+  if (process.env.STRICT_EVENT_CONTRACT === "true") {
+    const result = validateEventForContract(evt);
+    if (!result.valid) {
+      throw new EventContractValidationError(
+        `Event contract validation failed: ${result.errors.join("; ")}`,
+        result.errors
+      );
+    }
+  }
+
   const eventId = uuidv4();
   const conflictClause = evt.idempotency_key
     ? " ON CONFLICT (event_type, idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING"

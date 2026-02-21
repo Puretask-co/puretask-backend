@@ -1816,15 +1816,18 @@ CREATE INDEX IF NOT EXISTS idx_cleaner_client_notes_client ON cleaner_client_not
 -- Cleaner-initiated invoices to clients
 -- ============================================
 
-CREATE TYPE invoice_status AS ENUM (
-  'draft',
-  'pending_approval',  -- Waiting admin approval if over threshold
-  'sent',              -- Sent to client, awaiting payment
-  'paid',
-  'declined',          -- Client declined
-  'cancelled',         -- Cleaner cancelled
-  'expired'            -- Auto-expired after X days
-);
+DO $$ BEGIN
+  CREATE TYPE invoice_status AS ENUM (
+    'draft',
+    'pending_approval',  -- Waiting admin approval if over threshold
+    'sent',              -- Sent to client, awaiting payment
+    'paid',
+    'declined',          -- Client declined
+    'cancelled',         -- Cleaner cancelled
+    'expired'            -- Auto-expired after X days
+  );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
 CREATE TABLE IF NOT EXISTS invoices (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2859,10 +2862,10 @@ INSERT INTO achievements (achievement_key, name, description, category, tier, ic
 ON CONFLICT (achievement_key) DO NOTHING;
 
 INSERT INTO certifications (certification_key, name, description, level, icon, badge_color, requirements, benefits, display_order) VALUES
-('ai_assistant_basic', 'AI Assistant Basics', 'Master the fundamentals of the AI Assistant', 1, '🎓', '#3B82F6', '{"profile_completion": 50, "templates_customized": 3, "quick_responses_added": 5}', '["Access to basic templates", "Community forum access"]', 1),
-('ai_assistant_intermediate', 'AI Assistant Intermediate', 'Advanced AI configuration skills', 2, '📚', '#8B5CF6', '{"profile_completion": 75, "templates_customized": 10, "quick_responses_added": 15, "created_custom_template": true}', '["Priority support", "Advanced template library", "Analytics dashboard"]', 2),
-('ai_assistant_advanced', 'AI Assistant Advanced', 'Expert-level AI customization', 3, '🏅', '#F59E0B', '{"profile_completion": 90, "templates_customized": 20, "quick_responses_added": 25, "viewed_insights_dashboard": true, "exported_settings": true}', '["1-on-1 coaching session", "Featured in marketplace", "Beta features access"]', 3),
-('ai_assistant_master', 'AI Assistant Master', 'Absolute mastery of all AI features', 4, '👑', '#EF4444', '{"profile_completion": 100, "templates_customized": 50, "quick_responses_added": 50, "days_since_signup": 30}', '["Lifetime priority support", "Exclusive webinars", "Revenue sharing on templates", "Master badge on profile"]', 4)
+('ai_assistant_basic', 'AI Assistant Basics', 'Master the fundamentals of the AI Assistant', 1, '🎓', '#3B82F6', '{"profile_completion": 50, "templates_customized": 3, "quick_responses_added": 5}'::jsonb, ARRAY['Access to basic templates', 'Community forum access'], 1),
+('ai_assistant_intermediate', 'AI Assistant Intermediate', 'Advanced AI configuration skills', 2, '📚', '#8B5CF6', '{"profile_completion": 75, "templates_customized": 10, "quick_responses_added": 15, "created_custom_template": true}'::jsonb, ARRAY['Priority support', 'Advanced template library', 'Analytics dashboard'], 2),
+('ai_assistant_advanced', 'AI Assistant Advanced', 'Expert-level AI customization', 3, '🏅', '#F59E0B', '{"profile_completion": 90, "templates_customized": 20, "quick_responses_added": 25, "viewed_insights_dashboard": true, "exported_settings": true}'::jsonb, ARRAY['1-on-1 coaching session', 'Featured in marketplace', 'Beta features access'], 3),
+('ai_assistant_master', 'AI Assistant Master', 'Absolute mastery of all AI features', 4, '👑', '#EF4444', '{"profile_completion": 100, "templates_customized": 50, "quick_responses_added": 50, "days_since_signup": 30}'::jsonb, ARRAY['Lifetime priority support', 'Exclusive webinars', 'Revenue sharing on templates', 'Master badge on profile'], 4)
 ON CONFLICT (certification_key) DO NOTHING;
 
 INSERT INTO template_library (template_type, template_name, template_content, variables, category, description, is_featured, is_verified, tags) VALUES
