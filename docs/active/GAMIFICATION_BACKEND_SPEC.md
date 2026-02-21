@@ -269,7 +269,8 @@ POST/PATCH: same shape (partial for PATCH). Backend should validate that `reward
 
 ### Cleaner-facing: record selection
 
-- When a cleaner selects one option from a choice group, the frontend will call an endpoint such as **POST `/cleaner/rewards/choice/:choiceGroupId/select`** with body `{ "reward_id": "reward-uuid-1" }`. Implement this in the cleaner rewards flow: validate eligibility, record selection, grant the chosen reward, and mark the choice as used so it cannot be selected again.
+- When a cleaner selects one option from a choice group, the frontend will call **POST `/cleaner/rewards/choice/:choiceGroupId/select`** with body `{ "reward_id": "reward-uuid-1" }`. Implement this in the cleaner rewards flow: validate eligibility, record selection, grant the chosen reward, and mark the choice as used so it cannot be selected again.
+- Return **409 Conflict** (or 422) with a clear message if the cleaner has already selected for this choice group (e.g. `"Choice already made"`). The frontend can show a toast and refresh.
 
 ---
 
@@ -329,7 +330,7 @@ Or:
 }
 ```
 
-Response: same shape as GET (current state after update).
+Response: same shape as GET (current state after update). The frontend admin Governor page has "Apply recommended", "Lock region", and "Reset overrides" buttons; wiring these will call PATCH with the above shapes.
 
 ### Persistence
 
@@ -350,7 +351,7 @@ Store per-region governor settings (supply/demand inputs, fill time, early_expos
 
 ### GET `/admin/gamification/abuse`
 
-- **Query params:** `type` (optional): `spam_messages` | `login_farming` | `photo_timestamp` | `decline_abuse`. `page` (optional, default 1). `per_page` (optional, default 20).
+- **Query params:** `type` (optional): `spam_messages` | `login_farming` | `photo_timestamp` | `decline_abuse`. Omit or use a sentinel value for "all types". `page` (optional, default 1). `per_page` (optional, default 20).
 - **Response (200):**
 
 ```json
@@ -376,6 +377,7 @@ Store per-region governor settings (supply/demand inputs, fill time, early_expos
 
 - **Severity:** `low` | `medium` | `high`. Derive from rules or thresholds.
 - **Persistence:** Either real-time computed from logs/events or a table of "abuse_signals" populated by jobs (e.g. message volume, photo timestamps, decline rates). Cleaner name can be joined from users/cleaners.
+- **Frontend:** Currently sends `type` when filtering by tab; may later send `page` and `per_page` for pagination. Always return `pagination` so the UI can show total count and add paging.
 
 ### POST `/admin/gamification/abuse/:cleanerId/pause-rewards`
 
@@ -559,17 +561,20 @@ Suggested response shape (aligned with frontend):
   "goals": [
     {
       "id": "goal-uuid-1",
-      "type": "add_on_completions",
+      "type": "core",
       "title": "Complete 45 add-ons",
       "current": 27,
       "target": 45,
-      "window": "last_30_days"
+      "window": "last_30_days",
+      "counts_when": "Add-on services completed in the last 30 days.",
+      "reward_preview": "Priority Visibility 14 days"
     }
   ]
 }
 ```
 
-- **Source:** Use the same goals from the admin goals library (enabled, by level). For each goal, compute `current` from your metrics store (e.g. add-on completions in window, on-time rate, dispute-free count). Filter to goals for the cleaner's current level and type (core/stretch/maintenance).
+- **Important:** `type` must be the goal type: `core` | `stretch` | `maintenance` (not the metric key). Use `metric_key` in the goals library for the underlying metric (e.g. `add_on_completions`). The frontend uses `type` for filtering (e.g. level detail page) and for display.
+- **Source:** Use the same goals from the admin goals library (enabled, by level). For each goal, compute `current` from your metrics store. Filter to goals for the cleaner's current level. Optionally include **`counts_when`** and **`reward_preview`** for the goal-detail UI.
 
 ### New or extended: GET `/cleaner/progress`
 
@@ -601,9 +606,8 @@ Example **GET `/cleaner/progress`** or **GET `/cleaner/progress/summary`** → 2
 }
 ```
 
-- **Next best actions:** Can be computed server-side (e.g. "complete 3 more add-ons") and added as an array, or left for the frontend to derive from goals and progress.
-- **Optional:** Include `recovery_steps: string[]` when `progress_paused` is true so the Maintenance page can show recovery steps.
-- **GET `/cleaner/goals`:** Each goal in `goals[]` must include **`type`** as `core` | `stretch` | `maintenance`. Optionally include **`counts_when`** and **`reward_preview`** for the goal-detail UI.
+- **Next best actions:** Can be computed server-side (e.g. "complete 3 more add-ons") and added as `next_best_actions: [{ title, description, action_href?, action_label?, unlock_preview? }]`, or left for the frontend to derive from goals and progress.
+- **Optional:** Include `recovery_steps: string[]` when `progress_paused` is true so the Maintenance page can show recovery steps. The frontend also calls GET `/cleaner/maintenance` for the same fields; you may return them in progress or in a dedicated maintenance endpoint.
 
 ### GET `/cleaner/badges` (authenticated cleaner)
 
@@ -670,6 +674,28 @@ Use this as a starting point; adapt to your DB and conventions.
 - **metrics cache** (optional)  
   cleaner_id, metric_key (e.g. add_on_completions_last_30_days), value, computed_at. Refreshed by jobs or a cron so progress and goals can be computed quickly.
 
+### 11.1 SQL migrations in this codebase
+
+**No new migrations are required** to implement this spec. The following existing migrations already provide the tables and columns:
+
+| Spec concept | Migration(s) | Table(s) / notes |
+|--------------|--------------|------------------|
+| gamification_flags | 051 | `admin_feature_flags` (key, region_id, enabled); API maps to five booleans + region_overrides. |
+| goals | 058 | `gamification_goals` (id, title, level, type, metric_key, target, window, enabled, version, …). |
+| rewards | 058 | `gamification_rewards` (id, kind, name, duration_days, stacking, permanent, enabled, …). |
+| goal_rewards | — | **Optional.** No table yet; link can be in app config or add a `goal_rewards` (goal_id, reward_id, sort) migration if you want explicit FK linking. |
+| choice_groups | 058 | `gamification_choice_groups` (id, title, reward_ids JSONB, eligibility_window_days, expires_at, enabled). |
+| cleaner_choice_selections | 048 | `gamification_choice_eligibilities` (cleaner_id, choice_group_id, selected_reward_id, selected_at, status). |
+| governor_region_settings | 051, 056, 058 | `region_governor_config` (058 adds supply_score, demand_score, fill_time_hours, early_exposure_min, cap_multiplier, locked); `region_governor_state` for computed state. |
+| cleaner_gamification_state | 043, 048 | `cleaner_level_progress` (cleaner_id, current_level, maintenance_paused, maintenance_paused_reason); `cleaner_goal_progress` for per-goal progress. |
+| cleaner_reward_grants | 048, 050 | `gamification_reward_grants` (cleaner_id, reward_id, granted_at, ends_at, source_type, source_id, status). |
+| cleaner_reward_pause | 058 | `cleaner_reward_pause` (cleaner_id, reason, paused_until, admin_id). |
+| abuse_signals | 058 | `abuse_signals` (id, cleaner_id, type, severity, detail, detected_at). |
+| cleaner_badges | 053, consolidated | `cleaner_badges` (cleaner_id, badge_id, earned_at). |
+| metrics cache | — | **Optional.** `cleaner_goal_progress` (048) caches goal progress; no separate metrics cache table; add one if you want precomputed metric_key/value. |
+
+**Relevant migration files:** `043_cleaner_level_system.sql`, `048_gamification_reward_grants_and_choices.sql`, `050_gamification_reward_idempotency_and_effects.sql`, `051_gamification_admin_control_plane.sql`, `053_gamification_badges.sql`, `056_marketplace_health_governor.sql`, `058_gamification_frontend_spec_tables.sql` (and consolidated schema if you apply that).
+
 ---
 
 ## 12. Error handling and status codes
@@ -700,12 +726,12 @@ Return a consistent error body so the frontend can show toasts, e.g.:
 - [ ] **Flags:** GET/PATCH `/admin/gamification/flags`; persist and return global + optional region_overrides.
 - [ ] **Goals:** GET (list + by id), POST, PATCH `/admin/gamification/goals`; persist with level, type, metric, target, window, enabled, versioning.
 - [ ] **Rewards:** GET, POST, PATCH `/admin/gamification/rewards`; persist reward definitions.
-- [ ] **Choices:** GET (list + by id), POST, PATCH `/admin/gamification/choices`; persist choice groups and optional POST `/cleaner/rewards/choice/:id/select` to record selection and grant reward.
+- [ ] **Choices:** GET (list + by id), POST, PATCH `/admin/gamification/choices`; persist choice groups and POST `/cleaner/rewards/choice/:id/select` to record selection and grant reward (return 409 if already selected).
 - [ ] **Governor:** GET/PATCH `/admin/gamification/governor`; persist per-region settings and optional recommended_changes.
-- [ ] **Abuse:** GET `/admin/gamification/abuse` (with type, page); POST `/admin/gamification/abuse/:cleanerId/pause-rewards`; persist pause state and optionally abuse_signals.
+- [ ] **Abuse:** GET `/admin/gamification/abuse` (with type, page, per_page); POST `/admin/gamification/abuse/:cleanerId/pause-rewards`; persist pause state and optionally abuse_signals; return pagination.
 - [ ] **Support debug:** GET `/admin/support/cleaner/:cleanerId/gamification` (full payload); optional POST recompute, grant-reward, remove-reward with guarded access and audit.
 - [ ] **Cleaner profile:** Extend GET `/cleaners/:id` with `level` and `badges[]` (id, name, icon) for client trust signals.
-- [ ] **Cleaner progress:** GET `/cleaner/goals` with progress (current/target), type (core|stretch|maintenance), counts_when, reward_preview; GET `/cleaner/progress` or `/cleaner/progress/summary` with level, core %, stretch, maintenance, active_rewards, optional next_best_actions and recovery_steps.
+- [ ] **Cleaner progress:** GET `/cleaner/goals` with progress (current/target), **type** (core|stretch|maintenance), counts_when, reward_preview; GET `/cleaner/progress` or `/cleaner/progress/summary` with level, core %, stretch, maintenance, active_rewards, optional next_best_actions and recovery_steps.
 - [ ] **Cleaner badges:** GET `/cleaner/badges` returning `{ badges: [] }` with id, name, icon, earned, earned_date, how_to_earn, category.
 - [ ] **Cleaner rewards:** GET `/cleaner/rewards` returning active_rewards, reward_history, choice_eligible.
 - [ ] **Cleaner stats:** GET `/cleaner/stats` returning on_time_rate, acceptance_rate, photo_compliance, avg_rating, disputes_opened_lost, add_on_completions.
@@ -727,6 +753,7 @@ Once these are implemented, the frontend can remove fallbacks and rely on your A
 | POST | `/admin/gamification/goals` | Admin | Create goal |
 | PATCH | `/admin/gamification/goals/:id` | Admin | Update goal |
 | GET | `/admin/gamification/rewards` | Admin | List rewards |
+| GET | `/admin/gamification/rewards/:id` | Admin | Get reward by id |
 | POST | `/admin/gamification/rewards` | Admin | Create reward |
 | PATCH | `/admin/gamification/rewards/:id` | Admin | Update reward |
 | GET | `/admin/gamification/choices` | Admin | List choice groups |
@@ -735,17 +762,17 @@ Once these are implemented, the frontend can remove fallbacks and rely on your A
 | PATCH | `/admin/gamification/choices/:id` | Admin | Update choice group |
 | GET | `/admin/gamification/governor` | Admin | Get governor state |
 | PATCH | `/admin/gamification/governor` | Admin | Apply overrides / recommended |
-| GET | `/admin/gamification/abuse` | Admin | List abuse signals (query: type, page) |
+| GET | `/admin/gamification/abuse` | Admin | List abuse signals (query: type, page, per_page) |
 | POST | `/admin/gamification/abuse/:cleanerId/pause-rewards` | Admin | Pause rewards for cleaner |
 | GET | `/admin/support/cleaner/:cleanerId/gamification` | Admin | Support debug view |
 | POST | `/admin/support/cleaner/:cleanerId/gamification/recompute` | Admin | Recompute progress (optional) |
 | POST | `/admin/support/cleaner/:cleanerId/gamification/grant-reward` | Admin | Grant reward manually (guarded) |
 | POST | `/admin/support/cleaner/:cleanerId/gamification/remove-reward` | Admin | Remove reward (guarded) |
 | GET | `/cleaners/:id` | Public/Auth | Get cleaner profile; **include level, badges** |
-| GET | `/cleaner/goals` | Cleaner | List my goals with progress |
-| GET | `/cleaner/progress` or `/cleaner/progress/summary` | Cleaner | Progress hub summary (optional) |
+| GET | `/cleaner/goals` | Cleaner | List my goals with progress (type = core\|stretch\|maintenance) |
+| GET | `/cleaner/progress` or `/cleaner/progress/summary` | Cleaner | Progress hub summary |
 | GET | `/cleaner/badges` | Cleaner | List badges with earned status |
 | GET | `/cleaner/rewards` | Cleaner | Active rewards, reward history, choice-eligible groups |
 | GET | `/cleaner/stats` | Cleaner | Metrics for Stats page |
 | GET | `/cleaner/maintenance` | Cleaner | Paused status and recovery steps (optional if in progress) |
-| POST | `/cleaner/rewards/choice/:choiceGroupId/select` | Cleaner | Select one reward from choice group (body: `{ "reward_id": "..." }`) |
+| POST | `/cleaner/rewards/choice/:choiceGroupId/select` | Cleaner | Select one reward (body: `{ "reward_id": "..." }`); return 409 if already selected |

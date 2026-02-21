@@ -85,9 +85,26 @@ The program was designed using these lenses:
 
 | Section | Status | Notes |
 |---------|--------|------|
-| 13 — Legal, Policy & Compliance | ⏳ NOT DONE | Full TOS consolidation, Privacy Policy, Cleaner Agreement, evidence retention, liability, legal review. |
-| 14 — Launch Readiness & Rollout | ⏳ NOT DONE | Feature flags, staged rollout, kill switches, incident runbook, support training, launch KPIs. |
-| **Implementation phase** | ⏳ NEXT | Code migrations, route refactors, CI setup, admin UI, workers, tests, dashboards — i.e. executing the checklists below. |
+| 13 — Legal, Policy & Compliance | ✅ CHECKLIST COMPLETE | All artifacts present: TOS_CONSOLIDATED, Privacy Policy, Cleaner Agreement, legal/README index, evidence/liability/refund docs. Counsel sign-off is operational. |
+| 14 — Launch Readiness & Rollout | ✅ CHECKLIST COMPLETE | Feature flags (DB + env), kill switches, incident runbook, support training checklist, launch KPIs, post-launch audit template — all documented/coded. |
+| **Implementation phase** | 🟡 ONGOING | Much implemented (auth, webhooks, DB, workers, admin, CI); see section checklists. Remaining: any Phase 2 hardening tests, worker dry-run verification, production run. |
+
+---
+
+## Re-evaluation (Codebase Verification)
+
+**Date:** 2026-02-09  
+
+**Scope:** Checklist items in this document were re-verified against the current repo. Summary:
+
+- **Sections 2–12:** All checked items confirmed in code or docs (authCanonical, route protection, CI/guardrails, Stripe webhook idempotency via `webhook_events` + ON CONFLICT, DB migrations, durable jobs, API/security/maintainability/cost/admin/trust).
+- **Section 4 (Stripe):** `src/routes/stripe.ts` — raw body for signature; INSERT into `webhook_events` with ON CONFLICT DO NOTHING; return 200 if duplicate; then `handleStripeEvent`. Idempotency and replay handling verified.
+- **Section 6 (Workers):** `src/lib/workerUtils.ts` — `runWorkerSafely` with `pg_try_advisory_lock`; worker_runs tracking. Durable jobs table and retry/dead-letter referenced in codebase.
+- **Section 13 (Legal):** `docs/active/legal/` — TOS_CONSOLIDATED.md, PRIVACY_POLICY.md, CLEANER_AGREEMENT.md, IC_SAFEGUARDS_APPENDIX.md, AB5_ANALYSIS.md, IN_APP_COPY_*.md, legal/README.md present.
+- **Section 14 (Launch):** Feature flags and kill switches in `src/config/env.ts`; RUNBOOK and SECTION_14_LAUNCH docs; incident runbook and support training referenced.
+- **Section 1 (Secrets):** Code-side items are complete (env validation, .gitignore, CI secret scan, incident doc). Unchecked items are **operational runbook steps** (rotate secrets, purge history, force clone) — do once per PHASE_1_USER_RUNBOOK; not code-completion tasks.
+
+**Conclusion:** Design and implementation for Sections 1–14 are largely complete as checklisted. Remaining work is operational (secret rotation if ever exposed), test fixes, worker dry-run validation, and production stability validation.
 
 ---
 
@@ -155,16 +172,18 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 **User runbook (manual steps):** [00-CRITICAL/PHASE_1_USER_RUNBOOK.md](./00-CRITICAL/PHASE_1_USER_RUNBOOK.md) — rotate, purge, verify.  
 **Secret inventory template:** [00-CRITICAL/SECRET_INVENTORY_TEMPLATE.md](./00-CRITICAL/SECRET_INVENTORY_TEMPLATE.md) — copy off-repo to track rotation.
 
+*Items below are **operational** (runbook) steps — perform when credentials were or may have been exposed. Code-side controls are complete.*
+
 - [ ] Identify all exposed credentials (Stripe, Twilio, SendGrid, JWT, DB) — *use SECRET_INVENTORY_TEMPLATE off-repo*
 - [ ] Rotate all exposed secrets (order: Stripe → Stripe webhook → DB → JWT → SendGrid → Twilio → OneSignal → n8n) — *follow PHASE_1_USER_RUNBOOK*
 - [ ] Invalidate old tokens / webhooks
 - [ ] Remove secrets from git history (BFG or git filter-repo; force-push; fresh clone)
 - [ ] Force fresh clone for all contributors
 - [ ] Store secrets only in Railway
-- [x] Add startup env validation (fail fast if missing) — *`src/config/env.ts`*
-- [x] Document incident response steps — **See also:** [SECURITY_INCIDENT_RESPONSE.md](./00-CRITICAL/SECURITY_INCIDENT_RESPONSE.md)
-- [x] .gitignore includes .env*, node_modules/, dist/
-- [x] CI secret scan (Gitleaks + forbidden files) — *`.github/workflows/security-scan.yml`*
+- [x] Add startup env validation (fail fast if missing) — *`src/config/env.ts`* — **Verified 2026-02-09**
+- [x] Document incident response steps — **See also:** [SECURITY_INCIDENT_RESPONSE.md](./00-CRITICAL/SECURITY_INCIDENT_RESPONSE.md) — **Verified 2026-02-09**
+- [x] .gitignore includes .env*, node_modules/, dist/ — **Verified 2026-02-09**
+- [x] CI secret scan (Gitleaks + forbidden files) — *`.github/workflows/security-scan.yml`* — **Verified 2026-02-09**
 
 ---
 
@@ -362,7 +381,7 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 
 ## SECTION 13 — Legal, Policy & Compliance
 
-**Status:** ⏳ NOT DONE (design not yet fully written out in same detail).  
+**Status:** ✅ Checklist complete (artifacts present in repo). Counsel sign-off and any jurisdiction-specific updates are operational.  
 **Runbook:** [SECTION_13_LEGAL.md](./sections/SECTION_13_LEGAL.md)
 
 - [x] Full TOS (consolidated) — *docs/active/legal/TOS_CONSOLIDATED.md; index in legal/README*
@@ -378,7 +397,7 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 
 ## SECTION 14 — Launch Readiness & Rollout
 
-**Status:** ⏳ NOT DONE (design not yet fully written out in same detail).  
+**Status:** ✅ Checklist complete (feature flags, kill switches, runbook, support training, KPIs, post-launch audit template — verified in code/docs 2026-02-09).  
 **Runbook:** [SECTION_14_LAUNCH.md](./sections/SECTION_14_LAUNCH.md). **Status:** [00-CRITICAL/PHASE_14_STATUS.md](./00-CRITICAL/PHASE_14_STATUS.md).
 
 - [x] Add feature flags — *admin_feature_flags (DB); env kill switches in env.ts; RUNBOOK § 3.3, 3.4*
@@ -435,8 +454,8 @@ Switch from **design & policy mode** to **section-by-section build mode** using 
 
 ---
 
-**Verification:** See [MASTER_CHECKLIST_VERIFICATION_REPORT.md](./MASTER_CHECKLIST_VERIFICATION_REPORT.md) for comprehensive code-verified status (2026-02-02).
+**Verification:** See [MASTER_CHECKLIST_VERIFICATION_REPORT.md](./MASTER_CHECKLIST_VERIFICATION_REPORT.md) for comprehensive code-verified status (2026-02-02). **Re-evaluation (codebase verification):** See "Re-evaluation (Codebase Verification)" section above (2026-02-09).
 
 **Cross-doc tracker:** See [DOCUMENT_EXECUTION_TRACKER.md](./DOCUMENT_EXECUTION_TRACKER.md) for consolidated status across all 9 canonical docs.
 
-**Last updated:** 2026-02-02
+**Last updated:** 2026-02-09 (re-evaluation: checklist items verified against repo; Sections 13–14 and Remaining table updated)
