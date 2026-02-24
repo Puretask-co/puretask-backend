@@ -258,6 +258,8 @@ trackingRouter.post(
 const checkInSchema = z.object({
   location: locationSchema,
   beforePhotos: z.array(z.string().url()).min(1, "At least one before photo required"),
+  accuracyM: z.number().optional(),
+  source: z.enum(["device", "manual_override"]).optional(),
 });
 
 trackingRouter.post(

@@ -4,8 +4,9 @@
 import { Router } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
-import { requireAuth, type AuthedRequest } from "../middleware/authCanonical";
+import { requireAuth, requireRole, type AuthedRequest } from "../middleware/authCanonical";
 import { requireOwnership } from "../lib/ownership";
+import { addJobPhoto } from "../services/photosService";
 import { requireIdempotency } from "../lib/idempotency";
 import { sendSuccess, sendCreated } from "../lib/response";
 import { asyncHandler, sendError } from "../lib/errors";
@@ -23,12 +24,182 @@ import {
 } from "../services/jobsService";
 import { findMatchingCleaners, broadcastJobToCleaners } from "../services/jobMatchingService";
 import { createJobPaymentIntent, hasActivePaymentIntentForJob } from "../services/paymentService";
-import { getUserCreditBalance } from "../services/creditsService";
+import { getUserCreditBalance, getJobCreditEntries } from "../services/creditsService";
 import { getClientStripeCustomerId } from "../services/userManagementService";
+import { query } from "../db/client";
+import type {
+  JobDetailsResponse,
+  JobDetailsCleaner,
+  JobDetailsCheckin,
+  JobDetailsPhoto,
+  JobDetailsPaymentIntent,
+  JobDetailsPayout,
+} from "../types/jobDetails";
 import { logger } from "../lib/logger";
 import { env } from "../config/env";
 
 const jobsRouter = Router();
+
+// --------------- Job details helpers (GET /jobs/:jobId/details) ---------------
+
+async function getCleanerComposite(cleanerUserId: string): Promise<JobDetailsCleaner | null> {
+  const cleanerRow = await query<{
+    id: string;
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+    bio: string | null;
+    base_rate_cph: string | null;
+    reliability_score: string | null;
+    tier: string | null;
+    avg_rating: string | null;
+    jobs_completed: string | null;
+  }>(
+    `SELECT u.id, u.email, cp.first_name, cp.last_name, cp.avatar_url, cp.bio, cp.base_rate_cph,
+            cp.reliability_score, cp.tier, cp.avg_rating, cp.jobs_completed
+     FROM users u
+     LEFT JOIN cleaner_profiles cp ON cp.user_id = u.id
+     WHERE u.id = $1 AND u.role = 'cleaner' LIMIT 1`,
+    [cleanerUserId]
+  );
+  if (cleanerRow.rows.length === 0) return null;
+  const c = cleanerRow.rows[0];
+  const name = [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || c.email || "Cleaner";
+  const [level, badges] = await Promise.all([
+    getCleanerLevel(cleanerUserId).catch(() => null),
+    getCleanerBadges(cleanerUserId).catch(() => []),
+  ]);
+  return {
+    id: c.id,
+    email: c.email,
+    name,
+    avatar_url: c.avatar_url,
+    bio: c.bio,
+    base_rate_cph: c.base_rate_cph != null ? parseFloat(c.base_rate_cph) : null,
+    reliability_score: c.reliability_score != null ? Number(c.reliability_score) : null,
+    tier: c.tier ?? null,
+    avg_rating: c.avg_rating != null ? Number(c.avg_rating) : null,
+    jobs_completed: c.jobs_completed != null ? parseInt(c.jobs_completed, 10) : 0,
+    ...(level != null && { level }),
+    ...(badges.length > 0 && { badges }),
+  };
+}
+
+async function getJobPhotos(jobId: string): Promise<JobDetailsPhoto[]> {
+  const r = await query<JobDetailsPhoto>(
+    `SELECT id, job_id, uploaded_by, type, url, thumbnail_url, created_at
+     FROM job_photos WHERE job_id = $1 ORDER BY type ASC, created_at ASC`,
+    [jobId]
+  );
+  return r.rows;
+}
+
+async function getJobCheckins(jobId: string): Promise<JobDetailsCheckin[]> {
+  const r = await query<JobDetailsCheckin>(
+    `SELECT id, job_id, cleaner_id, type, lat, lng,
+            distance_from_job_meters, is_within_radius, created_at
+     FROM job_checkins WHERE job_id = $1 ORDER BY created_at ASC`,
+    [jobId]
+  );
+  return r.rows;
+}
+
+async function getJobLedgerEntries(jobId: string) {
+  return getJobCreditEntries(jobId);
+}
+
+async function getJobPaymentIntent(jobId: string): Promise<JobDetailsPaymentIntent | null> {
+  const r = await query<{
+    id: string;
+    job_id: string | null;
+    client_id: string | null;
+    stripe_payment_intent_id: string;
+    status: string;
+    amount_cents: number;
+    currency: string;
+    purpose: string;
+    credits_amount: number | null;
+    created_at: string;
+    updated_at: string;
+  }>(
+    `SELECT id, job_id, client_id, stripe_payment_intent_id, status, amount_cents,
+            currency, purpose, credits_amount, created_at, updated_at
+     FROM payment_intents WHERE job_id = $1 AND purpose = 'job_charge'
+     ORDER BY created_at DESC LIMIT 1`,
+    [jobId]
+  );
+  const row = r.rows[0];
+  if (!row) return null;
+  return {
+    id: row.id,
+    job_id: row.job_id,
+    client_id: row.client_id,
+    stripe_payment_intent_id: row.stripe_payment_intent_id,
+    status: row.status,
+    amount_cents: row.amount_cents,
+    currency: row.currency,
+    purpose: row.purpose,
+    credits_amount: row.credits_amount,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+async function getJobPayout(jobId: string): Promise<JobDetailsPayout | null> {
+  const r = await query<{
+    id: string;
+    cleaner_id: string;
+    job_id: string | null;
+    stripe_transfer_id: string | null;
+    amount_credits: number;
+    amount_cents: number;
+    total_usd: string | null;
+    status: string;
+    created_at: string;
+    updated_at: string;
+  }>(
+    `SELECT id, cleaner_id, job_id, stripe_transfer_id, amount_credits, amount_cents,
+            total_usd, status, created_at, updated_at
+     FROM payouts WHERE job_id = $1 ORDER BY created_at DESC LIMIT 1`,
+    [jobId]
+  );
+  const row = r.rows[0];
+  if (!row) return null;
+  return {
+    id: row.id,
+    cleaner_id: row.cleaner_id,
+    job_id: row.job_id,
+    stripe_transfer_id: row.stripe_transfer_id,
+    amount_credits: row.amount_credits,
+    amount_cents: row.amount_cents,
+    total_usd: row.total_usd != null ? parseFloat(String(row.total_usd)) : 0,
+    status: row.status,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+async function getCleanerLevel(cleanerUserId: string): Promise<number | null> {
+  const r = await query<{ current_level: number }>(
+    `SELECT current_level FROM cleaner_level_progress WHERE cleaner_id = $1 LIMIT 1`,
+    [cleanerUserId]
+  );
+  return r.rows[0]?.current_level ?? null;
+}
+
+async function getCleanerBadges(
+  cleanerUserId: string
+): Promise<Array<{ id: string; name: string; icon?: string | null }>> {
+  const r = await query<{ id: string; name: string; icon_key: string | null }>(
+    `SELECT bd.id, bd.name, bd.icon_key
+     FROM cleaner_badges cb
+     JOIN badge_definitions bd ON bd.id = cb.badge_id AND bd.is_profile_visible = true
+     WHERE cb.cleaner_id = $1 ORDER BY cb.earned_at DESC LIMIT 5`,
+    [cleanerUserId]
+  );
+  return r.rows.map((b) => ({ id: b.id, name: b.name, icon: b.icon_key ?? undefined }));
+}
 
 jobsRouter.use(requireAuth);
 
@@ -227,6 +398,49 @@ jobsRouter.get(
 );
 
 /**
+ * GET /jobs/:jobId/details
+ * Single-call endpoint for Job Details UI (timeline, trust viz, ledger flow, photos, checkins, payment, payout).
+ * Protect with requireOwnership("job", "jobId") to prevent leaks.
+ */
+jobsRouter.get(
+  "/:jobId/details",
+  requireOwnership("job", "jobId"),
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const jobId = req.params.jobId;
+    const job = await getJob(jobId);
+    if (!job) {
+      return sendError(res, {
+        code: "NOT_FOUND",
+        message: "Job not found",
+        statusCode: 404,
+      } as any);
+    }
+
+    const cleanerUserId = job.cleaner_id ?? undefined;
+
+    const [cleaner, photos, checkins, ledgerEntries, paymentIntent, payout] = await Promise.all([
+      cleanerUserId ? getCleanerComposite(cleanerUserId) : Promise.resolve(null),
+      getJobPhotos(jobId),
+      getJobCheckins(jobId),
+      getJobLedgerEntries(jobId),
+      getJobPaymentIntent(jobId),
+      getJobPayout(jobId),
+    ]);
+
+    const payload: JobDetailsResponse = {
+      job,
+      cleaner,
+      checkins,
+      photos,
+      ledgerEntries,
+      paymentIntent,
+      payout,
+    };
+    sendSuccess(res, payload);
+  })
+);
+
+/**
  * GET /jobs/:jobId
  */
 jobsRouter.get(
@@ -243,6 +457,29 @@ jobsRouter.get(
       } as any);
     }
     sendSuccess(res, { job });
+  })
+);
+
+/** POST /jobs/:jobId/photos — add before/after photo (photoUrl from presigned or upload); cleaner only */
+const addJobPhotoSchema = z.object({
+  type: z.enum(["before", "after"]),
+  photoUrl: z.string().url(),
+});
+jobsRouter.post(
+  "/:jobId/photos",
+  requireOwnership("job", "jobId"),
+  requireRole("cleaner"),
+  validateBody(addJobPhotoSchema),
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { jobId } = req.params;
+    const { type, photoUrl } = req.body;
+    const photo = await addJobPhoto({
+      jobId,
+      uploadedBy: req.user!.id,
+      type,
+      url: photoUrl,
+    });
+    sendCreated(res, { photo });
   })
 );
 

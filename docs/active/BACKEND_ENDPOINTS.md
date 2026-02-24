@@ -4,7 +4,7 @@ This document lists all REST API endpoints the PureTask frontend expects the bac
 
 For Trust-Fintech integration details (auth, response contracts, roles, errors, CORS), see [TRUST_BACKEND_INTEGRATION.md](./TRUST_BACKEND_INTEGRATION.md).
 
-**Stub implementations:** `GET /bookings/me` and `GET /cleaners/:cleanerId/reviews` return empty arrays to avoid 404/500; replace with real implementations later.
+**Implemented:** `GET /bookings/me` and `GET /cleaners/:cleanerId/reviews` return real data. See Bookings & Jobs and Cleaners below. Referral, job photos, cleaner schedule range, check-in optional fields, and admin resolve-dispute path are documented in their sections.
 
 ---
 
@@ -75,7 +75,7 @@ For Trust-Fintech integration details (auth, response contracts, roles, errors, 
 |--------|------|-------------|
 | POST | `/bookings` | Create booking |
 | GET | `/bookings/:bookingId` | Get booking |
-| GET | `/bookings/me` | My bookings → `{ bookings: [] }` (stub; params: status, page) |
+| GET | `/bookings/me` | My bookings → `{ bookings: [...] }` (id, status, scheduled_start_at, scheduled_end_at, address, cleaner_id, cleaner?: { name, avatar_url }, etc.). Client only. |
 | POST | `/bookings/:id/cancel` | Cancel booking |
 | POST | `/bookings/:id/complete` | Mark completed |
 | POST | `/bookings/:id/review` | Submit review |
@@ -94,6 +94,17 @@ For Trust-Fintech integration details (auth, response contracts, roles, errors, 
 | POST | `/jobs/:id/complete` | Complete job |
 | POST | `/jobs/:id/rate` | Rate job |
 | POST | `/jobs/:id/transition` | State transition (e.g. accept) |
+| POST | `/jobs/:jobId/photos` | Add before/after photo (body: `type`: "before"\|"after", `photoUrl`: string). Cleaner only; use after presigned upload. |
+
+---
+
+## Tracking (check-in / check-out)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/tracking/:jobId` | Job tracking state |
+| POST | `/tracking/:jobId/check-in` | Check in (body: `location`: { latitude, longitude, accuracy? }, `beforePhotos`: string[], optional `accuracyM`, `source`: "device"\|"manual_override"). Cleaner only. |
+| POST | `/tracking/:jobId/check-out` | Check out (after photos, notes). Cleaner only. |
 
 ---
 
@@ -121,7 +132,7 @@ For Trust-Fintech integration details (auth, response contracts, roles, errors, 
 | GET | `/cleaners/search` | Search cleaners (params) |
 | GET | `/cleaners/:id` | Get cleaner profile |
 | GET | `/cleaners/:id/availability` | Available slots |
-| GET | `/cleaners/:id/reviews` | Reviews → `{ reviews: [], page, per_page, total }` (stub; params: page, per_page) |
+| GET | `/cleaners/:id/reviews` | Reviews → `{ reviews: [...], page, per_page, total }` (params: page, per_page). Each review: id, job_id, reviewer_id, rating, comment, created_at, response?, response_at?, reviewer_name?). |
 | GET | `/cleaners/featured` | Featured cleaners |
 | GET | `/cleaners/top-rated` | Top-rated cleaners |
 | GET | `/cleaners/:id/reliability` | Reliability score |
@@ -137,7 +148,8 @@ For Trust-Fintech integration details (auth, response contracts, roles, errors, 
 | GET | `/cleaner/service-areas` | Service areas |
 | GET | `/cleaner/availability` | Weekly availability |
 | PUT | `/cleaner/availability` | Update availability |
-| GET | `/cleaner/schedule` | Schedule (params: from, to) |
+| GET | `/cleaner/schedule` | Schedule range (query: `from`, `to` YYYY-MM-DD) → `{ schedule: [...], from, to }`. Assigned jobs in range. |
+| GET | `/cleaner/schedule/:date` | Schedule for a single date → `{ date, schedule: { availability, timeOff, scheduledJobs } }`. |
 | GET | `/cleaner/time-off` | Time-off list |
 | POST | `/cleaner/time-off` | Add time-off |
 | DELETE | `/cleaner/time-off/:id` | Delete time-off |
@@ -235,6 +247,15 @@ For Trust-Fintech integration details (auth, response contracts, roles, errors, 
 
 ---
 
+## Referral
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/referral/send` | Send referral invite (body: `email`). Sender from auth; backend gets/creates referral code and sends email if SendGrid configured. |
+| GET | `/referral/me` | Current user's referral code and stats → `{ code, totalReferrals, pendingReferrals, qualifiedReferrals, totalEarned }`. |
+
+---
+
 ## Payments
 
 | Method | Path | Description |
@@ -320,7 +341,7 @@ For Trust-Fintech integration details (auth, response contracts, roles, errors, 
 | GET | `/admin/jobs` | List jobs (params: status) |
 | POST | `/admin/jobs/bulk-action` | Bulk action |
 | GET | `/admin/jobs/insights` | Job insights |
-| POST | `/admin/jobs/:id/resolve-dispute` | Resolve dispute |
+| POST | `/admin/jobs/:jobId/resolve-dispute` | Resolve dispute by job (body: `resolution`: "resolved_refund"\|"resolved_no_refund", `admin_notes`?: string). Same as `/admin/disputes/job/:jobId/resolve`. |
 
 ---
 
@@ -448,4 +469,38 @@ For Trust-Fintech integration details (auth, response contracts, roles, errors, 
 - **Auth**: Most endpoints expect `Authorization: Bearer <token>`.
 - **Trust API** uses paths prefixed with `/api/` (credits, billing, appointments); the main app uses paths without that prefix.
 - **Path conventions**: Some services may expect different shapes; this list reflects current frontend usage.
-- **Gamification**: Full request/response shapes and data model: [GAMIFICATION_FRONTEND_BACKEND_SPEC.md](./GAMIFICATION_FRONTEND_BACKEND_SPEC.md).
+- **Gamification**: Full request/response shapes and data model: [GAMIFICATION_BACKEND_SPEC.md](./GAMIFICATION_BACKEND_SPEC.md).
+- **Recently implemented (backend)**: `GET /bookings/me` (real client bookings), `GET /cleaners/:id/reviews` (paginated reviews), `POST /admin/jobs/:jobId/resolve-dispute`, `POST /referral/send`, `GET /referral/me`, `POST /jobs/:jobId/photos`, `GET /cleaner/schedule?from=&to=`, and check-in body optional `accuracyM`, `source`. Trust live checklist returns `id`, `completed`, `completedAtISO` (labels on frontend). See DECISIONS.md for data ownership (labels/copy).
+
+---
+
+## Endpoints still returning stubs or placeholder data
+
+These routes exist for frontend compatibility but return empty/hardcoded data or no-op success. Replace with real implementations when the feature is needed.
+
+**Implemented with real data:**
+
+- **GET /cleaners/:id/availability** — Uses `getWeeklyAvailability(cleanerId)`; returns `slots` from `cleaner_availability`.
+- **GET /cleaners/top-rated** and **GET /cleaners/featured** — Query cleaners with rating/review count from `reviews`; featured reuses top-rated (no featured flag on cleaners).
+- **GET /admin/risk/review** — `getRiskReviewQueue()` queries `risk_flags` where `active = true`, returns users + flags and a simple risk score from severity.
+- **GET /notifications** and **GET /notifications/unread-count** — Feed from `notification_log` for current user; unread_count is total count (no `read_at` column yet; PATCH read / POST read-all remain no-op until schema added).
+
+| Method | Path | Status | Notes |
+|--------|------|--------|--------|
+| GET | `/cleaners/featured` | **Real data** | Same as top-rated (no featured flag). |
+| GET | `/cleaners/top-rated` | **Real data** | From `reviews` + cleaner_profiles; ordered by rating. |
+| GET | `/cleaners/:id/availability` | **Real data** | From `getWeeklyAvailability` / `cleaner_availability`. |
+| GET | `/notifications` | **Real data** | From `notification_log` for user; no read state yet. |
+| GET | `/notifications/unread-count` | **Real data** | Total count from `notification_log`. |
+| PATCH | `/notifications/:id/read` | No-op | Add `read_at` column to persist. |
+| POST | `/notifications/read-all` | No-op | Same. |
+| GET | `/client/payment-methods` | Stub | Needs Stripe `paymentMethods.list`. |
+| POST | `/users/me/avatar` | 501 | Upload or redirect. |
+| POST | `/client/profile/photo` | Body only | Add file upload. |
+| GET | `/admin/risk/review` | **Real data** | `getRiskReviewQueue()` queries `risk_flags`. |
+
+**Other notes:**
+
+- **Search** (`/search/global`, `/search/autocomplete`): Return empty when query &lt; 2 chars; otherwise use DB. Not stubs.
+- **Holidays**: Returns real data from `listHolidays()`; empty only on error (fallback).
+- **Gamification** (e.g. next-best-actions, badges): When `gamification_enabled` is false, returns empty by design.

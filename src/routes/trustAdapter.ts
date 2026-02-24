@@ -436,10 +436,11 @@ router.get(
         uploadedBy: "cleaner" as const,
       }));
 
+      // Checklist: id, completed, completedAtISO only; frontend owns room labels (see DECISIONS.md)
       const checklist = [
-        { id: "c1", label: "Kitchen", completed: photosResult.rows.some((p) => p.type === "after"), completedAtISO: undefined as string | undefined },
-        { id: "c2", label: "Bathrooms", completed: false, completedAtISO: undefined as string | undefined },
-        { id: "c3", label: "Floors", completed: false, completedAtISO: undefined as string | undefined },
+        { id: "c1", completed: photosResult.rows.some((p) => p.type === "after"), completedAtISO: undefined as string | undefined },
+        { id: "c2", completed: false, completedAtISO: undefined as string | undefined },
+        { id: "c3", completed: false, completedAtISO: undefined as string | undefined },
       ];
 
       const etaISO =

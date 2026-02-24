@@ -801,6 +801,58 @@ cleanerRouter.put(
 // ============================================
 
 /**
+ * GET /cleaner/schedule?from=YYYY-MM-DD&to=YYYY-MM-DD
+ * Get assigned jobs in date range (for calendar).
+ */
+cleanerRouter.get(
+  "/schedule",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const fromStr = req.query.from as string | undefined;
+      const toStr = req.query.to as string | undefined;
+      if (!fromStr || !toStr) {
+        res.status(400).json({
+          error: { code: "INVALID_QUERY", message: "Query from and to (YYYY-MM-DD) required" },
+        });
+        return;
+      }
+      const fromDate = new Date(fromStr);
+      const toDate = new Date(toStr);
+      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime()) || fromDate > toDate) {
+        res.status(400).json({
+          error: { code: "INVALID_DATE", message: "Invalid from/to date range" },
+        });
+        return;
+      }
+      const { query } = await import("../db/client");
+      const result = await query<{
+        id: string;
+        status: string;
+        scheduled_start_at: string;
+        scheduled_end_at: string;
+        address: string;
+      }>(
+        `SELECT id, status, scheduled_start_at, scheduled_end_at, address
+         FROM jobs
+         WHERE cleaner_id = $1
+           AND DATE(scheduled_start_at) >= $2::DATE
+           AND DATE(scheduled_start_at) <= $3::DATE
+           AND status NOT IN ('cancelled')
+         ORDER BY scheduled_start_at`,
+        [req.user!.id, fromStr, toStr]
+      );
+      res.json({ schedule: result.rows, from: fromStr, to: toStr });
+    } catch (error) {
+      logger.error("get_schedule_range_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "GET_SCHEDULE_FAILED", message: "Failed to get schedule" },
+      });
+    }
+  })
+);
+
+/**
  * GET /cleaner/schedule/:date
  * Get cleaner's schedule for a specific date
  */

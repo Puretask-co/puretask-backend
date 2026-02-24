@@ -141,10 +141,10 @@ router.get(
       ORDER BY setting_type
     `);
 
+      // Return raw type and count; frontend owns category labels (see DECISIONS.md)
       const categories = result.rows.map((row) => ({
         type: row.setting_type,
         count: parseInt(row.count),
-        label: formatCategoryLabel(row.setting_type),
       }));
 
       res.json({ categories });
@@ -513,35 +513,5 @@ router.post(
     }
   })
 );
-
-// Helper function to format category labels
-function formatCategoryLabel(type: string): string {
-  const labels: Record<string, string> = {
-    platform: "Platform Configuration",
-    booking: "Booking Rules",
-    pricing: "Pricing & Fees",
-    credits: "Credit System",
-    payment: "Payment Settings",
-    payout: "Payout Settings",
-    notifications: "Notifications",
-    email: "Email Configuration",
-    sms: "SMS Configuration",
-    features: "Feature Flags",
-    ai: "AI Assistant",
-    security: "Security Settings",
-    rate_limit: "Rate Limiting",
-    tiers: "Cleaner Tiers",
-    reviews: "Review System",
-    disputes: "Disputes",
-    referral: "Referral Program",
-    analytics: "Analytics & Tracking",
-    api: "API Configuration",
-    webhooks: "Webhooks",
-    backup: "Backup & Maintenance",
-    maintenance: "Maintenance",
-  };
-
-  return labels[type] || type.charAt(0).toUpperCase() + type.slice(1);
-}
 
 export default router;

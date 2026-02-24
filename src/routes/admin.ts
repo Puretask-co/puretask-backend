@@ -809,6 +809,14 @@ adminRouter.post(
   authedHandler(handleResolveDisputeByJobId)
 );
 
+/** POST /admin/jobs/:jobId/resolve-dispute — alias for frontend (same body: resolution, admin_notes) */
+adminRouter.post(
+  "/jobs/:jobId/resolve-dispute",
+  requireDisputeResolveRole,
+  validateBody(resolveDisputeSchema),
+  authedHandler(handleResolveDisputeByJobId)
+);
+
 /**
  * @swagger
  * /admin/payouts:
