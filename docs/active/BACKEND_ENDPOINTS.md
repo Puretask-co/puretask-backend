@@ -504,3 +504,28 @@ These routes exist for frontend compatibility but return empty/hardcoded data or
 - **Search** (`/search/global`, `/search/autocomplete`): Return empty when query &lt; 2 chars; otherwise use DB. Not stubs.
 - **Holidays**: Returns real data from `listHolidays()`; empty only on error (fallback).
 - **Gamification** (e.g. next-best-actions, badges): When `gamification_enabled` is false, returns empty by design.
+
+---
+
+## Next steps & wiring status (Job Details + integration)
+
+**Designed, implemented, and wired (backend):**
+
+- **GET /jobs/:jobId/details** — Returns `{ data: { job, cleaner, photos, checkins, ledgerEntries, paymentIntent, payout } }`. Typed with `JobDetailsResponse`. Uses `requireAuth` + `requireOwnership("job", "jobId")`. All helpers (cleaner composite, photos, checkins, ledger, payment intent, payout, level, badges) use real DB.
+- **GET /tracking/:jobId** — Returns `{ tracking: state }` (jobId, status, currentLocation, timeline, eta, photos, cleaner, times). Same auth/ownership. Used for live presence polling.
+- **GET /cleaners/:id** — Returns `{ cleaner: CleanerProfileResponse }` with reliability_score, tier, avg_rating, jobs_completed, level, badges. Real data.
+- **GET /bookings/me** — Real client bookings (dashboardStubs). **GET /cleaners/featured**, **/cleaners/top-rated**, **/cleaners/:id/availability**, **GET /notifications**, **GET /admin/risk/review** — real data as noted above.
+
+**API mounting:** Backend serves the same API at **/** and **/api/v1** (e.g. `/jobs/:jobId/details` and `/api/v1/jobs/:jobId/details`). Frontend should use one base consistently (e.g. `NEXT_PUBLIC_API_URL` = `https://api.example.com` or `https://api.example.com/api/v1`).
+
+**Communicating as intended:**
+
+- Details and tracking are separate (static vs live) as per the design. Frontend should call details once, then poll tracking every 5–10s.
+- Auth: backend expects JWT (Bearer or cookie depending on middleware). Ensure frontend sends credentials (cookies) or `Authorization: Bearer <token>` so `requireAuth` and `requireOwnership` succeed.
+
+**Remaining / next steps:**
+
+1. **Frontend Job Details page** — Implement the Frontend Integration Guide (see DATA_MODEL_REFERENCE.md): types, `getJobDetails`/`getJobTracking`, hooks, page, and components (TimelineRail, ReliabilityRing, LedgerFlow, ProofGallery, PresenceMiniMap). Then point the app at a real job ID and verify the UI.
+2. **Path alignment** — Confirm frontend base URL matches backend (root vs `/api/v1`). If the app proxies to the backend under `/api`, use `/api/jobs/...` and `/api/tracking/...` in the client.
+3. **Optional stubs to replace later** — `GET /client/payment-methods` (Stripe paymentMethods.list), `PATCH /notifications/:id/read` and `POST /notifications/read-all` (need `read_at` column). Not blocking for Job Details.
+4. **E2E or manual test** — Log in as client, open a job, hit GET /jobs/:jobId/details and GET /tracking/:jobId; confirm response shape and that ownership allows access.

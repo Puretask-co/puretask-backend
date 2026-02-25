@@ -40,6 +40,7 @@
     "db:patch:production": "node scripts/run-production-schema-patch.js",
     "db:verify:production": "node scripts/verify-production-schema.js",
     "db:validate:migrations": "node scripts/validate-migrations.js",
+    "db:transfer:test-to-production": "node scripts/transfer-test-to-production.js",
     "db:generate:neon-uuid": "node scripts/generate-neon-uuid-bundle.js --output DB/neon/gamification_uuid.sql",
     "security:setup-hooks": "powershell -ExecutionPolicy Bypass -File scripts/setup-pre-commit.ps1",
     "worker:auto-cancel": "ts-node src/workers/v1-core/autoCancelJobs.ts",

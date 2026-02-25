@@ -31,6 +31,60 @@ Optional for local: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `N8N_WEBHOOK_S
 
 **Check that the database is reachable:** Run `npm run db:check`. If it says "DATABASE_URL is not set", add `DATABASE_URL=postgresql://...?sslmode=require` to `.env` (get the URI from Neon Dashboard → Connection string). If the DB still doesn't work, see [TROUBLESHOOTING.md — Database Connection Issues](./TROUBLESHOOTING.md).
 
+### Switching from test DB to real DB
+
+The app uses **one** database at a time: whatever is in `DATABASE_URL`. There is no code switch for "test" vs "real" — you change the environment.
+
+| Where | What to do |
+|-------|------------|
+| **Local (.env)** | Replace `DATABASE_URL` with your **real** Postgres URL (e.g. production Neon or your live DB). Use `?sslmode=require` for Neon/cloud. Restart the server (`npm run dev`). |
+| **Production (Railway etc.)** | In the service Variables, set `DATABASE_URL` to the production database connection string. Redeploy or restart so the process picks up the new value. |
+| **Tests** | `TEST_DATABASE_URL` is only for **npm test** / integration tests: if set, tests use it instead of `DATABASE_URL` so tests don’t touch your real DB. Leave it unset when running the app. |
+
+**Also when going to “real”:**
+
+- **Stripe:** For real payments use live keys: `STRIPE_SECRET_KEY=sk_live_...`, `STRIPE_WEBHOOK_SECRET=whsec_...` from your live Stripe webhook. The app warns if you use a test key in production or a live key in development.
+- **NODE_ENV:** Set `NODE_ENV=production` in production so auth and safety checks run correctly (see DEPLOYMENT.md).
+
+### Transfer data from test DB to real DB
+
+If you’ve been using the test DB by mistake and want to copy that data into the real DB:
+
+**Neon host reference (this repo):**
+
+- **Test DB:** `ep-small-unit-af97hhtw-pooler.c-2.us-west-2.aws.neon.tech`
+- **Production DB:** `ep-fragrant-bird-afmlkke1-pooler.c-2.us-west-2.aws.neon.tech`
+
+Store full connection strings only in `.env` or environment; never commit them.
+
+1. **Confirm which DB the app uses**  
+   Run: `node scripts/check-which-db.js` — it prints host and database (no passwords).
+
+2. **Dump from the test DB (source)**  
+   Set `SOURCE_DATABASE_URL` to your **test** connection string (ep-small-unit...), then:
+   ```powershell
+   pg_dump $env:SOURCE_DATABASE_URL --no-owner --no-acl -f test_db_dump.sql
+   ```
+   Or CMD: `pg_dump "%SOURCE_DATABASE_URL%" --no-owner --no-acl -f test_db_dump.sql`
+
+3. **Ensure production has the schema**  
+   Set `DATABASE_URL` to your **production** connection string (ep-fragrant-bird...), then:
+   ```bash
+   npm run db:migrate
+   ```
+
+4. **Restore into production (target)**  
+   Set `TARGET_DATABASE_URL` to the same **production** URL, then:
+   ```powershell
+   psql $env:TARGET_DATABASE_URL -f test_db_dump.sql
+   ```
+   **Warning:** If production already has data, this can create duplicates or conflicts. For an empty production DB it’s fine. Otherwise use a new Neon branch as target or restore only specific tables.
+
+5. **Point the app at production**  
+   In `.env`, set `DATABASE_URL` to the **production** (ep-fragrant-bird) connection string. Set `TEST_DATABASE_URL` to the **test** (ep-small-unit) URL so `npm test` uses test. Restart the server. Run `node scripts/check-which-db.js` to confirm.
+
+**Note:** You need `pg_dump` and `psql` (PostgreSQL client tools) installed. See also [BACKUP_RESTORE.md](./BACKUP_RESTORE.md).
+
 ## Install
 
 1. **Clone** the repo (if not already).
