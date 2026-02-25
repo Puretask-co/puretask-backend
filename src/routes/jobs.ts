@@ -6,7 +6,9 @@ import { z } from "zod";
 import { validateBody } from "../lib/validation";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/authCanonical";
 import { requireOwnership } from "../lib/ownership";
-import { addJobPhoto } from "../services/photosService";
+import { addJobPhoto, getJobPhotoCounts } from "../services/photosService";
+import { getStorageConfig } from "../lib/storage";
+import { logJobEvent, getJobTimelineOrdered } from "../services/jobEvents";
 import { requireIdempotency } from "../lib/idempotency";
 import { sendSuccess, sendCreated } from "../lib/response";
 import { asyncHandler, sendError } from "../lib/errors";
@@ -418,14 +420,27 @@ jobsRouter.get(
 
     const cleanerUserId = job.cleaner_id ?? undefined;
 
-    const [cleaner, photos, checkins, ledgerEntries, paymentIntent, payout] = await Promise.all([
-      cleanerUserId ? getCleanerComposite(cleanerUserId) : Promise.resolve(null),
-      getJobPhotos(jobId),
-      getJobCheckins(jobId),
-      getJobLedgerEntries(jobId),
-      getJobPaymentIntent(jobId),
-      getJobPayout(jobId),
-    ]);
+    const [cleaner, photos, checkins, ledgerEntries, paymentIntent, payout, clientBalance] =
+      await Promise.all([
+        cleanerUserId ? getCleanerComposite(cleanerUserId) : Promise.resolve(null),
+        getJobPhotos(jobId),
+        getJobCheckins(jobId),
+        getJobLedgerEntries(jobId),
+        getJobPaymentIntent(jobId),
+        getJobPayout(jobId),
+        job.client_id && env.CREDITS_ENABLED ? getUserCreditBalance(job.client_id) : Promise.resolve(null),
+      ]);
+
+    const credits_held = job.credit_amount ?? 0;
+    const balance_after_hold = clientBalance != null ? clientBalance : 0;
+    const credits: JobDetailsResponse["credits"] =
+      job.client_id && env.CREDITS_ENABLED
+        ? {
+            credits_held,
+            balance_after_hold,
+            top_up_required: balance_after_hold < 0,
+          }
+        : undefined;
 
     const payload: JobDetailsResponse = {
       job,
@@ -435,6 +450,7 @@ jobsRouter.get(
       ledgerEntries,
       paymentIntent,
       payout,
+      ...(credits && { credits }),
     };
     sendSuccess(res, payload);
   })
@@ -480,6 +496,112 @@ jobsRouter.post(
       url: photoUrl,
     });
     sendCreated(res, { photo });
+  })
+);
+
+/** POST /jobs/:jobId/photos/commit — record S3/R2 upload in DB + emit timeline event when min photos met */
+const commitPhotoSchema = z.object({
+  key: z.string().min(1),
+  kind: z.enum(["before", "after", "client_dispute"]),
+  contentType: z.string().min(3),
+  bytes: z.number().int().positive(),
+  publicUrl: z.string().url().optional(),
+});
+jobsRouter.post(
+  "/:jobId/photos/commit",
+  requireOwnership("job", "jobId"),
+  requireAuth,
+  validateBody(commitPhotoSchema),
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { jobId } = req.params;
+    const parsed = req.body as z.infer<typeof commitPhotoSchema>;
+    const role = req.user!.role;
+
+    if (parsed.kind === "client_dispute" && role !== "client" && role !== "admin" && role !== "super_admin") {
+      return res.status(403).json({ error: "Only client (or admin) can upload client_dispute photos." });
+    }
+    if ((parsed.kind === "before" || parsed.kind === "after") && role !== "cleaner" && role !== "admin" && role !== "super_admin") {
+      return res.status(403).json({ error: "Only cleaner (or admin) can upload before/after photos." });
+    }
+
+    let url = parsed.publicUrl;
+    if (!url) {
+      try {
+        const config = getStorageConfig();
+        url = config.publicBaseUrl ? `${config.publicBaseUrl.replace(/\/$/, "")}/${parsed.key}` : parsed.key;
+      } catch {
+        return res.status(503).json({ error: "Storage not configured; set STORAGE_* env or send publicUrl." });
+      }
+    }
+
+    const photo = await addJobPhoto({
+      jobId,
+      uploadedBy: req.user!.id,
+      type: parsed.kind,
+      url,
+      fileSize: parsed.bytes,
+      mimeType: parsed.contentType,
+      metadata: { storageKey: parsed.key },
+    });
+
+    const counts = await getJobPhotoCounts(jobId);
+    const minBefore = env.MIN_BEFORE_PHOTOS ?? 1;
+    const minAfter = env.MIN_AFTER_PHOTOS ?? 1;
+
+    const eventPayload = { key: parsed.key, bytes: parsed.bytes, contentType: parsed.contentType };
+    if (parsed.kind === "before" && counts.before >= minBefore) {
+      const existing = await query<{ id: string }>(
+        `SELECT id FROM job_events WHERE job_id = $1 AND event_type = $2 LIMIT 1`,
+        [jobId, "before_photos_uploaded"]
+      );
+      if (existing.rows.length === 0) {
+        await logJobEvent({
+          jobId,
+          actorType: role === "cleaner" ? "cleaner" : "system",
+          actorId: req.user!.id,
+          eventType: "before_photos_uploaded",
+          payload: eventPayload,
+        });
+      }
+    }
+    if (parsed.kind === "after" && counts.after >= minAfter) {
+      const existing = await query<{ id: string }>(
+        `SELECT id FROM job_events WHERE job_id = $1 AND event_type = $2 LIMIT 1`,
+        [jobId, "after_photos_uploaded"]
+      );
+      if (existing.rows.length === 0) {
+        await logJobEvent({
+          jobId,
+          actorType: role === "cleaner" ? "cleaner" : "system",
+          actorId: req.user!.id,
+          eventType: "after_photos_uploaded",
+          payload: eventPayload,
+        });
+      }
+    }
+    if (parsed.kind === "client_dispute") {
+      await logJobEvent({
+        jobId,
+        actorType: "client",
+        actorId: req.user!.id,
+        eventType: "client_dispute_photos_uploaded",
+        payload: eventPayload,
+      });
+    }
+
+    sendCreated(res, { photo });
+  })
+);
+
+/** GET /jobs/:jobId/timeline — events in chronological order (for stepper / client receipt) */
+jobsRouter.get(
+  "/:jobId/timeline",
+  requireOwnership("job", "jobId"),
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { jobId } = req.params;
+    const events = await getJobTimelineOrdered(jobId);
+    sendSuccess(res, events);
   })
 );
 

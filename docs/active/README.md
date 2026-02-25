@@ -43,6 +43,12 @@ History was rewritten (2026-01-31) to remove an exposed secret from SECURITY_GUA
 
 To restore this exact state: `git checkout docs-governance-checkpoint-2026-01-31` or `git checkout production-ready-backup`.
 
+## Backend build (Q&A + checklist)
+
+| Doc | Purpose |
+|-----|---------|
+| [BACKEND_QA.md](./BACKEND_QA.md) | **All backend questions and answers in one place:** what’s already set up (n8n, Stripe, Notion), A–K build checklist (✅/🟡/❌), “Screen → Endpoint → DB → n8n” deliverable, and immediate alignment endpoints (approve, dispute, credits-held). |
+
 ## Reference (consolidated)
 
 | Doc | Purpose |

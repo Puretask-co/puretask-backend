@@ -4,18 +4,32 @@
 
 ## Quick Start (Fresh Database)
 
-For a **fresh Neon database**, run these files in order:
+**Option A — Single file (recommended):**
 
 ```bash
-# 1. Run the COMPLETE consolidated schema (creates all tables, functions, views)
-#    Includes: core, V2–V4, migrations 026–056 (AI assistant, gamification, etc.), hardening 901–906
-psql $DATABASE_URL -f DB/migrations/000_COMPLETE_CONSOLIDATED_SCHEMA.sql
+# Run the generated master (FIX + COMPLETE + views patch + 019 + 057–061)
+# Regenerate with: npm run db:generate:master-migration
+psql $DATABASE_URL -f DB/migrations/000_MASTER_MIGRATION.sql
 
-# 2. (Optional) Run the test seed data
+# (Optional) Test seed data
 psql $DATABASE_URL -f DB/migrations/000_SEED_TEST_DATA.sql
 ```
 
-That's it! Your database is ready. The consolidated schema includes migrations 001–056 and hardening 901–906.
+**Option B — Run files in order:**
+
+```bash
+psql $DATABASE_URL -f DB/migrations/000_COMPLETE_CONSOLIDATED_SCHEMA.sql
+psql $DATABASE_URL -f DB/migrations/000_COMPLETE_VIEWS_PATCH.sql
+psql $DATABASE_URL -f DB/migrations/019_payout_reconciliation_flags.sql
+psql $DATABASE_URL -f DB/migrations/057_pt_safety_reports.sql
+psql $DATABASE_URL -f DB/migrations/058_gamification_frontend_spec_tables.sql
+psql $DATABASE_URL -f DB/migrations/059_add_invoice_status_and_invoices.sql
+psql $DATABASE_URL -f DB/migrations/060_add_reviews_ai_worker_stripe_tables.sql
+psql $DATABASE_URL -f DB/migrations/061_add_cleaner_id_payout_misc_tables.sql
+# (Optional) 000_SEED_TEST_DATA.sql
+```
+
+See **docs/active/MASTER_MIGRATIONS.md** for full canonical order.
 
 ---
 
@@ -23,12 +37,15 @@ That's it! Your database is ready. The consolidated schema includes migrations 0
 
 | File | Purpose |
 |------|---------|
-| `000_COMPLETE_CONSOLIDATED_SCHEMA.sql` | **Complete schema** - migrations 001–056 + hardening 901–906 |
-| `000_CONSOLIDATED_SCHEMA.sql` | Legacy schema (001–019 only) |
-| `000_NEON_PATCH_test_db_align.sql` | **Schema alignment** - FKs, columns, enums for existing Neon DBs (test + production). Run via `npm run db:patch:production` for prod. |
+| `000_MASTER_MIGRATION.sql` | **Generated** single file for fresh DB (run `npm run db:generate:master-migration` to regenerate) |
+| `000_COMPLETE_CONSOLIDATED_SCHEMA.sql` | Full schema 001–056 + hardening 901–906 (part of master) |
+| `000_COMPLETE_VIEWS_PATCH.sql` | Views + one table missing from COMPLETE (part of master) |
+| `019_payout_reconciliation_flags.sql` … `061_*.sql` | Forward-only migrations after COMPLETE (part of master) |
+| `000_NEON_PATCH_test_db_align.sql` | Schema alignment for existing Neon DBs; run via `npm run db:patch:production` for prod |
 | `000_SEED_TEST_DATA.sql` | Test data for development |
-| `001_init.sql` → `025_...` | Historical incremental migrations (for reference) |
-| `bundle_reference/` | Gamification bundle SQL (reference only; do not run; applied via 043–056) |
+| `001_init.sql` → `061_*.sql` | Incremental migrations (reference; use COMPLETE + patch + 019 + 057–061 or master) |
+| `archive/` | **Copies** of legacy/reference files (same files also in root); do not run for new DBs |
+| `bundle_reference/` | Gamification bundle SQL (reference only; applied via 043–056 in COMPLETE) |
 
 ---
 

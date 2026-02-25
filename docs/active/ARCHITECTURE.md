@@ -104,6 +104,22 @@ Credits ledger is append-only; balance is derived. Invoice payment by credits cr
 
 ---
 
+## 3.4a Canonical job status (backend, frontend, n8n in sync)
+
+**Single source of truth:** Job status enum and allowed transitions live in one place so backend, frontend, and n8n stay aligned.
+
+| What | Where |
+|------|--------|
+| **Statuses** | `requested`, `accepted`, `on_my_way`, `in_progress`, `awaiting_approval`, `completed`, `disputed`, `cancelled` |
+| **Code** | `src/state/jobStateMachine.ts` (transitions, events, role permissions); `src/types/db.ts` (`JobStatus` type) |
+| **Constants / JSON** | `src/constants/jobStatus.ts` — exports `JOB_STATUSES`, `JOB_EVENT_TYPES`, `TRANSITIONS_MATRIX`, `EVENT_PERMISSIONS`, `JOB_STATUS_CANONICAL` (JSON-serializable for frontend or n8n) |
+
+**Events that drive transitions:** `job_created`, `job_accepted`, `cleaner_on_my_way`, `job_started`, `job_completed`, `client_approved`, `client_disputed`, `dispute_resolved_refund`, `dispute_resolved_no_refund`, `job_cancelled`. Terminal statuses (no further transitions): `completed`, `disputed`, `cancelled`.
+
+**Frontend/n8n:** Import the same status list and transition matrix from the backend repo (e.g. copy `JOB_STATUS_CANONICAL` or add a GET endpoint that returns it), or keep a shared constants package. Do not hardcode status strings elsewhere.
+
+---
+
 ## 3.5 Gamification canonical rules and key constants (source: bundle)
 
 **Locked product truths:** Levels never go down. Progress/rewards can pause if maintenance fails (level remains). Customers always choose cleaners. Boosts are ranking multipliers / early exposure (never guarantees). Goals give tangible rewards; leveling up itself is minimal. Anti-gaming enforced for login, messaging, photos.

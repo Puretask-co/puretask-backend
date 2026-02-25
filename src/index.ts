@@ -77,6 +77,8 @@ import usersRouter from "./routes/users";
 import trustAdapterRouter, { trustRootRouter } from "./routes/trustAdapter";
 import { bookingsStubRouter, cleanersRouter } from "./routes/dashboardStubs";
 import referralRouter from "./routes/referral";
+import uploadsRouter from "./routes/uploads";
+import configRouter from "./routes/config";
 
 // ============================================
 // Sentry is already initialized in instrument.ts (required at top of file)
@@ -302,6 +304,8 @@ apiRouter.use("/users", usersRouter);
 apiRouter.use("/bookings", bookingsStubRouter);
 apiRouter.use("/cleaners", cleanersRouter);
 apiRouter.use("/referral", referralRouter);
+apiRouter.use("/uploads", uploadsRouter);
+apiRouter.use("/config", configRouter);
 apiRouter.use(eventsRouter);
 
 // Trust spec exact paths at root (no /api): POST /credits/checkout, GET /cleaners/:id/reliability

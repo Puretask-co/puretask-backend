@@ -88,6 +88,19 @@ export interface JobDetailsPayout {
 }
 
 /**
+ * Credits-held and top-up fields for job details (client wallet context).
+ * Present when job has a client; derived from ledger + job.credit_amount.
+ */
+export interface JobDetailsCredits {
+  /** Credits held in escrow for this job (job.credit_amount). */
+  credits_held: number;
+  /** Client's current credit balance (SUM delta_credits from credit_ledger). */
+  balance_after_hold: number;
+  /** True when client balance < 0 (needs top-up for future use). */
+  top_up_required: boolean;
+}
+
+/**
  * Full response payload for GET /jobs/:jobId/details.
  */
 export interface JobDetailsResponse {
@@ -98,4 +111,6 @@ export interface JobDetailsResponse {
   ledgerEntries: CreditLedgerEntry[];
   paymentIntent: JobDetailsPaymentIntent | null;
   payout: JobDetailsPayout | null;
+  /** Credits context for client (held for this job, balance, top-up flag). Omitted if no client or credits disabled. */
+  credits?: JobDetailsCredits;
 }

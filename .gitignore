@@ -127,6 +127,11 @@ pnpm-lock.yaml
 # ============================================
 *.sqlite
 *.sqlite3
+
+# Schema dumps (db:dump:schema)
+prod.sql
+test.sql
+test_to_production_dump.sql
 *.db
 *.db-journal
 

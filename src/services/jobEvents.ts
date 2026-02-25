@@ -37,7 +37,7 @@ export async function logJobEvent(params: LogJobEventParams): Promise<void> {
 }
 
 /**
- * Get all events for a specific job
+ * Get all events for a specific job (newest first)
  */
 export async function getJobEventsForJob(jobId: string): Promise<JobEvent[]> {
   const result = await query<JobEvent>(
@@ -46,6 +46,23 @@ export async function getJobEventsForJob(jobId: string): Promise<JobEvent[]> {
       FROM job_events
       WHERE job_id = $1
       ORDER BY created_at DESC
+    `,
+    [jobId]
+  );
+
+  return result.rows;
+}
+
+/**
+ * Get job timeline events in chronological order (for stepper / client receipt)
+ */
+export async function getJobTimelineOrdered(jobId: string): Promise<JobEvent[]> {
+  const result = await query<JobEvent>(
+    `
+      SELECT *
+      FROM job_events
+      WHERE job_id = $1
+      ORDER BY created_at ASC
     `,
     [jobId]
   );

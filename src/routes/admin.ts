@@ -751,6 +751,18 @@ async function handleResolveDisputeById(req: AuthedRequest, res: Response): Prom
       message: `Dispute ${disputeId} resolved: ${resolution}`,
       details: { disputeId, resolution },
     });
+    const { logAdminAction } = await import("../lib/adminAuditLog");
+    await logAdminAction({
+      adminUserId: req.user!.id,
+      action: "dispute_resolved",
+      entityType: "dispute",
+      entityId: disputeId,
+      oldValues: { status: dispute.status },
+      newValues: { resolution, admin_notes: admin_notes ?? null },
+      reason: admin_notes ?? undefined,
+      ipAddress: req.ip ?? undefined,
+      userAgent: req.get("user-agent") ?? undefined,
+    });
     res.json({ success: true });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
@@ -785,6 +797,17 @@ async function handleResolveDisputeByJobId(req: AuthedRequest, res: Response): P
     const { resolution, admin_notes } = req.body;
     const adminId = req.user!.id;
     const dispute = await resolveDispute(jobId, { resolution, adminNotes: admin_notes }, adminId);
+    const { logAdminAction } = await import("../lib/adminAuditLog");
+    await logAdminAction({
+      adminUserId: adminId,
+      action: "dispute_resolved",
+      entityType: "dispute",
+      entityId: dispute?.id ?? jobId,
+      newValues: { resolution, admin_notes: admin_notes ?? null },
+      reason: admin_notes ?? undefined,
+      ipAddress: req.ip ?? undefined,
+      userAgent: req.get("user-agent") ?? undefined,
+    });
     res.json({ dispute });
   } catch (error) {
     const err = error as Error & { statusCode?: number };

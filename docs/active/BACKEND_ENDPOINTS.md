@@ -8,6 +8,16 @@ For Trust-Fintech integration details (auth, response contracts, roles, errors, 
 
 ---
 
+## Config (optional, public, no auth)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/config/job-status` | **Optional.** Canonical job statuses, events, transitions, event permissions. Response: `{ data: { statuses, events, transitions, eventPermissions } }`. Use so frontend/n8n stay in sync with backend. If the endpoint is missing or fails, the frontend should fall back to static constants (e.g. `src/constants/jobStatus.ts`). Frontend can implement `getJobStatusConfig()` (service) and `useJobStatusConfig()` (hook, e.g. 5 min stale) exposing `getLabel`, `canTransition`, `isTerminal`, `isFromServer`. |
+
+**Frontend integration:** See [FRONTEND_JOB_STATUS_CONFIG.md](./FRONTEND_JOB_STATUS_CONFIG.md) for the full contract (service, hook, fallback) and Product/alignment notes.
+
+---
+
 ## Auth
 
 | Method | Path | Description |
@@ -95,16 +105,28 @@ For Trust-Fintech integration details (auth, response contracts, roles, errors, 
 | POST | `/jobs/:id/rate` | Rate job |
 | POST | `/jobs/:id/transition` | State transition (e.g. accept) |
 | POST | `/jobs/:jobId/photos` | Add before/after photo (body: `type`: "before"\|"after", `photoUrl`: string). Cleaner only; use after presigned upload. |
+| POST | `/jobs/:jobId/photos/commit` | Record S3/R2 upload in DB (body: `key`, `kind`: "before"\|"after"\|"client_dispute", `contentType`, `bytes`, optional `publicUrl`). Emits timeline events when MIN_BEFORE_PHOTOS / MIN_AFTER_PHOTOS met. Cleaner for before/after; client for client_dispute. |
+| GET | `/jobs/:jobId/timeline` | Job events in chronological order (ASC) for stepper / client receipt. |
 
 ---
 
-## Tracking (check-in / check-out)
+## Uploads (S3/R2 signed URLs)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/uploads/sign` | Get signed PUT URL for job photo (body: `jobId`, `kind`: "before"\|"after"\|"client_dispute", `contentType`, `fileName`, `bytes`). Returns `putUrl`, `key`, `publicUrl`. Requires STORAGE_* env. |
+
+---
+
+## Tracking (check-in / check-out / approve / dispute)
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/tracking/:jobId` | Job tracking state |
 | POST | `/tracking/:jobId/check-in` | Check in (body: `location`: { latitude, longitude, accuracy? }, `beforePhotos`: string[], optional `accuracyM`, `source`: "device"\|"manual_override"). Cleaner only. |
 | POST | `/tracking/:jobId/check-out` | Check out (after photos, notes). Cleaner only. |
+| POST | `/tracking/:jobId/approve` | Client approves completed job, releases escrow; optional rating/tip. |
+| POST | `/tracking/:jobId/dispute` | Client disputes completed job (body: reason, description, etc.). |
 
 ---
 
