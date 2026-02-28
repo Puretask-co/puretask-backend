@@ -21,7 +21,13 @@ describe("Jobs Integration Tests", () => {
       role: "client",
     });
     clientToken = clientRes.body.token;
-    clientId = clientRes.body.user.id;
+    clientId = clientRes.body.user?.id ?? clientRes.body.user.id;
+
+    // Give client credits so job creation (escrow) succeeds
+    await query(
+      `INSERT INTO credit_ledger (user_id, delta_credits, reason) VALUES ($1, 200, 'adjustment')`,
+      [clientId]
+    );
 
     // Create test cleaner
     const cleanerEmail = `cleaner-${Date.now()}@example.com`;
@@ -31,13 +37,20 @@ describe("Jobs Integration Tests", () => {
       role: "cleaner",
     });
     cleanerToken = cleanerRes.body.token;
-    cleanerId = cleanerRes.body.user.id;
+    cleanerId = cleanerRes.body.user?.id ?? cleanerRes.body.user.id;
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await query("DELETE FROM jobs WHERE client_id = $1 OR cleaner_id = $1", [clientId]);
-    await query("DELETE FROM users WHERE id IN ($1, $2)", [clientId, cleanerId]);
+    try {
+      await query("DELETE FROM credit_ledger WHERE user_id IN ($1, $2)", [clientId, cleanerId]);
+      await query("DELETE FROM jobs WHERE client_id = $1 OR cleaner_id = $1", [clientId, cleanerId]);
+      await query("DELETE FROM cleaner_teams WHERE owner_cleaner_id = $1", [cleanerId]);
+      await query("DELETE FROM cleaner_profiles WHERE user_id IN ($1, $2)", [clientId, cleanerId]);
+      await query("DELETE FROM client_profiles WHERE user_id IN ($1, $2)", [clientId, cleanerId]);
+      await query("DELETE FROM users WHERE id IN ($1, $2)", [clientId, cleanerId]);
+    } catch (_) {
+      // Ignore FK/cleanup errors in teardown
+    }
   });
 
   describe("POST /jobs", () => {
@@ -53,12 +66,15 @@ describe("Jobs Integration Tests", () => {
       const response = await request(app)
         .post("/jobs")
         .set("Authorization", `Bearer ${clientToken}`)
+        .set("Idempotency-Key", `job-create-${Date.now()}`)
         .send(jobData)
         .expect(201);
 
-      expect(response.body).toHaveProperty("job");
-      expect(response.body.job.address).toBe(jobData.address);
-      expect(response.body.job.credit_amount).toBe(jobData.credit_amount);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.job).toBeDefined();
+      const job = response.body.data.job;
+      expect(job.address).toBe(jobData.address);
+      expect(job.credit_amount).toBe(jobData.credit_amount);
     });
 
     it("should reject job creation without authentication", async () => {
@@ -95,18 +111,22 @@ describe("Jobs Integration Tests", () => {
         .set("Authorization", `Bearer ${clientToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty("jobs");
-      expect(Array.isArray(response.body.jobs)).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.jobs).toBeDefined();
+      expect(Array.isArray(response.body.data.jobs)).toBe(true);
     });
 
-    it("should list available jobs for cleaner", async () => {
+    it("should list assigned and available jobs for cleaner", async () => {
       const response = await request(app)
-        .get("/jobs/available")
+        .get("/jobs")
         .set("Authorization", `Bearer ${cleanerToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty("jobs");
-      expect(Array.isArray(response.body.jobs)).toBe(true);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.assigned).toBeDefined();
+      expect(response.body.data.available).toBeDefined();
+      expect(Array.isArray(response.body.data.assigned)).toBe(true);
+      expect(Array.isArray(response.body.data.available)).toBe(true);
     });
   });
 });

@@ -20,7 +20,7 @@ vi.mock("../../config/env", () => ({
     SENDGRID_FROM_EMAIL: "noreply@puretask.com",
     TWILIO_ACCOUNT_SID: "test",
     TWILIO_AUTH_TOKEN: "test",
-    TWILIO_PHONE_NUMBER: "+15551234567",
+    TWILIO_FROM_NUMBER: "+15551234567",
     FRONTEND_URL: "https://app.puretask.com",
     N8N_API_KEY: "test-n8n-key",
     NODE_ENV: "test",

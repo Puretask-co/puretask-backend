@@ -57,6 +57,7 @@ To restore this exact state: `git checkout docs-governance-checkpoint-2026-01-31
 | [CI_CD_SETUP.md](./CI_CD_SETUP.md) | CI/CD pipelines, env vars, migrations in CI, deploy options |
 | [NOTIFICATIONS.md](./NOTIFICATIONS.md) | Notification system: sender flow, dedupe, templates, maturity |
 | [API_REFERENCE.md](./API_REFERENCE.md) | Swagger/OpenAPI access, spec comparison, exact endpoint list |
+| [BACKEND_UI_SPEC.md](./BACKEND_UI_SPEC.md) | **Backend → frontend UI:** what screens to build, what data to show, what actions to offer, and what states to handle (from the API) |
 | [CONSOLIDATION_GUIDE.md](./CONSOLIDATION_GUIDE.md) | Which docs were combined and how (synthesize, not concatenate) |
 | [MASTER_CHECKLIST_EXECUTION.md](./MASTER_CHECKLIST_EXECUTION.md) | **How to complete every task** in the V1–V5 Master Checklist: what each task does, why it matters, and how to do it (use with [MASTER_CHECKLIST.md](../versions/MASTER_CHECKLIST.md)). |
 | [PRIORITIZED_BACKLOG.md](../versions/PRIORITIZED_BACKLOG.md) | **Full consolidated TODO list** by priority: Critical (6), High (8), Medium (12), Low (10) — 36 items from repo + docs. |

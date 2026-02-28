@@ -221,7 +221,28 @@ Cash bonuses can be paused if the region budget cap is reached, cash rewards are
 
 ---
 
-## 6. Contacts and links
+## 6. API behaviour (idempotency & messaging)
+
+- **Idempotency-Key:** POST `/credits/checkout`, POST `/api/credits/checkout`, POST `/jobs`, POST `/payments/*`, and selected tracking routes read the `Idempotency-Key` header. Duplicate keys return the stored response (same status and body); no double charge or duplicate booking. Keys are stored in `idempotency_keys` (24h TTL). See `src/lib/idempotency.ts`.
+- **Socket rooms (job-scoped messaging):** Frontend emits `join_booking` / `leave_booking` with `{ bookingId: jobId }` (or plain string). Backend (`src/index.ts`) joins/leaves room `booking:${bookingId}` so messages can be scoped by job.
+
+### 6.1 Backend audit vs frontend contract (canonical)
+
+Run in **puretask-backend** to re-verify. Summary:
+
+| Audit item | Backend status |
+|------------|----------------|
+| **1. API contract** | `apiRouter` mounts `/jobs`, `/payments`, `/credits`, `/messages`, `/notifications`. Same routes at `/` and `/api/v1`. GET `/jobs/:jobId/details` exists. Trust adapter: `/api/credits/balance`, `/api/credits/ledger`, POST `/api/credits/checkout` with idempotency. |
+| **2. Job lifecycle** | `applyStatusTransition` + POST `/:jobId/transition`; `requireIdempotency` on POST `/jobs` and POST `/:jobId/transition`. Illegal transitions rejected in service. |
+| **3. Credit ledger** | `credit_ledger`, escrow/release/refund in `creditsService`; GET `/credits/balance`, `/credits/ledger`; GET `/api/credits/balance`, `/api/credits/ledger` (Trust shape). Integration tests cover credits flows. |
+| **4. Payment + idempotency** | `requireIdempotency` on payments routes. `wallet_topup` / `job_charge` / `purpose` in `paymentService` and `payment_intents`. |
+| **5. Messaging** | Socket: `join_booking` / `leave_booking` (accept string or `{ bookingId }`). `markMessagesAsRead`, `getUnreadCount`; GET `/messages/unread` and GET `/messages/unread-count` (alias); POST `/messages/job/:jobId/read`. |
+| **6. Workers** | `WORKER_SCHEDULES` in `src/workers/scheduler.ts`; `CRONS_ENQUEUE_ONLY`; `package.json` scripts `worker:scheduler`, `worker:durable-jobs`, etc. |
+| **7. Observability** | Sentry in `instrument.ts` + `setupExpressErrorHandler`. `helmet`, `securityHeaders`, `endpointRateLimiter` (or Redis). Error responses include `requestId` when set (requestContextMiddleware). |
+
+---
+
+## 7. Contacts and links
 
 - **Checklists:** [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md)
 - **Phase status:** [00-CRITICAL/PHASE_*_STATUS.md](./00-CRITICAL/)

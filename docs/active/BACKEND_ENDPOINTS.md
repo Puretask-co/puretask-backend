@@ -4,6 +4,8 @@ This document lists all REST API endpoints the PureTask frontend expects the bac
 
 For Trust-Fintech integration details (auth, response contracts, roles, errors, CORS), see [TRUST_BACKEND_INTEGRATION.md](./TRUST_BACKEND_INTEGRATION.md).
 
+**What UI to build from the backend:** See [BACKEND_UI_SPEC.md](./BACKEND_UI_SPEC.md) for screens, data to show, actions, and states (empty, 401, 403, 404, 501) derived from the API.
+
 **Implemented:** `GET /bookings/me` and `GET /cleaners/:cleanerId/reviews` return real data. See Bookings & Jobs and Cleaners below. Referral, job photos, cleaner schedule range, check-in optional fields, and admin resolve-dispute path are documented in their sections.
 
 ---

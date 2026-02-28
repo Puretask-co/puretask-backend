@@ -44,6 +44,8 @@
     "db:dump:schema": "node scripts/dump-schema-only-node.js",
     "db:dump:schema:full": "node scripts/dump-schema-only.js",
     "db:migrate:unify-test": "node scripts/run-unify-migrations-on-test.js",
+    "db:migrate:unify-prod": "node scripts/run-unify-migrations-on-prod.js",
+    "db:generate:master-migration": "node scripts/generate-master-migration.js",
     "db:generate:neon-uuid": "node scripts/generate-neon-uuid-bundle.js --output DB/neon/gamification_uuid.sql",
     "security:setup-hooks": "powershell -ExecutionPolicy Bypass -File scripts/setup-pre-commit.ps1",
     "worker:auto-cancel": "ts-node src/workers/v1-core/autoCancelJobs.ts",

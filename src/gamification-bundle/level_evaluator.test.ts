@@ -1,6 +1,6 @@
-import { evaluateLevels } from "../src/level_evaluator";
-import { InMemoryMetricProvider } from "../src/in_memory_metric_provider";
-import { GoalDefinition, LevelDefinition } from "../src/types";
+import { evaluateLevels } from "../lib/gamification/level_evaluator";
+import { InMemoryMetricProvider } from "../lib/gamification/inMemoryMetricProvider";
+import { GoalDefinition, LevelDefinition } from "../lib/gamification/types";
 
 const levels: LevelDefinition[] = [
   { level: 1, name: "L1", requirements: { core_require_all: true, stretch_required_count: 1, maintenance_require_all: true } },

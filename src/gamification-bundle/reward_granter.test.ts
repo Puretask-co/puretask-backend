@@ -1,5 +1,5 @@
-import { makeGrant, shouldGrant } from "../src/reward_granter";
-import { RewardDefinition, RewardGrant } from "../src/types";
+import { makeGrant, shouldGrant } from "../lib/gamification/reward_granter";
+import { RewardDefinition, RewardGrant } from "../lib/gamification/types";
 
 const tempReward: RewardDefinition = {
   id: "r1",

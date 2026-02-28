@@ -425,12 +425,14 @@ if (!isTestMode) {
   io.on("connection", (socket) => {
     logger.info("socket_connected", { socketId: socket.id });
 
-    socket.on("join_booking", (bookingId: string) => {
-      void socket.join(`booking:${bookingId}`);
+    socket.on("join_booking", (payload: string | { bookingId: string }) => {
+      const bookingId = typeof payload === "string" ? payload : payload?.bookingId;
+      if (bookingId) void socket.join(`booking:${bookingId}`);
     });
 
-    socket.on("leave_booking", (bookingId: string) => {
-      void socket.leave(`booking:${bookingId}`);
+    socket.on("leave_booking", (payload: string | { bookingId: string }) => {
+      const bookingId = typeof payload === "string" ? payload : payload?.bookingId;
+      if (bookingId) void socket.leave(`booking:${bookingId}`);
     });
 
     socket.on("disconnect", (reason: string) => {

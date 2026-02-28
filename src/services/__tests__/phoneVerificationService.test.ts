@@ -14,7 +14,7 @@ vi.mock("../../config/env", () => ({
   env: {
     TWILIO_ACCOUNT_SID: "test-sid",
     TWILIO_AUTH_TOKEN: "test-token",
-    TWILIO_PHONE_NUMBER: "+1234567890",
+    TWILIO_FROM_NUMBER: "+1234567890",
     NODE_ENV: "test",
   },
 }));

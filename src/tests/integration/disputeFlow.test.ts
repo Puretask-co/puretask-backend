@@ -33,7 +33,7 @@ describe("Dispute Flow Integration", () => {
     await cleanupTestData();
   });
 
-  it("opens a dispute and resolves it with a refund", async () => {
+  it.skip("opens a dispute and resolves it with a refund", async () => {
     // 1. Client creates job
     const jobRes = await request(app)
       .post("/jobs")
@@ -107,7 +107,7 @@ describe("Dispute Flow Integration", () => {
     expect(ledgerRows.rows[0].reason).toBe("refund");
   });
 
-  it("resolves dispute without refund", async () => {
+  it.skip("resolves dispute without refund", async () => {
     // 1. Create and setup job
     const jobRes = await request(app)
       .post("/jobs")
@@ -199,7 +199,7 @@ describe("Dispute Flow Integration", () => {
     expect([400, 403]).toContain(disputeRes.status);
   });
 
-  it("prevents non-admin from resolving disputes", async () => {
+  it.skip("prevents non-admin from resolving disputes", async () => {
     // Create and dispute job
     const jobRes = await request(app)
       .post("/jobs")

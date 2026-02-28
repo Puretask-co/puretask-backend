@@ -11,6 +11,7 @@ import {
   authedHandler,
 } from "../middleware/authCanonical";
 import { requireOwnership } from "../lib/ownership";
+import { requireIdempotency } from "../lib/idempotency";
 import { validateQuery, validateBody } from "../lib/validation";
 import { logger } from "../lib/logger";
 import { getSocketIO } from "../lib/socket";
@@ -175,6 +176,7 @@ router.post(
   "/credits/checkout",
   requireAuth,
   requireRole("client"),
+  requireIdempotency,
   validateBody(checkoutBodySchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {
@@ -650,6 +652,7 @@ trustRootRouter.post(
   "/credits/checkout",
   requireAuth,
   requireRole("client"),
+  requireIdempotency,
   validateBody(checkoutBodySchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {

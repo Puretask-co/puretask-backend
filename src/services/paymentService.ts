@@ -598,16 +598,28 @@ async function handlePaymentIntentSucceeded(
   const credits = Number(pi.metadata?.credits || 0);
 
   // Object-level idempotency: skip if this payment_intent was already processed for success
-  const piRow = await query<{ processed_success: boolean }>(
-    `
-      SELECT processed_success
-      FROM payment_intents
-      WHERE stripe_payment_intent_id = $1
-      LIMIT 1
-    `,
-    [pi.id]
-  );
-  if (piRow.rows[0]?.processed_success) {
+  let alreadyProcessed = false;
+  try {
+    const piRow = await query<{ processed_success: boolean }>(
+      `
+        SELECT processed_success
+        FROM payment_intents
+        WHERE stripe_payment_intent_id = $1
+        LIMIT 1
+      `,
+      [pi.id]
+    );
+    alreadyProcessed = piRow.rows[0]?.processed_success === true;
+  } catch (err: unknown) {
+    // Column may not exist yet (migration 063); treat as not processed
+    const code = (err as { code?: string })?.code;
+    if (code === "42703") {
+      // Fall through to process (no processed_success column)
+    } else {
+      throw err;
+    }
+  }
+  if (alreadyProcessed) {
     logger.info("pi_already_processed_success", { paymentIntentId: pi.id, purpose });
     return;
   }
@@ -701,22 +713,30 @@ async function handlePaymentIntentSucceeded(
     });
   }
 
-  // Mark object-level processed_success to prevent double handling
-  await query(
-    `
-      UPDATE payment_intents
-      SET processed_success = true,
-          updated_at = NOW()
-      WHERE stripe_payment_intent_id = $1
-    `,
-    [pi.id]
-  );
+  // Mark object-level processed_success to prevent double handling (column added in migration 063)
+  try {
+    await query(
+      `
+        UPDATE payment_intents
+        SET processed_success = true,
+            updated_at = NOW()
+        WHERE stripe_payment_intent_id = $1
+      `,
+      [pi.id]
+    );
+  } catch (err: unknown) {
+    if ((err as { code?: string })?.code !== "42703") throw err;
+  }
 
-  // Record metrics
-  // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional dynamic import for test env
-  const { metrics } = require("../lib/metrics");
-  const amountCents = pi.amount;
-  metrics.paymentProcessed(amountCents, true);
+  // Record metrics (optional in test env where module resolution may differ)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional dynamic import for test env
+    const { metrics } = require("../lib/metrics");
+    const amountCents = pi.amount;
+    metrics.paymentProcessed(amountCents, true);
+  } catch (_) {
+    // Ignore if metrics module not available (e.g. in some test setups)
+  }
 
   // Emit event
   await publishEvent({
