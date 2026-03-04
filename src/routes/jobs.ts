@@ -862,6 +862,7 @@ const transitionJobSchema = z.object({
 jobsRouter.post(
   "/:jobId/transition",
   requireOwnership("job", "jobId"),
+  requireIdempotency,
   asyncHandler(async (req: AuthedRequest, res) => {
     const { jobId } = req.params;
     const body = transitionJobSchema.parse(req.body);

@@ -2,7 +2,7 @@
 // Jobs service matching 001_init.sql schema
 // Integrates with credits service for escrow/release and payouts service
 
-import { query } from "../db/client";
+import { query, withTransaction } from "../db/client";
 import { JobEventType, validateTransition } from "../state/jobStateMachine";
 import { publishEvent } from "../lib/events";
 import { getJobEventsForJob } from "./jobEvents";
@@ -10,6 +10,7 @@ import {
   escrowCreditsWithTransaction,
   releaseJobCreditsToCleaner,
   refundJobCreditsToClient,
+  addLedgerEntry,
 } from "./creditsService";
 import { recordEarningsForCompletedJob } from "./payoutsService";
 import { logger } from "../lib/logger";
@@ -405,6 +406,12 @@ export async function applyStatusTransition(options: {
 
   const nextStatus = validation.nextStatus;
 
+  // R5: Idempotent — if already in target status, no-op (same event retried)
+  if (job.status === nextStatus) {
+    logger.info("job_transition_idempotent_skip", { jobId, status: job.status, eventType });
+    return job;
+  }
+
   // Enforce preconditions for certain transitions
   if (eventType === "job_started") {
     // Require check-in payload coordinates if desired; here we only enforce role/state via state machine.
@@ -551,22 +558,69 @@ export async function applyStatusTransition(options: {
     }
   }
 
-  // Execute UPDATE
+  // R6: Guarded UPDATE — WHERE status = current status so concurrent accept/cancel races fail safely
   const updateQuery = `
     UPDATE jobs
     SET ${updateFields.join(", ")}
-    WHERE id = $1
+    WHERE id = $1 AND status = $${paramIndex}
     RETURNING *
   `;
+  updateParams.push(job.status);
 
-  const result = await query<Job>(updateQuery, updateParams);
-  const updated = result.rows[0];
+  // Audit R4: Run status update + credit/payout in one transaction for completed/cancelled
+  const needsAtomicCredits =
+    (nextStatus === "cancelled" && job.credit_amount > 0) ||
+    (nextStatus === "completed" && job.cleaner_id) ||
+    eventType === "dispute_resolved_refund";
 
-  if (!updated) {
-    throw new Error("Job not found");
+  let updated: Job;
+  if (needsAtomicCredits) {
+    updated = await withTransaction(async (client) => {
+      const result = await client.query<Job>(updateQuery, updateParams);
+      const row = result.rows[0];
+      if (!row) {
+        // R6: Guarded UPDATE matched 0 rows — status changed by another request (race)
+        throw Object.assign(new Error("Job status was updated by another request; please refresh and retry."), {
+          statusCode: 409,
+          code: "CONCURRENT_UPDATE",
+        });
+      }
+
+      if (nextStatus === "cancelled" && job.credit_amount > 0) {
+        await refundJobCreditsToClient(job.client_id, job.id, job.credit_amount, client);
+        logger.info("credits_refunded_on_cancel", { jobId, clientId: job.client_id, amount: job.credit_amount });
+      }
+      if (nextStatus === "completed" && job.cleaner_id) {
+        await releaseJobCreditsToCleaner(job.cleaner_id, job.id, job.credit_amount, client);
+        logger.info("credits_released_to_cleaner", { jobId, cleanerId: job.cleaner_id, amount: job.credit_amount });
+        await recordEarningsForCompletedJob(row, client);
+        logger.info("payout_recorded", { jobId, cleanerId: job.cleaner_id, creditAmount: job.credit_amount });
+        const tip = Number(payload?.tip ?? 0);
+        if (tip > 0) {
+          await addLedgerEntry(
+            { userId: row.cleaner_id!, jobId: row.id, deltaCredits: tip, reason: "adjustment" },
+            client
+          );
+        }
+      }
+      if (eventType === "dispute_resolved_refund") {
+        await refundJobCreditsToClient(job.client_id, job.id, job.credit_amount, client);
+        logger.info("dispute_refunded", { jobId, clientId: job.client_id, amount: job.credit_amount });
+      }
+      return row;
+    });
+  } else {
+    const result = await query<Job>(updateQuery, updateParams);
+    updated = result.rows[0];
+    if (!updated) {
+      throw Object.assign(new Error("Job status was updated by another request; please refresh and retry."), {
+        statusCode: 409,
+        code: "CONCURRENT_UPDATE",
+      });
+    }
   }
 
-  // Log event
+  // Log event (after commit so n8n doesn't hold transaction)
   await publishEvent({
     jobId,
     actorType,
@@ -575,72 +629,19 @@ export async function applyStatusTransition(options: {
     payload,
   });
 
-  // ============================================
-  // Handle credit operations based on status transitions
-  // ============================================
-
-  // On cancellation: refund escrowed credits to client
-  if (nextStatus === "cancelled" && job.credit_amount > 0) {
-    await refundJobCreditsToClient(job.client_id, job.id, job.credit_amount);
-    logger.info("credits_refunded_on_cancel", {
-      jobId,
-      clientId: job.client_id,
-      amount: job.credit_amount,
-    });
-  }
-
-  // On completion (client_approved): release credits to cleaner + create payout + update reliability
+  // Non-critical follow-ups (outside transaction)
   if (nextStatus === "completed" && job.cleaner_id) {
-    // 1) Release credits to cleaner's balance (ledger entry)
-    await releaseJobCreditsToCleaner(job.cleaner_id, job.id, job.credit_amount);
-    logger.info("credits_released_to_cleaner", {
-      jobId,
-      cleanerId: job.cleaner_id,
-      amount: job.credit_amount,
-    });
-
-    // 2) Update cleaner reliability score
     try {
       const { updateCleanerReliability } = await import("./reliabilityService");
-      await updateCleanerReliability(job.cleaner_id);
+      await updateCleanerReliability(updated.cleaner_id!);
     } catch (err) {
-      logger.error("reliability_update_failed", {
-        cleanerId: job.cleaner_id,
-        error: (err as Error).message,
-      });
+      logger.error("reliability_update_failed", { cleanerId: updated.cleaner_id, error: (err as Error).message });
     }
-
-    // 2b) Check level goals (async, non-critical)
-    if (job.cleaner_id) {
-      import("./cleanerLevelService")
-        .then(({ checkAndProcessGoals }) => checkAndProcessGoals(job.cleaner_id!))
-        .catch((err) =>
-          logger.error("level_goals_check_failed", {
-            cleanerId: job.cleaner_id,
-            jobId,
-            error: (err as Error).message,
-          })
-        );
-    }
-
-    // 3) Create pending payout record (for weekly Stripe transfer)
-    await recordEarningsForCompletedJob(updated);
-    logger.info("payout_recorded", {
-      jobId,
-      cleanerId: job.cleaner_id,
-      creditAmount: job.credit_amount,
-    });
-  }
-
-  // On dispute resolution with refund
-  if (eventType === "dispute_resolved_refund") {
-    // Full refund to client
-    await refundJobCreditsToClient(job.client_id, job.id, job.credit_amount);
-    logger.info("dispute_refunded", {
-      jobId,
-      clientId: job.client_id,
-      amount: job.credit_amount,
-    });
+    void import("./cleanerLevelService")
+      .then(({ checkAndProcessGoals }) => checkAndProcessGoals(updated.cleaner_id!))
+      .catch((err) =>
+        logger.error("level_goals_check_failed", { cleanerId: updated.cleaner_id, jobId, error: (err as Error).message })
+      );
   }
 
   logger.info("job_status_changed", {

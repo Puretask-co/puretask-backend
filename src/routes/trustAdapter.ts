@@ -36,6 +36,7 @@ const router = Router();
 
 const reasonToTrustType: Record<CreditReason, string> = {
   purchase: "deposit",
+  wallet_topup: "deposit",
   subscription_credit: "deposit",
   job_escrow: "spend",
   job_release: "credit",

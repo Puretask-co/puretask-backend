@@ -28,8 +28,10 @@ export type PayoutStatus = "pending" | "paid" | "failed";
 
 export type DisputeStatus = "open" | "resolved_refund" | "resolved_no_refund";
 
+/** Matches DB enum credit_reason (audit R8). wallet_topup = legacy/Stripe; subscription_credit/invoice_payment = ledger reasons. */
 export type CreditReason =
   | "purchase"
+  | "wallet_topup"
   | "subscription_credit"
   | "job_escrow"
   | "job_release"

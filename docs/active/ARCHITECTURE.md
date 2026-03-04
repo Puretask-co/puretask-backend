@@ -29,6 +29,21 @@
 
 **Rule:** Routes do not talk to the DB directly; they call services. Do not import from `src/db/client` or use `query` in route files. Validation uses Zod and `validateBody` / `validateQuery` / `validateParams` from `src/lib/validation.ts`. Pagination: use `parsePagination` from `src/lib/pagination.ts` for list endpoints. Ownership: use `requireOwnership(resourceType, paramName)` from `src/lib/ownership.ts` for any route that accesses a resource by ID (job, payout, invoice, photo, property); admins bypass automatically.
 
+### 2.1 Authorization and ownership matrix (audit AuthZ)
+
+| Resource   | Who can access | Enforced by | Notes |
+|-----------|----------------|-------------|--------|
+| **Job**   | Client (owner), cleaner (assigned or status=requested), admin | `requireOwnership("job", "jobId")` in jobs, tracking, messages, photos, assignment, stripe pay | `src/lib/ownership.ts` ensureOwnership("job"): client_id / cleaner_id / status=requested |
+| **Payout**| Cleaner (owner), admin | `requireOwnership("payout", …)` where used | cleaner_id match |
+| **Invoice** | Client (owner), cleaner (owner), admin | `requireOwnership("invoice", "id")` in trustAdapter, clientInvoices, cleanerPortal | client_id or cleaner_id |
+| **Photo**  | Owner of job the photo belongs to | `requireOwnership("photo", "photoId")` or job-scoped routes | Job ownership implies photo access |
+| **Property** | Client (owner), admin | `requireOwnership("property", "id")` in v2, clientEnhanced | client_id |
+| **User**   | Self, admin | Profile routes; requireAuth + self or admin | user id match |
+| **Credits** | Authenticated client (own balance/ledger) | requireAuth + requireClient or requireRole on credits/payments/trust | Trust adapter: requireRole("client") |
+| **Admin** | requireAdmin / requireSupportRole | adminRouter and sub-routers | JWT role |
+
+Webhooks (Stripe, n8n) use signature or secret verification only; no user ownership. Regression tests: `src/tests/integration/authzRegression.test.ts` (unauthenticated → 401; wrong-owner job → 403).
+
 ---
 
 ## 3. Key flows
@@ -173,6 +188,50 @@ Credits ledger is append-only; balance is derived. Invoice payment by credits cr
 - **Pagination:** `parsePagination(req)` and `formatPaginatedResponse` in `src/lib/pagination.ts`; apply to admin list endpoints. Cursor-based pagination for very large lists is a future enhancement.
 - **Admin RBAC:** Roles in use: requireAdmin, requireSupportRole, requireFinanceRole, requireDisputeResolveRole. Sensitive actions require `requireAuditReason` (X-Audit-Reason or body.reason). See RUNBOOK § 3.4.
 - **Ops dashboard:** Unified view for disputes, webhooks, risk, and system health.
+
+---
+
+## 5. Strict analysis (current backend)
+
+Evidence-based audit of the codebase as of the last full review. Use this to prioritize fixes and align with the target layering.
+
+### 5.1 What is in good shape
+
+| Area | Evidence |
+|------|----------|
+| **Stack & runtime** | Node 20+, TypeScript, Express. Single entry `src/index.ts`; Sentry init before other imports in non-test. |
+| **Env validation** | `src/config/env.ts`: required vars (DATABASE_URL, JWT_SECRET, STRIPE_*, N8N_WEBHOOK_SECRET) throw at startup. Optional vars have defaults. |
+| **DB access** | Single pool in `src/db/client.ts`; `query(text, params)` is parameterized (no string interpolation in SQL). `withTransaction` for multi-step work. Slow-query log over threshold. |
+| **Security baseline** | Helmet, custom security headers, CORS, body sanitization, trust proxy. Rate limiting (in-memory or Redis). Idempotency on jobs, payments, credits checkout. |
+| **Auth (majority)** | Most routes use `src/middleware/authCanonical.ts` (requireAuth, requireRole, requireAdmin). JWT verification with optional token_version and invalidated_tokens check. |
+| **Error contract** | `src/lib/errors.ts`: ErrorCode enum, AppError, sendError. Global error handler and 404 attach `requestId` when set. |
+| **Observability** | requestContextMiddleware (requestId/correlationId), logger with context, Sentry setupExpressErrorHandler, metrics.apiRequest/errorOccurred. |
+| **API surface** | Routes mounted at `/` and `/api/v1`. Trust adapter at `/api`. Health, status, Stripe webhook, credits, jobs, messages, notifications, etc. Documented in RUNBOOK §6.1. |
+| **Workers** | Scheduler with WORKER_SCHEDULES; CRONS_ENQUEUE_ONLY + durable_jobs; package.json worker:* scripts. |
+| **Tests** | Vitest; 75 test files, 600+ tests (integration, smoke, unit). Idempotency, job lifecycle, credits, Stripe, auth covered. |
+
+### 5.2 Violations and risks
+
+| Issue | Severity | Evidence | Recommendation |
+|-------|----------|----------|----------------|
+| **Routes calling DB directly** | High | ARCHITECTURE §2 says "Routes do not talk to the DB". Many route files import `query` from `../db/client` and call it (e.g. jobs, admin, gamification, trustAdapter, cleanerOnboarding, client, payments, search, stripe, health). | Move all `query`/`withTransaction` usage from routes into services or a thin repo layer; routes should only call services and return responses. |
+| **Dual auth middleware** | Medium | `authCanonical` is canonical; `jwtAuth` is "backwards compatibility". `gamification.ts` mixes both (requireAuth from authCanonical, requireRole from jwtAuth). `manager.ts` and `analytics.ts` use only jwtAuth. | Standardize on authCanonical everywhere; migrate jwtAuth usages and deprecate jwtAuth. |
+| **Migration complexity** | Medium | 100+ SQL files: 000_MASTER, 000_COMPLETE_CONSOLIDATED, 000_CONSOLIDATED, incremental 001–063, hardening 9xx, archive. Order and "which to run" vary by env. | Document a single recommended path (e.g. fresh vs existing DB) in DB/migrations/README.md; consider folding incremental into a single maintained schema for new deploys. |
+| **Lint warning debt** | Low | ESLint reports 1600+ warnings (no-restricted-syntax for raw SQL strings, no-explicit-any, no-console, etc.), 0 errors. | Tackle in batches: enable stricter rules in new code; fix high-traffic paths first; add pre-commit or CI gate for new violations. |
+| **Duplicate gamification logic** | Low | `src/lib/gamification/` (goal_evaluator, level_evaluator, reward_granter) and `src/gamification-bundle/` (parallel implementations). Bundle tests now import from lib. | Treat lib/gamification as canonical; remove or clearly mark bundle as legacy/adapter-only. |
+| **Skipped / flaky tests** | Low | A few tests are it.skip (dispute flow, v4 risk, onboarding GET progress). | Un-skip when underlying behavior is fixed or stabilize with proper mocks; avoid leaving skips without a ticket. |
+
+### 5.3 Consistency checks
+
+- **Response shape:** Mixed. Many routes return `res.json({ data: ... })` or `res.json({ ... })`; some return `{ error: { code, message } }`. Error handler and sendError standardize error shape; success shapes are not fully standardized (e.g. list endpoints: some `data.jobs`, some `jobs`).
+- **Validation:** Zod + validateBody/validateQuery used in many routes; some handlers still parse manually or lack validation.
+- **Pagination:** parsePagination/formatPaginatedResponse exist; not applied to all list endpoints.
+
+### 5.4 Summary verdict
+
+- **Production readiness:** The backend is deployable and used in production: auth, payments, credits, workers, and observability are in place. Critical paths (job lifecycle, Stripe, idempotency) are tested and documented.
+- **Technical debt:** The main structural debt is **routes talking to the DB** and **two auth stacks**. Migration and lint debt are manageable but should be tracked.
+- **Next steps (priority):** (1) Move DB access out of route files into services. (2) Standardize on authCanonical and remove jwtAuth from new code. (3) Document migration strategy and reduce schema file sprawl. (4) Gradually reduce lint warnings and align response shapes on new endpoints.
 
 ---
 

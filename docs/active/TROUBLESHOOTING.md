@@ -8,6 +8,10 @@
 
 ## Common Issues and Solutions
 
+### Crash / partial state (audit R13)
+- **Job completion and escrow:** Status UPDATE, credit release/refund, and payout are done in a single transaction in `applyStatusTransition` (R4). If the process crashes after commit, job and ledger are consistent; if it crashes before commit, nothing is applied.
+- **Check-in twice:** The state machine does not allow `job_started` from `in_progress`; the second check-in returns 400 BAD_TRANSITION. Integration test: v1Hardening "R13 Try-to-break".
+
 ## Server Won't Start
 
 ### Symptoms

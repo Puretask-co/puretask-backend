@@ -37,7 +37,7 @@ PRODUCTION_DATABASE_URL="..." npm run db:verify:production
 
 ### 1.2 Critical-flow tests (integration / E2E)
 
-- `src/tests/integration/jobLifecycle.test.ts` — Full job flow (create → accept → start → complete → approve; cancellation; dispute).
+- **Critical path E2E (create → accept → complete → approve):** `src/tests/integration/jobLifecycle.test.ts` — Full job flow; cancellation; dispute. Same flow in smoke: `src/tests/smoke/jobLifecycle.test.ts`. Run before release to confirm lifecycle and credits.
 - `src/tests/smoke/*` — Smoke tests for jobs, messages, credits, events.
 - Run: `npm run test:integration` and `npm run test:smoke`.
 
@@ -50,7 +50,13 @@ PRODUCTION_DATABASE_URL="..." npm run db:verify:production
 
 **Production recommendation (Section 6):** Set `CRONS_ENQUEUE_ONLY=true` in production so crons only enqueue; run `npm run worker:durable-jobs:loop` (or equivalent) as a separate process. This avoids long-running work in the cron process and uses the durable job table for retries and dead-letter handling.
 
-**Scheduled workers** (from `src/workers/scheduler.ts`): auto-cancel (*/5 min), retry-notifications (*/10), webhook-retry (*/5), lock-recovery (*/15), auto-expire (hourly), kpi-daily (1 AM), nightly-scores (2 AM), goal-checker (2 AM), subscription-jobs (2 AM), reliability-recalc (3 AM), cleaning-scores (3 AM), backup-daily (3 AM), credit-economy (4 AM), photo-cleanup (5 AM), onboarding-reminders (*/6 h), payout-retry (*/30), payout-reconciliation (6 AM), payout-weekly (Sun midnight), expire-boosts, weekly-summary, job-reminders, no-show-detection, governor-metrics. See `WORKER_SCHEDULES` in scheduler.ts for full list.
+**Scheduled workers** (from `src/workers/scheduler.ts`): auto-cancel (*/5 min), retry-notifications (*/10), webhook-retry (*/5), lock-recovery (*/15), auto-expire (hourly), idempotency-cleanup (hourly), kpi-daily (1 AM), nightly-scores (2 AM), goal-checker (2 AM), subscription-jobs (2 AM), reliability-recalc (3 AM), cleaning-scores (3 AM), backup-daily (3 AM), credit-economy (4 AM), photo-cleanup (5 AM), onboarding-reminders (*/6 h), payout-retry (*/30), payout-reconciliation (6 AM), payout-weekly (Sun midnight), expire-boosts, weekly-summary, job-reminders, no-show-detection, governor-metrics. See `WORKER_SCHEDULES` in scheduler.ts for full list.
+
+### 1.4 Idempotency keys TTL (audit R11)
+
+Table `idempotency_keys` is cleaned by function `cleanup_old_idempotency_keys()` (deletes rows older than 24 hours). The function is defined in `000_MASTER_MIGRATION.sql`. **Scheduled:** worker `idempotency-cleanup` runs hourly via `WORKER_SCHEDULES` in `src/workers/scheduler.ts`; runner: `node dist/workers/scheduler.js idempotency-cleanup` or use internal cron when enabled.
+
+**Daily/weekly ops check:** Verify idempotency-cleanup is running (e.g. in logs: `idempotency_cleanup_completed` or `scheduled_worker_completed` for `idempotency-cleanup`). Optionally: `SELECT COUNT(*) FROM idempotency_keys` — should stay bounded (e.g. not growing without limit if cleanup runs). If count grows unbounded, run `SELECT cleanup_old_idempotency_keys();` manually and confirm the scheduler process is up.
 
 ---
 
@@ -66,7 +72,7 @@ PRODUCTION_DATABASE_URL="..." npm run db:verify:production
 
 - **Secrets exposure:** [SECURITY_INCIDENT_RESPONSE.md](./00-CRITICAL/SECURITY_INCIDENT_RESPONSE.md) and [PHASE_1_USER_RUNBOOK.md](./00-CRITICAL/PHASE_1_USER_RUNBOOK.md) — rotate, invalidate, purge history, verify.
 - **Outage:** Check health endpoint; logs (requestId); DB connectivity; rate limits; Stripe/webhook status.
-- **Payment/webhook issues:** [SECTION_04_STRIPE_WEBHOOKS.md](./sections/SECTION_04_STRIPE_WEBHOOKS.md); idempotency via `webhook_events`; no double-processing.
+- **Payment/webhook issues:** [SECTION_04_STRIPE_WEBHOOKS.md](./sections/SECTION_04_STRIPE_WEBHOOKS.md). **Stripe webhook (dedupe, retries, crash safety):** (1) Dedupe: intake writes to `webhook_events` with `ON CONFLICT (provider, event_id) DO NOTHING`; `handleStripeEvent` uses `stripe_events_processed` (event_id + object_id) so duplicate deliveries are no-op. (2) Retries: on processing failure we set `webhook_events.processing_status = 'failed'` and call `queueWebhookForRetry`; worker `webhook-retry` (every 5 min) processes `webhook_failures` with exponential backoff. (3) Crash safety: event is stored before processing; if the process crashes after handling, retry will call `handleStripeEvent` again but stripe_events_processed makes it idempotent.
 
 ### 3.1 Incident runbook (Section 14)
 

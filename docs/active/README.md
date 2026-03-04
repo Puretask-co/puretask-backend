@@ -49,6 +49,15 @@ To restore this exact state: `git checkout docs-governance-checkpoint-2026-01-31
 |-----|---------|
 | [BACKEND_QA.md](./BACKEND_QA.md) | **All backend questions and answers in one place:** what’s already set up (n8n, Stripe, Notion), A–K build checklist (✅/🟡/❌), “Screen → Endpoint → DB → n8n” deliverable, and immediate alignment endpoints (approve, dispute, credits-held). |
 
+## Audit / PR review
+
+| Doc | Purpose |
+|-----|---------|
+| [PR_AUDIT_RUBRIC.md](./PR_AUDIT_RUBRIC.md) | PR audit checklist (15 sections); evidence key Verified/Observed; top-3 risks; summary. |
+| [AUDIT_TICKETS.md](./AUDIT_TICKETS.md) | Tickets for every Bug and high-priority Risk from the rubric (create issues from this list). |
+| [SYSTEM_INVENTORY_EVIDENCE.md](./SYSTEM_INVENTORY_EVIDENCE.md) | Pre-audit system inventory (routes, services, schema). |
+| [EVIDENCE_MAP_AUDIT.md](./EVIDENCE_MAP_AUDIT.md) | Evidence map (where to check, current answer, fix). |
+
 ## Reference (consolidated)
 
 | Doc | Purpose |

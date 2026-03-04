@@ -10,6 +10,22 @@ For Trust-Fintech integration details (auth, response contracts, roles, errors, 
 
 ---
 
+## Idempotency-Key (audit R12)
+
+For safe retries and to avoid double charges or duplicate state, send a unique **`Idempotency-Key`** header (e.g. UUID or `action-userId-timestamp`) on these endpoints. Same key + same body returns the stored response; same key + different body returns 409. Keys are scoped by key only (not by endpoint); use one key per logical operation. TTL 24h; cleanup runs hourly.
+
+| Method | Path | Notes |
+|--------|------|-------|
+| POST | `/jobs` | Create job |
+| POST | `/jobs/:jobId/pay` | Create payment intent for job |
+| POST | `/jobs/:jobId/transition` | Accept, cancel, complete, approve (lifecycle) |
+| POST | `/tracking/:jobId/approve` | Client approve (rating, tip, feedback) |
+| POST | `/payments/credits` | Buy credits (wallet top-up) |
+| POST | `/credits/checkout` | Checkout session for credits |
+| POST | Trust: `/api/credits/buy` (or equivalent) | Trust adapter buy credits |
+
+---
+
 ## Config (optional, public, no auth)
 
 | Method | Path | Description |

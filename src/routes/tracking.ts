@@ -16,7 +16,6 @@ import {
   checkIn,
   checkOut,
   updateCleanerLocation,
-  approveJob,
   disputeJob,
 } from "../services/jobTrackingService";
 
@@ -479,13 +478,15 @@ trackingRouter.post(
         return res.status(403).json({ error: { code: "FORBIDDEN", message: "Clients only" } });
       }
 
-      await approveJob(
-        req.params.jobId,
-        req.user.id,
-        req.body.rating,
-        req.body.tip,
-        req.body.feedback
-      );
+      // B2/R2: Single lifecycle path — use state machine instead of tracking direct UPDATE
+      const { applyStatusTransition } = await import("../services/jobsService");
+      await applyStatusTransition({
+        jobId: req.params.jobId,
+        eventType: "client_approved",
+        payload: { rating: req.body.rating, tip: req.body.tip, feedback: req.body.feedback },
+        requesterId: req.user.id,
+        role: "client",
+      });
       sendSuccess(res, { success: true, status: "completed" });
     } catch (error) {
       const err = error as Error & { statusCode?: number };
