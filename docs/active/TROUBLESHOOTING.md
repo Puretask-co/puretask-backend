@@ -8,6 +8,10 @@
 
 ## Common Issues and Solutions
 
+### Crash / partial state (audit R13)
+- **Job completion and escrow:** Status UPDATE, credit release/refund, and payout are done in a single transaction in `applyStatusTransition` (R4). If the process crashes after commit, job and ledger are consistent; if it crashes before commit, nothing is applied.
+- **Check-in twice:** The state machine does not allow `job_started` from `in_progress`; the second check-in returns 400 BAD_TRANSITION. Integration test: v1Hardening "R13 Try-to-break".
+
 ## Server Won't Start
 
 ### Symptoms
@@ -54,15 +58,40 @@ echo $DATABASE_URL
 - Connection timeout errors
 - "Connection refused" errors
 - SSL errors
+- "Missing required environment variable: DATABASE_URL" on startup
 
-### Solutions
+### Why the DB might not be working (Neon)
+
+The app reads **DATABASE_URL** from a **`.env`** file in the **repo root**. That file is not in git (it’s in `.gitignore`) so you must create it and add your Neon connection string yourself.
+
+1. **Create or edit `.env` in the repo root** (same folder as `package.json`).
+2. **Add your Neon connection string** on a single line:
+   ```bash
+   DATABASE_URL=postgresql://user:password@ep-xxx.region.aws.neon.tech/neondb?sslmode=require
+   ```
+   Get it from Neon: Dashboard → your project → **Connection string** (choose “Node.js” or copy the URI). **Neon requires SSL**, so the URL must end with `?sslmode=require` (or include it if there are other query params).
+3. **Run from the repo root** when you start the app (`npm run dev` or `npm start`). If you run from another directory, `.env` may not be loaded.
+4. **Verify:** Run `npm run db:check`. It will report whether DATABASE_URL is set and if the database accepts a connection (it does not print your URL).
+
+### Quick check
+
+```bash
+npm run db:check
+```
+
+- If it says **"DATABASE_URL is not set"** → create `.env` in the repo root and add `DATABASE_URL=...` (your Neon URI with `?sslmode=require`).
+- If it says **"Connection OK"** → the DB is reachable; if the app still fails, the issue is elsewhere (e.g. schema not migrated: run `npm run db:migrate`).
+- If it says **"Connection failed"** with timeout → Neon may be paused (free tier); open the Neon dashboard to wake the project, then retry.
+- If it says **SSL** error → add `?sslmode=require` to the end of DATABASE_URL.
+
+### Other solutions
 
 **POST /auth/login returns 500 "Connection terminated due to connection timeout"**  
-Health passes but login fails: the backend is up; the failure is when the login handler talks to the DB (e.g. Neon). Check: (1) `DATABASE_URL` is set and correct, (2) Neon project is not paused (cold start can take a few seconds), (3) firewall/network allows outbound HTTPS to Neon. Retry login after a few seconds; if using Neon free tier, the first request after idle may be slow.
+Health passes but login fails: the backend is up; the failure is when the login handler talks to the DB (e.g. Neon). Check: (1) `DATABASE_URL` is set in `.env` and correct, (2) Neon project is not paused (cold start can take a few seconds), (3) firewall/network allows outbound HTTPS to Neon. Retry login after a few seconds; if using Neon free tier, the first request after idle may be slow.
 
 **Connection Timeout** (general):
 - Check database server status
-- Verify DATABASE_URL is correct
+- Verify DATABASE_URL is correct in `.env` (run `npm run db:check`)
 - Check network connectivity
 - Review firewall rules
 
@@ -362,6 +391,20 @@ Same patch applies to production Neon DBs with schema drift. Run `npm run db:pat
 ## Document Execution
 
 For a consolidated view of all canonical docs (ARCHITECTURE, SETUP, CONTRIBUTING, GAP_ANALYSIS, MASTER_CHECKLIST, EXECUTION_PLAN, CI_CD, PRODUCTION_READINESS, TROUBLESHOOTING) and implementation status, see [DOCUMENT_EXECUTION_TRACKER.md](./DOCUMENT_EXECUTION_TRACKER.md).
+
+## Integration tests: known skips and status
+
+These integration tests are intentionally skipped or may need real DB/auth to pass. See `src/tests/integration/`.
+
+| Test file | Skipped / issue | How to fix or run |
+|-----------|-----------------|--------------------|
+| **onboardingFlow.test.ts** | `it.skip("completes full 10-step onboarding flow")` | Auth rejects fake token. For real-auth coverage, use **onboardingRealAuth.test.ts** (GET /cleaner/onboarding/progress with `createTestCleaner()` token). Full 10-step flow remains skipped until auth mock or full E2E is added. |
+| **v1Hardening.test.ts** | `it.skip("should prevent duplicate webhook processing")` | Skipped; enable when webhook idempotency test is ready (e.g. Stripe test mode + idempotency key). |
+| **v2Features.test.ts** | `it.skip("should be able to import stuckJobDetection worker")` | Skipped; enable when worker exists and is importable in test env. |
+| **disputeFlow.test.ts** | Not skipped | Uses `jobRes.body.data?.job?.id ?? jobRes.body.job?.id` for API shape compatibility. Run with real DB and test users. |
+| **v3Features.test.ts** | Not skipped | Subscription/earnings tests may 500 if Stripe or DB setup differs. Run with test DB; accept 200 or 500 in assertions if needed (see BUNDLE_MERGE_ANALYSIS). |
+
+**Run integration tests:** `npm run test:integration`. For full flow (jobs, dispute, V3), ensure `TEST_DATABASE_URL` or `DATABASE_URL` points to a test DB with migrations applied and seed if required.
 
 ## Prevention
 

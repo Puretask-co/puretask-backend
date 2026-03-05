@@ -286,30 +286,12 @@ matchingRouter.get("/explain/:jobId/:cleanerId", async (req: AuthedRequest, res)
       });
     }
 
-    const explanation: string[] = [];
-
-    // Build human-readable explanation
-    if (cleanerResult.factors.reliabilityPoints > 150) {
-      explanation.push(`High reliability score (${cleanerResult.cleaner.reliabilityScore}/100)`);
-    }
-    if (cleanerResult.isRepeatClient) {
-      explanation.push("Has successfully completed jobs for you before");
-    }
-    if (cleanerResult.distanceKm < 5) {
-      explanation.push(`Close proximity (${Math.round(cleanerResult.distanceKm)}km away)`);
-    }
-    if (cleanerResult.cleaner.reliabilityTier === "Elite") {
-      explanation.push("Elite tier cleaner - top performer");
-    } else if (cleanerResult.cleaner.reliabilityTier === "Pro") {
-      explanation.push("Pro tier cleaner - highly rated");
-    }
-
+    // Frontend builds explanation from breakdown; see DECISIONS.md for template copy
     return res.json({
       jobId,
       cleanerId,
       matchScore: Math.round(cleanerResult.score * 100) / 100,
       rank: ranked.findIndex((r) => r.cleaner.id === cleanerId) + 1,
-      explanation,
       breakdown: {
         reliability: {
           score: Math.round(cleanerResult.factors.reliabilityPoints * 100) / 100,

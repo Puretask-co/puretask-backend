@@ -37,7 +37,7 @@ PRODUCTION_DATABASE_URL="..." npm run db:verify:production
 
 ### 1.2 Critical-flow tests (integration / E2E)
 
-- `src/tests/integration/jobLifecycle.test.ts` — Full job flow (create → accept → start → complete → approve; cancellation; dispute).
+- **Critical path E2E (create → accept → complete → approve):** `src/tests/integration/jobLifecycle.test.ts` — Full job flow; cancellation; dispute. Same flow in smoke: `src/tests/smoke/jobLifecycle.test.ts`. Run before release to confirm lifecycle and credits.
 - `src/tests/smoke/*` — Smoke tests for jobs, messages, credits, events.
 - Run: `npm run test:integration` and `npm run test:smoke`.
 
@@ -50,7 +50,13 @@ PRODUCTION_DATABASE_URL="..." npm run db:verify:production
 
 **Production recommendation (Section 6):** Set `CRONS_ENQUEUE_ONLY=true` in production so crons only enqueue; run `npm run worker:durable-jobs:loop` (or equivalent) as a separate process. This avoids long-running work in the cron process and uses the durable job table for retries and dead-letter handling.
 
-**Scheduled workers** (from `src/workers/scheduler.ts`): auto-cancel (*/5 min), retry-notifications (*/10), webhook-retry (*/5), lock-recovery (*/15), auto-expire (hourly), kpi-daily (1 AM), nightly-scores (2 AM), goal-checker (2 AM), subscription-jobs (2 AM), reliability-recalc (3 AM), cleaning-scores (3 AM), backup-daily (3 AM), credit-economy (4 AM), photo-cleanup (5 AM), onboarding-reminders (*/6 h), payout-retry (*/30), payout-reconciliation (6 AM), payout-weekly (Sun midnight), expire-boosts, weekly-summary, job-reminders, no-show-detection, governor-metrics. See `WORKER_SCHEDULES` in scheduler.ts for full list.
+**Scheduled workers** (from `src/workers/scheduler.ts`): auto-cancel (*/5 min), retry-notifications (*/10), webhook-retry (*/5), lock-recovery (*/15), auto-expire (hourly), idempotency-cleanup (hourly), kpi-daily (1 AM), nightly-scores (2 AM), goal-checker (2 AM), subscription-jobs (2 AM), reliability-recalc (3 AM), cleaning-scores (3 AM), backup-daily (3 AM), credit-economy (4 AM), photo-cleanup (5 AM), onboarding-reminders (*/6 h), payout-retry (*/30), payout-reconciliation (6 AM), payout-weekly (Sun midnight), expire-boosts, weekly-summary, job-reminders, no-show-detection, governor-metrics. See `WORKER_SCHEDULES` in scheduler.ts for full list.
+
+### 1.4 Idempotency keys TTL (audit R11)
+
+Table `idempotency_keys` is cleaned by function `cleanup_old_idempotency_keys()` (deletes rows older than 24 hours). The function is defined in `000_MASTER_MIGRATION.sql`. **Scheduled:** worker `idempotency-cleanup` runs hourly via `WORKER_SCHEDULES` in `src/workers/scheduler.ts`; runner: `node dist/workers/scheduler.js idempotency-cleanup` or use internal cron when enabled.
+
+**Daily/weekly ops check:** Verify idempotency-cleanup is running (e.g. in logs: `idempotency_cleanup_completed` or `scheduled_worker_completed` for `idempotency-cleanup`). Optionally: `SELECT COUNT(*) FROM idempotency_keys` — should stay bounded (e.g. not growing without limit if cleanup runs). If count grows unbounded, run `SELECT cleanup_old_idempotency_keys();` manually and confirm the scheduler process is up.
 
 ---
 
@@ -66,7 +72,7 @@ PRODUCTION_DATABASE_URL="..." npm run db:verify:production
 
 - **Secrets exposure:** [SECURITY_INCIDENT_RESPONSE.md](./00-CRITICAL/SECURITY_INCIDENT_RESPONSE.md) and [PHASE_1_USER_RUNBOOK.md](./00-CRITICAL/PHASE_1_USER_RUNBOOK.md) — rotate, invalidate, purge history, verify.
 - **Outage:** Check health endpoint; logs (requestId); DB connectivity; rate limits; Stripe/webhook status.
-- **Payment/webhook issues:** [SECTION_04_STRIPE_WEBHOOKS.md](./sections/SECTION_04_STRIPE_WEBHOOKS.md); idempotency via `webhook_events`; no double-processing.
+- **Payment/webhook issues:** [SECTION_04_STRIPE_WEBHOOKS.md](./sections/SECTION_04_STRIPE_WEBHOOKS.md). **Stripe webhook (dedupe, retries, crash safety):** (1) Dedupe: intake writes to `webhook_events` with `ON CONFLICT (provider, event_id) DO NOTHING`; `handleStripeEvent` uses `stripe_events_processed` (event_id + object_id) so duplicate deliveries are no-op. (2) Retries: on processing failure we set `webhook_events.processing_status = 'failed'` and call `queueWebhookForRetry`; worker `webhook-retry` (every 5 min) processes `webhook_failures` with exponential backoff. (3) Crash safety: event is stored before processing; if the process crashes after handling, retry will call `handleStripeEvent` again but stripe_events_processed makes it idempotent.
 
 ### 3.1 Incident runbook (Section 14)
 
@@ -157,7 +163,7 @@ Messages count if: (1) you used a Quick Template, (2) the message is 25+ charact
 **“Why didn’t my login/streak count?”**  
 A login day counts when you take at least one meaningful action within 15 minutes of opening the app (open job request, accept/decline, send message, upload photos, update availability). Opening and closing the app doesn’t count.
 
-**Gamification bundle reference:** Event/metric contracts and bundle specs: [docs/active/gamification_bundle/](gamification_bundle/README.md); contract JSON in `src/config/cleanerLevels/contracts/`; reference code in `src/gamification-bundle/`.
+**Canonical gamification spec:** Rules, event stream, and metrics are defined in the uploaded bundle. **Lead doc:** [gamification_bundle/docs/PURETASK_GAMIFICATION_CURSOR_CONTEXT.md](gamification_bundle/docs/PURETASK_GAMIFICATION_CURSOR_CONTEXT.md). **Full index:** [gamification_bundle/README.md](gamification_bundle/README.md) (event contract, metrics contract, spec-enforcement matrix). Contract JSON: `src/config/cleanerLevels/contracts/`.
 
 **Key constants (quick reference):** Meaningful action window 15 min | Message: 25 chars OR template OR reply within 24 h | On-time: ±15 min, GPS 250 m | Short notice good-faith &lt; 18 h | Good-faith limit 6 per 7 days | Distance good-faith: 10 mi radius, penalty-free ≥ 11 mi. Full table: ARCHITECTURE §3.5.
 
@@ -177,6 +183,13 @@ Cash bonuses can be paused if the region budget cap is reached, cash rewards are
 - **Meaningful message:** Counts if you use a Quick Template, write 25+ characters, or the client replies.
 - **Photos:** Count when you upload 1 before + 1 after between clock-in and clock-out.
 - **Visibility rewards:** Improve where you appear in the list; never guarantee jobs.
+
+### 4.4 New data switch and event contract
+
+- **Event contract:** Incoming events (e.g. `POST /cleaner/events`) can be validated against `event_contract_v1.json` by setting `STRICT_EVENT_CONTRACT=true`. When set, only contract-allowed `event_type` values and valid `source` are accepted; invalid events return 400 with `EVENT_CONTRACT_VIOLATION`. See `docs/active/BUNDLE_SWITCH_GAP_ANALYSIS.md`.
+- **Production with STRICT_EVENT_CONTRACT:** Ensure `event_contract_v1.json` is available at runtime (loader tries `__dirname`, then `src/.../contracts/` and `dist/.../contracts/` under `process.cwd()`). Copy `src/config/cleanerLevels/contracts/*.json` into your deploy (e.g. into the same path under `dist/`) or run with working directory so one of those paths exists. See DEPLOYMENT for build notes.
+- **Migration 057 (pt_safety_reports):** Run `057_pt_safety_reports.sql` only if you need event-style safety reports for the gamification/event pipeline. Optional; file is in `DB/migrations/`. See SETUP “Fresh DB path” and BUNDLE_SWITCH_GAP_ANALYSIS §5.2.
+- **Suggestions (from gap analysis):** Prefer fresh DB + consolidated migration when possible; gamification worker logs `gamification_worker_run` / `gamification_worker_complete`; keep DECISIONS.md updated. Integration test skips are documented in TROUBLESHOOTING.
 
 ---
 
@@ -214,7 +227,28 @@ Cash bonuses can be paused if the region budget cap is reached, cash rewards are
 
 ---
 
-## 6. Contacts and links
+## 6. API behaviour (idempotency & messaging)
+
+- **Idempotency-Key:** POST `/credits/checkout`, POST `/api/credits/checkout`, POST `/jobs`, POST `/payments/*`, and selected tracking routes read the `Idempotency-Key` header. Duplicate keys return the stored response (same status and body); no double charge or duplicate booking. Keys are stored in `idempotency_keys` (24h TTL). See `src/lib/idempotency.ts`.
+- **Socket rooms (job-scoped messaging):** Frontend emits `join_booking` / `leave_booking` with `{ bookingId: jobId }` (or plain string). Backend (`src/index.ts`) joins/leaves room `booking:${bookingId}` so messages can be scoped by job.
+
+### 6.1 Backend audit vs frontend contract (canonical)
+
+Run in **puretask-backend** to re-verify. Summary:
+
+| Audit item | Backend status |
+|------------|----------------|
+| **1. API contract** | `apiRouter` mounts `/jobs`, `/payments`, `/credits`, `/messages`, `/notifications`. Same routes at `/` and `/api/v1`. GET `/jobs/:jobId/details` exists. Trust adapter: `/api/credits/balance`, `/api/credits/ledger`, POST `/api/credits/checkout` with idempotency. |
+| **2. Job lifecycle** | `applyStatusTransition` + POST `/:jobId/transition`; `requireIdempotency` on POST `/jobs` and POST `/:jobId/transition`. Illegal transitions rejected in service. |
+| **3. Credit ledger** | `credit_ledger`, escrow/release/refund in `creditsService`; GET `/credits/balance`, `/credits/ledger`; GET `/api/credits/balance`, `/api/credits/ledger` (Trust shape). Integration tests cover credits flows. |
+| **4. Payment + idempotency** | `requireIdempotency` on payments routes. `wallet_topup` / `job_charge` / `purpose` in `paymentService` and `payment_intents`. |
+| **5. Messaging** | Socket: `join_booking` / `leave_booking` (accept string or `{ bookingId }`). `markMessagesAsRead`, `getUnreadCount`; GET `/messages/unread` and GET `/messages/unread-count` (alias); POST `/messages/job/:jobId/read`. |
+| **6. Workers** | `WORKER_SCHEDULES` in `src/workers/scheduler.ts`; `CRONS_ENQUEUE_ONLY`; `package.json` scripts `worker:scheduler`, `worker:durable-jobs`, etc. |
+| **7. Observability** | Sentry in `instrument.ts` + `setupExpressErrorHandler`. `helmet`, `securityHeaders`, `endpointRateLimiter` (or Redis). Error responses include `requestId` when set (requestContextMiddleware). |
+
+---
+
+## 7. Contacts and links
 
 - **Checklists:** [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md)
 - **Phase status:** [00-CRITICAL/PHASE_*_STATUS.md](./00-CRITICAL/)

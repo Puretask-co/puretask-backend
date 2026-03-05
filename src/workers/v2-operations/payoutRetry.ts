@@ -32,7 +32,7 @@ async function main(): Promise<void> {
 if (require.main === module) {
   main()
     .then(() => {
-      console.log("Payout retry worker completed");
+      logger.info("payout_retry_worker_completed");
       process.exit(0);
     })
     .catch((error) => {

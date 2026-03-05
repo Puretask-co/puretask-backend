@@ -53,7 +53,7 @@ async function main(): Promise<void> {
 if (require.main === module) {
   main()
     .then(() => {
-      console.log("KPI daily snapshot worker completed successfully");
+      logger.info("kpi_daily_snapshot_worker_completed");
       process.exit(0);
     })
     .catch((error) => {

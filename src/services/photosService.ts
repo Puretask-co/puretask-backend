@@ -8,11 +8,13 @@ import { logger } from "../lib/logger";
 // Types
 // ============================================
 
+export type JobPhotoType = "before" | "after" | "client_dispute";
+
 export interface JobPhoto {
   id: string;
   job_id: string;
   uploaded_by: string;
-  type: "before" | "after";
+  type: JobPhotoType;
   url: string;
   thumbnail_url: string | null;
   file_size: number | null;
@@ -24,7 +26,7 @@ export interface JobPhoto {
 export interface AddPhotoInput {
   jobId: string;
   uploadedBy: string;
-  type: "before" | "after";
+  type: JobPhotoType;
   url: string;
   thumbnailUrl?: string;
   fileSize?: number;
@@ -101,7 +103,7 @@ export async function listJobPhotos(jobId: string): Promise<JobPhoto[]> {
  */
 export async function getJobPhotosByType(
   jobId: string,
-  type: "before" | "after"
+  type: JobPhotoType
 ): Promise<JobPhoto[]> {
   const result = await query<JobPhoto>(
     `
@@ -158,7 +160,7 @@ export async function deleteJobPhoto(
  */
 export async function hasRequiredPhotos(
   jobId: string,
-  type: "before" | "after",
+  type: "before" | "after" | "client_dispute",
   minRequired = 1
 ): Promise<boolean> {
   const result = await query<{ count: string }>(

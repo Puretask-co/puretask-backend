@@ -158,6 +158,12 @@ export const WORKER_SCHEDULES: WorkerSchedule[] = [
     description: "Compute marketplace metrics + governor state per region",
     enabled: true,
   },
+  {
+    workerName: "idempotency-cleanup",
+    cronExpression: "0 * * * *", // Every hour (R11: keep idempotency_keys table bounded)
+    description: "Delete idempotency keys older than 24h",
+    enabled: true,
+  },
 ];
 
 // ============================================

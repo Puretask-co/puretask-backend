@@ -1,6 +1,7 @@
 // src/lib/idempotency.ts
-// Idempotency-Key header support for API endpoints
+// Idempotency-Key header support for API endpoints (audit B4: optional request body hash)
 
+import crypto from "crypto";
 import { Request, Response, NextFunction } from "express";
 import { query } from "../db/client";
 import { logger } from "./logger";
@@ -18,67 +19,81 @@ interface IdempotencyRecord {
   status_code: number;
   response_body: any;
   created_at: string;
+  request_body_hash?: string | null;
+}
+
+function hashBody(body: unknown): string | null {
+  if (body === undefined || body === null) return null;
+  const str = typeof body === "string" ? body : JSON.stringify(body);
+  return crypto.createHash("sha256").update(str).digest("hex");
 }
 
 /**
- * Store idempotency result
+ * Store idempotency result (audit B4: optional request_body_hash)
  */
 async function storeIdempotencyResult(
   key: string,
   endpoint: string,
   method: string,
   statusCode: number,
-  responseBody: any
+  responseBody: any,
+  requestBodyHash?: string | null
 ): Promise<void> {
   try {
-    await query(
-      `
-        INSERT INTO idempotency_keys (idempotency_key, endpoint, method, status_code, response_body, created_at)
-        VALUES ($1, $2, $3, $4, $5::jsonb, NOW())
-        ON CONFLICT (idempotency_key) DO NOTHING
-      `,
-      [key, endpoint, method, statusCode, JSON.stringify(responseBody)]
-    );
+    try {
+      await query(
+        `INSERT INTO idempotency_keys (idempotency_key, endpoint, method, status_code, response_body, request_body_hash, created_at)
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
+         ON CONFLICT (idempotency_key) DO NOTHING`,
+        [key, endpoint, method, statusCode, JSON.stringify(responseBody), requestBodyHash ?? null]
+      );
+    } catch (colError: any) {
+      if (colError?.code === "42703") {
+        await query(
+          `INSERT INTO idempotency_keys (idempotency_key, endpoint, method, status_code, response_body, created_at)
+           VALUES ($1, $2, $3, $4, $5::jsonb, NOW())
+           ON CONFLICT (idempotency_key) DO NOTHING`,
+          [key, endpoint, method, statusCode, JSON.stringify(responseBody)]
+        );
+      } else throw colError;
+    }
   } catch (error) {
-    logger.error("idempotency_store_failed", {
-      key,
-      error: (error as Error).message,
-    });
-    // Don't throw - idempotency is best-effort
+    logger.error("idempotency_store_failed", { key, error: (error as Error).message });
   }
 }
 
 /**
- * Get idempotency result
+ * Get idempotency result (includes request_body_hash when column exists, e.g. after migration 065)
  */
 async function getIdempotencyResult(key: string): Promise<IdempotencyRecord | null> {
   try {
-    const result = await query<IdempotencyRecord>(
-      `
-        SELECT idempotency_key as id, endpoint, method, status_code, response_body, created_at
-        FROM idempotency_keys
-        WHERE idempotency_key = $1
-        LIMIT 1
-      `,
-      [key]
-    );
-
-    if (result.rows.length === 0) {
-      return null;
+    let result: { rows: (IdempotencyRecord & { request_body_hash?: string | null })[] };
+    try {
+      result = await query<IdempotencyRecord & { request_body_hash?: string | null }>(
+        `SELECT idempotency_key as id, endpoint, method, status_code, response_body, request_body_hash, created_at
+         FROM idempotency_keys WHERE idempotency_key = $1 LIMIT 1`,
+        [key]
+      );
+    } catch (colError: any) {
+      if (colError?.code === "42703") {
+        result = await query<IdempotencyRecord>(
+          `SELECT idempotency_key as id, endpoint, method, status_code, response_body, created_at
+           FROM idempotency_keys WHERE idempotency_key = $1 LIMIT 1`,
+          [key]
+        );
+        (result as any).rows = result.rows.map((r) => ({ ...r, request_body_hash: undefined }));
+      } else throw colError;
     }
-
+    if (result.rows.length === 0) return null;
+    const row = result.rows[0];
     return {
-      ...result.rows[0],
+      ...row,
+      request_body_hash: (row as any).request_body_hash ?? undefined,
       response_body:
-        typeof result.rows[0].response_body === "string"
-          ? JSON.parse(result.rows[0].response_body)
-          : result.rows[0].response_body,
+        typeof row.response_body === "string" ? JSON.parse(row.response_body) : row.response_body,
     };
   } catch (error) {
-    logger.error("idempotency_get_failed", {
-      key,
-      error: (error as Error).message,
-    });
+    logger.error("idempotency_get_failed", { key, error: (error as Error).message });
     return null;
   }
 }
@@ -115,40 +130,49 @@ export function requireIdempotency(req: Request, res: Response, next: NextFuncti
     } as any);
   }
 
-  // Check for existing result
+  const bodyHash = hashBody(req.body);
+
   getIdempotencyResult(idempotencyKey)
     .then((existing) => {
       if (existing) {
+        // Audit B4: reject same key with different body when stored hash exists
+        if (existing.request_body_hash && bodyHash !== null && existing.request_body_hash !== bodyHash) {
+          logger.warn("idempotency_key_body_mismatch", {
+            key: idempotencyKey,
+            endpoint: req.path,
+          });
+          sendError(res, {
+            code: ErrorCode.VALIDATION_ERROR,
+            message: "Idempotency-Key was used with a different request body. Use a new key or the same body.",
+            statusCode: 409,
+          } as any);
+          return;
+        }
+
         logger.info("idempotency_key_reused", {
           key: idempotencyKey,
           endpoint: req.path,
           originalStatus: existing.status_code,
         });
-
-        // Return previous response
         res.status(existing.status_code).json(existing.response_body);
-        return; // Don't call next() - response already sent
+        return;
       }
 
-      // No existing result, proceed with request
-      // Store original json method to intercept response
       const originalJson = res.json.bind(res);
       res.json = function (body: any) {
-        // Store result before sending
         storeIdempotencyResult(
           idempotencyKey,
           req.path,
           req.method,
           res.statusCode || 200,
-          body
+          body,
+          bodyHash
         ).catch((err) => {
           logger.error("idempotency_store_error", {
             key: idempotencyKey,
             error: err.message,
           });
         });
-
-        // Send response
         return originalJson(body);
       };
 

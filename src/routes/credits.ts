@@ -5,6 +5,7 @@
 import { Router, Response } from "express";
 import { z } from "zod";
 import { validateBody } from "../lib/validation";
+import { requireIdempotency } from "../lib/idempotency";
 import { logger } from "../lib/logger";
 import {
   requireAuth,
@@ -156,6 +157,7 @@ const checkoutSchema = z.object({
 creditsRouter.post(
   "/checkout",
   requireRole("client"),
+  requireIdempotency,
   validateBody(checkoutSchema),
   authedHandler(async (req: AuthedRequest, res: Response) => {
     try {

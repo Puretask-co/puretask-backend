@@ -43,14 +43,19 @@ export const getUserCreditBalance = getUserBalance;
  *
  * V1 HARDENING: For idempotent operations (escrow, refund, etc.), uses ON CONFLICT
  * to prevent duplicates via unique constraints.
+ * @param client - Optional PoolClient for use inside a transaction (audit R4)
  */
-export async function addLedgerEntry(input: {
-  userId: string;
-  jobId?: string | null;
-  deltaCredits: number;
-  reason: CreditReason;
-}): Promise<CreditLedgerEntry> {
+export async function addLedgerEntry(
+  input: {
+    userId: string;
+    jobId?: string | null;
+    deltaCredits: number;
+    reason: CreditReason;
+  },
+  client?: PoolClient
+): Promise<CreditLedgerEntry> {
   const { userId, jobId = null, deltaCredits, reason } = input;
+  const run = client ? client.query.bind(client) : query;
 
   // V1 HARDENING: Check credits guard flag
   if (!env.CREDITS_ENABLED && reason !== "refund") {
@@ -76,9 +81,7 @@ export async function addLedgerEntry(input: {
     reason === "purchase";
 
   if (isIdempotentOperation && jobId) {
-    // For idempotent operations, check for existing entry first
-    // The unique constraint (user_id, reason, job_id) will prevent duplicates
-    const existing = await query<CreditLedgerEntry>(
+    const existing = await run<CreditLedgerEntry>(
       `
         SELECT * FROM credit_ledger
         WHERE user_id = $1 AND job_id = $2 AND reason = $3
@@ -99,8 +102,7 @@ export async function addLedgerEntry(input: {
     }
   }
 
-  // Non-idempotent operation or no jobId - insert normally (schema: delta_credits)
-  const result = await query<CreditLedgerEntry>(
+  const result = await run<CreditLedgerEntry>(
     `
       INSERT INTO credit_ledger (user_id, job_id, delta_credits, reason)
       VALUES ($1, $2, $3, $4)
@@ -161,45 +163,51 @@ export async function escrowJobCredits(
 /**
  * On job completion/approval: release credits to cleaner as earnings.
  * This does NOT touch the client; they already lost credits at escrow time.
+ * @param client - Optional PoolClient for use inside a transaction (audit R4)
  */
 export async function releaseJobCreditsToCleaner(
   cleanerId: string,
   jobId: string,
-  creditAmount: number
+  creditAmount: number,
+  client?: PoolClient
 ): Promise<CreditLedgerEntry> {
   if (creditAmount <= 0) {
     throw new Error("Credit amount must be positive");
   }
-
-  // Add credits to cleaner (positive delta)
-  return addLedgerEntry({
-    userId: cleanerId,
-    jobId,
-    deltaCredits: creditAmount,
-    reason: "job_release",
-  });
+  return addLedgerEntry(
+    {
+      userId: cleanerId,
+      jobId,
+      deltaCredits: creditAmount,
+      reason: "job_release",
+    },
+    client
+  );
 }
 
 /**
  * On dispute resolution with refund: return credits to client.
  * This is independent of whether cleaner has already been credited.
+ * @param client - Optional PoolClient for use inside a transaction (audit R4)
  */
 export async function refundJobCreditsToClient(
   clientId: string,
   jobId: string,
-  creditAmount: number
+  creditAmount: number,
+  client?: PoolClient
 ): Promise<CreditLedgerEntry> {
   if (creditAmount <= 0) {
     throw new Error("Credit amount must be positive");
   }
-
-  // Return credits to client (positive delta)
-  return addLedgerEntry({
-    userId: clientId,
-    jobId,
-    deltaCredits: creditAmount,
-    reason: "refund",
-  });
+  return addLedgerEntry(
+    {
+      userId: clientId,
+      jobId,
+      deltaCredits: creditAmount,
+      reason: "refund",
+    },
+    client
+  );
 }
 
 /**

@@ -36,16 +36,60 @@ notificationsRouter.use(requireAuth);
  *                 data: { type: 'array', items: { type: 'object' } }
  *                 unread_count: { type: 'integer' }
  */
-notificationsRouter.get("/", async (_req: AuthedRequest, res: Response) => {
-  res.json({ data: [], unread_count: 0 });
+notificationsRouter.get("/", async (req: AuthedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || "50"), 10)));
+    const result = await query(
+      `SELECT id, type, channel, status, created_at
+       FROM notification_log
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [userId, limit]
+    );
+    // No read_at column yet; treat all as unread for count. status = sent/pending/failed
+    const data = result.rows.map((r: { id: string; type: string; channel: string; status: string; created_at: string }) => ({
+      id: r.id,
+      type: r.type,
+      channel: r.channel,
+      success: r.status === "sent",
+      created_at: r.created_at,
+    }));
+    res.json({ data, unread_count: data.length });
+  } catch (error) {
+    logger.error("get_notifications_feed_failed", {
+      error: (error as Error).message,
+      userId: req.user?.id,
+    });
+    res.status(500).json({
+      error: { code: "GET_NOTIFICATIONS_FAILED", message: (error as Error).message },
+    });
+  }
 });
 
 /**
  * GET /notifications/unread-count
- * Return unread count (placeholder)
+ * Count from notification_log for user (no read_at yet, so count = total recent)
  */
-notificationsRouter.get("/unread-count", async (_req: AuthedRequest, res: Response) => {
-  res.json({ count: 0 });
+notificationsRouter.get("/unread-count", async (req: AuthedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(*)::text as count FROM notification_log WHERE user_id = $1`,
+      [userId]
+    );
+    const count = parseInt(result.rows[0]?.count ?? "0", 10);
+    res.json({ count });
+  } catch (error) {
+    logger.error("get_unread_count_failed", {
+      error: (error as Error).message,
+      userId: req.user?.id,
+    });
+    res.status(500).json({
+      error: { code: "GET_UNREAD_COUNT_FAILED", message: (error as Error).message },
+    });
+  }
 });
 
 /**

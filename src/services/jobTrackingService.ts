@@ -5,6 +5,8 @@ import { query, withTransaction } from "../db/client";
 import { PoolClient } from "pg";
 import { logger } from "../lib/logger";
 import { publishEvent } from "../lib/events";
+import { getNextStatus } from "../state/jobStateMachine";
+import type { JobEventType } from "../state/jobStateMachine";
 import { updateCleanerReliability } from "./reliabilityService";
 import { releaseJobCreditsToCleaner } from "./creditsService";
 import { recordEarningsForCompletedJob } from "./payoutsService";
@@ -220,6 +222,7 @@ export async function startEnRoute(
   if (job.status !== "accepted") {
     throw Object.assign(new Error("Job must be in accepted status"), { statusCode: 400 });
   }
+  getNextStatus(job.status as any, "cleaner_on_my_way"); // R3: validate against state machine
 
   await query(`UPDATE jobs SET status = 'on_my_way', updated_at = NOW() WHERE id = $1`, [jobId]);
 
@@ -313,6 +316,7 @@ export async function checkIn(
   if (!["on_my_way", "accepted"].includes(job.status)) {
     throw Object.assign(new Error("Invalid status for check-in"), { statusCode: 400 });
   }
+  getNextStatus(job.status as any, "job_started"); // R3: validate against state machine
 
   // Verify GPS proximity (per policy: within 250 meters)
   if (job.latitude && job.longitude) {
@@ -385,6 +389,7 @@ export async function checkOut(
   if (job.status !== "in_progress") {
     throw Object.assign(new Error("Job must be in progress"), { statusCode: 400 });
   }
+  getNextStatus(job.status as any, "job_completed"); // R3: validate against state machine
 
   // Require at least 1 after photo
   if (afterPhotos.length === 0) {
@@ -571,7 +576,7 @@ export async function approveJob(
         });
       });
       // Step 6b: Check level goals (async, non-critical)
-      import("./cleanerLevelService").then(({ checkAndProcessGoals }) =>
+      void import("./cleanerLevelService").then(({ checkAndProcessGoals }) =>
         updatedJob.cleaner_id
           ? checkAndProcessGoals(updatedJob.cleaner_id).catch((err) => {
               logger.error("level_goals_check_failed_after_approval", {
@@ -613,6 +618,9 @@ export async function disputeJob(
 
   if (!["awaiting_approval", "completed"].includes(job.status)) {
     throw Object.assign(new Error("Cannot dispute job in current status"), { statusCode: 400 });
+  }
+  if (job.status === "awaiting_approval") {
+    getNextStatus(job.status as any, "client_disputed"); // R3: validate against state machine
   }
 
   // Create dispute (reason_code = optional structured category)

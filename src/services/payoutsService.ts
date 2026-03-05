@@ -87,51 +87,52 @@ export async function getCleanerPayoutPercent(cleanerId: string): Promise<number
 /**
  * Called when a job is approved & completed.
  * Creates a pending payout row for that job/cleaner.
+ * Idempotent: if a payout for this job already exists (same or other path), returns it.
  *
  * Per Terms of Service:
  * - Platform fee: 15% of transaction value
  * - Cleaners receive 80-85% of booking amount depending on tier
  */
-export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
+export async function recordEarningsForCompletedJob(
+  job: Job,
+  existingClient?: PoolClient
+): Promise<Payout> {
   if (!job.cleaner_id) {
     throw Object.assign(new Error("Job has no cleaner assigned"), { statusCode: 500 });
   }
 
-  // Get cleaner's payout percentage based on tier
-  const payoutPercent = await getCleanerPayoutPercent(job.cleaner_id);
+  const runInTransaction = async (client: PoolClient) => {
+    // Idempotent: one payout per job (audit R1)
+    const existing = await client.query<Payout>(
+      `SELECT * FROM payouts WHERE job_id = $1 LIMIT 1`,
+      [job.id]
+    );
+    if (existing.rows[0]) {
+      logger.info("payout_already_exists_for_job", { jobId: job.id, payoutId: existing.rows[0].id });
+      return existing.rows[0];
+    }
 
-  // Calculate payout amounts (applying tier-based percentage)
-  const grossCents = job.credit_amount * CENTS_PER_CREDIT;
-  const payoutCents = Math.round(grossCents * (payoutPercent / 100));
-  const platformFeeCents = grossCents - payoutCents;
-  const payoutCredits = Math.round(job.credit_amount * (payoutPercent / 100));
+    // Get cleaner's payout percentage based on tier
+    const payoutPercent = await getCleanerPayoutPercent(job.cleaner_id);
 
-  // Create payout record
-  // Best Practice: Foreign key should reference users.id (primary entity), not cleaner_profiles.user_id
-  // The cleaner_profile should already exist from registration - if it doesn't, that's a registration bug
-  // If the FK constraint fails, it means either:
-  // 1. The user doesn't exist (data integrity issue)
-  // 2. The FK references the wrong table (schema issue - run DB/migrations/000_fix_payouts_fk.sql)
-  const payout = await withTransaction(async (client: PoolClient) => {
+    // Calculate payout amounts (applying tier-based percentage)
+    const grossCents = job.credit_amount * CENTS_PER_CREDIT;
+    const payoutCents = Math.round(grossCents * (payoutPercent / 100));
+    const platformFeeCents = grossCents - payoutCents;
+    const payoutCredits = Math.round(job.credit_amount * (payoutPercent / 100));
+
     // Verify user exists before attempting payout creation
-    // This provides a clearer error message than a foreign key constraint violation
-    // Note: In test environments, there might be transaction isolation issues, so we'll
-    // also try to create the payout and let the FK constraint handle it if the check fails
     const userCheck = await client.query<{ exists: boolean }>(
       `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1) AS exists`,
       [job.cleaner_id]
     );
 
     if (!userCheck.rows[0]?.exists) {
-      // User doesn't exist - this is a data integrity issue
-      // In test environments, this might indicate the user was deleted or never committed
       logger.error("payout_user_does_not_exist", {
         cleanerId: job.cleaner_id,
         jobId: job.id,
         message: "Cleaner user does not exist in users table - cannot create payout",
       });
-
-      // Throw a clear error instead of attempting insert
       throw Object.assign(
         new Error(
           `Cannot create payout: cleaner user ${job.cleaner_id} does not exist in users table. ` +
@@ -141,8 +142,6 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
       );
     }
 
-    // Create payout record
-    // The foreign key constraint will enforce referential integrity
     let result;
     try {
       result = await client.query<Payout>(
@@ -161,7 +160,17 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
         [job.cleaner_id, job.id, payoutCredits, payoutCents]
       );
     } catch (error: any) {
-      // If foreign key constraint fails, provide helpful debugging info
+      if (error?.code === "23505") {
+        // Unique violation (uniq_payouts_job_id) — another path already created payout
+        const existing = await client.query<Payout>(
+          `SELECT * FROM payouts WHERE job_id = $1 LIMIT 1`,
+          [job.id]
+        );
+        if (existing.rows[0]) {
+          logger.info("payout_unique_conflict_return_existing", { jobId: job.id });
+          return existing.rows[0];
+        }
+      }
       if (error?.code === "23503") {
         logger.error("payout_creation_failed_foreign_key", {
           cleanerId: job.cleaner_id,
@@ -169,21 +178,16 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
           error: error?.message,
           constraint: error?.constraint,
         });
-
-        // Provide actionable error message
         throw Object.assign(
           new Error(
             `Failed to create payout: foreign key constraint violation. ` +
               `Constraint: ${error?.constraint}. ` +
-              `The foreign key may reference the wrong table. ` +
               `Expected: payouts.cleaner_id -> users.id. ` +
-              `Run DB/migrations/000_fix_payouts_fk.sql to fix the constraint. ` +
               `Error: ${error?.message}`
           ),
           { statusCode: 500, constraint: error?.constraint }
         );
       }
-      // Re-throw other errors
       throw error;
     }
 
@@ -191,38 +195,25 @@ export async function recordEarningsForCompletedJob(job: Job): Promise<Payout> {
     if (!payout) {
       throw Object.assign(new Error("Failed to create payout"), { statusCode: 500 });
     }
-
-    return payout;
-  });
-
-  logger.info("payout_recorded", {
-    payoutId: payout.id,
-    cleanerId: job.cleaner_id,
-    jobId: job.id,
-    grossCredits: job.credit_amount,
-    grossCents,
-    payoutPercent,
-    payoutCredits,
-    payoutCents,
-    platformFeeCents,
-  });
-
-  await publishEvent({
-    jobId: job.id,
-    actorType: "system",
-    eventName: "payout_created",
-    payload: {
+    logger.info("payout_recorded", {
       payoutId: payout.id,
       cleanerId: job.cleaner_id,
+      jobId: job.id,
       grossCredits: job.credit_amount,
-      payoutCredits,
-      payoutCents,
-      payoutPercent,
-      platformFeeCents,
-    },
-  });
+    });
+    void publishEvent({
+      jobId: job.id,
+      actorType: "system",
+      eventName: "payout_created",
+      payload: { payoutId: payout.id, amountCredits: payoutCredits, amountCents: payoutCents },
+    }).catch((err) => logger.error("payout_created_event_failed", { jobId: job.id, error: (err as Error).message }));
+    return payout;
+  };
 
-  return payout;
+  if (existingClient) {
+    return runInTransaction(existingClient);
+  }
+  return withTransaction(runInTransaction);
 }
 
 interface PendingPayoutWithAccount extends Payout {
@@ -358,6 +349,7 @@ export async function processPendingPayouts(): Promise<{
 
       // Record metrics (optional - skip if module unavailable in test env)
       try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional in test env
         const { metrics } = require("../lib/metrics");
         for (const payout of payouts) {
           metrics.payoutProcessed(payout.amount_cents, true);
@@ -400,6 +392,7 @@ export async function processPendingPayouts(): Promise<{
 
       // Record metrics for failed payouts (optional - skip if module unavailable in tests)
       try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires -- optional in test env
         const { metrics } = require("../lib/metrics");
         for (const payout of payouts) {
           metrics.payoutProcessed(payout.amount_cents, false);

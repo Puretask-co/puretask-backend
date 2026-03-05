@@ -66,6 +66,16 @@ npm run worker:durable-jobs:loop
 
 Optional: `JWT_EXPIRES_IN`, `SENDGRID_*`, `TWILIO_*`, `WORKERS_ENABLED`, `BOOKINGS_ENABLED`, etc. See `src/config/env.ts` and `.env.example`.
 
+**S3/R2 job photo uploads (production):** To enable signed PUT URLs and photo commit, set in production (e.g. Railway env): `STORAGE_PROVIDER` (s3 or r2), `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`. For R2 also set `STORAGE_ENDPOINT` (e.g. `https://<accountid>.r2.cloudflarestorage.com`). Optional: `STORAGE_PUBLIC_BASE_URL` (CDN or bucket public URL for serving photos). Without these, `POST /uploads/sign` returns 503 with `STORAGE_NOT_CONFIGURED`.
+
+### Production: photo uploads and DB
+
+**Storage:** Set **STORAGE_*** (or backend equivalent; this repo uses `STORAGE_*`) in production for the service that issues presigned URLs. If the frontend’s Next.js API route or a separate backend uses its own env (e.g. `lib/storage.ts`), set **S3_BUCKET**, **S3_REGION**, **S3_ACCESS_KEY_ID**, **S3_SECRET_ACCESS_KEY**, and for R2 **S3_ENDPOINT**. The backend in this repo uses: `STORAGE_PROVIDER`, `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_ENDPOINT` (R2), `STORAGE_PUBLIC_BASE_URL` (optional).
+
+**Migration 062:** Run on every DB that should support `client_dispute` job photos (e.g. staging, production):  
+`node scripts/run-migration.js DB/migrations/062_job_photos_client_dispute_type.sql`  
+so `job_photos.type = 'client_dispute'` is allowed. Idempotent; safe to run more than once.
+
 ### Railway layout (example)
 
 | Service | Build | Start | Env |
@@ -77,6 +87,8 @@ Optional: `JWT_EXPIRES_IN`, `SENDGRID_*`, `TWILIO_*`, `WORKERS_ENABLED`, `BOOKIN
 If using **compiled JS** for scheduler/worker, point to `dist/` (e.g. `node dist/workers/scheduler.js`). If using ts-node in prod, use `npm run worker:scheduler` and `npm run worker:durable-jobs:loop` (ensure `ts-node` is a dependency).
 
 ### Directory / artifact layout (after build)
+
+When using **STRICT_EVENT_CONTRACT=true**, the event contract JSON must be loadable at runtime. **Build already copies** contract JSON: `npm run build` runs `scripts/copy-contracts-to-dist.js` after `tsc`, so `dist/config/cleanerLevels/contracts/*.json` are present. See RUNBOOK §4.4.
 
 ```
 puretask-backend/

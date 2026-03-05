@@ -91,7 +91,7 @@ async function main(): Promise<void> {
 if (require.main === module) {
   main()
     .then(() => {
-      console.log("Subscription jobs worker completed");
+      logger.info("subscription_jobs_worker_completed");
       process.exit(0);
     })
     .catch((error) => {

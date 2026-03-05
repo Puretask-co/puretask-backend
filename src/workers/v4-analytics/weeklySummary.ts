@@ -56,7 +56,7 @@ async function main(): Promise<void> {
 if (require.main === module) {
   main()
     .then(() => {
-      console.log("Weekly summary worker completed");
+      logger.info("weekly_summary_worker_completed");
       process.exit(0);
     })
     .catch((error) => {

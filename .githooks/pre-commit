@@ -17,9 +17,9 @@ fi
 # ---------- Block new .md files unless in allowed doc paths ----------
 NEW_MD=$(git diff --cached --name-only --diff-filter=A | grep -E '\.md$' || true)
 if [ -n "$NEW_MD" ]; then
-  BAD=$(echo "$NEW_MD" | grep -vE '^(docs/active/|docs/archive/|docs/_archive/|docs/runbooks/|docs/_md_inventory/|\.githooks/)' || true)
+  BAD=$(echo "$NEW_MD" | grep -vE '^(docs/active/|docs/archive/|docs/_archive/|docs/runbooks/|docs/_md_inventory/|\.githooks/|DB/migrations/archive/)' || true)
   if [ -n "$BAD" ]; then
-    echo "❌ New markdown files must be under: docs/active/, docs/archive/, docs/runbooks/, .githooks/"
+    echo "❌ New markdown files must be under: docs/active/, docs/archive/, docs/runbooks/, .githooks/, DB/migrations/archive/"
     echo "Blocked: $BAD"
     exit 1
   fi

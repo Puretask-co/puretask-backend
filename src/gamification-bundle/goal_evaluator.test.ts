@@ -1,4 +1,4 @@
-import { compare, progressRatio } from "../src/goal_evaluator";
+import { compare, progressRatio } from "../lib/gamification/goal_evaluator";
 
 describe("goal_evaluator.compare", () => {
   test("numeric >=", () => {

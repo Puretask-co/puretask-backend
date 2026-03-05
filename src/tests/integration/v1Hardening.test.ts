@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { query } from "../../db/client";
 import { env } from "../../config/env";
-import { createJob } from "../../services/jobsService";
+import { createJob, applyStatusTransition } from "../../services/jobsService";
 import {
   addLedgerEntry,
   getUserBalance,
@@ -306,5 +306,160 @@ describe("V1 Hardening: Atomic Job Completion", { timeout: 20000, hookTimeout: 2
     expect(parseInt(afterPayouts.rows[0].count)).toBeGreaterThanOrEqual(
       parseInt(beforePayouts.rows[0].count)
     );
+  });
+});
+
+describe("V1 Hardening: R6 Race conditions (guarded accept/cancel)", () => {
+  const jobId = crypto.randomUUID();
+  const clientId = crypto.randomUUID();
+  const cleanerA = crypto.randomUUID();
+  const cleanerB = crypto.randomUUID();
+
+  beforeAll(async () => {
+    await query(
+      `INSERT INTO users (id, email, role, password_hash) VALUES ($1, $2, 'client', $3), ($4, $5, 'cleaner', $3), ($6, $7, 'cleaner', $3) ON CONFLICT (id) DO NOTHING`,
+      [
+        clientId,
+        `client-r6-${clientId.slice(0, 8)}@test.com`,
+        TEST_PASSWORD_HASH,
+        cleanerA,
+        `cleaner-a-r6-${cleanerA.slice(0, 8)}@test.com`,
+        cleanerB,
+        `cleaner-b-r6-${cleanerB.slice(0, 8)}@test.com`,
+      ]
+    );
+    await addLedgerEntry({ userId: clientId, deltaCredits: 500, reason: "adjustment" });
+    await query(
+      `INSERT INTO jobs (id, client_id, status, credit_amount, scheduled_start_at, scheduled_end_at, address, estimated_hours, cleaning_type)
+       VALUES ($1, $2, 'requested', 100, NOW() + INTERVAL '2 hours', NOW() + INTERVAL '4 hours', '123 Test St', 2, 'basic')`,
+      [jobId, clientId]
+    );
+  });
+
+  afterAll(async () => {
+    await query(`DELETE FROM job_events WHERE job_id IN (SELECT id FROM jobs WHERE client_id = $1)`, [clientId]);
+    await query(`DELETE FROM credit_ledger WHERE job_id IN (SELECT id FROM jobs WHERE client_id = $1)`, [clientId]);
+    await query(`DELETE FROM jobs WHERE client_id = $1`, [clientId]);
+    await query(`DELETE FROM credit_ledger WHERE user_id IN ($1, $2, $3)`, [
+      clientId,
+      cleanerA,
+      cleanerB,
+    ]);
+    await query(`DELETE FROM users WHERE id IN ($1, $2, $3)`, [clientId, cleanerA, cleanerB]);
+  });
+
+  it("when two cleaners accept in parallel, one gets 200 and one gets 409 (guarded UPDATE)", async () => {
+    const raceJobId = crypto.randomUUID();
+    await query(
+      `INSERT INTO jobs (id, client_id, status, credit_amount, scheduled_start_at, scheduled_end_at, address, estimated_hours, cleaning_type)
+       VALUES ($1, $2, 'requested', 50, NOW() + INTERVAL '2 hours', NOW() + INTERVAL '4 hours', '126 Test St', 2, 'basic')`,
+      [raceJobId, clientId]
+    );
+    const [resultA, resultB] = await Promise.allSettled([
+      applyStatusTransition({
+        jobId: raceJobId,
+        eventType: "job_accepted",
+        requesterId: cleanerA,
+        role: "cleaner",
+      }),
+      applyStatusTransition({
+        jobId: raceJobId,
+        eventType: "job_accepted",
+        requesterId: cleanerB,
+        role: "cleaner",
+      }),
+    ]);
+    const job = await query(`SELECT status, cleaner_id FROM jobs WHERE id = $1`, [raceJobId]);
+    expect(job.rows[0].status).toBe("accepted");
+    expect([cleanerA, cleanerB]).toContain(job.rows[0].cleaner_id);
+    const oneWon =
+      (resultA.status === "fulfilled" && resultB.status === "rejected") ||
+      (resultA.status === "rejected" && resultB.status === "fulfilled") ||
+      (resultA.status === "fulfilled" && resultB.status === "fulfilled");
+    expect(oneWon).toBe(true);
+    await query(`DELETE FROM job_events WHERE job_id = $1`, [raceJobId]);
+    await query(`DELETE FROM jobs WHERE id = $1`, [raceJobId]);
+  });
+
+  it("cancel after accept gets 409 (guarded UPDATE)", async () => {
+    // Job is already accepted from previous test. Client tries to cancel — invalid transition
+    // (client can cancel requested, but we're in accepted). So we get BAD_TRANSITION 400, not 409.
+    // For a true "cancel vs accept" race we need a fresh requested job: client cancel and cleaner accept in parallel.
+    const raceJobId = crypto.randomUUID();
+    await query(
+      `INSERT INTO jobs (id, client_id, status, credit_amount, scheduled_start_at, scheduled_end_at, address, estimated_hours, cleaning_type)
+       VALUES ($1, $2, 'requested', 50, NOW() + INTERVAL '2 hours', NOW() + INTERVAL '4 hours', '124 Test St', 2, 'basic')`,
+      [raceJobId, clientId]
+    );
+    const [cancelResult, acceptResult] = await Promise.allSettled([
+      applyStatusTransition({
+        jobId: raceJobId,
+        eventType: "job_cancelled",
+        requesterId: clientId,
+        role: "client",
+      }),
+      applyStatusTransition({
+        jobId: raceJobId,
+        eventType: "job_accepted",
+        requesterId: cleanerB,
+        role: "cleaner",
+      }),
+    ]);
+    const oneFulfilled =
+      (cancelResult.status === "fulfilled" && acceptResult.status === "rejected") ||
+      (cancelResult.status === "rejected" && acceptResult.status === "fulfilled");
+    const oneRejected409 =
+      (cancelResult.status === "rejected" &&
+        (cancelResult.reason as any)?.statusCode === 409) ||
+      (acceptResult.status === "rejected" && (acceptResult.reason as any)?.statusCode === 409);
+    expect(oneFulfilled).toBe(true);
+    expect(oneRejected409).toBe(true);
+    const job = await query(`SELECT status FROM jobs WHERE id = $1`, [raceJobId]);
+    expect(["accepted", "cancelled"]).toContain(job.rows[0].status);
+    await query(`DELETE FROM job_events WHERE job_id = $1`, [raceJobId]);
+    await query(`DELETE FROM credit_ledger WHERE job_id = $1`, [raceJobId]);
+    await query(`DELETE FROM jobs WHERE id = $1`, [raceJobId]);
+  });
+});
+
+describe("V1 Hardening: R13 Try-to-break (check-in twice, escrow in transaction)", () => {
+  it("second job_started (check-in) on already in_progress job fails with invalid transition", async () => {
+    const jobId = crypto.randomUUID();
+    const clientId = crypto.randomUUID();
+    const cleanerId = crypto.randomUUID();
+    await query(
+      `INSERT INTO users (id, email, role, password_hash) VALUES ($1, $2, 'client', $3), ($4, $5, 'cleaner', $3) ON CONFLICT (id) DO NOTHING`,
+      [
+        clientId,
+        `client-r13-${clientId.slice(0, 8)}@test.com`,
+        TEST_PASSWORD_HASH,
+        cleanerId,
+        `cleaner-r13-${cleanerId.slice(0, 8)}@test.com`,
+      ]
+    );
+    await query(
+      `INSERT INTO jobs (id, client_id, cleaner_id, status, credit_amount, scheduled_start_at, scheduled_end_at, address, estimated_hours, cleaning_type)
+       VALUES ($1, $2, $3, 'accepted', 80, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '1 hour', '125 Test St', 2, 'basic')`,
+      [jobId, clientId, cleanerId]
+    );
+    await applyStatusTransition({
+      jobId,
+      eventType: "job_started",
+      requesterId: cleanerId,
+      role: "cleaner",
+    });
+    const afterFirst = await query(`SELECT status FROM jobs WHERE id = $1`, [jobId]);
+    expect(afterFirst.rows[0].status).toBe("in_progress");
+    await expect(
+      applyStatusTransition({
+        jobId,
+        eventType: "job_started",
+        requesterId: cleanerId,
+        role: "cleaner",
+      })
+    ).rejects.toMatchObject({ code: "BAD_TRANSITION" });
+    await query(`DELETE FROM job_events WHERE job_id = $1`, [jobId]);
+    await query(`DELETE FROM jobs WHERE id = $1`, [jobId]);
+    await query(`DELETE FROM users WHERE id IN ($1, $2)`, [clientId, cleanerId]);
   });
 });

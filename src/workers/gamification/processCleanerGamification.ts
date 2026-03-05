@@ -7,33 +7,27 @@
 import { withTransaction } from "../../db/client";
 import type { PoolClient } from "pg";
 import { isGamificationEnabled } from "../../lib/gamificationFeatureFlags";
-import {
-  getCleanerProgression,
-  getGoalDefinitions,
-} from "../../services/gamificationProgressionService";
+import { getCleanerProgression } from "../../services/gamificationProgressionService";
 import {
   expireRewards,
   expireChoices,
-  computeChoiceExpiresAt,
+  grantRewardsForGoal,
 } from "../../services/gamificationRewardService";
-import { CashBudgetService } from "../../services/cashBudgetService";
-import { isCashReward } from "../../services/rewardKindHelpers";
 import { BadgeService } from "../../services/badgeService";
-import { getRewards, getChoiceRewardGroups } from "../../config/cleanerLevels";
 import { logger } from "../../lib/logger";
-import { makeGrant, shouldGrant } from "../../lib/gamification";
 
-const cashBudget = new CashBudgetService();
 const badgeService = new BadgeService();
 
 /**
  * Process gamification for a cleaner: recompute progress, update level, grant rewards
  */
 export async function processCleanerGamification(cleanerId: string): Promise<void> {
+  const startMs = Date.now();
   if (!(await isGamificationEnabled({ region_id: null }))) {
     logger.debug("gamification_skipped_disabled", { cleanerId });
     return;
   }
+  logger.info("gamification_worker_run", { cleanerId });
 
   // Step 8: Expire time-based rewards and choices (idempotent, safe to run before each process)
   await expireRewards();
@@ -100,7 +94,7 @@ export async function processCleanerGamification(cleanerId: string): Promise<voi
     }
 
     for (const gp of goalProgress.filter((g) => g.complete && g.goal_id)) {
-      await grantRewardsForGoal(client, cleanerId, gp.goal_id, currentLevel);
+      await grantRewardsForGoal(client, cleanerId, gp.goal_id);
     }
 
     // Step 14: Award eligible badges from metric snapshot
@@ -117,161 +111,7 @@ export async function processCleanerGamification(cleanerId: string): Promise<voi
       logger.warn("gamification_badge_award_failed", { cleanerId, error: (err as Error).message });
     }
   });
-}
 
-async function grantRewardsForGoal(
-  client: { query: (sql: string, args?: unknown[]) => Promise<{ rows: unknown[] }> },
-  cleanerId: string,
-  goalId: string,
-  level: number
-): Promise<void> {
-  const goals = getGoalDefinitions();
-  const goal = goals.find((g) => g.id === goalId);
-  if (!goal?.reward_ids?.length) return;
-
-  const rewards = getRewards();
-  const choiceGroups = getChoiceRewardGroups();
-
-  for (const rewardId of goal.reward_ids) {
-    const rewardRaw = rewards.find((r) => r.id === rewardId);
-    if (!rewardRaw) continue;
-
-    const reward = {
-      id: rewardRaw.id,
-      kind: rewardRaw.kind,
-      name: rewardRaw.name,
-      params: rewardRaw.params ?? {},
-      stacking_rule: (rewardRaw.stacking_rule || "no_stack") as
-        | "no_stack"
-        | "extend_duration"
-        | "extend_uses",
-    };
-
-    const choiceGroup = Object.values(choiceGroups).find((g) => g.options.includes(rewardId));
-    if (choiceGroup) {
-      const existing = await client.query(
-        `SELECT id, cleaner_id, reward_id, granted_at, ends_at, uses_remaining, source_type, source_id
-         FROM gamification_reward_grants
-         WHERE cleaner_id = $1 AND source_id = $2 AND status = 'active'
-         LIMIT 1`,
-        [cleanerId, goalId]
-      );
-      if (existing.rows.length > 0) continue;
-
-      const eligCheck = await client.query(
-        `SELECT 1 FROM gamification_choice_eligibilities
-         WHERE cleaner_id = $1 AND source_goal_id = $2 AND status = 'open'
-         LIMIT 1`,
-        [cleanerId, goalId]
-      );
-      if (eligCheck.rows.length > 0) continue;
-
-      const expiresAt = computeChoiceExpiresAt();
-      await client.query(
-        `INSERT INTO gamification_choice_eligibilities
-         (cleaner_id, choice_group_id, source_goal_id, status, expires_at)
-         VALUES ($1, $2, $3, 'open', $4)`,
-        [cleanerId, choiceGroup.id, goalId, expiresAt]
-      );
-      continue;
-    }
-
-    const existingRows = await client.query(
-      `SELECT id, cleaner_id, reward_id, granted_at, ends_at, uses_remaining, source_type, source_id
-       FROM gamification_reward_grants
-       WHERE cleaner_id = $1 AND reward_id = $2 AND status = 'active'
-       ORDER BY granted_at DESC LIMIT 1`,
-      [cleanerId, rewardId]
-    );
-
-    const existing = existingRows.rows[0]
-      ? {
-          grant_id: (existingRows.rows[0] as { id: string }).id,
-          cleaner_id: cleanerId,
-          reward_id: rewardId,
-          granted_at: (existingRows.rows[0] as { granted_at: Date }).granted_at.toISOString(),
-          ends_at:
-            (existingRows.rows[0] as { ends_at: Date | null }).ends_at?.toISOString() ?? null,
-          uses_remaining: (existingRows.rows[0] as { uses_remaining: number | null })
-            .uses_remaining,
-          source: {
-            source_type: "goal" as const,
-            source_id: goalId,
-          },
-        }
-      : null;
-
-    const decision = shouldGrant(reward, existing, new Date());
-    if (decision.action === "skip") continue;
-
-    const alreadyGrantedForGoal = await client.query(
-      `SELECT 1 FROM gamification_reward_grants
-       WHERE cleaner_id = $1 AND source_id = $2 AND source_type = 'goal' AND status = 'active'
-       LIMIT 1`,
-      [cleanerId, goalId]
-    );
-    if (alreadyGrantedForGoal.rows.length > 0 && decision.action === "grant") continue;
-
-    const grant = makeGrant({
-      cleaner_id: cleanerId,
-      reward,
-      source_type: "goal",
-      source_id: goalId,
-    });
-
-    if (decision.action === "extend" && existing) {
-      if ((decision as { newEndsAt?: Date }).newEndsAt) {
-        await client.query(
-          `UPDATE gamification_reward_grants SET ends_at = $1, meta = jsonb_set(COALESCE(meta, '{}'), '{extended_at}', to_jsonb(now()::text)) WHERE id = $2`,
-          [(decision as { newEndsAt: Date }).newEndsAt.toISOString(), existing.grant_id]
-        );
-      }
-      if ((decision as { newUses?: number }).newUses !== undefined) {
-        await client.query(
-          `UPDATE gamification_reward_grants SET uses_remaining = $1 WHERE id = $2`,
-          [(decision as { newUses: number }).newUses, existing.grant_id]
-        );
-      }
-    } else {
-      const { is_cash, amount_cents } = isCashReward(reward);
-      if (is_cash) {
-        const spendOk = await cashBudget.canSpend({ region_id: null, amount_cents });
-        if (!spendOk.ok) {
-          logger.info("gamification_cash_blocked", {
-            cleanerId,
-            rewardId,
-            goalId,
-            reason: spendOk.reason,
-          });
-          continue;
-        }
-      }
-
-      await client.query(
-        `INSERT INTO gamification_reward_grants
-         (id, cleaner_id, reward_id, granted_at, ends_at, uses_remaining, source_type, source_id, status, meta)
-         VALUES ($1, $2, $3, $4, $5, $6, 'goal', $7, 'active', '{}'::jsonb)`,
-        [
-          grant.grant_id,
-          grant.cleaner_id,
-          grant.reward_id,
-          grant.granted_at,
-          grant.ends_at,
-          grant.uses_remaining,
-          goalId,
-        ]
-      );
-
-      if (is_cash && amount_cents > 0) {
-        await cashBudget.recordCashGrantWithClient(client as PoolClient, {
-          cleaner_id: cleanerId,
-          region_id: null,
-          reward_id: rewardId,
-          amount_cents,
-          source_type: "goal",
-          source_id: goalId,
-        });
-      }
-    }
-  }
+  const durationMs = Date.now() - startMs;
+  logger.info("gamification_worker_complete", { cleanerId, durationMs });
 }

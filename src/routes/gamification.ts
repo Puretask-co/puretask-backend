@@ -10,13 +10,21 @@ import { query } from "../db/client";
 import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { requireRole } from "../middleware/jwtAuth";
 import { getLevelProgress, recordCleanerLogin } from "../services/cleanerLevelService";
-import { recordEvent, recordSessionStart } from "../services/eventIngestionService";
+import {
+  recordEvent,
+  recordSessionStart,
+  EventContractValidationError,
+} from "../services/eventIngestionService";
 import { getCleanerProgression } from "../services/gamificationProgressionService";
 import {
   selectChoiceReward,
   getActiveRewards,
   getOpenChoiceEligibilities,
 } from "../services/gamificationRewardService";
+import {
+  getCleanerGoalsWithProgress,
+  getCleanerProgressSummary,
+} from "../services/cleanerGamificationProgressService";
 import { RewardEffectsService } from "../services/rewardEffectsService";
 import { BadgeService } from "../services/badgeService";
 import { SeasonService } from "../services/seasonService";
@@ -112,6 +120,53 @@ router.get(
 );
 
 /**
+ * GET /cleaner/goals — Frontend spec: goals with progress (current, target, window)
+ */
+router.get(
+  "/goals",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.query.region_id as string) || null;
+    if (!(await gateGamification(req, res, regionId, { goals: [] }))) return;
+    try {
+      const cleanerId = req.user!.id;
+      const goals = await getCleanerGoalsWithProgress(cleanerId);
+      res.json({ goals });
+    } catch (error: unknown) {
+      console.error("Error fetching cleaner goals:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch goals" },
+      });
+    }
+  })
+);
+
+/**
+ * GET /cleaner/progress — Frontend spec: progress hub summary (level, core %, stretch, maintenance, active_rewards)
+ */
+router.get(
+  "/progress",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    const regionId = (req.query.region_id as string) || null;
+    if (!(await gateGamification(req, res, regionId, { current_level: 1, active_rewards: [] }))) return;
+    try {
+      const cleanerId = req.user!.id;
+      const summary = await getCleanerProgressSummary(cleanerId);
+      if (!summary) {
+        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Progress not found" } });
+      }
+      res.json(summary);
+    } catch (error: unknown) {
+      console.error("Error fetching cleaner progress:", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch progress" },
+      });
+    }
+  })
+);
+
+/**
  * GET /cleaner/rewards/choices — List open choice eligibilities (Step 8)
  */
 router.get(
@@ -154,6 +209,49 @@ router.post(
       const grant = await selectChoiceReward({
         cleanerId,
         eligibilityId: eligibility_id,
+        rewardId: reward_id,
+      });
+      res.json({ ok: true, grant });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Failed to select reward";
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: msg } });
+    }
+  })
+);
+
+/**
+ * POST /cleaner/rewards/choice/:choiceGroupId/select — Frontend spec: select by choice group id
+ * Body: { reward_id }
+ */
+router.post(
+  "/rewards/choice/:choiceGroupId/select",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
+      const choiceGroupId = req.params.choiceGroupId;
+      const reward_id = (req.body as { reward_id?: string })?.reward_id;
+      if (!reward_id) {
+        return res.status(400).json({
+          error: { code: "BAD_REQUEST", message: "reward_id required" },
+        });
+      }
+      const elig = await query<{ id: string }>(
+        `SELECT id FROM gamification_choice_eligibilities
+         WHERE cleaner_id = $1 AND choice_group_id = $2 AND status = 'open'
+           AND (expires_at IS NULL OR expires_at > now())
+         ORDER BY earned_at DESC LIMIT 1`,
+        [cleanerId, choiceGroupId]
+      );
+      const eligibilityId = elig.rows[0]?.id;
+      if (!eligibilityId) {
+        return res.status(422).json({
+          error: { code: "UNPROCESSABLE_ENTITY", message: "No open eligibility for this choice group" },
+        });
+      }
+      const grant = await selectChoiceReward({
+        cleanerId,
+        eligibilityId,
         rewardId: reward_id,
       });
       res.json({ ok: true, grant });
@@ -436,6 +534,16 @@ router.post(
       });
       res.json({ ok: true });
     } catch (error: unknown) {
+      if (error instanceof EventContractValidationError) {
+        res.status(400).json({
+          error: {
+            code: "EVENT_CONTRACT_VIOLATION",
+            message: error.message,
+            details: error.errors,
+          },
+        });
+        return;
+      }
       console.error("Error recording event:", error);
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Failed to record event" },
@@ -539,12 +647,14 @@ router.get("/onboarding/progress", (async (req: AuthedRequest, res) => {
       });
     }
 
-    res.json(result.rows[0]);
-  } catch (error: any) {
+    return res.json(result.rows[0]);
+  } catch (error: unknown) {
     console.error("Error fetching onboarding progress:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to fetch progress" },
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to fetch progress" },
+      });
+    }
   }
 }) as RequestHandler);
 

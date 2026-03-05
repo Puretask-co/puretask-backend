@@ -27,6 +27,7 @@ import webhooksRouter from "./webhooks";
 import jobsRouter from "./jobs";
 import levelTuningRouter from "./levelTuning";
 import gamificationControlRouter from "./gamificationControl";
+import supportGamificationRouter from "./supportGamification";
 
 const adminRouter = Router();
 adminRouter.use(requireAuth);
@@ -149,5 +150,6 @@ adminRouter.use("/system", systemRouter); // systemRouter enforces requireAdmin
 adminRouter.use("/settings", settingsRouter); // settingsRouter enforces requireAdmin
 adminRouter.use("/level-tuning", levelTuningRouter); // levelTuningRouter enforces requireAdmin
 adminRouter.use("/gamification", gamificationControlRouter); // gamificationControlRouter enforces requireAdmin
+adminRouter.use("/support", supportGamificationRouter); // support gamification debug (admin only)
 
 export default adminRouter;

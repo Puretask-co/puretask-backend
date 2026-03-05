@@ -1,7 +1,9 @@
 /**
  * PureTask Gamification — Level Evaluator
- * No demotions. Level-up = all core + >= N stretch + maintenance compliant.
- * Maintenance failure pauses progression (level remains).
+ * Rules (locked):
+ * - Levels never demote.
+ * - Level-up requires: all core complete + >= N stretch complete (usually 1) + maintenance compliant (if maintenance_require_all).
+ * - If maintenance fails, progression/rewards pause (but level remains).
  */
 
 import { GoalDefinition, LevelDefinition, LevelEvaluationResult, MetricProvider } from "./types";
@@ -20,9 +22,7 @@ export async function evaluateLevels(params: {
 
   const goalsByLevel = new Map<number, GoalDefinition[]>();
   for (const g of goals) {
-    const list = goalsByLevel.get(g.level) ?? [];
-    list.push(g);
-    goalsByLevel.set(g.level, list);
+    goalsByLevel.set(g.level, [...(goalsByLevel.get(g.level) ?? []), g]);
   }
 
   const currentLevelGoals = goalsByLevel.get(current_level) ?? [];
@@ -31,6 +31,7 @@ export async function evaluateLevels(params: {
   const maintenanceFailed = maintenanceResults.filter((r) => !r.complete).map((r) => r.goal_id);
 
   const levelDef = level_definitions.find((ld) => ld.level === current_level);
+  // Default to true for safety per spec (maintenance pauses progress by default)
   const maintenanceRequired = levelDef?.requirements.maintenance_require_all ?? true;
 
   const paused = maintenanceRequired && maintenanceFailed.length > 0;

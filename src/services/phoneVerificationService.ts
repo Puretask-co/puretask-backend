@@ -70,7 +70,7 @@ export async function sendOTP(
       // Development mode: log OTP instead of sending
       logger.info("otp_generated_dev", { userId, otpCode, phoneNumber });
       if (env.NODE_ENV === "development") {
-        console.log(`\n📱 OTP for ${phoneNumber}: ${otpCode}\n`);
+        logger.info("otp_dev_display", { phoneNumber, otpCode });
       }
     }
 

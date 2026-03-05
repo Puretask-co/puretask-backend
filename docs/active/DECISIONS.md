@@ -19,6 +19,173 @@ Hand-curated list (~10â€“30). Each entry: **Decision** â€” **Why** â�
 - **Layering: routes thin, services own logic** â€” Why: testability, clear boundaries â€” Tradeoff: more files, no DB in routes
 - **Cleaner Level System: goals over XP, levels as gates** — Why: behavior control, tangible rewards (cash, visibility, fee reduction), no abstract points — Tradeoff: goal evaluation on each completion/login adds minor latency (async)
 - **Gamification docs: bundle content as canonical for rules and constants** — Why: bundle docs (PURETASK_GAMIFICATION_CURSOR_CONTEXT, event_contract_v1, metrics_contract_v1, spec_enforcement_matrix_v1) are more complete than backend’s original gamification sections: they define canonical rules (meaningful login 15 min, message 25 chars/template/reply 24h, photo/on-time/good-faith), key constants table, and full event/metric contracts. Backend ARCHITECTURE keeps code/schema paths; we merged the bundle’s rules and constants into ARCHITECTURE and RUNBOOK so one source of truth exists. Bundle SQL migrations are not run (043–056 already apply). — Tradeoff: two doc locations (canonical docs + gamification_bundle/docs) with canonical docs holding the distilled rules; full contracts stay in gamification_bundle/docs.
+- **Documents switch: uploaded bundle as canonical gamification spec** — Why: the uploaded bundle is the source of truth for gamification. We made the switch by: (1) declaring gamification_bundle/README.md the index and PURETASK_GAMIFICATION_CURSOR_CONTEXT.md the lead doc; (2) pointing ARCHITECTURE §3, RUNBOOK §4, SETUP, and docs/active/README.md to the bundle; (3) keeping implementation (code, DB) unchanged. — Tradeoff: single canonical spec location; implementation docs reference it.
+- **ESLint: zero errors, warnings allowed** — Why: CI and local `npm run lint` must pass (exit 0). We ignore test/spec/docs and gamification-bundle for type-aware lint; allow `db/client` in core/workers/lib/middleware/routes; SQL template literal rule and no-misused-promises are "warn"; no-console is "warn" in workers, "off" in logger. Remaining errors were fixed (void promises, logger instead of console, eslint-disable for optional require). — Tradeoff: many no-explicit-any and no-unused-vars remain as warnings; can tighten later.
+- **Real-site frontend stack: Next.js + Tailwind + shadcn/ui + Framer Motion** — Why: aligns with existing frontend docs and DATA_MODEL_REFERENCE (timeline, presence map); Next.js for SSR and deploy; Tailwind + shadcn for consistency; Framer for job timeline and trust UI. — Tradeoff: none for this repo (frontend lives in its own repo).
+- **Maps: Mapbox** — Why: better for custom "cleaner on route" and presence UX (vector tiles, mobile SDKs, predictable pricing at scale). Use Google Directions API only if you already rely on it for turn-by-turn. — Tradeoff: another vendor; Google may be simpler if you only need basic directions.
+- **Uploads: S3 or Cloudflare R2 with signed URLs** — Why: backend already assumes S3/Cloudinary and signed URLs (fileUploadService, MASTER_CHECKLIST). S3 default (ecosystem, BACKUP_S3 in n8n); R2 if zero egress matters (S3-compatible API). — Tradeoff: R2 slightly smaller ecosystem; S3 egress cost unless behind CloudFront.
+- **Single S3-compatible storage implementation for S3 and R2** — Why: one codepath in `src/lib/storage.ts` using AWS SDK; R2 is "S3 API + custom endpoint". Env only: set `STORAGE_ENDPOINT` for R2, leave empty for S3. Endpoints: `POST /uploads/sign` (signed PUT URL), `POST /jobs/:jobId/photos/commit` (record photo + optional timeline events when MIN_BEFORE_PHOTOS / MIN_AFTER_PHOTOS met), `GET /jobs/:jobId/timeline` (events ASC for stepper). — Tradeoff: none.
+- **Canonical job status in one place** — Why: backend, frontend, and n8n must use the same status enum and transition rules. Source: `src/state/jobStateMachine.ts` and `src/constants/jobStatus.ts` (JSON-safe constants for frontend/n8n). See ARCHITECTURE §3.4a. — Tradeoff: frontend/n8n must consume from this repo or a shared package.
+- **Admin audit log for sensitive actions** — Why: ops trail for resolve dispute, override job status, and (already) credit adjust. `logAdminAction` in `src/lib/adminAuditLog.ts` writes to `admin_audit_log` (019 schema). Used by: job status override, dispute resolve (by id and by jobId). Credit adjust already logged via `createAuditLog` → `audit_logs`. — Tradeoff: none.
+- **Audit R1: One payout per job** — Why: two approval paths (tracking + state machine) could both run; ledger was protected by unique constraint but payouts was not. We added `uniq_payouts_job_id` (064) and made `recordEarningsForCompletedJob` idempotent (return existing payout when present). — Tradeoff: none.
+- **Audit R4: Atomic status + credits** — Why: `applyStatusTransition` could update status then fail before release/refund, leaving inconsistent state. We now run status UPDATE + release/refund/payout in a single transaction for completed/cancelled/dispute_resolved_refund. — Tradeoff: event publish happens after commit (correct; avoids holding transaction for n8n).
+- **Audit B4: Idempotency request body hash** — Why: same key with different body could replay a different operation. We store optional `request_body_hash` (SHA-256) and reject 409 when key exists with different body. — Tradeoff: legacy keys without hash still accepted (backward compatible).
+- **Event naming: two namespaces** — job_events.event_type mixes canonical (`client_approved`) and dot-notation (`job.approved`). State machine and config use canonical; tracking uses dot-notation. Consumers (n8n, UI, analytics) should normalize or backend will canonicalize in a future change. See PR_AUDIT_RUBRIC §6, §15.
+- **Audit B1: Canonical event_type only** — We store only canonical event_type in job_events; `toCanonicalEventType()` in events.ts maps tracking names (job.approved → client_approved, etc.). n8n receives canonical name. — Tradeoff: none.
+- **Audit B2/R2: Single approval path** — `POST /tracking/:jobId/approve` now calls `applyStatusTransition(..., client_approved, ...)` instead of `approveJob()`. One code path for completion; tip handled in applyStatusTransition. — Tradeoff: approveJob remains in jobTrackingService for tests/legacy.
+- **Audit R3: Tracking validates state machine** — startEnRoute, checkIn, checkOut, disputeJob call `getNextStatus()` before direct UPDATE so tracking cannot bypass allowed transitions. — Tradeoff: none.
+- **Audit R5: Transition idempotent** — applyStatusTransition returns early if job.status === nextStatus (same event retry = no-op). — Tradeoff: none.
+- **Audit R7: Event delivery semantics** — job_events: exactly-once in DB. n8n: best-effort (no outbox retry). Document in RUNBOOK or here: consumers must tolerate at-least-once delivery for n8n. — Tradeoff: if n8n must see every event, add retry/outbox later.
+- **Audit R9: Idempotency key scope** — Uniqueness is by idempotency_key only (not endpoint+method). Client contract: use a unique key per logical operation; same key same endpoint = replay. Body hash (B4) rejects same key different body. Document in API spec. — Tradeoff: cross-endpoint key reuse possible; document that keys should be per-operation.
+- **Audit R10: Idempotency first attempt fails** — No pending/committed state. If first attempt does side effects then crashes before storing response, replay with same key returns stale response. Document as best-effort; critical flows use ledger/payout idempotency. — Tradeoff: accept small risk or add pending state later.
+- **Audit R14: Single transition contract** — State machine (jobStateMachine.ts) is the contract. Tracking still does direct UPDATEs but validates via getNextStatus before each change; approve route uses applyStatusTransition. See ARCHITECTURE §3.4a. — Tradeoff: full unification would have all tracking transitions go through applyStatusTransition.
+- **Audit R12: Idempotency on money/lifecycle endpoints** — We require Idempotency-Key on: POST /jobs (create), POST /jobs/:jobId/pay, POST /jobs/:jobId/transition, POST /tracking/:jobId/approve, POST /payments/credits, POST /credits/checkout, Trust POST credits/buy and related. Transition and approve are also application-idempotent (R5, guarded UPDATE). — Tradeoff: client must send key for these endpoints.
+
+---
+
+## Data and copy: backend vs frontend (2026-02)
+
+**Review question:** Is there data or copy we built in the backend that should live on the frontend instead?
+
+**Summary:** Most backend-owned data is correct (source of truth for DB/admin-editable content). A few items are **pure UI copy** or **display-only derivations** that could move to the frontend to simplify the API and centralize i18n/UX.
+
+### Keep in backend (correct as-is)
+
+- **Level names (`level_label`)** — Sourced from `cleaner_level_definitions` (DB); can be admin-editable. API returning `level_label` with `current_level` is fine.
+- **Badge name/icon** — From `badge_definitions` (DB) and config; admin can change. API returns `id`, `name`, `icon` for profile/trust signals. Correct.
+- **Reason codes (label, description)** — Stored in DB, admin-editable; used in cancellation/decline flows. Backend is source of truth.
+- **Invoice/line item labels** — From DB (`description`); backend correct.
+- **Support explanation paragraph** — Generated server-side from gamification state so support “Copy explanation” stays in sync with data. Keep in backend.
+- **Next Best Action / reward_preview label** — Derived from reward definitions (DB); backend is fine. If we ever want frontend i18n for reward names, we could return only `reward_id` and have frontend map; not required now.
+- **Gamification config (goals, levels, level copy, quick templates)** — Used by backend for evaluation, emails, and API responses. Level copy and quick templates used **only** for in-app UI could theoretically move to frontend; if they’re also used in notifications or system messages, keep in backend.
+
+### Good candidates to move to frontend
+
+1. **Trust live-appointment checklist labels**  
+   **Where:** `src/routes/trustAdapter.ts` — hardcoded `[{ id: "c1", label: "Kitchen" }, { id: "c2", label: "Bathrooms" }, { id: "c3", label: "Floors" }]`.  
+   **Recommendation:** Backend returns only checklist state, e.g. `[{ id, completed, completedAtISO }]` (or equivalent). Frontend owns the list of room labels and merges for display. Reduces coupling and allows frontend/i18n to change copy without backend deploy.
+
+2. **Admin settings category labels**  
+   **Where:** `src/routes/admin/settings.ts` — `formatCategoryLabel()` maps `setting_type` to strings like "Platform Configuration", "Booking Rules".  
+   **Recommendation:** API returns raw `setting_type`; frontend holds the map (or i18n) for display. Keeps admin UI copy and possible i18n on the frontend.
+
+3. **Matching explanation strings**  
+   **Where:** `src/routes/matching.ts` — builds `explanation: string[]` (e.g. "High reliability score (85/100)", "Elite tier cleaner - top performer"). API also returns `breakdown` with numeric scores and keys.  
+   **Recommendation:** Optional. Frontend could format explanations from `breakdown` alone; backend would return only `breakdown`. Keeps all “why we recommended this cleaner” copy and i18n on the frontend. If the same strings are used in emails or other backend contexts, keep current behavior.
+
+### Optional / context-dependent
+
+- **Level label only:** If level names become **fixed** (never admin-edited), frontend could hold a static map `level 1–10 → display name` and API could return only `current_level`. Today level names are in DB and may be edited; current design is correct unless we explicitly make levels non-editable.
+- **Level copy / quick message templates** (`getLevelCopy()`, `getQuickTemplates()` in `src/config/cleanerLevels/index.ts`): If used only for cleaner-facing in-app UI, could move to frontend; if used in notifications or backend-generated messages, keep in backend.
+
+**Decision:** No change required immediately. When touching Trust adapter or admin settings, consider moving checklist labels and admin category labels to the frontend. Matching explanations can stay as-is unless we want full i18n for match reasons.
+
+### Copy-paste: what to put in the frontend
+
+Use the blocks below in the **frontend** (constants, i18n, or config). After that, change the **backend** as noted so it only returns data, not labels.
+
+---
+
+**1. Trust live-appointment checklist (room labels)**
+
+Backend today: `src/routes/trustAdapter.ts` builds `checklist` with `id`, `label`, `completed`, `completedAtISO`.  
+Move the **labels** to the frontend. Backend should return only e.g. `{ id, completed, completedAtISO }` (no `label`).  
+Frontend merges this list with labels:
+
+```ts
+// Frontend: e.g. constants/trustChecklist.ts or i18n
+export const TRUST_CHECKLIST_ROOM_LABELS: Record<string, string> = {
+  c1: "Kitchen",
+  c2: "Bathrooms",
+  c3: "Floors",
+};
+
+// Usage: map API checklist items and add label from TRUST_CHECKLIST_ROOM_LABELS[id]
+```
+
+---
+
+**2. Admin settings category labels**
+
+Backend today: `src/routes/admin/settings.ts` → `formatCategoryLabel(type)`.  
+Backend should return raw `setting_type`; frontend does the display mapping:
+
+```ts
+// Frontend: e.g. constants/adminSettingsCategories.ts or i18n
+export const ADMIN_SETTINGS_CATEGORY_LABELS: Record<string, string> = {
+  platform: "Platform Configuration",
+  booking: "Booking Rules",
+  pricing: "Pricing & Fees",
+  credits: "Credit System",
+  payment: "Payment Settings",
+  payout: "Payout Settings",
+  notifications: "Notifications",
+  email: "Email Configuration",
+  sms: "SMS Configuration",
+  features: "Feature Flags",
+  ai: "AI Assistant",
+  security: "Security Settings",
+  rate_limit: "Rate Limiting",
+  tiers: "Cleaner Tiers",
+  reviews: "Review System",
+  disputes: "Disputes",
+  referral: "Referral Program",
+  analytics: "Analytics & Tracking",
+  api: "API Configuration",
+  webhooks: "Webhooks",
+  backup: "Backup & Maintenance",
+  maintenance: "Maintenance",
+};
+
+// Fallback if type not in map: type.charAt(0).toUpperCase() + type.slice(1)
+```
+
+---
+
+**3. Matching explanation strings (optional)**
+
+Backend today: `src/routes/matching.ts` returns `explanation: string[]` and `breakdown` with `description` per factor.  
+If you want i18n, backend can return only `breakdown` (scores + keys); frontend builds the bullet list from these templates (use `breakdown.reliability.score`, `breakdown.distance.description`, etc.):
+
+```ts
+// Frontend: templates to build explanation bullets from GET match explain response
+// Backend returns: breakdown.reliability.score, .distance, .repeatClient, .flexibility, .riskAlignment
+// Each has .score and .description. Backend can stop sending top-level "explanation" array.
+
+// Template ideas (frontend builds string from breakdown + these):
+// - reliability: `Based on ${score}/100 reliability score` or use breakdown.reliability.description
+// - distance: `${km}km from job location` or use breakdown.distance.description
+// - repeatClient: "Bonus for previous successful jobs with you" | "No prior history with this client"
+// - flexibility: "Low flexibility badge (prefers fixed schedules)" | "Flexible with schedule changes"
+// - riskAlignment: "Adjustment based on client risk profile" | "Good risk alignment"
+// Plus summary bullets: "High reliability score (X/100)", "Close proximity (Xkm away)",
+// "Has successfully completed jobs with you before", "Elite tier cleaner - top performer",
+// "Pro tier cleaner - highly rated"
+```
+
+So: copy **1** and **2** into the frontend as-is; use **3** only if you want to stop sending `explanation[]` from the backend and build it from `breakdown` on the frontend.
+
+---
+
+## Documentation consolidation (done 2026-02)
+
+**Approach:** We **synthesized** (gathered all ideas and important information into one coherent doc per topic), not concatenated. See **CONSOLIDATION_GUIDE.md** for the plan and which docs were combined.
+
+**Completed:** Backup & restore → `BACKUP_RESTORE.md`; CI/CD → `CI_CD_SETUP.md`; Notifications (4 files) → `NOTIFICATIONS.md`; API (3 files) → `API_REFERENCE.md`; Founder reference → `FOUNDER_BACKEND_REFERENCE.md` is now an index linking to `founder/*.md` (full single-doc version archived). Source files archived to `docs/archive/raw/consolidated-sources/` (01-HIGH/, 02-MEDIUM/, FOUNDER_BACKEND_REFERENCE_FULL.md).
+
+**Not combined (kept as-is):** RUNBOOK + DEPLOYMENT; Legal; Gamification bundle docs; 01-HIGH/02-MEDIUM/03-LOW folder structure for remaining files. Table below kept as historical reference.
+
+| Candidate | Files to combine | Target / note |
+|-----------|------------------|---------------|
+| **Backup & restore** | `docs/active/BACKUP_RESTORE.md`, `01-HIGH/BACKUP_SETUP.md`, `01-HIGH/BACKUP_RESTORE_PROCEDURE.md` | Merge into single `BACKUP_RESTORE.md`: strategy + setup + restore steps. 01-HIGH versions are longer and have "plain English" sections; fold the best into active and archive the 01-HIGH pair. |
+| **CI/CD** | `docs/active/CI_CD_SETUP.md`, `01-HIGH/CI_CD_SETUP.md` | One file only. 01-HIGH version is longer and has glossary; merge any missing workflow detail into active `CI_CD_SETUP.md` and remove or archive the duplicate. |
+| **RUNBOOK + DEPLOYMENT** | `RUNBOOK.md`, `DEPLOYMENT.md` | Optional. Both cover deploy, rollback, production. Could become one "Ops & deployment" doc; current split (RUNBOOK = ops/incident, DEPLOYMENT = Railway/process layout) is also fine. |
+| **Notifications (02-MEDIUM)** | `NOTIFICATION_DEDUPE_STRATEGY.md`, `NOTIFICATION_MATURITY_UPGRADES.md`, `NOTIFICATION_SENDER_ANALYSIS.md`, `NOTIFICATION_TEMPLATES_OUTLINE.md` | One `NOTIFICATIONS.md` with sections: dedupe, maturity/sender, templates. Reduces four files to one reference. |
+| **API (02-MEDIUM)** | `API_DOCUMENTATION.md`, `API_SPEC_COMPARISON.md`, `API_EXACT_ENDPOINTS.md` | One `API_REFERENCE.md`: how we document the API + spec comparison + exact endpoints. Complements canonical `BACKEND_ENDPOINTS.md`. |
+| **Founder reference** | `FOUNDER_BACKEND_REFERENCE.md` (single long doc) + `founder/*.md` (36 topic files) | Either: (A) merge all `founder/*.md` into `FOUNDER_BACKEND_REFERENCE.md` as sections (one very long doc), or (B) keep `founder/` as chapters and make `FOUNDER_BACKEND_REFERENCE.md` a short index that links to them. Avoid duplicating the same content in both. |
+| **Legal** | `legal/README.md` + `legal/*.md` (TOS, PRIVACY_POLICY, CLEANER_AGREEMENT, etc.) | Usually kept separate for counsel and liability clarity. Optional: one `LEGAL.md` with an index and sections for each artifact; current structure is already an index + files. |
+| **Gamification bundle docs** | `gamification_bundle/docs/*.md` (README, event_contract, metrics_contract, enforcement, etc.) | Optional: one `GAMIFICATION_SPEC.md` with sections. Current split is good for modular updates; combine only if you want a single long spec. |
+| **01-HIGH / 02-MEDIUM / 03-LOW** | All files under these priority folders | Either merge each folder’s content into the relevant canonical doc (e.g. 01-HIGH backup → BACKUP_RESTORE; 01-HIGH CI_CD → CI_CD_SETUP), or turn each folder into one "HIGH/MEDIUM/LOW backlog" doc that links to or embeds the current files. Reduces many small files to a few. |
 
 ---
 ## Extracted from archive (auto)
@@ -219,4 +386,31 @@ Raw lines matched from `docs/archive/raw`. For quick reference use the curated l
 - **### Option 3: Railway Cron Jobs** _(source: `docs\archive\raw\uncategorized\WORKER_SCHEDULE.md`)_
 - **For Railway, use the **Cron Jobs** feature or create separate worker services:** _(source: `docs\archive\raw\uncategorized\WORKER_SCHEDULE.md`)_
 - **Use Railway's built-in cron job feature to schedule individual workers.** _(source: `docs\archive\raw\uncategorized\WORKER_SCHEDULE.md`)_
+
+---
+
+## Gamification bundle implementation (2026-02)
+
+- **Implemented (implementation guide Steps 1, 2, 4, 9):** `withClient` adapter (`src/db/bundleAdapter.ts`, re-exported from `src/db/client.ts`), config bridge (`src/config/cleanerLevels/bundleConfigBridge.ts` with `getBundleConfig()`), RBAC shim (`src/middleware/rbac.ts` with `requireAdminRole` and `req.adminUser`), and optional migration `057_pt_safety_reports.sql`. Build and gamification unit tests pass. The app continues to use existing `src/lib/gamification/` and services; bundle code in `src/gamification-bundle/` remains reference-only and excluded from build.
+- **Also implemented:** Wrapper adapters for bundle-style progression and rewards: `bundleProgressionServiceAdapter.ts`, `bundleRewardGrantServiceAdapter.ts`, and `grantForCompletedGoals` (used where completed goals should grant bundle-defined rewards). Event contract loader (`src/config/cleanerLevels/contracts/eventContractLoader.ts`) loads `event_contract_v1.json` and exposes `getAllowedEventTypes()`, `isAllowedEventType()`, `validateEventForContract()`; optional enforcement via `STRICT_EVENT_CONTRACT=true` in `recordEvent` (returns 400 EVENT_CONTRACT_VIOLATION when validation fails). See docs/active/BUNDLE_SWITCH_GAP_ANALYSIS.md.
+- **Option A merge (done):** Bundle logic and comments were merged into current engine: `src/lib/gamification/goal_evaluator.ts` (evaluateGoals comment), `level_evaluator.ts` (rules comment, immutable goalsByLevel, maintenance default comment), `reward_granter.ts` (extend_duration comments), `types.ts` (JSDoc and inline comments). Build and gamification unit tests (11) pass. Bundle folder remains reference-only; no Option B adapted folder.
+- **Build and deploy:** `npm run build` copies `src/config/cleanerLevels/contracts/*.json` to `dist/` via `scripts/copy-contracts-to-dist.js` so STRICT_EVENT_CONTRACT works in production. Integration test `onboardingRealAuth.test.ts` uses real auth (createTestCleaner); TROUBLESHOOTING documents known skips. Gamification onboarding progress route fixed to avoid double-send (return + headersSent check in catch).
+
+---
+
+## Type-safe API integration (rule of thumb)
+
+We follow a **practical rule of thumb** for type-safe integration (shared/mirrored types between backend and frontend):
+
+| Kind of endpoint / data | Type-safe? | What we do |
+|-------------------------|------------|------------|
+| **Job details (full payload)** | Yes | `JobDetailsResponse` in `src/types/jobDetails.ts`; GET `/jobs/:jobId/details` builds and returns it. |
+| **Job (single resource)** | Worth it | `Job` from `src/types/db.ts`; GET `/jobs/:jobId` returns `{ job }` from `getJob()` (typed). |
+| **Cleaner profile (with reliability, etc.)** | Worth it | `CleanerProfileResponse` (= `JobDetailsCleaner`) in `src/types/jobDetails.ts`; GET `/cleaners/:id` returns `{ cleaner: CleanerProfileResponse }`. |
+| **Ledger / payment by job** | Yes if frontend renders in detail | Covered inside `JobDetailsResponse`: `CreditLedgerEntry[]`, `JobDetailsPaymentIntent`, `JobDetailsPayout`. |
+| **List responses (jobs, cleaners, notifications)** | Nice to have | No formal `{ items: T[], total }` shared type yet; responses are ad-hoc (e.g. `{ jobs }`, `{ cleaners }`). Frontend can type locally if desired. |
+| **Simple success/error** | Optional | `sendSuccess` / `sendError`; frontend can type wrapper if wanted. |
+| **One-off or rarely used** | Optional | Add types when we touch them. |
+
+So: we **do** follow the rule. We prioritize shared types for job details, single job, cleaner profile, and ledger/payment (via job details). We do not force a shared type for every endpoint; list and simple responses remain optionally typed (often frontend-only).
 

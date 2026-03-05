@@ -1,70 +1,65 @@
-# CI/CD Pipeline Setup Guide
+# CI/CD Pipeline Setup
 
-## Overview
-This document describes the CI/CD pipeline setup for PureTask Backend using GitHub Actions.  
-**Cross-doc status:** [DOCUMENT_EXECUTION_TRACKER.md](./DOCUMENT_EXECUTION_TRACKER.md)
+**What it is:** GitHub Actions workflows for PureTask Backend: lint, typecheck, test, build, security scan, and optional deploy.  
+**What it does:** Describes what runs on push/PR, required env vars, how to run migrations in CI or on deploy, and how to add staging/production deploy.  
+**How we use it:** Read when changing or debugging CI; run the same commands locally to reproduce CI.
 
-## Workflows
+**Why it matters:** Every push runs lint, typecheck, and tests so broken code doesn’t merge. Security scan blocks secrets. Migrations in CI or on deploy keep schema and code in sync.
 
-### 1. Main CI Pipeline (`.github/workflows/ci.yml`)
-**Triggers**: Push/PR to `main` or `develop` branches
+---
 
-**Jobs**:
-- **lint**: Runs ESLint, `npm run format:check` (Prettier), and TypeScript type checking
-- **test**: Runs all tests with PostgreSQL service
-- **build**: Builds the application (runs after lint/test pass)
-- **security-scan**: Runs npm audit and secret scanning
+## Key terms (plain English)
 
-**How to Know It's Working**:
-- ✅ Green checkmarks appear on PRs
-- ✅ Tests run automatically on push
-- ✅ Build succeeds
-- ✅ Failed tests block merge
+| Term | Meaning |
+|------|--------|
+| **CI/CD** | On every push, scripts run lint, test, build. They block bad code from being merged. Optional: deploy to staging/production. |
+| **Migration** | A script that updates the database (e.g. add a column). We run them in order so the DB matches the code. |
+| **Production / Staging** | Production = live app; staging = copy for testing before production. |
+| **Env vars / .env** | Configuration (API keys, DB URL) in environment variables or `.env`—never committed. |
 
-**How to Know It's NOT Working**:
-- ❌ Red X marks on PRs
-- ❌ Tests don't run automatically
-- ❌ Build fails
-- ❌ Can merge code that breaks tests
+---
 
-### 2. Test Workflow (`.github/workflows/test.yml`)
-**Triggers**: Push/PR to `main` or `develop` branches
+## 1. Workflows
 
-**Jobs**:
-- **backend-tests**: Backend unit/integration tests
-- **frontend-tests**: Frontend tests (if frontend repo is included)
-- **e2e-tests**: End-to-end tests with Playwright
+### 1.1 Main CI (`.github/workflows/ci.yml`)
 
-**Features**:
-- PostgreSQL service container
-- Coverage reporting
-- Codecov integration (optional)
+**Triggers:** Push/PR to `main` or `develop`.
 
-### 3. Security Scan (`.github/workflows/security-scan.yml`)
-**Triggers**: Push/PR or manual dispatch
+**Jobs:** lint (ESLint, format check, TypeScript) → test (with PostgreSQL) → build → security-scan (npm audit + secret scanning).
 
-**Jobs**:
-- **secret-scan**: Scans for secrets and forbidden files
-- **auth-enforcement**: Checks for legacy auth middleware
-- **build-check**: Verifies build doesn't contain secrets
+**What it does:** Prevents broken or insecure code from reaching main. Green CI = known-good state.
 
-**Features**:
-- Gitleaks integration
-- Pattern-based secret detection
-- Forbidden file checks (.env, node_modules, etc.)
+**Signs it’s working:** Green checkmarks on PRs; tests run on push; failed tests block merge.  
+**Signs it’s not:** Red X on PRs; tests don’t run; build fails; you can merge failing code.
 
-### 4. Architecture Checks (`.github/workflows/backend-architecture-checks.yml`)
-**Triggers**: PRs that modify `src/**`
+### 1.2 Test workflow (`.github/workflows/test.yml`)
 
-**Checks**:
-- Blocks direct SendGrid/Twilio calls
-- Warns about large route files
-- Verifies service layer usage
-- Checks event naming conventions
+**Triggers:** Push/PR to `main` or `develop`.
 
-## Environment Variables
+**Jobs:** backend-tests, optionally frontend-tests, e2e-tests (Playwright). PostgreSQL service container; optional coverage/Codecov.
 
-### Required for CI
+**What it does:** Catches regressions in a clean environment that matches production.
+
+### 1.3 Security scan (`.github/workflows/security-scan.yml`)
+
+**Triggers:** Push/PR or manual.
+
+**Jobs:** secret-scan (Gitleaks, forbidden files), auth-enforcement (legacy auth checks), build-check (no secrets in build).
+
+**What it does:** Last line of defense against committed secrets.
+
+### 1.4 Architecture checks (`.github/workflows/backend-architecture-checks.yml`)
+
+**Triggers:** PRs that change `src/**`.
+
+**Checks:** No direct SendGrid/Twilio in routes; service layer usage; event naming. Fails PR on violations.
+
+---
+
+## 2. Environment variables
+
+**Required for CI:**
+
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/puretask_test
 JWT_SECRET=test-secret-key-for-ci-minimum-32-chars-long
@@ -73,81 +68,32 @@ STRIPE_WEBHOOK_SECRET=whsec_test_secret_for_ci
 N8N_WEBHOOK_SECRET=test-n8n-secret-for-ci
 ```
 
-### Optional
+**Optional:** `REDIS_URL=""`, `USE_REDIS_RATE_LIMITING=false`, `ENABLE_METRICS=false`.
+
+---
+
+## 3. Database migrations in CI or on deploy
+
+- **Commands:** `npm run db:migrate` (or project’s migrate script). See [DB/migrations/README.md](../../DB/migrations/README.md).
+- **Option A (CI):** Add a job that sets `DATABASE_URL` to staging, runs migrate, then deploy. Run only on push to deploy branch.
+- **Option B (on server):** In deploy script, run migrate before `npm start`. Order: migrate then start.
+
+---
+
+## 4. Deployment (future)
+
+**Staging:** Uncomment/configure deploy job in `ci.yml` for `develop` push; use `environment: staging`.  
+**Production:** Deploy on `main` push; use `environment: production`.
+
+**Options:** SSH (appleboy/ssh-action), Docker (build-push then pull on server), or cloud (AWS/GCP/Azure actions). See [DEPLOYMENT.md](./DEPLOYMENT.md) for Railway/production layout.
+
+---
+
+## 5. Testing the pipeline
+
+**Locally (same as CI):**
+
 ```bash
-REDIS_URL=""  # Empty for CI (Redis not needed for tests)
-USE_REDIS_RATE_LIMITING=false
-ENABLE_METRICS=false  # Disable metrics in CI
-```
-
-## Deployment (Future)
-
-### Staging Deployment
-Uncomment and configure the `deploy` job in `ci.yml`:
-```yaml
-deploy:
-  name: Deploy to Staging
-  runs-on: ubuntu-latest
-  needs: [build, test, security-scan]
-  if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-  environment:
-    name: staging
-    url: https://staging-api.puretask.com
-```
-
-### Production Deployment
-```yaml
-deploy:
-  name: Deploy to Production
-  runs-on: ubuntu-latest
-  needs: [build, test, security-scan]
-  if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-  environment:
-    name: production
-    url: https://api.puretask.com
-```
-
-## Deployment Options
-
-### Option 1: SSH Deployment
-```yaml
-- name: Deploy via SSH
-  uses: appleboy/ssh-action@master
-  with:
-    host: ${{ secrets.SSH_HOST }}
-    username: ${{ secrets.SSH_USER }}
-    key: ${{ secrets.SSH_KEY }}
-    script: |
-      cd /var/www/puretask-backend
-      git pull
-      npm ci --production
-      npm run build
-      pm2 restart puretask-backend
-```
-
-### Option 2: Docker Deployment
-```yaml
-- name: Build and push Docker image
-  uses: docker/build-push-action@v5
-  with:
-    context: .
-    push: true
-    tags: puretask/backend:${{ github.sha }}
-    
-- name: Deploy to server
-  run: |
-    ssh ${{ secrets.SSH_HOST }} "docker pull puretask/backend:${{ github.sha }} && docker-compose up -d"
-```
-
-### Option 3: Cloud Provider (AWS/GCP/Azure)
-- Use provider-specific actions (e.g., `aws-actions/configure-aws-credentials`)
-- Deploy to ECS, Cloud Run, or App Service
-
-## Testing the Pipeline
-
-### Test Locally
-```bash
-# Run the same commands CI runs
 npm ci
 npm run lint
 npm run typecheck
@@ -155,67 +101,28 @@ npm test
 npm run build
 ```
 
-### Test in CI
-1. Create a test branch
-2. Push to trigger workflow
-3. Check GitHub Actions tab
-4. Verify all jobs pass
+**In CI:** Push a branch, open GitHub Actions, confirm all jobs pass.
 
-### Test Failure Scenarios
-- Push code with lint errors → Should fail lint job
-- Push code with type errors → Should fail typecheck job
-- Push code that breaks tests → Should fail test job
-- Push code with secrets → Should fail security-scan job
+**Failure scenarios:** Lint errors → fail lint; type errors → fail typecheck; broken tests → fail test; secrets → fail security-scan.
 
-## Troubleshooting
+---
 
-### Tests Fail in CI but Pass Locally
-- Check environment variables match
-- Verify PostgreSQL version matches
-- Check Node.js version matches
-- Review test isolation issues
+## 6. Troubleshooting
 
-### Build Fails in CI
-- Check TypeScript errors
-- Verify all dependencies are in package.json
-- Check for missing environment variables
+- **Tests pass locally, fail in CI:** Env vars, PostgreSQL/Node version, test isolation.
+- **Build fails in CI:** TypeScript errors, missing deps in package.json, missing env.
+- **Security scan fails:** Remove real secrets; add false positives to allowlist (e.g. `.gitleaks.toml`).
 
-### Security Scan Fails
-- Review detected secrets
-- Add false positives to `.gitleaks.toml` allowlist
-- Remove actual secrets from code
+---
 
-## Best Practices
+## 7. Best practices
 
-1. **Always run tests before pushing**
-   ```bash
-   npm test
-   ```
+1. Run tests before pushing: `npm test`
+2. Fix lint locally: `npm run lint -- --fix`
+3. Typecheck before commit: `npm run typecheck`
+4. Never commit secrets; use env vars and `.env.example` (no values).
+5. Keep workflows fast: cache deps, parallel jobs, skip when possible.
 
-2. **Fix lint errors locally**
-   ```bash
-   npm run lint -- --fix
-   ```
+---
 
-3. **Check types before committing**
-   ```bash
-   npm run typecheck
-   ```
-
-4. **Don't commit secrets**
-   - Use environment variables
-   - Add to `.env.example` (without values)
-   - Never commit `.env` files
-
-5. **Keep workflows fast**
-   - Cache dependencies
-   - Run tests in parallel
-   - Skip unnecessary jobs when possible
-
-## Next Steps
-
-1. **Set up deployment**: Configure production deployment
-2. **Add notifications**: Slack/email on failures
-3. **Add performance tests**: Include in CI
-4. **Add database migrations**: Run in deployment
-5. **Add rollback**: Automatic rollback on failure
+**Sources consolidated (2026-02):** Content merged from `docs/active/CI_CD_SETUP.md` and `docs/active/01-HIGH/CI_CD_SETUP.md`. Original 01-HIGH file archived to `docs/archive/raw/consolidated-sources/01-HIGH/`.

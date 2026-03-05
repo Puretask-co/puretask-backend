@@ -14,6 +14,7 @@ import { runNoShowDetectionWorker } from "./v1-core/noShowDetection";
 import { runPhotoRetentionCleanup } from "./v2-operations/photoRetentionCleanup";
 import { runGoalChecker } from "./v2-operations/goalChecker";
 import { runCreditEconomyMaintenance } from "./v2-operations/creditEconomyMaintenance";
+import { runIdempotencyCleanupWorker } from "./v2-operations/idempotencyCleanup";
 import { runPayoutRetry } from "./v2-operations/payoutRetry";
 import { runPayoutReconciliation } from "./v2-operations/payoutReconciliation";
 import { runBackupDaily } from "./v2-operations/backupDaily";
@@ -64,6 +65,7 @@ type WorkerName =
   | "no-show-detection"
   | "governor-metrics"
   | "goal-checker"
+  | "idempotency-cleanup"
   | "all";
 
 const workers: Record<string, () => Promise<unknown>> = {
@@ -90,6 +92,7 @@ const workers: Record<string, () => Promise<unknown>> = {
   "no-show-detection": runNoShowDetectionWorker,
   "governor-metrics": runComputeGovernorMetrics,
   "goal-checker": runGoalChecker,
+  "idempotency-cleanup": runIdempotencyCleanupWorker,
 };
 
 /**

@@ -76,6 +76,9 @@ import userDataRouter from "./routes/userData";
 import usersRouter from "./routes/users";
 import trustAdapterRouter, { trustRootRouter } from "./routes/trustAdapter";
 import { bookingsStubRouter, cleanersRouter } from "./routes/dashboardStubs";
+import referralRouter from "./routes/referral";
+import uploadsRouter from "./routes/uploads";
+import configRouter from "./routes/config";
 
 // ============================================
 // Sentry is already initialized in instrument.ts (required at top of file)
@@ -171,6 +174,7 @@ app.use(sanitizeBody);
 // ============================================
 // Use Redis-based rate limiting in production if enabled, otherwise use in-memory
 if (env.USE_REDIS_RATE_LIMITING && env.REDIS_URL) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic conditional load
   const { productionGeneralRateLimiter } = require("./lib/rateLimitRedis");
   app.use(productionGeneralRateLimiter);
   logger.info("rate_limiting_redis_enabled");
@@ -299,6 +303,9 @@ apiRouter.use("/user", userDataRouter);
 apiRouter.use("/users", usersRouter);
 apiRouter.use("/bookings", bookingsStubRouter);
 apiRouter.use("/cleaners", cleanersRouter);
+apiRouter.use("/referral", referralRouter);
+apiRouter.use("/uploads", uploadsRouter);
+apiRouter.use("/config", configRouter);
 apiRouter.use(eventsRouter);
 
 // Trust spec exact paths at root (no /api): POST /credits/checkout, GET /cleaners/:id/reliability
@@ -418,15 +425,17 @@ if (!isTestMode) {
   io.on("connection", (socket) => {
     logger.info("socket_connected", { socketId: socket.id });
 
-    socket.on("join_booking", (bookingId: string) => {
-      socket.join(`booking:${bookingId}`);
+    socket.on("join_booking", (payload: string | { bookingId: string }) => {
+      const bookingId = typeof payload === "string" ? payload : payload?.bookingId;
+      if (bookingId) void socket.join(`booking:${bookingId}`);
     });
 
-    socket.on("leave_booking", (bookingId: string) => {
-      socket.leave(`booking:${bookingId}`);
+    socket.on("leave_booking", (payload: string | { bookingId: string }) => {
+      const bookingId = typeof payload === "string" ? payload : payload?.bookingId;
+      if (bookingId) void socket.leave(`booking:${bookingId}`);
     });
 
-    socket.on("disconnect", (reason) => {
+    socket.on("disconnect", (reason: string) => {
       logger.info("socket_disconnected", { socketId: socket.id, reason });
     });
   });
@@ -441,7 +450,6 @@ if (!isTestMode) {
       env: env.NODE_ENV,
       timestamp: new Date().toISOString(),
     });
-    console.log(`✅ API + Socket.IO running on http://localhost:${PORT}`);
   });
 
   // ============================================
@@ -469,8 +477,12 @@ if (!isTestMode) {
     }
   };
 
-  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+  process.on("SIGTERM", () => {
+    void gracefulShutdown("SIGTERM");
+  });
+  process.on("SIGINT", () => {
+    void gracefulShutdown("SIGINT");
+  });
 }
 
 // Export for testing

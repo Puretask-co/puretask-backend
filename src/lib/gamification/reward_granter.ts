@@ -46,9 +46,11 @@ export function shouldGrant(
   if (reward.stacking_rule === "extend_duration") {
     const ends = computeEndsAt(reward, now);
     if (!ends) {
+      // permanent or misconfigured: treat as no_stack
       return active ? { action: "skip" } : { action: "grant" };
     }
     if (!active) return { action: "grant" };
+    // extend by duration_days from current ends_at
     const base = new Date(existing.ends_at!);
     const days = (reward.params as Record<string, number>).duration_days;
     base.setUTCDate(base.getUTCDate() + days);

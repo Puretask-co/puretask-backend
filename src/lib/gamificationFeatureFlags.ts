@@ -11,8 +11,10 @@ export type GamificationFlagContext = {
 
 /**
  * Check if gamification (progression, rewards) is enabled for the given context.
+ * When GAMIFICATION_ENABLED env is "false", gamification is disabled everywhere (overrides DB flag).
  */
 export async function isGamificationEnabled(ctx: GamificationFlagContext = {}): Promise<boolean> {
+  if (process.env.GAMIFICATION_ENABLED === "false") return false;
   const flag = await getEffectiveFeatureFlag("gamification_enabled", ctx.region_id ?? null);
   return flag?.enabled === true;
 }

@@ -23,41 +23,70 @@ export type JobEventType =
   | "job_overridden"
   | "payment_succeeded";
 
+/** Dot-notation (tracking) → canonical event_type for job_events (audit B1: single namespace) */
+const TRACKING_TO_CANONICAL: Record<string, string> = {
+  "job.approved": "client_approved",
+  "job.checked_in": "job_started",
+  "job.checked_out": "job_completed",
+  "job.en_route": "cleaner_on_my_way",
+  "job.arrived": "job_started", // or keep as marker; arrived often precedes check-in
+  "job.disputed": "client_disputed",
+};
+
+export function toCanonicalEventType(eventName: string): string {
+  return TRACKING_TO_CANONICAL[eventName] ?? eventName;
+}
+
 export interface PublishEventInput {
   jobId?: string | null;
   actorType?: ActorType | null;
   actorId?: string | null;
   eventName: JobEventType | string;
   payload?: Record<string, unknown>;
+  /** Optional idempotency key for dedupe (audit B3); when set, store canonical type */
+  idempotencyKey?: string | null;
 }
 
 /**
  * Publish an application event to job_events table
+ * Stores canonical event_type only (audit B1); dot-notation from tracking is normalized.
  * Matches 001_init.sql schema: (id, job_id, actor_type, actor_id, event_type, payload, created_at)
  * Note: job_id is NOT NULL in the schema, so events without a jobId are logged but not stored in DB
  */
 export async function publishEvent(input: PublishEventInput): Promise<void> {
-  const { jobId = null, actorType = null, actorId = null, eventName, payload = {} } = input;
+  const { jobId = null, actorType = null, actorId = null, eventName, payload = {}, idempotencyKey = null } = input;
 
+  const canonicalType = toCanonicalEventType(String(eventName));
   const payloadJson = JSON.stringify(payload);
 
   // Only insert into job_events if jobId is provided (schema requires NOT NULL)
   // For system events without a job, we still log and forward to n8n, but don't store in DB
   if (jobId) {
     try {
-      await query(
-        `
-          INSERT INTO job_events (
-            job_id,
-            actor_type,
-            actor_id,
-            event_type,
-            payload
-          )
-          VALUES ($1, $2, $3, $4, $5::jsonb)
-        `,
-        [jobId, actorType, actorId, eventName, payloadJson]
-      );
+      if (idempotencyKey) {
+        try {
+          await query(
+            `
+              INSERT INTO job_events (job_id, actor_type, actor_id, event_type, payload, idempotency_key)
+              VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+              ON CONFLICT (job_id, event_type, idempotency_key) WHERE (idempotency_key IS NOT NULL) DO NOTHING
+            `,
+            [jobId, actorType, actorId, canonicalType, payloadJson, idempotencyKey]
+          );
+        } catch (colErr: any) {
+          if (colErr?.code === "42703" || colErr?.message?.includes("idempotency_key")) {
+            await query(
+              `INSERT INTO job_events (job_id, actor_type, actor_id, event_type, payload) VALUES ($1, $2, $3, $4, $5::jsonb)`,
+              [jobId, actorType, actorId, canonicalType, payloadJson]
+            );
+          } else throw colErr;
+        }
+      } else {
+        await query(
+          `INSERT INTO job_events (job_id, actor_type, actor_id, event_type, payload) VALUES ($1, $2, $3, $4, $5::jsonb)`,
+          [jobId, actorType, actorId, canonicalType, payloadJson]
+        );
+      }
     } catch (error: any) {
       // If insert fails (e.g., foreign key constraint), log but don't throw
       // This allows events to still be forwarded to n8n even if DB insert fails
@@ -90,13 +119,13 @@ export async function publishEvent(input: PublishEventInput): Promise<void> {
   //   });
   // });
 
-  // Forward to n8n webhook if configured (non-blocking, errors are logged but don't fail the request)
+  // Forward to n8n webhook if configured (non-blocking); send canonical event name for consistency
   const n8nActorType = (actorType as string) === "super_admin" ? "admin" : actorType;
   forwardEventToN8nWebhook({
     jobId,
     actorType: n8nActorType,
     actorId,
-    eventName,
+    eventName: canonicalType,
     payload,
     timestamp: new Date().toISOString(),
   }).catch((err) => {

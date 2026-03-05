@@ -39,7 +39,7 @@ messagesRouter.use(requireAuth);
  *               properties:
  *                 unreadCount: { type: 'integer' }
  */
-messagesRouter.get("/unread", async (req: AuthedRequest, res: Response) => {
+const getUnreadCountHandler = async (req: AuthedRequest, res: Response) => {
   try {
     const count = await getUnreadCount(req.user!.id);
     res.json({ unreadCount: count });
@@ -58,7 +58,11 @@ messagesRouter.get("/unread", async (req: AuthedRequest, res: Response) => {
       },
     });
   }
-});
+};
+
+messagesRouter.get("/unread", getUnreadCountHandler);
+/** Alias for frontend contract: GET /messages/unread-count */
+messagesRouter.get("/unread-count", getUnreadCountHandler);
 
 /**
  * @swagger

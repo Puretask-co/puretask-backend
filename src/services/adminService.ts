@@ -262,6 +262,18 @@ export async function overrideJobStatus(
     },
   });
 
+  // Admin audit log
+  const { logAdminAction } = await import("../lib/adminAuditLog");
+  await logAdminAction({
+    adminUserId: adminId,
+    action: "job_status_override",
+    entityType: "job",
+    entityId: jobId,
+    oldValues: { status: job.status },
+    newValues: { status: newStatus },
+    reason,
+  });
+
   logger.warn("job_status_overridden", {
     jobId,
     previousStatus: job.status,

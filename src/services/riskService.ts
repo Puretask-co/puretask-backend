@@ -388,11 +388,49 @@ export async function getUserRiskProfile(
 export async function getRiskReviewQueue(): Promise<
   Array<{ userId: string; userRole: "client" | "cleaner"; flags: RiskFlag[]; riskScore: number }>
 > {
-  // For now, this is a placeholder
-  // In production, you'd query a risk_flags table
-  // For MVP, we can calculate on-demand
+  const result = await query<{
+    id: string;
+    user_id: string;
+    flag_type: string;
+    reason: string | null;
+    severity: string;
+    metadata: Record<string, unknown> | null;
+    active: boolean;
+    created_at: string;
+    role: string;
+  }>(
+    `SELECT rf.id, rf.user_id, rf.flag_type, rf.reason, rf.severity, rf.metadata, rf.active, rf.created_at, u.role
+     FROM risk_flags rf
+     JOIN users u ON u.id = rf.user_id
+     WHERE rf.active = true
+     ORDER BY rf.created_at DESC`
+  );
 
-  // This would typically query active flags from database
-  // For now, return empty array - admins can query specific users
-  return [];
+  const byUser = new Map<
+    string,
+    { userId: string; userRole: "client" | "cleaner"; flags: RiskFlag[]; riskScore: number }
+  >();
+  for (const r of result.rows) {
+    const role = r.role === "cleaner" ? "cleaner" : "client";
+    const flag: RiskFlag = {
+      id: r.id,
+      userId: r.user_id,
+      flagType: r.flag_type as RiskFlagType,
+      severity: r.severity as "low" | "medium" | "high",
+      description: r.reason ?? "",
+      evidence: (r.metadata as Record<string, any>) ?? {},
+      createdAt: new Date(r.created_at),
+      status: r.active ? "active" : "cleared",
+    };
+    let entry = byUser.get(r.user_id);
+    if (!entry) {
+      entry = { userId: r.user_id, userRole: role, flags: [], riskScore: 0 };
+      byUser.set(r.user_id, entry);
+    }
+    entry.flags.push(flag);
+    // Simple risk score from highest severity in queue
+    const sevScore = r.severity === "high" ? 75 : r.severity === "medium" ? 50 : 25;
+    if (sevScore > entry.riskScore) entry.riskScore = sevScore;
+  }
+  return Array.from(byUser.values());
 }
