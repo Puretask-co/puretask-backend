@@ -100,6 +100,7 @@ export async function recordEarningsForCompletedJob(
   if (!job.cleaner_id) {
     throw Object.assign(new Error("Job has no cleaner assigned"), { statusCode: 500 });
   }
+  const cleanerId = job.cleaner_id;
 
   const runInTransaction = async (client: PoolClient) => {
     // Idempotent: one payout per job (audit R1)
@@ -113,7 +114,7 @@ export async function recordEarningsForCompletedJob(
     }
 
     // Get cleaner's payout percentage based on tier
-    const payoutPercent = await getCleanerPayoutPercent(job.cleaner_id);
+    const payoutPercent = await getCleanerPayoutPercent(cleanerId);
 
     // Calculate payout amounts (applying tier-based percentage)
     const grossCents = job.credit_amount * CENTS_PER_CREDIT;
@@ -124,18 +125,18 @@ export async function recordEarningsForCompletedJob(
     // Verify user exists before attempting payout creation
     const userCheck = await client.query<{ exists: boolean }>(
       `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1) AS exists`,
-      [job.cleaner_id]
+      [cleanerId]
     );
 
     if (!userCheck.rows[0]?.exists) {
       logger.error("payout_user_does_not_exist", {
-        cleanerId: job.cleaner_id,
+        cleanerId,
         jobId: job.id,
         message: "Cleaner user does not exist in users table - cannot create payout",
       });
       throw Object.assign(
         new Error(
-          `Cannot create payout: cleaner user ${job.cleaner_id} does not exist in users table. ` +
+          `Cannot create payout: cleaner user ${cleanerId} does not exist in users table. ` +
             `This may be a test isolation issue - ensure the user exists before creating payouts.`
         ),
         { statusCode: 500, code: "USER_NOT_FOUND" }
@@ -157,7 +158,7 @@ export async function recordEarningsForCompletedJob(
           VALUES ($1, $2, null, $3, $4, 'pending')
           RETURNING *
         `,
-        [job.cleaner_id, job.id, payoutCredits, payoutCents]
+        [cleanerId, job.id, payoutCredits, payoutCents]
       );
     } catch (error: any) {
       if (error?.code === "23505") {
@@ -173,7 +174,7 @@ export async function recordEarningsForCompletedJob(
       }
       if (error?.code === "23503") {
         logger.error("payout_creation_failed_foreign_key", {
-          cleanerId: job.cleaner_id,
+          cleanerId,
           jobId: job.id,
           error: error?.message,
           constraint: error?.constraint,
@@ -197,7 +198,7 @@ export async function recordEarningsForCompletedJob(
     }
     logger.info("payout_recorded", {
       payoutId: payout.id,
-      cleanerId: job.cleaner_id,
+      cleanerId,
       jobId: job.id,
       grossCredits: job.credit_amount,
     });

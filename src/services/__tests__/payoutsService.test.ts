@@ -28,7 +28,7 @@ vi.mock("../../lib/logger", () => ({
   },
 }));
 vi.mock("../../lib/events", () => ({
-  publishEvent: vi.fn(),
+  publishEvent: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../config/env", () => ({
   env: {
@@ -96,6 +96,7 @@ describe("payoutsService", () => {
       };
 
       mockQuery
+        .mockResolvedValueOnce({ rows: [] }) // existing payout check (SELECT payouts WHERE job_id)
         .mockResolvedValueOnce({ rows: [{ tier: "gold", payout_percent: null }] }) // getCleanerPayoutPercent
         .mockResolvedValueOnce({ rows: [{ exists: true }] }) // userCheck
         .mockResolvedValueOnce({ rows: [{ id: "payout-123" }] }); // INSERT payout RETURNING

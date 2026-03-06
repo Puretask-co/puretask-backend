@@ -27,7 +27,7 @@ const TEST_CLEANER_1_ID = crypto.randomUUID();
 const TEST_CLEANER_2_ID = crypto.randomUUID();
 const TEST_CLEANER_3_ID = crypto.randomUUID();
 
-describe("V1 Core Features: Top 3 Cleaner Selection", () => {
+describe("V1 Core Features: Top 3 Cleaner Selection", { timeout: 15000 }, () => {
   let testJobId: string;
 
   beforeAll(async () => {

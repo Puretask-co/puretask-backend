@@ -3950,10 +3950,10 @@ SELECT 'PURETASK COMPLETE CONSOLIDATED SCHEMA CREATED SUCCESSFULLY!' AS status,
 CREATE OR REPLACE VIEW credit_summary_by_reason AS
 SELECT
   reason,
-  COUNT(*) as transaction_count,
-  SUM(CASE WHEN direction = 'credit' THEN amount ELSE 0 END)::INTEGER as total_added,
-  SUM(CASE WHEN direction != 'credit' THEN amount ELSE 0 END)::INTEGER as total_removed,
-  SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END)::INTEGER as net_change
+  COUNT(*) AS transaction_count,
+  SUM(CASE WHEN delta_credits > 0 THEN delta_credits ELSE 0 END)::INTEGER AS total_added,
+  SUM(CASE WHEN delta_credits < 0 THEN -delta_credits ELSE 0 END)::INTEGER AS total_removed,
+  SUM(delta_credits)::INTEGER AS net_change
 FROM credit_ledger
 GROUP BY reason;
 
