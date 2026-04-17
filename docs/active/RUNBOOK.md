@@ -248,10 +248,121 @@ Run in **puretask-backend** to re-verify. Summary:
 
 ---
 
-## 7. Contacts and links
+## 7. Cloud-agent skills catalog (backend + testing + Playwright)
+
+Use this section as the canonical skill inventory for autonomous agents working in Cursor Cloud.
+
+### 7.1 Global invocation order (all code changes)
+
+1. **Environment readiness**
+   - Ensure toolchain + DB: `node -v`, `npm -v`, `npm run db:check`.
+2. **Implement**
+   - Keep route/service boundaries and auth middleware conventions (`authCanonical`).
+3. **Targeted testing**
+   - Run the smallest high-signal suite(s) first.
+4. **Quality gate**
+   - `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run build`.
+5. **Evidence**
+   - Save command outputs/artifacts for review (logs, curl output, test summaries).
+
+### 7.2 Skill cards
+
+| Skill | Use when | Required context | Command/checklist | Output/evidence |
+|-------|----------|------------------|-------------------|-----------------|
+| `env-bootstrap-cursor-cloud` | Fresh VM or broken local env | OS package manager access, repo root | Ensure apt HTTPS mirrors → install postgres/server client → start cluster → ensure `puretask` DB/user → `npm install` → `.env` bootstrap if missing → `npm run db:check` | Working DB check + bootable backend |
+| `backend-feature-change` | Any route/service behavior change | Route path, role/auth requirement, service touched | Keep routes thin; do business logic in services; preserve requestId/error contracts; avoid direct DB access in routes | Code diff + route/service alignment notes |
+| `db-migration-change` | SQL schema edits/new migration | Target DB URL, migration file order | Validate idempotency (`IF NOT EXISTS` where needed), run migration on clean/local DB, run affected integration tests | Migration success logs + regression test pass |
+| `quality-gate-core` | Before commit/PR | None | `npm run lint` → `npm run format:check` → `npm run typecheck` → `npm run build` | Green quality/build logs |
+| `security-secrets-guard` | Env/dependency/integration edits | Security baseline and CI policy | `npm run security:scan`; avoid secret files in git; avoid direct SendGrid/Twilio imports in production paths unless approved architecture exception | Scan output + policy compliance note |
+| `release-readiness-backend` | Release candidate or risky refactor | ENV matrix, critical flows list | Run integration + smoke + quality gate; verify `/health`, `/health/ready`; verify key business route(s) | End-to-end verification transcript |
+
+### 7.3 Testing skills (all supported test types)
+
+#### `test-unit-vitest`
+- **Trigger:** Service/lib/pure logic changes.
+- **Inputs:** Files touched + related existing unit tests.
+- **Run:** `npm run test -- --run <target-path-or-glob>`
+- **Must verify:** logic branches, validation, idempotent helpers.
+- **Evidence:** vitest pass output (targeted path).
+
+#### `test-integration-vitest`
+- **Trigger:** Route + DB changes, auth flow changes, payment/credits/jobs updates.
+- **Inputs:** `DATABASE_URL` or `TEST_DATABASE_URL`, migrated schema.
+- **Run:** `npm run test:integration`
+- **Must verify:** API + DB interaction, transaction behavior, auth guards.
+- **Evidence:** integration suite summary + failing case reruns resolved.
+
+#### `test-smoke-vitest`
+- **Trigger:** Release readiness, broad regressions, hotfix validation.
+- **Inputs:** Running DB + seeded baseline as needed.
+- **Run:** `npm run test:smoke`
+- **Must verify:** core routes are alive and critical path still works.
+- **Evidence:** smoke suite pass output.
+
+#### `test-contract-and-response-shape`
+- **Trigger:** API response shape/error handling changes.
+- **Inputs:** Contract tests under `src/tests/contract`.
+- **Run:** `npm run test -- --run src/tests/contract`
+- **Must verify:** status codes, error schema, compatibility expectations.
+- **Evidence:** contract tests pass.
+
+#### `test-jest-live-api` (root `tests/` path)
+- **Trigger:** Cleaner AI API behavior or scripts that rely on running server.
+- **Inputs:** Running backend instance + test user credentials as required.
+- **Run:** `bash tests/run-tests.sh` (or direct Jest command for specific file).
+- **Must verify:** end-to-end HTTP behavior against live app process.
+- **Evidence:** Jest run log with target API URL and pass/fail summary.
+
+#### `test-load-k6`
+- **Trigger:** Throughput/latency/capacity tasks.
+- **Inputs:** stable target API URL + env safe for load testing.
+- **Run:** `npm run test:load` / `npm run test:load:jobs`
+- **Must verify:** no critical error spikes, acceptable latency under configured profile.
+- **Evidence:** k6 summary (error rate, p95, throughput).
+
+#### `test-performance-benchmark`
+- **Trigger:** algorithm/query performance optimization claims.
+- **Inputs:** reproducible benchmark scenario.
+- **Run:** `npm run test:performance`
+- **Must verify:** before/after measurable improvement.
+- **Evidence:** benchmark output comparison.
+
+### 7.4 Playwright skills (status + adoption workflow)
+
+Current repo status: `tests/e2e/*.spec.ts` exists, but full Playwright wiring is partial and must be standardized before treating as required CI gate.
+
+#### `playwright-bootstrap`
+- **Trigger:** Team decides to operationalize browser E2E in this repo.
+- **Checklist:**
+  1. Add dependency: `npm install -D @playwright/test`
+  2. Install browsers: `npx playwright install`
+  3. Add `playwright.config.ts` with explicit `baseURL` and artifacts.
+  4. Add scripts: `test:e2e`, `test:e2e:headed`, `test:e2e:ui`.
+  5. Align ports/URLs explicitly (`API 4000`, frontend URL env-driven).
+  6. Add CI workflow for Playwright artifacts on failure.
+- **Output:** runnable E2E harness and CI job.
+
+#### `playwright-e2e-execution`
+- **Trigger:** UI-critical changes (auth UX, booking lifecycle UX, admin workflows).
+- **Inputs:** running UI app + backend + test account fixtures.
+- **Run:** `npm run test:e2e` (after bootstrap), with traces/screenshots on failure.
+- **Must verify:** complete user flow from UI action to backend side effects.
+- **Evidence:** pass summary + trace/report artifacts.
+
+### 7.5 Pitfalls agents must explicitly guard against
+
+1. **Dual test runners:** `vitest` does not automatically cover root `tests/*.test.ts` Jest files.
+2. **Migration source mismatch:** local scripts may use different consolidated SQL files depending on command path; always state exact file used in test evidence.
+3. **Port drift:** API defaults to `4000`, some scripts historically assume `3000`; set explicit URLs in commands.
+4. **Policy checks in CI:** avoid unauthorized auth middleware imports and direct provider usage patterns blocked by policy workflows.
+5. **Docs governance:** new markdown must remain under `docs/active/` or `docs/archive/`.
+
+---
+
+## 8. Contacts and links
 
 - **Checklists:** [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md)
 - **Phase status:** [00-CRITICAL/PHASE_*_STATUS.md](./00-CRITICAL/)
 - **Backup/restore:** [BACKUP_RESTORE.md](./BACKUP_RESTORE.md)
 
-**Last updated:** 2026-02-02
+**Last updated:** 2026-04-17
