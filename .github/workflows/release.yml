@@ -1,0 +1,70 @@
+name: Backend Release Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
+
+concurrency:
+  group: backend-release-${{ github.ref }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  release:
+    name: Deploy backend services via Railway
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy API service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_SERVICE: ${{ secrets.RAILWAY_API_SERVICE }}
+        run: railway up --service "${RAILWAY_API_SERVICE}" --detach
+
+      - name: Deploy scheduler service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SCHEDULER_SERVICE: ${{ secrets.RAILWAY_SCHEDULER_SERVICE }}
+        run: railway up --service "${RAILWAY_SCHEDULER_SERVICE}" --detach
+
+      - name: Deploy durable worker service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_WORKER_SERVICE: ${{ secrets.RAILWAY_WORKER_SERVICE }}
+        run: railway up --service "${RAILWAY_WORKER_SERVICE}" --detach
+
+      - name: Verify API health
+        env:
+          BACKEND_HEALTHCHECK_URL: ${{ secrets.BACKEND_HEALTHCHECK_URL }}
+        run: |
+          if [ -z "${BACKEND_HEALTHCHECK_URL}" ]; then
+            echo "BACKEND_HEALTHCHECK_URL not configured; skipping health probe."
+            exit 0
+          fi
+          curl -fsS "${BACKEND_HEALTHCHECK_URL}" > /dev/null

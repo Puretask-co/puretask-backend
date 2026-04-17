@@ -20,6 +20,18 @@ on:
           - staging
           - production
 
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: cross-repo-release-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  BACKEND_REPO: PURETASK/puretask-backend
+  FRONTEND_REPO: PURETASK/puretask-frontend
+
 jobs:
   validate:
     name: Validate backend + frontend compatibility
@@ -83,7 +95,7 @@ jobs:
       - name: Checkout frontend
         uses: actions/checkout@v4
         with:
-          repository: PURETASK/puretask-frontend
+          repository: ${{ env.FRONTEND_REPO }}
           ref: ${{ inputs.frontend_ref }}
           path: frontend
 
@@ -123,18 +135,19 @@ jobs:
     steps:
       - name: Dispatch backend release workflow
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PURETASK_ORG_DISPATCH_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          gh workflow run "CI/CD Pipeline" \
-            --repo PURETASK/puretask-backend \
+          gh workflow run release.yml \
+            --repo "${BACKEND_REPO}" \
+            --field environment="${{ inputs.environment }}" \
             --ref "${{ inputs.backend_ref }}"
 
       - name: Dispatch frontend release workflow
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PURETASK_ORG_DISPATCH_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          gh workflow run "Frontend Release Deploy" \
-            --repo PURETASK/puretask-frontend \
+          gh workflow run release.yml \
+            --repo "${FRONTEND_REPO}" \
             --field environment="${{ inputs.environment }}" \
             --ref "${{ inputs.frontend_ref }}"
 

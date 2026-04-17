@@ -69,7 +69,8 @@
     "seed:gamification": "ts-node scripts/seed_gamification_config.ts",
     "seed:gamification:dry-run": "ts-node scripts/seed_gamification_config.ts --dry-run",
     "seed:e2e:users": "node scripts/seed-e2e-users.js",
-    "reset:e2e:users": "node scripts/reset-e2e-users.js"
+    "reset:e2e:users": "node scripts/reset-e2e-users.js",
+    "verify:e2e:fixtures": "npm run seed:e2e:users && npm run reset:e2e:users"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.997.0",

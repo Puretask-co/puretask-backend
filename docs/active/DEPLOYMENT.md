@@ -159,24 +159,29 @@ Railway auto-deploys on push to the linked branch unless disabled.
 For coordinated full-stack releases, use the backend workflow:
 
 - `.github/workflows/release-orchestration.yml` (manual `workflow_dispatch`)
+- Backend deployment workflow: `.github/workflows/release.yml` (`Backend Release Deploy`)
+- Frontend deployment workflow: `puretask-frontend/.github/workflows/release.yml` (`Frontend Release Deploy`)
 - Inputs:
   - `frontend_ref` (frontend branch/tag/sha to release)
+  - `backend_ref` (backend branch/tag/sha to release)
   - `environment` (`staging` or `production`)
 
 What it does:
 
 1. Checks out backend + selected frontend ref.
-2. Runs backend quality gate + test DB setup + tests.
-3. Runs frontend lint/test/build.
-4. Runs frontend API contract verification against a running backend (`scripts/run-api-verification.js` in frontend repo).
-5. Runs frontend Playwright smoke E2E against backend + frontend.
-6. Deploys backend to Railway and frontend to Vercel if all checks pass.
+2. Builds backend and verifies health on local CI Postgres.
+3. Builds frontend against local backend and runs frontend API contract verification.
+4. Dispatches backend release workflow (Railway deploy) and frontend release workflow (Vercel deploy).
 
 Required GitHub secrets for orchestration:
 
+- Cross-repo dispatch:
+  - `PURETASK_ORG_DISPATCH_TOKEN` (recommended PAT with workflow dispatch rights in both repos)
 - Backend deploy:
   - `RAILWAY_TOKEN`
-  - `RAILWAY_BACKEND_SERVICE`
+  - `RAILWAY_API_SERVICE`
+  - `RAILWAY_SCHEDULER_SERVICE`
+  - `RAILWAY_WORKER_SERVICE`
 - Frontend deploy:
   - `VERCEL_TOKEN`
   - `VERCEL_ORG_ID`
