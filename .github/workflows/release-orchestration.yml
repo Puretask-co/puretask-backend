@@ -1,0 +1,147 @@
+name: Cross-Repo Release Orchestration
+
+on:
+  workflow_dispatch:
+    inputs:
+      frontend_ref:
+        description: "Frontend git ref (branch/tag/sha)"
+        required: true
+        default: "main"
+      backend_ref:
+        description: "Backend git ref (branch/tag/sha)"
+        required: true
+        default: "main"
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  validate:
+    name: Validate backend + frontend compatibility
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: puretask_release_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout backend
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.backend_ref }}
+
+      - name: Setup Node.js (backend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Setup backend test DB
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/puretask_release_test
+        run: |
+          npm run db:setup:test
+          E2E_CLIENT_EMAIL=client@test.com E2E_CLIENT_PASSWORD=TestPass123! E2E_CLEANER_EMAIL=cleaner@test.com E2E_CLEANER_PASSWORD=TestPass123! E2E_ADMIN_EMAIL=admin@test.com E2E_ADMIN_PASSWORD=TestPass123! npm run seed:e2e:users
+
+      - name: Build backend
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/puretask_release_test
+          JWT_SECRET: test-release-secret-minimum-32-characters
+          STRIPE_SECRET_KEY: sk_test_release
+          STRIPE_WEBHOOK_SECRET: whsec_release
+          N8N_WEBHOOK_SECRET: n8n_release
+        run: |
+          npm run build
+          nohup npm run dev > /tmp/backend-release.log 2>&1 &
+          for i in {1..60}; do
+            if curl -fsS http://localhost:4000/health > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend health did not become ready"
+          tail -n 200 /tmp/backend-release.log || true
+          exit 1
+
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+        with:
+          repository: PURETASK/puretask-frontend
+          ref: ${{ inputs.frontend_ref }}
+          path: frontend
+
+      - name: Setup Node.js (frontend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend against backend
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:4000
+          NEXT_PUBLIC_API_URL: http://localhost:4000
+          NEXT_PUBLIC_BASE_URL: http://localhost:3001
+          NEXT_PUBLIC_WS_URL: ws://localhost:4000
+        run: npm run build
+
+      - name: Frontend-backend contract check
+        working-directory: frontend
+        env:
+          API_BASE: http://localhost:4000
+          TEST_EMAIL: client@test.com
+          TEST_PASSWORD: TestPass123!
+        run: npm run test:api
+
+  deploy:
+    name: Deploy coordinated release
+    needs: [validate]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Dispatch backend release workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run "CI/CD Pipeline" \
+            --repo PURETASK/puretask-backend \
+            --ref "${{ inputs.backend_ref }}"
+
+      - name: Dispatch frontend release workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run "Frontend Release Deploy" \
+            --repo PURETASK/puretask-frontend \
+            --field environment="${{ inputs.environment }}" \
+            --ref "${{ inputs.frontend_ref }}"
+
+      - name: Record coordinated release intent
+        run: |
+          echo "Validated release pair:"
+          echo "backend_ref=${{ inputs.backend_ref }}"
+          echo "frontend_ref=${{ inputs.frontend_ref }}"
+          echo "environment=${{ inputs.environment }}"
+          echo "Dispatched backend and frontend workflows."

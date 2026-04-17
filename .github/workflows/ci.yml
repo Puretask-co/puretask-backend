@@ -84,6 +84,17 @@ jobs:
           USE_REDIS_RATE_LIMITING: "false"
         run: npm run test:coverage
       
+      - name: Seed deterministic E2E users
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/puretask_test
+          E2E_CLIENT_EMAIL: client@test.com
+          E2E_CLIENT_PASSWORD: TestPass123!
+          E2E_CLEANER_EMAIL: cleaner@test.com
+          E2E_CLEANER_PASSWORD: TestPass123!
+          E2E_ADMIN_EMAIL: admin@test.com
+          E2E_ADMIN_PASSWORD: TestPass123!
+        run: npm run seed:e2e:users
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -113,12 +124,21 @@ jobs:
       
       - name: Build application
         run: npm run build
+
+      - name: Verify dist workers are generated
+        run: |
+          test -f dist/workers/scheduler.js
+          test -f dist/workers/runDurableJobWorker.js
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/
+          path: |
+            dist/
+            scripts/
+            package.json
+            package-lock.json
           retention-days: 7
 
   security-scan:
@@ -147,26 +167,62 @@ jobs:
         run: npm run security:scan
         continue-on-error: true
 
-  # Deployment job (uncomment and configure when ready)
-  # deploy:
-  #   name: Deploy to Production
-  #   runs-on: ubuntu-latest
-  #   needs: [build, test, security-scan]
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-  #   environment:
-  #     name: production
-  #     url: https://api.puretask.com
-  #   
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #     
-  #     - name: Download build artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: dist
-  #     
-  #     - name: Deploy to server
-  #       run: |
-  #         echo "Deploy to your hosting provider here"
-  #         # Example: rsync, SSH, or provider-specific CLI
+  deploy:
+    name: Deploy Backend to Railway
+    runs-on: ubuntu-latest
+    needs: [build, test, security-scan]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: deploy-artifacts
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy API service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_SERVICE: ${{ secrets.RAILWAY_API_SERVICE }}
+        run: |
+          cp -R deploy-artifacts/* .
+          railway up --service "${RAILWAY_API_SERVICE}" --detach
+
+      - name: Deploy scheduler service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SCHEDULER_SERVICE: ${{ secrets.RAILWAY_SCHEDULER_SERVICE }}
+        run: railway up --service "${RAILWAY_SCHEDULER_SERVICE}" --detach
+
+      - name: Deploy durable worker service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_WORKER_SERVICE: ${{ secrets.RAILWAY_WORKER_SERVICE }}
+        run: railway up --service "${RAILWAY_WORKER_SERVICE}" --detach
+
+      - name: Verify API health
+        env:
+          BACKEND_HEALTHCHECK_URL: ${{ secrets.BACKEND_HEALTHCHECK_URL }}
+        run: |
+          if [ -z "${BACKEND_HEALTHCHECK_URL}" ]; then
+            echo "BACKEND_HEALTHCHECK_URL not configured; skipping health probe."
+            exit 0
+          fi
+          curl -fsS "${BACKEND_HEALTHCHECK_URL}" > /dev/null

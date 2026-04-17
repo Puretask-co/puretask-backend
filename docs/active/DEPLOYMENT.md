@@ -154,6 +154,40 @@ Railway auto-deploys on push to the linked branch unless disabled.
 - **Staging (optional)** — Create a second Railway service or project with `DATABASE_URL` pointing to a staging Neon branch. Deploy develop → staging; merge main → production.
 - **Coverage** — CI runs `npm run test:coverage`; reports in `coverage/`. Add `CODECOV_TOKEN` secret and `lcov.info` will be uploaded. Badge: `[![codecov](https://codecov.io/gh/OWNER/REPO/graph/badge.svg)](https://codecov.io/gh/OWNER/REPO)`.
 
+### Cross-repo release orchestration (backend + frontend)
+
+For coordinated full-stack releases, use the backend workflow:
+
+- `.github/workflows/release-orchestration.yml` (manual `workflow_dispatch`)
+- Inputs:
+  - `frontend_ref` (frontend branch/tag/sha to release)
+  - `environment` (`staging` or `production`)
+
+What it does:
+
+1. Checks out backend + selected frontend ref.
+2. Runs backend quality gate + test DB setup + tests.
+3. Runs frontend lint/test/build.
+4. Runs frontend API contract verification against a running backend (`scripts/run-api-verification.js` in frontend repo).
+5. Runs frontend Playwright smoke E2E against backend + frontend.
+6. Deploys backend to Railway and frontend to Vercel if all checks pass.
+
+Required GitHub secrets for orchestration:
+
+- Backend deploy:
+  - `RAILWAY_TOKEN`
+  - `RAILWAY_BACKEND_SERVICE`
+- Frontend deploy:
+  - `VERCEL_TOKEN`
+  - `VERCEL_ORG_ID`
+  - `VERCEL_PROJECT_ID`
+- Frontend runtime env for build/deploy:
+  - `NEXT_PUBLIC_API_BASE_URL`
+  - `NEXT_PUBLIC_API_URL`
+  - `NEXT_PUBLIC_BASE_URL`
+  - `NEXT_PUBLIC_WS_URL`
+  - `NEXT_PUBLIC_STRIPE_PUBLIC_KEY`
+
 ### Branch protection (recommended)
 
 In GitHub → **Settings** → **Branches** → **Add rule** for `main`:

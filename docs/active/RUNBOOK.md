@@ -357,6 +357,31 @@ Current repo status: `tests/e2e/*.spec.ts` exists, but full Playwright wiring is
 4. **Policy checks in CI:** avoid unauthorized auth middleware imports and direct provider usage patterns blocked by policy workflows.
 5. **Docs governance:** new markdown must remain under `docs/active/` or `docs/archive/`.
 
+### 7.6 Full-stack deterministic E2E seed/reset skills
+
+#### `seed-fullstack-e2e-users`
+- **Trigger:** Before Playwright or contract verification that depends on deterministic test users.
+- **Run (backend repo):**
+  - `npm run seed:e2e:users`
+- **Default deterministic accounts:**
+  - `client@test.com` / `TestPass123!`
+  - `cleaner@test.com` / `TestPass123!`
+  - `admin@test.com` / `TestPass123!`
+- **Evidence:** script prints ensured users and completes successfully.
+
+#### `reset-fullstack-e2e-users`
+- **Trigger:** Test cleanup, rerun from clean auth identities, or flaky auth state.
+- **Run (backend repo):**
+  - `npm run reset:e2e:users`
+- **Evidence:** script reports number of deleted deterministic users.
+
+#### `frontend-backend-contract-gate`
+- **Trigger:** Frontend PRs touching API services/hooks or backend PRs changing response contracts.
+- **Run (frontend repo):**
+  - `npm run test:api`
+- **Expected env:** `API_BASE`, `TEST_EMAIL`, `TEST_PASSWORD`.
+- **Evidence:** verification report + failing endpoint details.
+
 ---
 
 ## 8. Contacts and links
