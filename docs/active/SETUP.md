@@ -500,3 +500,25 @@ Going forward: run the same migrations on both DBs so they stay in sync.
 | Known issues | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) |
 | Gamification checklist | [BUNDLE_SWITCH_GAP_ANALYSIS.md](./BUNDLE_SWITCH_GAP_ANALYSIS.md) |
 | Event contract / 057 | [RUNBOOK.md §4.4](./RUNBOOK.md) |
+
+### Cursor Cloud VM bootstrap (recommended)
+
+When multiple cloud agents work on this repo, repeated local setup can waste time. Keep a startup script in the VM environment config so new sessions are ready immediately.
+
+**What the startup script should do (idempotent):**
+
+1. Ensure apt sources use HTTPS (`archive.ubuntu.com`, `security.ubuntu.com`), then run `apt-get update`.
+2. Install PostgreSQL server/client (`postgresql`, `postgresql-client`).
+3. Start local PostgreSQL cluster and ensure local dev role/database exist:
+   - user: `puretask`, password: `puretask_dev`
+   - database: `puretask`
+4. Run `npm install` in repo root.
+5. Create `.env` only if missing, with local-safe defaults:
+   - `DATABASE_URL=postgresql://puretask:puretask_dev@localhost:5432/puretask?sslmode=disable`
+   - required `JWT_SECRET`, Stripe, and n8n placeholders so `src/config/env.ts` passes boot validation.
+6. Run schema setup with fallback:
+   - try `npm run db:migrate`
+   - on failure, run `USE_LEGACY_SCHEMA=1 npm run db:setup:test`
+7. Verify readiness with `npm run db:check`.
+
+**Why this matters:** it standardizes first-run setup, removes package-manager/network drift issues, and gives every agent a working backend+DB baseline before feature work.
