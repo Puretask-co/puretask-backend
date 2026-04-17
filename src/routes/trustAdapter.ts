@@ -229,7 +229,7 @@ router.get(
           `
             SELECT invoice_id, id, description, total_cents
             FROM invoice_line_items
-            WHERE invoice_id = ANY($1::uuid[])
+            WHERE invoice_id::text = ANY($1::text[])
           `,
           [ids]
         );
@@ -259,6 +259,17 @@ router.get(
 
       res.json({ invoices });
     } catch (error) {
+      const pgError = error as { code?: string; message?: string };
+      if (
+        pgError.code === "42P01" ||
+        /relation\s+"invoices"\s+does not exist/i.test(pgError.message ?? "")
+      ) {
+        logger.warn("trust_billing_invoices_missing_schema", {
+          userId: req.user?.id,
+          detail: pgError.message,
+        });
+        return res.json({ invoices: [] });
+      }
       logger.error("trust_billing_invoices_failed", {
         error: (error as Error).message,
         userId: req.user?.id,
