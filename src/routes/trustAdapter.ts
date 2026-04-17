@@ -226,7 +226,11 @@ router.get(
       const lineItemsByInvoice: Record<string, { id: string; label: string; amount: number }[]> = {};
       if (ids.length > 0) {
         const items = await query<{ invoice_id: string; id: string; description: string; total_cents: number }>(
-          `SELECT invoice_id, id, description, total_cents FROM invoice_line_items WHERE invoice_id = ANY($1)`,
+          `
+            SELECT invoice_id, id, description, total_cents
+            FROM invoice_line_items
+            WHERE invoice_id = ANY($1::uuid[])
+          `,
           [ids]
         );
         for (const row of items.rows) {

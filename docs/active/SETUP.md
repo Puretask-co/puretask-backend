@@ -145,6 +145,25 @@ Frontend, n8n, and workers are separate; see ARCHITECTURE and RUNBOOK for how th
 - **Backend .env:** Set `FRONTEND_URL=http://localhost:3001` if your frontend runs on 3001 (see `.env.example`).
 - Trust contract: `/api/credits`, `/api/billing`, `/api/appointments`. Send `Authorization: Bearer <token>`. Check-in/check-out with photos: `/tracking/:jobId/check-in` and `/tracking/:jobId/check-out`.
 
+### Full-stack local verification (recommended sequence)
+
+From backend repo (`/workspace`):
+
+1. `npm run db:check`
+2. `npm run seed:e2e:users`
+
+From frontend repo (`/workspace/puretask-frontend`):
+
+3. `npm run test:fullstack:prepare`
+4. `npm run test:api`
+5. `npm run test:e2e:smoke`
+
+Cleanup (backend repo):
+
+6. `npm run reset:e2e:users`
+
+If you only want to validate fixture script determinism on backend, run `npm run verify:e2e:fixtures`.
+
 ### API verification script
 
 From repo root (backend must be running: `npm run dev`):

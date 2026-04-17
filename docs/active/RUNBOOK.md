@@ -390,4 +390,34 @@ Current repo status: `tests/e2e/*.spec.ts` exists, but full Playwright wiring is
 - **Phase status:** [00-CRITICAL/PHASE_*_STATUS.md](./00-CRITICAL/)
 - **Backup/restore:** [BACKUP_RESTORE.md](./BACKUP_RESTORE.md)
 
+## 9. Full-stack completion checklist (backend + frontend)
+
+This is the current prioritized execution list after full-stack integration hardening.
+
+### P0 — Must finish before strict branch protection
+
+| Item | Why | Owner |
+|------|-----|-------|
+| Fix frontend lint blockers in `src/app/cleaner/[id]/page.tsx`, `src/app/cleaner/dashboard/page.tsx`, and `src/test-helpers/mocks/handlers.ts`. | `npm run lint` is currently non-green, so CI cannot be enforced as a mandatory gate. | Frontend |
+| Decide strategy for `legacy/reactSetup/` (archive, separate package, or keep excluded from Next.js build). | This path can re-enter builds/tests if tooling config changes; ownership must be explicit. | Frontend + Platform |
+| Ensure GitHub token used by cross-repo orchestration can dispatch workflows in both repos (`PURETASK_ORG_DISPATCH_TOKEN`). | Default `GITHUB_TOKEN` may be repo-scoped; cross-repo dispatch can silently fail without org PAT. | DevOps |
+| Configure all required deploy secrets (`RAILWAY_*`, `VERCEL_*`, healthcheck URLs, frontend runtime env vars) in both repos. | Release orchestration and manual release workflows depend on these secrets to actually deploy. | DevOps |
+
+### P1 — Stability and observability hardening
+
+| Item | Why | Owner |
+|------|-----|-------|
+| Add dashboard panels/alerts for contract gate and Playwright smoke outcomes per PR. | Makes frontend-backend drift visible immediately. | Platform |
+| Persist request/correlation IDs into centralized logging and include them in support playbooks. | Speeds incident triage across frontend, API, and worker logs. | Backend + DevOps |
+| Add nightly non-blocking full-stack smoke run (`test:api` + `test:e2e:smoke`) with artifact retention. | Detects regressions that can be missed by PR-only test coverage. | Platform |
+| Create deterministic invoice fixture seed path for contract tests (optional happy-path invoice in addition to empty/error-path assertions). | Increases contract confidence beyond shape checks. | Backend |
+
+### P2 — Delivery efficiency
+
+| Item | Why | Owner |
+|------|-----|-------|
+| Add repo-level CODEOWNERS for backend, frontend, workflows, and docs. | Improves review routing and release accountability. | Platform |
+| Add runbook links from PR template for full-stack verification commands. | Standardizes validation expectations for every feature PR. | Platform |
+| Expand frontend unit coverage around trust/billing and live appointment adapters. | Reduces reliance on manual QA for API contract-adjacent UI logic. | Frontend |
+
 **Last updated:** 2026-04-17
