@@ -1,0 +1,1705 @@
+
+
+
+
+i need you to create all of the following- GLOBAL DESIGN SYSTEM (Set This Up First in Figma)
+📐 Frame Sizes
+
+Create these frames:
+
+Desktop App: 1440 x 1024
+
+Tablet: 1024 x 900 (optional)
+
+Mobile: 390 x 844 (optional later)
+
+We’ll design desktop first.
+
+📏 Grid
+
+12-column layout
+
+80px side margins
+
+24px gutters
+
+8pt spacing system
+
+Spacing scale:
+
+4
+
+8
+
+12
+
+16
+
+24
+
+32
+
+48
+
+64
+
+🎨 Color Tokens
+
+Create Figma Color Styles:
+
+Primary / 600
+
+Primary / 500
+
+Success / 500
+
+Warning / 500
+
+Error / 500
+
+Neutral / 900, 700, 500, 300, 100
+
+Surface / Card
+
+Surface / App
+
+🧱 Typography Styles
+
+Create:
+
+H1 — 32px / 600
+
+H2 — 24px / 600
+
+H3 — 18px / 600
+
+Body — 16px / 400
+
+Small — 14px / 400
+
+Caption — 12px / 400
+
+🧭 APP SHELL (Reusable Layout)
+Frame: AppShell/Desktop
+
+Width: 1440
+Height: 1024
+Auto-layout: Horizontal
+
+Left Sidebar (240px fixed width)
+
+Vertical Auto-layout
+Padding: 24
+Spacing: 16
+
+Sections:
+
+Logo
+
+32px height
+
+Nav Section (Role Aware)
+Text list items:
+
+For Cleaner:
+
+Home
+
+Jobs
+
+Messages
+
+Availability
+
+Progress
+
+Rewards
+
+Badges
+
+Stats
+
+Maintenance
+
+Payouts
+
+For Admin:
+
+Dashboard
+
+Gamification
+
+Goals
+
+Rewards
+
+Governor
+
+Flags
+
+Abuse
+
+Audit
+
+Each item:
+
+40px height
+
+Left icon 20px
+
+Label
+
+Hover state
+
+Active state (primary background tint)
+
+Main Content Area
+
+Auto-layout: Vertical
+Padding: 48
+Spacing: 32
+Background: Surface / App
+
+🧼 CLEANER — PROGRESS HUB
+Frame: /cleaner/progress
+
+Width: 1200 inside content
+
+Top Section (Level Summary)
+
+Create a Card Component:
+
+Component: LevelSummaryCard
+
+Width: Fill container
+Padding: 32
+Corner radius: 16
+Shadow: soft elevation
+
+Layout: Horizontal
+
+Left side:
+
+LevelBadge (large)
+
+Level title: “Level 4 — Trusted Pro”
+
+Subtitle: “63% to Level 5”
+
+Right side:
+
+Circular Progress (160x160)
+
+Label inside: “63%”
+
+Section: Next Best Actions
+
+Header:
+H2: “Next Best Actions”
+
+Below:
+Auto-layout horizontal
+Spacing: 24
+
+Component: NextActionCard
+
+360px width
+
+Padding 24
+
+Title
+
+Short explanation
+
+Primary button
+
+Example text:
+Title: “Complete 3 more add-ons”
+Body: “Unlock Priority Visibility for 7 days”
+Button: “See Eligible Jobs”
+
+Section: Active Rewards
+
+H2: “Active Rewards”
+
+Horizontal scroll container
+
+Component: RewardCard
+
+300px width
+
+Padding 24
+
+Title
+
+Effect line
+
+Countdown pill
+
+“View Details” link
+
+Section: Recent Achievements
+
+Simple grid of BadgeCard (100x120)
+
+🎯 GOALS LIST
+Frame: /cleaner/goals
+
+Top Bar:
+
+Page title
+
+Filters (dropdowns)
+
+Search input
+
+GoalCard Component
+
+Width: Fill container
+Padding: 24
+Radius: 16
+
+Vertical auto-layout:
+
+Row 1:
+
+Title
+
+Reward preview pill (right aligned)
+
+Row 2:
+
+ProgressBar (8px height)
+
+Text: “27 / 45”
+
+Row 3:
+
+“Counts when…” small text
+
+Row 4:
+
+Buttons:
+
+View Details (secondary)
+
+Take Action (primary)
+
+Variants:
+
+Complete
+
+Locked
+
+Almost complete
+
+Maintenance
+
+🎁 REWARDS CENTER
+Frame: /cleaner/rewards
+
+Tabs Component:
+
+Active
+
+Earned
+
+Locked
+
+Choice
+
+Active tab:
+
+Grid:
+2 columns
+Gap 24
+
+RewardCard expanded version:
+
+Title
+
+Description
+
+Applies to
+
+Time left
+
+Usage left (if applicable)
+
+“Use Now” button (if type=uses)
+
+Choice State:
+If pending:
+Show large centered card:
+
+Title: “Choose Your Reward”
+List of options (radio selection style)
+Primary button: “Confirm Selection”
+
+🏅 BADGES PAGE
+
+Grid layout:
+4 columns
+Gap 24
+
+BadgeCard:
+
+80x80 icon
+
+Title
+
+Earned date
+
+“How to earn”
+
+Variants:
+
+Earned
+
+Locked
+
+Featured
+
+⚠️ MAINTENANCE PAGE
+
+Top Banner Component:
+
+Variant 1: Healthy (green)
+Variant 2: Paused (warning)
+
+Banner:
+Title: “Progress Paused”
+Body: “On-time rate below 85%”
+Button: “See How to Fix”
+
+Below:
+Metric Cards Grid
+
+MetricCard
+
+Title
+
+Big stat
+
+Trend arrow
+
+Mini explanation
+
+“How calculated” link
+
+📊 STATS DASHBOARD
+
+Grid: 3 columns
+
+Metric tiles:
+
+On-time %
+
+Acceptance %
+
+Disputes
+
+Add-ons
+
+Rating
+
+Photo compliance
+
+Each:
+Large number
+Subtext
+Trend indicator
+
+🛠 ADMIN — GAMIFICATION DASHBOARD
+Frame: /admin/gamification
+
+Top:
+H1: “Gamification Overview”
+
+Row 1:
+3 KPI Cards
+
+Level Distribution
+
+Median Time to Level
+
+Reward Burn
+
+Row 2:
+Large chart area (Supply vs Demand)
+
+Row 3:
+Governor Status Card
+
+Right sidebar:
+Kill Switch Panel:
+
+Toggle
+
+Disable cash rewards
+
+Disable globally
+
+🧩 ADMIN — GOALS LIBRARY
+
+DataTable:
+Columns:
+
+ID
+
+Title
+
+Level
+
+Type
+
+Target
+
+Enabled
+
+Updated
+
+Right side drawer when clicked:
+
+Edit panel:
+
+Goal title
+
+Metric key
+
+Operator
+
+Target
+
+Window
+
+Filters JSON
+
+Reward binding
+
+Buttons:
+
+Save Draft
+
+Publish
+
+Rollback
+
+🧠 GOVERNOR CONSOLE
+
+Two column layout:
+
+Left:
+Inputs
+
+Fill time
+
+Supply ratio
+
+Disputes
+
+Cancellations
+
+Right:
+Outputs
+
+Visibility multiplier
+
+Early exposure window
+
+Caps
+
+Overrides
+
+Buttons:
+
+Apply recommended
+
+Manual override
+
+Reset region
+
+🔔 ABUSE MONITOR
+
+Tabs:
+
+Messages
+
+Login sessions
+
+Declines
+
+Photos
+
+Data table:
+
+Cleaner ID
+
+Pattern
+
+Risk score
+
+Action
+
+Side panel:
+
+Pause rewards
+
+Require review
+
+🧱 COMPONENT VARIANTS TO CREATE IN FIGMA
+
+Create these as Figma Components with Variants:
+
+Button (Primary / Secondary / Danger / Disabled)
+
+Badge (Earned / Locked)
+
+LevelBadge (Level 1–10 color variants)
+
+RewardCard (Active / Locked / Choice)
+
+GoalCard (Core / Stretch / Maintenance / Complete)
+
+MetricCard (Healthy / Warning / Critical)
+
+Banner (Healthy / Paused)
+
+Toggle (On / Off)
+
+NavItem (Default / Hover / Active)
+
+📱 Responsive Rules
+
+When shrinking:
+
+Sidebar collapses to icon-only
+
+Goal cards become single column
+
+Level summary stacks vertically
+
+Reward cards become vertical scroll
+
+🚀 If You Want
+
+I can next generate:
+
+Exact Figma auto-layout nesting hierarchy
+
+Tailwind-ready class mapping
+
+A component JSON spec for design tokens
+
+A Notion-ready design system doc
+
+Or a clickable prototype interaction map
+
+Tell me what design tool workflow you're using:
+
+Figma only?
+
+Figma → Dev handoff?
+
+Figma → Tailwind?
+
+Figma → shadcn?
+
+And I’ll tailor the next output exactly for that pipeline.
+
+can u explain how do to the things u request
+
+Perfect — I’ll explain this step-by-step like you’ve never used Figma before.
+
+You asked how to do the things I requested (Auto-layout, components, variants, grids, etc.). I’ll walk you through everything in simple language.
+
+🟣 1️⃣ How To Create The Base Layout (App Shell)
+Step 1 — Create a Desktop Frame
+
+Open Figma
+
+Press F (Frame tool)
+
+On the right panel choose:
+
+Desktop → 1440px
+
+Rename it:
+
+AppShell / Desktop
+Step 2 — Add a 12 Column Grid
+
+Click your frame
+
+On right panel → Layout Grid
+
+Click “+”
+
+Change type to Columns
+
+Set:
+
+Count: 12
+
+Margin: 80
+
+Gutter: 24
+
+Now you have a real app grid.
+
+🟣 2️⃣ How To Create Sidebar + Main Layout
+
+We use Auto Layout.
+
+Think of Auto Layout like Flexbox in CSS.
+
+Step 1 — Make Sidebar + Main Horizontal
+
+Select the frame
+
+Press Shift + A
+→ This enables Auto Layout
+
+Change direction to Horizontal
+
+Now your frame splits into rows left-to-right.
+
+Step 2 — Create Sidebar
+
+Press R
+
+Draw rectangle 240px wide
+
+Rename: Sidebar
+
+Set width = 240
+
+Height = Fill container
+
+Select sidebar → press Shift + A
+
+Direction: Vertical
+
+Padding: 24
+
+Spacing: 16
+
+Now it stacks items top-to-bottom.
+
+Add:
+
+Logo
+
+Nav items
+
+Step 3 — Create Main Content Area
+
+Add another rectangle next to sidebar
+
+Rename: Main Content
+
+Set width to Fill container
+
+Add Auto Layout:
+
+Vertical
+
+Padding: 48
+
+Spacing: 32
+
+Done. You now have a real app shell.
+
+🟣 3️⃣ How To Make Reusable Components
+
+You should NOT redesign buttons 50 times.
+
+Example: Create Button Component
+
+Draw rectangle (height: 44px)
+
+Add text inside (“Primary Button”)
+
+Select both
+
+Press Shift + A (Auto layout)
+
+Set:
+
+Padding: 16 left/right
+
+Height: Hug contents
+
+Add corner radius: 8px
+
+Add background color
+
+Now:
+
+Press Cmd/Ctrl + Alt + K
+
+This turns it into a Component.
+
+Rename:
+
+Button / Primary
+Create Variants (Very Important)
+
+Select the component
+
+Click “+ Variant”
+
+Change property to:
+
+Primary
+
+Secondary
+
+Danger
+
+Disabled
+
+Now you have a real system.
+
+🟣 4️⃣ How To Make GoalCard Component
+Step 1 — Create Card Frame
+
+Create frame 600px wide
+
+Add:
+
+Title text
+
+Progress bar
+
+Small description
+
+Button row
+
+Select everything
+
+Press Shift + A
+
+Vertical
+
+Padding: 24
+
+Spacing: 16
+
+Add:
+
+Radius: 16
+
+Fill: White
+
+Shadow
+
+Turn into component:
+
+GoalCard
+Add Variants:
+
+Core
+
+Stretch
+
+Maintenance
+
+Completed
+
+Locked
+
+Use Figma Variant property panel.
+
+🟣 5️⃣ How To Make Tabs
+
+Create horizontal frame
+
+Add 4 text labels
+
+Select all → Shift + A
+
+Spacing: 32
+
+Add underline element under active tab
+
+Make this a component:
+
+Tabs / Default
+
+Variants:
+
+Active tab index 1
+
+Active tab index 2
+
+etc
+
+🟣 6️⃣ How To Make Circular Progress (Level Progress)
+
+Two ways:
+
+Easy Way (Recommended)
+
+Draw circle
+
+Duplicate
+
+Change stroke color
+
+Use “Arc” property in right panel
+
+Adjust angle to represent %
+
+Inside add:
+
+63%
+
+“To Level 5”
+
+Group and make component:
+
+LevelProgressRing
+🟣 7️⃣ How To Create Cards With Consistent Spacing
+
+Always:
+
+Use Auto Layout
+
+Use padding multiples of 8
+
+Use spacing multiples of 8
+
+Use consistent radius (8 or 16)
+
+Never manually drag things into place.
+
+🟣 8️⃣ How To Create Clean Admin Tables
+
+Create frame
+
+Make top row header
+
+Add Auto Layout horizontal
+
+Add column labels
+
+Duplicate row
+
+Create Component:
+
+DataTable / Row
+
+Make row variant:
+
+Normal
+
+Hover
+
+Selected
+
+🟣 9️⃣ How To Make Clean Design System Page
+
+Create a new page in Figma:
+
+Design System
+
+Add sections:
+
+Buttons
+
+Cards
+
+Typography
+
+Colors
+
+Badges
+
+GoalCard
+
+RewardCard
+
+NavItem
+
+MetricCard
+
+Organize with big section headers.
+
+🟣 🔟 How To Make It Clickable (Prototype Mode)
+
+Click “Prototype” tab in right panel
+
+Select button
+
+Drag blue node to target frame
+
+Set:
+
+On Click
+
+Navigate to
+
+Smart Animate
+
+Now you have clickable wireframes.
+
+🧠 Important Concept
+
+Auto Layout = Flexbox
+Variants = Component states
+Frame = Page container
+Hug contents = dynamic size
+Fill container = flexible size
+
+If you master:
+
+Frame
+
+Auto Layout
+
+Components
+
+Variants
+
+You can build any product.
+
+Here’s a comprehensive, beginner-friendly guide that walks you through setting up the design system, creating key screens (Cleaner and Admin) and building reusable components in Figma, complete with responsive behaviours. The document is organized with clear sections on grids, typography, color tokens, auto‑layout, component creation and variants, along with step‑by‑step instructions for each part of the app’s UI and admin dashboards.
+
+Step‑by‑Step Guide to Building the Design System in Figma
+This guide explains how to set up a complete design system and create key interface screens in Figma. It assumes you are new to Figma and walks through fundamental concepts like frames, grids, auto‑layout, components, variants, typography and color styles. The approach follows best practices described in accessible tutorials on auto‑layout
+ and design‑system organisation
+.
+
+1. Global Design System
+1.1 Frame sizes
+Open Figma. Press F (Frame tool). In the right panel, choose a desktop size and create frames sized:
+
+Desktop App: 1440 × 1024
+
+Tablet: 1024 × 900 (optional)
+
+Mobile: 390 × 844 (optional)
+
+Name the frames clearly, e.g., AppShell/Desktop. You can duplicate these frames for other sizes later.
+
+1.2 Layout Grid (12‑column)
+Select the desktop frame.
+
+In the right‑hand properties panel, find Layout grid and click + to add a grid.
+
+Change the grid type to Columns and set:
+
+Count: 12 columns
+
+Margin: 80 px (left and right)
+
+Gutter: 24 px between columns
+
+Use an 8‑point spacing system for all padding and spacing values. A 4‑point grid helps maintain rhythm and responsiveness
+.
+
+You can use similar grids on other frames (e.g., 12 columns for desktop, fewer columns for smaller breakpoints) by copying the grid and adjusting the column count and margins
+.
+
+1.3 Spacing system
+Follow an 8‑point scale, which ensures that all paddings and margins are multiples of 4 or 8. Suggested values: 4, 8, 12, 16, 24, 32, 48, 64. Use these numbers consistently for padding, gaps, border radius and shadows.
+
+1.4 Color tokens
+Open the Assets panel and switch to Library > Local styles.
+
+Click + to add Color Styles. Name them using a clear hierarchy, for example:
+
+Group	Tokens
+Primary	Primary/600, Primary/500
+Success	Success/500
+Warning	Warning/500
+Error	Error/500
+Neutral	Neutral/900, Neutral/700, Neutral/500, Neutral/300, Neutral/100
+Surface	Surface/Card (for cards), Surface/App (for page backgrounds)
+Apply these color styles to shapes and components so that any changes propagate automatically. Figma makes it easy to define a color palette and reuse styles across the system
+.
+
+1.5 Typography styles
+Figma allows you to create text styles for headings, body and captions. To set them up:
+
+Use the Text tool (T) to create text elements for each style (H1, H2, H3, Body, Small, Caption).
+
+In the right panel, define font size and weight:
+
+H1 – 32 px / 600 weight
+
+H2 – 24 px / 600
+
+H3 – 18 px / 600
+
+Body – 16 px / 400
+
+Small – 14 px / 400
+
+Caption – 12 px / 400
+
+Click the four‑dots icon next to Text in the properties panel to create a new Text Style. Give each style a descriptive name (e.g., Heading/H1), so you can apply it easily later
+.
+
+These styles provide a hierarchy that helps users scan the content easily
+.
+
+2. Fundamentals: Frames, Auto‑layout & Components
+2.1 Using Auto‑layout
+Auto‑layout is Figma’s equivalent of flexbox. It lets you define how child elements are spaced and aligned. According to a beginner tutorial
+, auto‑layout only works on frames or components and not on groups. You can add auto‑layout by:
+
+Selecting one or more layers.
+
+Pressing Shift + A (shortcut).
+
+Clicking + Auto layout in the right panel.
+
+Right‑clicking and choosing Add auto layout
+.
+
+Once applied, auto‑layout can be set to Horizontal or Vertical. You can rearrange elements by dragging them or using the arrow keys, and switch between horizontal and vertical flows using the orientation controls
+.
+
+2.2 Creating Components and Variants
+Components turn your designs into reusable building blocks. A design system relies on components and their variants to maintain consistency
+. To create a component:
+
+Select the elements (e.g., a button rectangle and text).
+
+Apply auto‑layout if the component needs flexible padding (e.g., a button should hug its text content).
+
+With the group selected, press Ctrl + Alt + K (⌘ + Option + K on Mac) to create a component.
+
+Name the component logically (e.g., Button/Primary).
+
+To create variants, select the component and click + Variant in the right panel. Variants allow multiple states (e.g., primary, secondary, danger, disabled) to be stored in one master component. You can create variant properties such as State and assign values like Default, Hover, or Active to each variant. Grouping states as variants keeps your library organised and easy to use
+.
+
+2.3 Applying Component Properties
+Figma’s component properties enable you to define which parts of a component can change. You can add Boolean properties (e.g., show/hide an icon), Instance swap properties (e.g., replace an icon), and Text properties (e.g., change button label)
+. This reduces the number of required variants and makes the system easier to scale.
+
+3. Building the App Shell
+The App Shell provides a reusable layout containing a sidebar and main content area. Follow these steps:
+
+Create the Frame: Press F, choose 1440 × 1024 desktop size and name it AppShell/Desktop.
+
+Enable Auto‑layout: Select the frame and press Shift + A to convert it to auto‑layout. Set the direction to Horizontal, so children are arranged left‑to‑right.
+
+Create the Sidebar:
+
+Draw a rectangle (240 px wide, height set to Fill container). Name it Sidebar.
+
+With the rectangle selected, press Shift + A to apply a Vertical auto‑layout.
+
+Add padding of 24 px and set spacing between items to 16 px.
+
+Insert the logo (a 32 px‑high image or placeholder) at the top.
+
+For each navigation item, create a row (40 px high) with a 20 px icon and label. Use auto‑layout horizontally to align icons and labels and apply consistent padding. Turn the row into a component (NavItem) with default, hover, and active variants.
+
+Create the Main Content Area:
+
+Draw another rectangle to the right of the sidebar and set its width to Fill container and height to Fill container.
+
+Apply vertical auto‑layout with padding 48 and spacing 32.
+
+Set the fill color to Surface/App and the frame’s corner radius if needed (e.g., 0 for full‑screen). All pages (progress hub, goals list, etc.) will live inside this area.
+
+4. Cleaner – Progress Hub
+Create a frame called /cleaner/progress inside the main content area. Set its internal width to 1200 px and follow the design below.
+
+4.1 Level Summary Card
+Draw a frame and apply auto‑layout (horizontal).
+
+Set padding 32, corner radius 16, and add a soft drop shadow.
+
+On the left side, insert a LevelBadge component (large size), followed by two text elements: the level title (e.g., “Level 4 – Trusted Pro”) and subtitle (“63 % to Level 5”).
+
+On the right side, create a circular progress indicator: draw two concentric circles and use the Arc tool to adjust the stroke to 63 %
+. Place text inside (“63 %”). Convert this into a LevelProgressRing component.
+
+Turn the entire card into a component (LevelSummaryCard) so it can be reused for other levels.
+
+4.2 Next Best Actions Section
+Add a header using the H2 style (“Next Best Actions”).
+
+Below the heading, create a horizontal auto‑layout with spacing 24 px.
+
+Design a NextActionCard component:
+
+Size: 360 px width, variable height.
+
+Padding: 24 px; corner radius: 16.
+
+Include a title, body text, and a primary button.
+
+Example: title “Complete 3 more add‑ons”, body “Unlock Priority Visibility for 7 days”, button “See Eligible Jobs”.
+
+Convert the card to a component and add states if necessary.
+
+Duplicate the card horizontally to list multiple actions.
+
+4.3 Active Rewards Section
+Insert another header (H2) labelled “Active Rewards”.
+
+Below it, create a horizontal scroll container (set width to 1200 px and allow overflow on the x‑axis). Inside, place RewardCard components:
+
+Width: 300 px; padding: 24 px.
+
+Include a title, effect line (what benefit the reward provides), a countdown pill, and a “View Details” link.
+
+Provide variants for active vs. locked states.
+
+4.4 Recent Achievements Section
+Create a simple grid of BadgeCard components (100 × 120). These display earned badges with the badge image, title, and date. Use auto‑layout wrap (Wrap control) if you need items to break across multiple rows when the frame is resized
+.
+
+5. Cleaner – Goals List (/cleaner/goals)
+Top Bar:
+
+Add a page title using H1.
+
+Include filter dropdowns and a search input. Use auto‑layout to align these horizontally.
+
+GoalCard Component:
+
+Create a frame with padding 24 and corner radius 16. Set width to fill container.
+
+Use vertical auto‑layout with spacing 16.
+
+Row 1: Title on the left; on the right, add a reward preview pill (display the reward that will be earned upon completion).
+
+Row 2: Add a horizontal progress bar (8 px height). Use a filled rectangle for progress and a lighter one for the remaining portion. Display text below (e.g., “27 / 45”).
+
+Row 3: Include a small description (“Counts when…”). Use the Small or Caption style.
+
+Row 4: Provide two buttons: View Details (secondary style) and Take Action (primary style).
+
+Use variants for statuses (Complete, Locked, Almost complete, Maintenance) and for types (Core or Stretch). You can add a property such as status to change the look.
+
+6. Cleaner – Rewards Center (/cleaner/rewards)
+Tabs Component: Create a horizontal list of tabs (Active, Earned, Locked, Choice). Use auto‑layout with spacing 32. Underline the active tab with a colored line. Use a variant property (e.g., activeTab) to highlight the selected tab.
+
+Active Tab: Layout a 2‑column grid with a 24 px gap. Each cell contains an expanded RewardCard:
+
+Show title, description, “Applies to” (the type of jobs or actions), time left, usage left, and a Use Now button.
+
+Choice Tab: When a reward is pending, display a large card centered in the frame:
+
+Title “Choose Your Reward”.
+
+List of options with radio buttons or checkboxes.
+
+Confirm selection button.
+
+7. Cleaner – Badges Page
+Use a 4‑column grid with a 24 px gap.
+
+Each BadgeCard shows an 80 × 80 icon, title, earned date and a brief description of how to earn the badge.
+
+Provide variants for Earned, Locked and Featured states.
+
+8. Cleaner – Maintenance Page
+At the top of the page, insert a Banner component with two variants: Healthy (green) and Paused (warning). For the paused state, show title (“Progress Paused”), body (“On‑time rate below 85 %”) and a button (“See How to Fix”).
+
+Below the banner, design a Metric cards grid. Each MetricCard includes:
+
+A title (e.g., “On‑time rate”).
+
+A large statistic (e.g., 82 %).
+
+A trend arrow (up/down) with a color indicating improvement or decline.
+
+A mini explanation with a link (“How calculated”).
+
+Provide variants for Healthy, Warning and Critical states to change the card color and arrow direction.
+
+9. Cleaner – Stats Dashboard
+Use a 3‑column grid. Create tiles for each metric: On‑time %, Acceptance %, Disputes, Add‑ons, Rating, Photo compliance. Each tile should have a large number, a subtext and a trend indicator. Use the MetricCard component but adjust the layout to 3 columns.
+
+10. Admin Screens
+10.1 Gamification Dashboard (/admin/gamification)
+Header: Add an H1 (“Gamification Overview”).
+
+Row 1: Place 3 KPI cards horizontally.
+
+Row 2: Insert a large chart area (e.g., supply vs demand). This can be a placeholder rectangle which the development team later replaces with an actual chart component.
+
+Row 3: Place a Governor Status Card summarising the health of the system.
+
+Right Sidebar: Add a Kill Switch Panel with toggles to disable cash rewards or disable gamification globally. Use the Toggle component with on/off variants.
+
+10.2 Goals Library (/admin/goals)
+Create a data table frame using auto‑layout. Add column headers: ID, Title, Level, Type, Target, Enabled, Updated.
+
+Each row is a DataTableRow component. Provide hover and selected states as variants.
+
+When a row is clicked, show a right side drawer with an edit panel. The drawer includes fields: Goal Title, Metric key, Operator, Target, Window, Filters (JSON), Reward binding and action buttons Save Draft, Publish, Rollback.
+
+Use text inputs and dropdown components to build the form. Auto‑layout ensures the drawer resizes to fit content.
+
+10.3 Governor Console (/admin/governor)
+Create a two‑column layout using horizontal auto‑layout. Left column holds input sliders or number fields (Fill time, Supply ratio, Disputes, Cancellations). Right column displays output metrics (Visibility multiplier, Early exposure window, Caps, Overrides).
+
+At the bottom, add buttons: Apply recommended, Manual override, Reset region.
+
+10.4 Abuse Monitor (/admin/abuse)
+Use Tabs (Messages, Login sessions, Declines, Photos) to switch between categories.
+
+Below the active tab, design a data table listing: Cleaner ID, Pattern, Risk score, Action.
+
+When a row is selected, open a side panel with actions such as Pause rewards or Require review.
+
+11. Creating Component Variants
+For each reusable element, convert it into a component with variants. Here’s a checklist of components you should create:
+
+Component	Variants
+Button	Primary, Secondary, Danger, Disabled
+Badge	Earned, Locked
+LevelBadge	Levels 1–10 (colour variants)
+RewardCard	Active, Locked, Choice
+GoalCard	Core, Stretch, Maintenance, Complete
+MetricCard	Healthy, Warning, Critical
+Banner	Healthy, Paused
+Toggle	On, Off
+NavItem	Default, Hover, Active
+To build each variant, duplicate the base component and modify attributes such as colour or text. Use variant properties like type, status or state to switch between variants. Using Figma’s Variants feature groups them into a single component, making it easy to swap between states
+.
+
+12. Responsive Rules
+Responsive design ensures your interface adapts to smaller viewports:
+
+Sidebar collapses: At narrow widths, change the Sidebar component variant to an icon‑only style (e.g., hide labels and show only icons). You can implement this with a Boolean property to toggle label visibility.
+
+Goal cards: On mobile, stack cards in a single column. Use auto‑layout with Wrap enabled
+ to allow items to flow onto new lines.
+
+Level summary: Stack the left and right content vertically when the container width becomes narrow. This can be achieved by creating a responsive variant or by switching auto‑layout orientation based on the parent frame width.
+
+Reward cards: Replace the horizontal scroll container with a vertical list on mobile.
+
+13. Structuring Your Design System Page
+To keep your components organised:
+
+Create a new page in Figma called “Design System”.
+
+Add headings (e.g., Buttons, Cards, Typography, Colors, Badges, GoalCard, RewardCard, NavItem, MetricCard).
+
+Place your components under each section. Use auto‑layout to keep them aligned.
+
+Document usage guidelines within Figma notes or use a tool like Notion to write detailed documentation. Make sure to explain the purpose of each component, its variants, and when to use each state.
+
+14. Prototyping
+To make your designs interactive:
+
+Select a component (e.g., a button) and switch to the Prototype tab in the right panel.
+
+Drag the blue node from the selected element to the destination frame (e.g., from a GoalCard button to a Goal details page).
+
+Choose Interaction (e.g., On click), Action (Navigate to), and Animation (e.g., Smart animate).
+
+Repeat this for all interactions you want to showcase.
+
+By following these steps, you’ll build a robust design system and a full suite of screens in Figma. Use auto‑layout to handle spacing and responsive behaviour
+, define typography and colour styles for consistency
+, and create reusable components and variants to scale your design
+. This process sets you up for a smooth hand‑off to developers or for further integration with Tailwind, Tokens Studio or other tooling later.
+
+
+
+
+
+
+
+Sources
+
+can u do it for me
+
+
+You took control
+
+
+we need to be on figma.com when we start how do we do that
+
+It looks like figma.com can’t be loaded from within this environment—when I navigated to it, the browser returned a “Site Unavailable” message
+
+google.com
+. I’m unable to access Figma directly here. To build your design system, you’ll need to open Figma in your own browser and follow the step‑by‑step guide I provided earlier. Let me know if there’s another task I can help you with.
+
+
+You took control
+
+I see that you've taken control of the virtual browser. Since I can't access figma.com within this environment, I provided the detailed guide earlier. Please let me know if you need further assistance or if there’s another step I should handle for you.
+
+
+Auto response
+Continue
+
+I cannot access Figma directly within this environment, but I can continue by providing resources you can use in your own tools. I’ve created two helpful files:
+
+Detailed guide – This Markdown file walks through all the steps for setting up the design system, building the Cleaner/Admin screens and creating reusable components in Figma.
+
+Design tokens JSON – This JSON file contains the spacing scale, radii, colour tokens and typography definitions, which you can import into development pipelines (e.g. Tailwind or a design-token library) to keep your designs consistent.
+
+You can download both files below:
+
+Design system guide:
+Step‑by‑Step Guide to Building the Design System in Figma
+This guide explains how to set up a complete design system and create key interface screens in Figma. It assumes you are new to Figma and walks through fundamental concepts like frames, grids, auto‑layout, components, variants, typography and color styles. The approach follows best practices described in accessible tutorials on auto‑layout
+ and design‑system organisation
+.
+
+1. Global Design System
+1.1 Frame sizes
+Open Figma. Press F (Frame tool). In the right panel, choose a desktop size and create frames sized:
+
+Desktop App: 1440 × 1024
+
+Tablet: 1024 × 900 (optional)
+
+Mobile: 390 × 844 (optional)
+
+Name the frames clearly, e.g., AppShell/Desktop. You can duplicate these frames for other sizes later.
+
+1.2 Layout Grid (12‑column)
+Select the desktop frame.
+
+In the right‑hand properties panel, find Layout grid and click + to add a grid.
+
+Change the grid type to Columns and set:
+
+Count: 12 columns
+
+Margin: 80 px (left and right)
+
+Gutter: 24 px between columns
+
+Use an 8‑point spacing system for all padding and spacing values. A 4‑point grid helps maintain rhythm and responsiveness
+.
+
+You can use similar grids on other frames (e.g., 12 columns for desktop, fewer columns for smaller breakpoints) by copying the grid and adjusting the column count and margins
+.
+
+1.3 Spacing system
+Follow an 8‑point scale, which ensures that all paddings and margins are multiples of 4 or 8. Suggested values: 4, 8, 12, 16, 24, 32, 48, 64. Use these numbers consistently for padding, gaps, border radius and shadows.
+
+1.4 Color tokens
+Open the Assets panel and switch to Library > Local styles.
+
+Click + to add Color Styles. Name them using a clear hierarchy, for example:
+
+Group	Tokens
+Primary	Primary/600, Primary/500
+Success	Success/500
+Warning	Warning/500
+Error	Error/500
+Neutral	Neutral/900, Neutral/700, Neutral/500, Neutral/300, Neutral/100
+Surface	Surface/Card (for cards), Surface/App (for page backgrounds)
+Apply these color styles to shapes and components so that any changes propagate automatically. Figma makes it easy to define a color palette and reuse styles across the system
+.
+
+1.5 Typography styles
+Figma allows you to create text styles for headings, body and captions. To set them up:
+
+Use the Text tool (T) to create text elements for each style (H1, H2, H3, Body, Small, Caption).
+
+In the right panel, define font size and weight:
+
+H1 – 32 px / 600 weight
+
+H2 – 24 px / 600
+
+H3 – 18 px / 600
+
+Body – 16 px / 400
+
+Small – 14 px / 400
+
+Caption – 12 px / 400
+
+Click the four‑dots icon next to Text in the properties panel to create a new Text Style. Give each style a descriptive name (e.g., Heading/H1), so you can apply it easily later
+.
+
+These styles provide a hierarchy that helps users scan the content easily
+.
+
+2. Fundamentals: Frames, Auto‑layout & Components
+2.1 Using Auto‑layout
+Auto‑layout is Figma’s equivalent of flexbox. It lets you define how child elements are spaced and aligned. According to a beginner tutorial
+, auto‑layout only works on frames or components and not on groups. You can add auto‑layout by:
+
+Selecting one or more layers.
+
+Pressing Shift + A (shortcut).
+
+Clicking + Auto layout in the right panel.
+
+Right‑clicking and choosing Add auto layout
+.
+
+Once applied, auto‑layout can be set to Horizontal or Vertical. You can rearrange elements by dragging them or using the arrow keys, and switch between horizontal and vertical flows using the orientation controls
+.
+
+2.2 Creating Components and Variants
+Components turn your designs into reusable building blocks. A design system relies on components and their variants to maintain consistency
+. To create a component:
+
+Select the elements (e.g., a button rectangle and text).
+
+Apply auto‑layout if the component needs flexible padding (e.g., a button should hug its text content).
+
+With the group selected, press Ctrl + Alt + K (⌘ + Option + K on Mac) to create a component.
+
+Name the component logically (e.g., Button/Primary).
+
+To create variants, select the component and click + Variant in the right panel. Variants allow multiple states (e.g., primary, secondary, danger, disabled) to be stored in one master component. You can create variant properties such as State and assign values like Default, Hover, or Active to each variant. Grouping states as variants keeps your library organised and easy to use
+.
+
+2.3 Applying Component Properties
+Figma’s component properties enable you to define which parts of a component can change. You can add Boolean properties (e.g., show/hide an icon), Instance swap properties (e.g., replace an icon), and Text properties (e.g., change button label)
+. This reduces the number of required variants and makes the system easier to scale.
+
+3. Building the App Shell
+The App Shell provides a reusable layout containing a sidebar and main content area. Follow these steps:
+
+Create the Frame: Press F, choose 1440 × 1024 desktop size and name it AppShell/Desktop.
+
+Enable Auto‑layout: Select the frame and press Shift + A to convert it to auto‑layout. Set the direction to Horizontal, so children are arranged left‑to‑right.
+
+Create the Sidebar:
+
+Draw a rectangle (240 px wide, height set to Fill container). Name it Sidebar.
+
+With the rectangle selected, press Shift + A to apply a Vertical auto‑layout.
+
+Add padding of 24 px and set spacing between items to 16 px.
+
+Insert the logo (a 32 px‑high image or placeholder) at the top.
+
+For each navigation item, create a row (40 px high) with a 20 px icon and label. Use auto‑layout horizontally to align icons and labels and apply consistent padding. Turn the row into a component (NavItem) with default, hover, and active variants.
+
+Create the Main Content Area:
+
+Draw another rectangle to the right of the sidebar and set its width to Fill container and height to Fill container.
+
+Apply vertical auto‑layout with padding 48 and spacing 32.
+
+Set the fill color to Surface/App and the frame’s corner radius if needed (e.g., 0 for full‑screen). All pages (progress hub, goals list, etc.) will live inside this area.
+
+4. Cleaner – Progress Hub
+Create a frame called /cleaner/progress inside the main content area. Set its internal width to 1200 px and follow the design below.
+
+4.1 Level Summary Card
+Draw a frame and apply auto‑layout (horizontal).
+
+Set padding 32, corner radius 16, and add a soft drop shadow.
+
+On the left side, insert a LevelBadge component (large size), followed by two text elements: the level title (e.g., “Level 4 – Trusted Pro”) and subtitle (“63 % to Level 5”).
+
+On the right side, create a circular progress indicator: draw two concentric circles and use the Arc tool to adjust the stroke to 63 %
+. Place text inside (“63 %”). Convert this into a LevelProgressRing component.
+
+Turn the entire card into a component (LevelSummaryCard) so it can be reused for other levels.
+
+4.2 Next Best Actions Section
+Add a header using the H2 style (“Next Best Actions”).
+
+Below the heading, create a horizontal auto‑layout with spacing 24 px.
+
+Design a NextActionCard component:
+
+Size: 360 px width, variable height.
+
+Padding: 24 px; corner radius: 16.
+
+Include a title, body text, and a primary button.
+
+Example: title “Complete 3 more add‑ons”, body “Unlock Priority Visibility for 7 days”, button “See Eligible Jobs”.
+
+Convert the card to a component and add states if necessary.
+
+Duplicate the card horizontally to list multiple actions.
+
+4.3 Active Rewards Section
+Insert another header (H2) labelled “Active Rewards”.
+
+Below it, create a horizontal scroll container (set width to 1200 px and allow overflow on the x‑axis). Inside, place RewardCard components:
+
+Width: 300 px; padding: 24 px.
+
+Include a title, effect line (what benefit the reward provides), a countdown pill, and a “View Details” link.
+
+Provide variants for active vs. locked states.
+
+4.4 Recent Achievements Section
+Create a simple grid of BadgeCard components (100 × 120). These display earned badges with the badge image, title, and date. Use auto‑layout wrap (Wrap control) if you need items to break across multiple rows when the frame is resized
+.
+
+5. Cleaner – Goals List (/cleaner/goals)
+Top Bar:
+
+Add a page title using H1.
+
+Include filter dropdowns and a search input. Use auto‑layout to align these horizontally.
+
+GoalCard Component:
+
+Create a frame with padding 24 and corner radius 16. Set width to fill container.
+
+Use vertical auto‑layout with spacing 16.
+
+Row 1: Title on the left; on the right, add a reward preview pill (display the reward that will be earned upon completion).
+
+Row 2: Add a horizontal progress bar (8 px height). Use a filled rectangle for progress and a lighter one for the remaining portion. Display text below (e.g., “27 / 45”).
+
+Row 3: Include a small description (“Counts when…”). Use the Small or Caption style.
+
+Row 4: Provide two buttons: View Details (secondary style) and Take Action (primary style).
+
+Use variants for statuses (Complete, Locked, Almost complete, Maintenance) and for types (Core or Stretch). You can add a property such as status to change the look.
+
+6. Cleaner – Rewards Center (/cleaner/rewards)
+Tabs Component: Create a horizontal list of tabs (Active, Earned, Locked, Choice). Use auto‑layout with spacing 32. Underline the active tab with a colored line. Use a variant property (e.g., activeTab) to highlight the selected tab.
+
+Active Tab: Layout a 2‑column grid with a 24 px gap. Each cell contains an expanded RewardCard:
+
+Show title, description, “Applies to” (the type of jobs or actions), time left, usage left, and a Use Now button.
+
+Choice Tab: When a reward is pending, display a large card centered in the frame:
+
+Title “Choose Your Reward”.
+
+List of options with radio buttons or checkboxes.
+
+Confirm selection button.
+
+7. Cleaner – Badges Page
+Use a 4‑column grid with a 24 px gap.
+
+Each BadgeCard shows an 80 × 80 icon, title, earned date and a brief description of how to earn the badge.
+
+Provide variants for Earned, Locked and Featured states.
+
+8. Cleaner – Maintenance Page
+At the top of the page, insert a Banner component with two variants: Healthy (green) and Paused (warning). For the paused state, show title (“Progress Paused”), body (“On‑time rate below 85 %”) and a button (“See How to Fix”).
+
+Below the banner, design a Metric cards grid. Each MetricCard includes:
+
+A title (e.g., “On‑time rate”).
+
+A large statistic (e.g., 82 %).
+
+A trend arrow (up/down) with a color indicating improvement or decline.
+
+A mini explanation with a link (“How calculated”).
+
+Provide variants for Healthy, Warning and Critical states to change the card color and arrow direction.
+
+9. Cleaner – Stats Dashboard
+Use a 3‑column grid. Create tiles for each metric: On‑time %, Acceptance %, Disputes, Add‑ons, Rating, Photo compliance. Each tile should have a large number, a subtext and a trend indicator. Use the MetricCard component but adjust the layout to 3 columns.
+
+10. Admin Screens
+10.1 Gamification Dashboard (/admin/gamification)
+Header: Add an H1 (“Gamification Overview”).
+
+Row 1: Place 3 KPI cards horizontally.
+
+Row 2: Insert a large chart area (e.g., supply vs demand). This can be a placeholder rectangle which the development team later replaces with an actual chart component.
+
+Row 3: Place a Governor Status Card summarising the health of the system.
+
+Right Sidebar: Add a Kill Switch Panel with toggles to disable cash rewards or disable gamification globally. Use the Toggle component with on/off variants.
+
+10.2 Goals Library (/admin/goals)
+Create a data table frame using auto‑layout. Add column headers: ID, Title, Level, Type, Target, Enabled, Updated.
+
+Each row is a DataTableRow component. Provide hover and selected states as variants.
+
+When a row is clicked, show a right side drawer with an edit panel. The drawer includes fields: Goal Title, Metric key, Operator, Target, Window, Filters (JSON), Reward binding and action buttons Save Draft, Publish, Rollback.
+
+Use text inputs and dropdown components to build the form. Auto‑layout ensures the drawer resizes to fit content.
+
+10.3 Governor Console (/admin/governor)
+Create a two‑column layout using horizontal auto‑layout. Left column holds input sliders or number fields (Fill time, Supply ratio, Disputes, Cancellations). Right column displays output metrics (Visibility multiplier, Early exposure window, Caps, Overrides).
+
+At the bottom, add buttons: Apply recommended, Manual override, Reset region.
+
+10.4 Abuse Monitor (/admin/abuse)
+Use Tabs (Messages, Login sessions, Declines, Photos) to switch between categories.
+
+Below the active tab, design a data table listing: Cleaner ID, Pattern, Risk score, Action.
+
+When a row is selected, open a side panel with actions such as Pause rewards or Require review.
+
+11. Creating Component Variants
+For each reusable element, convert it into a component with variants. Here’s a checklist of components you should create:
+
+Component	Variants
+Button	Primary, Secondary, Danger, Disabled
+Badge	Earned, Locked
+LevelBadge	Levels 1–10 (colour variants)
+RewardCard	Active, Locked, Choice
+GoalCard	Core, Stretch, Maintenance, Complete
+MetricCard	Healthy, Warning, Critical
+Banner	Healthy, Paused
+Toggle	On, Off
+NavItem	Default, Hover, Active
+To build each variant, duplicate the base component and modify attributes such as colour or text. Use variant properties like type, status or state to switch between variants. Using Figma’s Variants feature groups them into a single component, making it easy to swap between states
+.
+
+12. Responsive Rules
+Responsive design ensures your interface adapts to smaller viewports:
+
+Sidebar collapses: At narrow widths, change the Sidebar component variant to an icon‑only style (e.g., hide labels and show only icons). You can implement this with a Boolean property to toggle label visibility.
+
+Goal cards: On mobile, stack cards in a single column. Use auto‑layout with Wrap enabled
+ to allow items to flow onto new lines.
+
+Level summary: Stack the left and right content vertically when the container width becomes narrow. This can be achieved by creating a responsive variant or by switching auto‑layout orientation based on the parent frame width.
+
+Reward cards: Replace the horizontal scroll container with a vertical list on mobile.
+
+13. Structuring Your Design System Page
+To keep your components organised:
+
+Create a new page in Figma called “Design System”.
+
+Add headings (e.g., Buttons, Cards, Typography, Colors, Badges, GoalCard, RewardCard, NavItem, MetricCard).
+
+Place your components under each section. Use auto‑layout to keep them aligned.
+
+Document usage guidelines within Figma notes or use a tool like Notion to write detailed documentation. Make sure to explain the purpose of each component, its variants, and when to use each state.
+
+14. Prototyping
+To make your designs interactive:
+
+Select a component (e.g., a button) and switch to the Prototype tab in the right panel.
+
+Drag the blue node from the selected element to the destination frame (e.g., from a GoalCard button to a Goal details page).
+
+Choose Interaction (e.g., On click), Action (Navigate to), and Animation (e.g., Smart animate).
+
+Repeat this for all interactions you want to showcase.
+
+By following these steps, you’ll build a robust design system and a full suite of screens in Figma. Use auto‑layout to handle spacing and responsive behaviour
+, define typography and colour styles for consistency
+, and create reusable components and variants to scale your design
+. This process sets you up for a smooth hand‑off to developers or for further integration with Tailwind, Tokens Studio or other tooling later.
+
+
+
+Design tokens JSON: design_tokens.json
+
+Let me know if you need this information formatted for a specific workflow or if there’s anything else I can help with.
+
+
+
+
+
+Sources
+
+
+
