@@ -1,0 +1,163 @@
+Blog Post Writer
+Built-in
+Writing
+Added by
+Built-in
+
+
+Description
+Writes structured blog posts, tutorials, and long-form articles with research, SEO, and cover image generation. Use when the user asks to write a blog post, article, tutorial, how-to guide, or thought leadership piece.
+
+SKILL.md
+
+
+name: blog-post description: Writes structured blog posts, tutorials, and long-form articles with research, SEO, and cover image generation. Use when the user asks to write a blog post, article, tutorial, how-to guide, or thought leadership piece.
+Blog Post Writing
+Structured workflow for creating high-quality blog posts. Outputs a markdown post and a cover image saved to files/ under the working directory.
+
+When to use this skill
+Write a blog post or article
+Create a tutorial or how-to guide
+Develop educational long-form content
+Write thought leadership pieces
+Step 1: Research
+Before writing, gather current information using WebSearch. Search for:
+
+The main topic — recent developments, statistics, key players
+Related subtopics for depth
+Competing articles to differentiate
+Save research notes scoped to the slug directory (avoids overwrites if multiple posts are written in sequence):
+
+bash
+
+Copy
+mkdir -p files/blogs/<slug>
+cat > files/blogs/<slug>/research-notes.md << 'EOF'
+# Research Notes: <topic>
+## Key findings
+- ...
+## Statistics
+- ...
+## Sources
+- ...
+EOF
+Step 2: Write the post
+Save the post to files/blogs/<slug>/post.md.
+
+bash
+
+Copy
+mkdir -p files/blogs/<slug>
+Required structure
+Frontmatter:
+
+markdown
+
+Copy
+---
+title: "Your Title Here (under 60 chars)"
+description: "Meta description for SEO (150-160 chars)"
+date: YYYY-MM-DD
+tags: [tag1, tag2]
+---
+Body sections:
+
+Hook — A compelling question, statistic, or statement in 2-3 sentences. Make the reader want to continue.
+Context — Why this topic matters. Describe the problem or opportunity. Connect to the reader's experience.
+Main Content — 3-5 sections with H2 headers. Each section covers one key point. Include code examples, data, or concrete illustrations where helpful.
+Practical Application — How to apply the concepts. Step-by-step instructions, code snippets, or templates.
+Conclusion & CTA — Summarize key takeaways (3 bullets max). End with a clear call-to-action.
+SEO considerations
+Include the main keyword in the title and first paragraph
+Use the keyword naturally 3-5 times throughout
+Keep the title under 60 characters
+Meta description should be 150-160 characters
+Step 3: Generate a cover image
+Generate a cover image using the Gemini API and save it to files/blogs/<slug>/hero.png.
+
+bash
+
+Copy
+pip install google-genai Pillow
+python
+
+Copy
+import os, base64, json
+from io import BytesIO
+from google import genai
+from google.genai import types
+from PIL import Image
+
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+prompt = "YOUR COVER IMAGE PROMPT HERE"
+output_dir = os.path.join(os.getcwd(), "files", "blogs", "<slug>")
+os.makedirs(output_dir, exist_ok=True)
+output_path = os.path.join(output_dir, "hero.png")
+
+response = client.models.generate_content(
+    model="gemini-3.1-flash-image-preview",
+    contents=[prompt],
+    config=types.GenerateContentConfig(
+        response_modalities=["TEXT", "IMAGE"],
+    ),
+)
+
+for part in response.candidates[0].content.parts:
+    if part.text is not None:
+        print(part.text)
+    elif part.inline_data is not None:
+        raw = part.inline_data.data
+        if isinstance(raw, str):
+            image_data = base64.b64decode(raw)
+        else:
+            image_data = bytes(raw)
+        img = Image.open(BytesIO(image_data))
+        img.save(output_path, format="PNG")
+        print(f"Image saved as {output_path}")
+
+print(json.dumps({"type": "generated_image", "path": output_path, "name": "hero.png"}))
+If GEMINI_API_KEY is not set, skip cover image generation and note it in the task result.
+
+Writing effective cover image prompts
+Structure prompts with:
+
+Subject: Main focus — be specific and concrete
+Style: Art direction (minimalist, isometric, flat design, 3D render, etc.)
+Composition: Element arrangement, leave negative space for title overlay
+Color palette: Specific colors or mood
+Atmosphere: Lighting, shadows, mood
+Example prompts by post type:
+
+Technical post: "Isometric 3D illustration of interconnected glowing cubes representing AI agents, connected by luminous data streams. Deep navy background with electric blue and soft purple accents. Clean minimal style, negative space at top for title."
+Tutorial: "Clean flat illustration of hands typing on a keyboard with abstract code symbols floating upward. Warm gradient background from soft coral to light peach. Friendly, approachable style. Centered composition with space for text overlay."
+Thought leadership: "Abstract visualization of a human silhouette merging with geometric neural network patterns. Muted sage green and warm terracotta color scheme. Contemplative, forward-thinking mood."
+Output
+A blog post is NOT complete without both files:
+
+files/blogs/<slug>/ ├── post.md # The blog post content └── hero.png # Generated cover image
+CRITICAL: After saving the markdown post, print the generated_file marker so it appears as a download:
+
+python
+
+Copy
+import json, os
+filepath = os.path.join(os.getcwd(), "files", "blogs", "<slug>", "post.md")
+print(json.dumps({"type": "generated_file", "path": filepath, "name": "post.md"}))
+Quality checklist
+Before calling report_task_result:
+
+ Post saved to files/blogs/<slug>/post.md
+ Hero image generated at files/blogs/<slug>/hero.png
+ Hook grabs attention in first 2 sentences
+ Each section has a clear purpose
+ SEO frontmatter is complete (title, description, date, tags)
+ Conclusion summarizes key points
+ CTA tells reader what to do next
+ Include both files in output_files when reporting results
+Rules
+ALWAYS research the topic first using WebSearch before writing.
+ALWAYS save output to files/blogs/<slug>/ under the working directory.
+ALWAYS generate a cover image — a blog post is not complete without one (unless GEMINI_API_KEY is unavailable).
+Use the inline Gemini image generation snippet in Step 3.
+Use unique slug names derived from the post title (lowercase, hyphens).

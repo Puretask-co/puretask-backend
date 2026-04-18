@@ -1,0 +1,3323 @@
+
+
+
+
+how do we use base 44 with our existing backend?
+
+Short version:
+Your backend stays the “brain.” Base44 just becomes the event router + internal UI that talks to the same Postgres + n8n workflows you already have.
+
+I’ll break it into what lives where and then exactly what to wire up.
+
+1. Who does what?
+Existing backend (Node/Nest/whatever):
+
+Public API for your apps
+
+Auth, permissions, rate limits
+
+Writes main business data into Neon Postgres (users, jobs, credits, payouts)
+
+Talks to Stripe, etc.
+
+n8n + Postgres (what you already set up):
+
+Workflows for payments, payouts, jobs, refunds, disputes, KPIs, backups, etc.
+
+Uses the PureTask Postgres credential to read/write the same DB as your backend.
+
+Base44:
+
+Configuration + admin UI panels (emit_event buttons, toggles, etc.) that trigger events like referral.earned, preferences.updated, etc.
+
+An “events” ingress endpoint that forwards those events into your n8n workflows and DB.
+
+Optional front-end helper for emitting events from browser → backend proxy → n8n.
+
+You’re not replacing your backend with Base44 — you’re letting Base44+n8n react to events coming from your backend and your admin UI.
+
+2. Core pattern: your backend emits events into Base44
+You already have the event shape from the helper snippet:
+
+{
+  event_name,
+  event_id,
+  occurred_at,
+  idempotency_key,
+  user_tz,
+  actor: { type, id },
+  payload
+}
+and it gets POSTed as JSON with an HMAC header:
+
+POST /events
+Content-Type: application/json
+X-Puretask-Signature: sha256=<hmac-of-raw-body>
+Step 1 — Add an internal emitEvent helper in your backend
+In your backend, implement a tiny client that knows how to talk to Base44/n8n:
+
+// pseudo-code for Node backend
+import crypto from "crypto";
+import fetch from "node-fetch"; // or global fetch in newer runtimes
+
+async function emitEvent(eventName, payload, actor = { type: "system", id: "backend" }) {
+  const body = JSON.stringify({
+    event_name: eventName,
+    event_id: crypto.randomUUID(),
+    occurred_at: new Date().toISOString(),
+    idempotency_key: `${eventName}_${payload.job_id || payload.booking_id || Date.now()}`,
+    user_tz: "America/Los_Angeles",
+    actor,
+    payload
+  });
+
+  const hmac = crypto
+    .createHmac("sha256", process.env.EVENTS_HMAC_SECRET)
+    .update(body)
+    .digest("hex");
+
+  await fetch(process.env.BASE44_EVENTS_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Puretask-Signature": `sha256=${hmac}`
+    },
+    body
+  });
+}
+Your BASE44_EVENTS_URL is whatever we wired up (usually an n8n webhook or Base44 gateway that feeds into the “01 – Stripe Webhook Ingest”–style flows).
+
+Step 2 — Call emitEvent from key backend moments
+Anywhere your backend already does something important, you emit a matching event:
+
+After a client signs up → user.created
+
+Client buys credits → credits.purchased
+
+Job is created/accepted/starts/finishes → job.created, job.accepted, job.in_progress, job.completed
+
+Client approves or disputes → job.approved, job.disputed
+
+Cleaner requests payout → payout.requested
+
+Example inside a booking route:
+
+// after you insert job row into Postgres:
+await emitEvent("job.created", {
+  job_id: job.id,
+  client_id: job.client_id,
+  cleaner_id: job.cleaner_id,
+  estimated_hours: job.estimated_hours,
+  cleaning_type: job.cleaning_type
+}, { type: "user", id: job.client_id });
+n8n + Base44 then listen for job.created and run all the stuff you’ve defined there:
+
+create ledger entries,
+
+hold credits,
+
+send emails/SMS/push (SendGrid, Twilio, OneSignal),
+
+update KPIs.
+
+All of that is already in your 12-workflow bundle; we’re just feeding it cleaner events.
+
+3. Backend as proxy for browser events (optional)
+The snippet you’ve got shows how to sign and send events directly from the browser, but it also warns: don’t expose a real secret in production — use a backend proxy.
+
+Best practice:
+
+Front-end calls your backend:
+POST /events with { event_name, payload } (no secret).
+
+Your backend uses the emitEvent helper above to:
+
+add event_id, occurred_at, idempotency_key, actor
+
+sign with EVENTS_HMAC_SECRET
+
+forward to Base44/n8n.
+
+That way:
+
+secrets never hit the browser,
+
+you can validate the user is logged in before allowing events,
+
+you keep one consistent event pipeline.
+
+4. How Base44 “talks back” to your backend/DB
+Once events are flowing, you get three kinds of integration points:
+
+Direct DB writes via n8n
+n8n uses the PureTask Postgres credential to run SQL nodes and update the same tables your backend uses (Users, Jobs, CreditTransactions, etc.).
+
+HTTP calls back into your backend
+For certain flows, you can have n8n hit your own REST endpoints (e.g. /internal/recalculate-reliability) instead of SQL, if you prefer to keep complex logic in code.
+
+Admin UI → events
+Base44 UI panels use buttons like:
+
+{
+  "type": "button",
+  "label": "Emit referral.earned",
+  "action": {
+    "type": "emit_event",
+    "event_name": "referral.earned",
+    "payload_from": ["client_id", "amount", "friend_name"]
+  }
+}
+When an internal user clicks that in Base44, it emits the same event into the pipeline that your backend would emit. n8n handles the rest (insert referral credits, send emails, etc.).
+
+From your backend’s POV, Base44 is just another trusted “actor” emitting events that result in DB updates and notifications.
+
+5. What you do NOT need to change
+You do not have to:
+
+Move your public APIs into Base44.
+
+Change how your mobile/web apps log in.
+
+Change the core DB schema you already designed for Users, Jobs, CreditTransactions, etc.
+
+Those stay in your backend + Postgres. Base44 is the control layer:
+
+defines admin pages and buttons,
+
+emits structured events,
+
+orchestrates workflows in n8n,
+
+reads/writes your database via the shared credential.
+
+6. TL;DR in “co-founder” speak
+Your backend keeps owning truth + APIs.
+
+Base44 owns events + internal UI.
+
+n8n executes background workflows.
+
+All three share the same Postgres and talk through a signed event bus (/events + HMAC).
+
+If you want, next step I can do is:
+
+list exact event names + payloads we should standardize (job, credits, payouts, disputes), or
+
+draft a small events.ts file you can drop into your backend that exports typed emitJobCreated, emitCreditsPurchased, etc., so your team just calls functions instead of hand-rolling payloads everywhere.
+
+
+so wats my frontend?
+
+Right now, in this architecture, you actually have two “frontends” (even if we haven’t built all of them yet):
+
+1. Public frontend (clients + cleaners)
+This is the “real app” that users touch:
+
+Clients:
+
+browse / book a cleaning
+
+manage jobs, reschedule, approve, tip, dispute
+
+buy credits, see balance
+
+Cleaners:
+
+see available jobs
+
+accept / reject
+
+check in / check out
+
+see earnings & payout status
+
+Tech-wise, this can be:
+
+A web app (e.g. Next.js/React) that:
+
+Talks to your backend API
+
+Uses normal auth (JWT/cookies)
+
+Never talks directly to Base44
+
+Later: a React Native app that hits the same backend APIs.
+
+In the diagram I gave you earlier, this is what “frontend” means:
+👉 “anything the client or cleaner taps on” → calls your backend → backend emits events into Base44/n8n.
+
+2. Internal frontend (Base44 admin UI)
+Base44 is also a frontend, but only for you + ops team, not for customers:
+
+Dashboards for:
+
+jobs, credits, payouts, disputes
+
+reliability scores, KPIs
+
+Buttons like:
+
+“Approve dispute”
+
+“Grant goodwill credits”
+
+“Trigger referral bonus”
+
+Those buttons fire emit_event actions which go into the same pipeline as your backend events.
+
+So:
+
+Public frontend: web/app UI you own (Next.js/React/React Native) → talks to your backend.
+
+Internal frontend: Base44 panels → talk to Base44/n8n → same DB.
+
+How they connect in practice
+Flow for a normal user action:
+
+User taps something in the app (your frontend)
+
+Your backend:
+
+Updates Postgres
+
+Calls emitEvent("job.completed", {...})
+
+Base44 + n8n:
+
+Listen for job.completed
+
+Release credits, update balances, send emails/SMS, update KPIs
+
+Flow for an internal action:
+
+You click a button in Base44 (“Grant referral credit”)
+
+Base44 emits referral.earned
+
+n8n runs “referral credit” workflow → updates DB, sends messages.
+
+TL;DR
+When you say “what’s my frontend?”:
+
+For users → your web/mobile app that talks to your backend API.
+
+For ops → your Base44 dashboards.
+
+Base44 is not your customer-facing frontend. It’s your internal control cockpit.
+
+If you want, next I can:
+
+Propose a concrete stack choice (e.g. Next.js + Expo) and
+
+Sketch the exact routes/screens we need for v1 client + cleaner app so you can hand it to a dev.
+
+
+i thought base 44 was the user interface/front end, that gets shown to customers
+
+Here’s the clean truth, no fluff:
+
+❌ Base44 is NOT a customer-facing frontend
+✅ Base44 only builds internal tools, dashboards, and automation UIs
+Think of Base44 like this:
+
+Your customers will NEVER see Base44.
+
+Your cleaners will NEVER see Base44.
+
+Base44 pages are for you, the founder + operations team.
+
+Base44 buttons trigger automations, workflows, and internal admin actions.
+
+Base44 = Intercom + Stripe Dashboard + Zapier + Admin Panel
+NOT = “the app your customers use”
+
+🔥 Why you got confused
+Because Base44 does let you design UI panels…
+…but those UI panels are admin tools, not public pages.
+
+Examples of what Base44 UI panels are:
+
+Refund dispute resolution panel
+
+Payout monitoring dashboard
+
+Manual credit adjustments
+
+Internal job inspector
+
+Reliability score viewer
+
+Operations-only tools for your staff
+
+These are NOT embeddable websites or apps.
+
+Base44 cannot do:
+
+Public booking pages
+
+Client dashboards
+
+Cleaner job acceptance interfaces
+
+Authentication flows for customers
+
+A full polished app UI
+
+A mobile app
+
+Push notifications to end users
+
+WYSIWYG front-end design for real customers
+
+That’s simply not what Base44 is built for.
+
+🧩 What is the frontend then?
+👉 Your frontend = A web or mobile app YOU build
+This connects to:
+
+Your backend API (Node/Nest)
+
+And indirectly triggers Base44+n8n workflows through events
+
+Examples:
+Client app UI
+
+Book cleaning
+
+See credits
+
+Approve or dispute job
+
+Manage address, payment, schedule
+
+Cleaner app UI
+
+Browse jobs
+
+Accept job
+
+Check in / out
+
+Upload before/after photos
+
+View earnings
+
+This must be built as:
+
+Option A — Next.js Web App (fastest)
+Option B — React Native mobile app (real “Uber-style” experience)
+Option C — Both (Next.js + Expo)
+🔥 So what does Base44 actually do?
+Stores internal configurations
+
+Emits events
+
+Lets you build admin tools
+
+Drives your workflows (via n8n)
+
+Manages validations, schemas, permissions
+
+Helps you orchestrate backend logic
+
+Think of it as:
+
+Your internal operating system, not the client-facing app.
+
+🧨 The correct architecture (simple version)
+Frontend (for real users)
+Next.js / React Native
+⬇
+Calls
+⬇
+
+Your Backend API
+Auth, booking logic, credit logic, photo uploads
+⬇
+Emits events into
+⬇
+
+Base44 → n8n
+Background logic, credits, payouts, jobs, KPIs
+⬇
+Writes to
+⬇
+
+Postgres (shared)
+🧠 Co-Founder Clarification (important)
+If you tried to make Base44 your customer-facing UI, you would hit these blockers:
+
+No deep UI customization
+
+No mobile-friendly UX for cleaners
+
+No map/GPS components
+
+No camera / photo upload system
+
+No client payment screens
+
+No Stripe Elements
+
+No session management / login
+
+No animations, modals, local storage, etc.
+
+No client-side logic beyond simple forms
+
+So PureTask would feel “admin tool-ish” instead of “Uber-like.”
+
+That’s why we must build our own frontend.
+
+💬 If you want, I can map out immediately:
+1. The full screen list for:
+Client web app
+
+Cleaner web app
+
+Admin/ops dashboards (Base44)
+
+2. Recommended tech stack for the fastest launch (Next.js + Expo + your existing backend)
+3. A quick Figma wireframe for every major screen
+4. The API endpoints your frontend needs
+(booking, credits, payouts, notifications, reliability score)
+
+Just tell me:
+Do you want a full “PureTask Frontend Blueprint” so we lock this in?
+
+
+will u re analyze base 44 via the internet and make sure you are correct, becuase im pretty sure base 44 has alot more capabilities then ur listing
+
+You’re right to question it — I just re-checked Base44 from their official site + recent reviews, and I was too narrow before.
+
+Short version: Base44 can absolutely be a full customer-facing app (frontend + backend + auth + DB + hosting) — not just an internal tools layer.
+
+What Base44 actually is (per their own docs)
+From Base44’s site + docs + independent reviews:
+
+It’s an AI-powered no-code/low-code app builder that turns natural language into a fully functional app (UI + backend). 
+
+It includes a built-in backend: auth, user management, database, storage, APIs — “batteries included”, so you don’t have to bring your own server. 
+
+You can publish apps publicly, share them, and even connect a custom domain — so these apps can definitely be customer-facing. 
+
+It’s marketed for personal productivity apps, back-office tools, customer portals, and full external apps/MVPs, not just internal dashboards. 
+
+It has integrations like Twilio, Zapier, etc., so you can send SMS, connect external APIs, and automate stuff directly. 
+
+So yeah: Base44 is very much capable of being “the thing customers see” if you want it to be.
+
+Where I mis-led you earlier was: I framed it only as an internal ops cockpit hooked to your existing backend + n8n. That’s a valid way to use it, but not a limitation of the platform.
+
+So for PureTask specifically, what are your options?
+Given what you already have (Postgres, n8n, backend logic, credit system), you basically have three paths:
+
+Option A — Base44 as full frontend + backend for customers
+Use Base44 to build:
+
+Client portal (book, manage jobs, see credits)
+
+Cleaner portal (accept jobs, check in/out, see earnings)
+
+Use its built-in auth, DB, and backend logic.
+
+Connect Stripe, Twilio, etc. via Base44 integrations.
+
+Your existing backend + n8n becomes more of a “supporting system” or you gradually migrate logic into Base44.
+
+➕ Fast to ship, less custom code
+➖ Less control over very custom flows (deep mobile/GPS/native stuff), long-term flexibility
+
+Option B — What we originally designed:
+Your own backend + custom frontend, and Base44 as internal ops + some external workflows
+
+Customers & cleaners use a custom web/app frontend (Next.js / React Native) talking to your backend API.
+
+Base44 is used for:
+
+Ops dashboards (jobs, payouts, disputes)
+
+Internal buttons that emit events (manual credits, overrides, etc.)
+
+Maybe some light external flows (simple portals, forms) if convenient.
+
+n8n remains the main workflow engine.
+
+➕ Maximum control & scalability for an “Uber-grade” experience
+➖ More engineering work up front
+
+Option C — Hybrid: Base44 as v1 customer app, your backend as the brain
+Use Base44 to ship a v1 web portal for clients + cleaners (fast).
+
+That app talks to:
+
+Your existing Postgres (via integrations / APIs)
+
+Your existing backend (for the heavy logic: credit ledger, payouts, reliability scoring, etc.).
+
+Over time you decide:
+
+move more into Base44, or
+
+keep Base44 mostly for internal tools once you build a custom React Native app.
+
+This is probably the most pragmatic “get something live” path.
+
+Clear correction / alignment
+So to answer your specific worry:
+
+“I thought base 44 was the user interface/front end, that gets shown to customers”
+
+Yes, Base44 can be that. It’s absolutely capable of building full customer-facing apps with UI, auth, DB, and backend built-in. 
+
+My earlier description treated it as only an internal ops panel, which was too limited and missed a bunch of what Base44 can do.
+
+The real decision now isn’t “can Base44 be the frontend?” (it can), it’s:
+
+Do we want PureTask’s v1 client/cleaner experience to live primarily in Base44, or in our own custom frontend hitting our backend?
+
+If you’d like, next I can:
+
+Lay out a concrete recommendation just for PureTask (given the credit system, payouts, GPS check-ins, future native app, etc.), and
+
+Sketch the exact architecture for whichever option you’re leaning toward (Base44-first vs custom-frontend-first).
+
+
+can u describe wat a custom react native app is and wat software i would use .wat is  custom web/app frontend (Next.js / React Native) how do we build it ? how do we make it look pretty at the same time functioning like we want?
+
+Good question to ask now instead of 6 months from now 😅
+Let’s unpack this in plain language.
+
+1. What is a “custom React Native app”?
+React Native app = your own mobile app that runs on iOS + Android, written in JavaScript/TypeScript.
+
+“Custom” = you design every screen, button, flow.
+
+Users download it from the App Store / Google Play.
+
+It talks to your backend API (and through that, to Base44, n8n, Stripe, etc.).
+
+For PureTask, React Native is what would power:
+
+Cleaner app (see jobs, accept, check-in/out, photos)
+
+Client app (book cleaning, see credits, approve jobs, tip)
+
+2. What software would we use for a React Native app?
+Here’s the realistic stack I’d recommend for you:
+
+Core tools:
+
+React Native – the framework
+
+Expo – makes building, testing, and deploying way easier
+
+TypeScript – like JavaScript with types (fewer bugs)
+
+VS Code – code editor
+
+GitHub – code storage + collaboration
+
+UI / visuals:
+
+Tamagui or NativeWind – lets you style things quickly, like Tailwind
+
+Component library (Tamagui UI, React Native Paper, etc.) for nice buttons, cards, modals
+
+Data / logic:
+
+React Query (TanStack Query) – handles API calls + caching
+
+Zustand or Redux Toolkit – for app-wide state if needed (logged-in user, auth tokens, etc.)
+
+3. What is a “custom web/app frontend (Next.js / React Native)”?
+These are just two kinds of frontends:
+
+🖥 Next.js → Web app
+Users open it in Chrome / Safari.
+
+Built with React, but optimized for web.
+
+Great for:
+
+client dashboard
+
+marketing site
+
+admin web tools
+
+📱 React Native → Mobile app
+Users install it from the stores.
+
+Uses React, but renders mobile-native views.
+
+Great for:
+
+cleaners on the go
+
+clients booking from phone
+
+push notifications, GPS, camera, etc.
+
+Custom frontend just means:
+“We build our own UI using React/React Native instead of using a no-code UI like Base44.”
+
+4. How do we actually build it? (High level steps)
+Step 1 – Design the flows (not code yet)
+We start in something like Figma (design tool):
+
+Define screens:
+
+Client: onboarding, home, book, upcoming jobs, credits, job details, approve/dispute, settings.
+
+Cleaner: onboarding, available jobs, job details, check-in/out, upload photos, earnings.
+
+Define flows:
+
+Book a job
+
+Approve a job
+
+Cleaner accepts a job
+
+Payouts
+
+Output: a clickable prototype so everyone agrees what it should do and look like.
+
+Step 2 – Scaffold the project
+For React Native (Expo):
+
+npx create-expo-app puretask-cleaner
+cd puretask-cleaner
+npm install
+npm run start
+For Next.js (web):
+
+npx create-next-app@latest puretask-web
+cd puretask-web
+npm install
+npm run dev
+This gives you a bare app with one starter screen.
+
+Step 3 – Add navigation + basic screens
+Example React Native (simplified):
+
+// App.tsx
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import HomeScreen from './screens/HomeScreen';
+import JobDetailsScreen from './screens/JobDetailsScreen';
+
+const Stack = createNativeStackNavigator();
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="JobDetails" component={JobDetailsScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+Now you have:
+
+A home screen
+
+A job details screen
+
+Navigation between them
+
+Step 4 – Connect to your backend API
+Example: load jobs for a cleaner:
+
+// screens/HomeScreen.tsx
+import { useEffect, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+
+export default function HomeScreen({ navigation }) {
+  const [jobs, setJobs] = useState([]);
+
+  useEffect(() => {
+    fetch('https://api.puretask.com/cleaner/jobs', {
+      headers: { Authorization: 'Bearer <token>' }
+    })
+      .then(res => res.json())
+      .then(setJobs)
+      .catch(console.error);
+  }, []);
+
+  return (
+    <View style={{ padding: 16 }}>
+      <Text style={{ fontSize: 24, fontWeight: '600', marginBottom: 16 }}>
+        Available Jobs
+      </Text>
+      <FlatList
+        data={jobs}
+        keyExtractor={job => job.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => navigation.navigate('JobDetails', { id: item.id })}
+            style={{ padding: 16, marginBottom: 8, borderRadius: 12, borderWidth: 1 }}
+          >
+            <Text>{item.address}</Text>
+            <Text>{item.estimated_hours} hrs • {item.payout_credits} credits</Text>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
+  );
+}
+This is the basic pattern:
+
+Frontend calls your backend (REST/GraphQL).
+
+Backend:
+
+Reads/writes Postgres
+
+Emits events to Base44/n8n, etc.
+
+Frontend displays results & lets user take actions.
+
+5. How do we make it look pretty and function well?
+You don’t “wing it” screen by screen. You set up rules + a design system.
+
+Visual side (pretty):
+Define brand basics:
+
+2–3 main colors (primary, accent, background)
+
+Font stack (e.g. Inter / SF Pro)
+
+Spacing scale (4, 8, 12, 16, 24, 32px)
+
+Corner radius styles (e.g. 8, 12, 16)
+
+Use a design system / utility styles:
+
+On web: Tailwind CSS with Next.js
+
+In RN: NativeWind (Tailwind for RN) or Tamagui
+
+So instead of custom CSS everywhere, you do:
+
+<View className="p-4 rounded-2xl border mb-3">
+  <Text className="text-lg font-semibold">Job at 123 Main St</Text>
+  <Text className="text-sm text-neutral-500">Tomorrow • 3 hours</Text>
+</View>
+This forces consistency = looks clean automatically.
+
+UX side (functional):
+Each screen has one main goal:
+
+Cleaner home → “Should I accept a job?”
+
+Client job screen → “Do I approve, tip, or dispute?”
+
+Show only the necessary info to make that decision.
+
+Make primary action big and obvious:
+
+“Accept Job”
+
+“Check In”
+
+“Approve & Release Credits”
+
+And under the hood:
+
+All actions call your backend API.
+
+Your backend logic + events ensure:
+
+credits escrow works
+
+payouts queue correctly
+
+reliability score updates
+
+notifications fire
+
+So the UX feels simple, even though the underlying logic is complex.
+
+6. Big-picture: where this leaves us
+Base44 = can be an app builder AND/or internal ops cockpit.
+
+Custom frontend (Next.js / React Native) = your tailored, branded, “Uber-style” UX for clients & cleaners.
+
+We combine:
+
+Great UX (React Native / Next.js)
+
+Strong logic (your backend)
+
+Automation & control (Base44 + n8n)
+
+If you want next, I can:
+
+List specific screens we need for:
+
+v1 Cleaner app
+
+v1 Client app
+
+And give you a minimal tech stack recipe like:
+
+“Install these tools, run these commands, here’s your starter structure.”
+
+
+so really we can really focus on building the backend and the features and different engines and the stuff we have been creating . and once all that is in place we build out the front end?
+
+YES — that is exactly the right strategy (and the same strategy ALL high-performance marketplaces use: Uber, DoorDash, Instacart, TaskRabbit, Homeaglow).
+
+Let me say it very cleanly:
+
+✅ The smartest order for PureTask:
+1. Build the backend engines
+2. Lock in the system logic
+3. THEN build the frontend on top
+This ensures your frontend is simple, clean, and powerful — because all the intelligence lives on the backend.
+
+🧠 Why this is the correct strategy
+Frontends change all the time:
+
+You redesign screens
+
+You improve UX
+
+You rebrand
+
+You add features to the UI
+
+You might switch from Base44 → React Native → Next.js → Native apps
+
+But the backend engines stay with you for life.
+
+If your backend is solid:
+
+Changing frontends is easy
+
+Adding a mobile app is easy
+
+Partner integrations are easy
+
+Scaling is easy
+
+Launching new versions is easy
+
+If your backend is weak:
+
+You get stuck
+
+You can’t ship fast
+
+You break things often
+
+Your UX becomes hacky
+
+PureTask needs to master the backend first.
+
+🔥 What “backend first” actually means for PureTask
+These are the things we are already building:
+
+✔ Credit system (ledger, escrow, conversion)
+✔ Cleaner reliability engine
+✔ Job lifecycle engine
+✔ Photo verification + timestamps
+✔ Dispute engine
+✔ Payout queue + Stripe Connect automation
+✔ Notifications engine (SMS / push / email)
+✔ KPIs + Analytics engine
+✔ Cleaner tier engine
+✔ Price calculation engine
+✔ Address/geolocation engine
+✔ User roles + permissions
+These are the foundations of PureTask.
+These engines will power ANY frontend — Base44, React Native, or future native apps.
+
+⚠️ If you build the frontend first, you get stuck.
+Frontend without backend =
+❌ fake
+❌ unconnected
+❌ unusable
+❌ fragile
+❌ expensive to redo
+
+Frontend second =
+✔ simple
+✔ beautiful
+✔ directly connected
+✔ reliable
+✔ ships 10× faster
+
+🎯 Once backend engines are complete…
+We then build:
+
+Your “Frontend Layer”
+Option A — Base44 as a simple v1 web portal
+(Best for speed → get something live fast)
+
+Option B — Next.js web app
+(Best for client dashboard + marketing + bookings)
+
+Option C — React Native mobile app
+(Best for cleaners — GPS, check-in/out, photos)
+
+Option D — All three
+(Backend stays the same; frontends are interchangeable)
+
+🪄 How frontend becomes EASY once backend is done
+Example:
+
+Cleaner taps “Check In”
+Frontend sends to backend:
+
+POST /job/:id/check-in
+{
+  cleaner_id,
+  timestamp,
+  gps: { lat, lng }
+}
+Backend does everything:
+
+validates location
+
+logs timestamp
+
+updates job status
+
+emits event to Base44
+
+triggers notifications
+
+updates reliability
+
+starts job timer
+
+updates KPIs
+
+Frontend doesn’t care about ANY of that complexity.
+It just sends one request → gets “OK”.
+
+That’s why backend-first is so powerful.
+
+💎 Final answer:
+YES — focus 90% on backend engines NOW.
+Then frontend becomes 10× easier, faster, and more beautiful.
+And as your AI co-founder, I’ll help you:
+
+Finish every PureTask backend engine
+
+Tie each into n8n + Base44
+
+Create clean API specs
+
+Then build beautiful React Native + Next.js screens on top
+
+If you want, I can now help you:
+
+➡️ Create the full backend roadmap
+➡️ List every API endpoint we need
+➡️ Define all the backend engines clearly
+➡️ Show how each connects to the frontend
+
+Which one do you want next?
+
+
+Create the full backend roadmap
+➡️ List every API endpoint we need
+➡️ Define all the backend engines clearly
+
+Perfect, this is the right moment to lock this in.
+
+Below is your backend master plan broken into:
+
+Backend roadmap (phases)
+
+Core backend engines (clearly defined)
+
+API endpoint list (grouped by engine)
+
+You can hand this to devs and say: “Build this.”
+
+1️⃣ Backend roadmap (phases)
+Phase 0 – Foundation
+Pick stack (example):
+
+Node.js + TypeScript
+
+Framework: NestJS / Express
+
+DB: Postgres (Neon)
+
+Set up:
+
+Migrations (Prisma / Knex / TypeORM)
+
+Environments (dev/stage/prod)
+
+Auth basics (JWT, refresh tokens)
+
+Logging + error handling
+
+Background queue (BullMQ / RabbitMQ) – optional but nice
+
+Phase 1 – Users, Auth, Profiles
+Goal: Clean separation of roles and identities.
+
+Tables:
+
+users (id, email, phone, hashed_password, role: client/cleaner/admin)
+
+client_profiles
+
+cleaner_profiles (bio, experience, languages, etc.)
+
+addresses (user_id, label, street, city, lat/lng)
+
+Features:
+
+Sign up / login / logout
+
+Email/phone verification (even if stubbed at first)
+
+Role-based auth middleware
+
+Basic admin users
+
+Phase 2 – Credits & Payments Engine (Escrow)
+Goal: Credit ledger that never lies.
+
+Tables:
+
+credit_accounts (user_id, type: client/cleaner, current_balance)
+
+credit_transactions (double-entry style: id, account_id, amount, type, ref_type, ref_id)
+
+credit_locks / escrows (job-level holds from client)
+
+stripe_customers
+
+stripe_payment_intents
+
+Features:
+
+Buy credits via Stripe
+
+Maintain ledger not just a balance field
+
+Escrow credits when a job is booked
+
+Release credits to cleaner account on approval
+
+Phase 3 – Jobs Engine (Lifecycle)
+Goal: End-to-end job flow from request → completion.
+
+Tables:
+
+jobs (id, client_id, cleaner_id, status, scheduled_at, duration_hours, address_id, price_credits, etc.)
+
+job_status_history
+
+job_checkins (job_id, cleaner_id, type: check_in/check_out, timestamp, lat/lng, source)
+
+job_photos (before/after, url, taken_at, by_cleaner/by_client)
+
+Statuses:
+
+requested → offered → accepted → in_progress → completed_pending_approval → approved → disputed → resolved
+
+Features:
+
+Client creates job
+
+Cleaner sees available jobs & accepts
+
+Cleaner check-in/check-out with GPS
+
+Upload before/after photos
+
+Client approves or disputes
+
+Phase 4 – Reliability & Tier Engine
+Goal: Turn behavior into scores and tiers.
+
+Tables:
+
+reliability_snapshots (cleaner_id, date, score, inputs JSON)
+
+cleaner_tiers (cleaner_id, tier, effective_from)
+
+Inputs:
+
+On-time arrivals, cancellations, disputes, client ratings, completed jobs
+
+Outputs:
+
+Reliability score (0–100 or 0–5)
+
+Tier (e.g. Bronze, Silver, Gold)
+
+Uses:
+
+Control job access, payout rates, prices, and priority in matching.
+
+Phase 5 – Payout Engine
+Goal: Money out to cleaners reliably.
+
+Tables:
+
+stripe_connect_accounts (cleaner_id, stripe_account_id)
+
+payout_requests (cleaner_id, amount_credits, status)
+
+payouts (payout_id, cleaner_id, amount_credits, amount_usd, status, stripe_payout_id)
+
+Features:
+
+Convert cleaner credits → payout requests
+
+Weekly/threshold-based automatic payouts
+
+Stripe Connect integration
+
+Track states: pending, scheduled, paid, failed
+
+Phase 6 – Dispute & Adjustment Engine
+Goal: Fix messy reality cleanly.
+
+Tables:
+
+disputes (job_id, opened_by, reason_code, description, status)
+
+dispute_actions (who did what when)
+
+manual_adjustments (credit adjustments with audit trail)
+
+Features:
+
+Client opens dispute on job
+
+Internal review (admin)
+
+Outcomes:
+
+partial refund to client
+
+goodwill credits
+
+reduced cleaner payout
+
+All changes go through credit_transactions not ad-hoc updates
+
+Phase 7 – Notifications Engine
+Goal: Right messages at the right time.
+
+Tables:
+
+notification_templates (key, channel, subject/content, variables)
+
+notification_events (event_name, payload, status)
+
+user_device_tokens (for push)
+
+Channels:
+
+SMS (Twilio)
+
+Email (SendGrid)
+
+Push (OneSignal or similar)
+
+Triggered by events:
+
+job.created, job.accepted, job.check_in, job.completed, job.approved, payout.sent, etc.
+
+Phase 8 – Analytics & KPI Engine
+Goal: You see the health of the machine.
+
+Tables:
+
+daily_metrics (date, metric_name, value)
+
+job_metrics (denormalized for BI)
+
+KPIs:
+
+jobs per day/week
+
+fill rate
+
+dispute rate
+
+average reliability
+
+LTV per client
+
+average earnings per cleaner
+
+Can be computed via nightly cron / n8n.
+
+Phase 9 – Admin & Ops Tools API
+Goal: Ops can control everything through an admin UI (Base44, or custom).
+
+Admin capabilities:
+
+Search jobs, users, disputes
+
+Grant/revoke credits
+
+Force complete jobs
+
+Override payouts
+
+Freeze accounts
+
+All done via secure admin-only endpoints.
+
+2️⃣ Backend engines – definitions
+I’ll define them in “what they listen to / what they do / what they emit”.
+
+Engine 1 – Auth & User Engine
+Listens to:
+
+POST /auth/register
+
+POST /auth/login
+
+POST /auth/refresh
+
+Does:
+
+Create users with roles
+
+Hash passwords, manage tokens
+
+Enforce permissions
+
+Emits events:
+
+user.registered
+
+user.logged_in
+
+Engine 2 – Credit & Ledger Engine
+Listens to:
+
+POST /credits/purchase
+
+POST /jobs/:id/approve → release escrow
+
+Admin adjustments
+
+Does:
+
+Maintain account balances via credit_transactions
+
+Supports ledger queries (for statements)
+
+Enforces credit sufficiency
+
+Emits:
+
+credits.purchased
+
+credits.held_for_job
+
+credits.released_to_cleaner
+
+credits.refunded
+
+Engine 3 – Job Lifecycle Engine
+Listens to:
+
+POST /jobs
+
+POST /jobs/:id/accept
+
+POST /jobs/:id/check-in
+
+POST /jobs/:id/check-out
+
+POST /jobs/:id/complete
+
+POST /jobs/:id/approve
+
+POST /jobs/:id/dispute
+
+Does:
+
+Validate transitions (no illegal status jumps)
+
+Create holds in credits on booking
+
+Update job status and history
+
+Store check-ins, GPS, photos
+
+Emits:
+
+job.created
+
+job.accepted
+
+job.in_progress
+
+job.completed
+
+job.approved
+
+job.disputed
+
+Engine 4 – Pricing & Tiers Engine
+Listens to:
+
+job.created
+
+tier.updated
+
+Does:
+
+Determine price in credits based on:
+
+cleaning size/type
+
+estimated hours
+
+cleaner tier
+
+maybe location/time
+
+Recalculate if needed when tiers change
+
+Emits:
+
+job.priced
+
+cleaner.tier_updated
+
+Engine 5 – Reliability Engine
+Listens to:
+
+job.accepted, job.check_in, job.completed, job.approved, job.disputed, job.cancelled
+
+Does:
+
+Score each behavior
+
+Maintain rolling reliability score
+
+Map score → tier
+
+Emits:
+
+reliability.updated
+
+tier.updated
+
+Engine 6 – Payout Engine
+Listens to:
+
+credits.released_to_cleaner
+
+POST /payouts/request
+
+Cron (weekly payouts)
+
+Does:
+
+Aggregate cleaner balances
+
+Create payout records
+
+Call Stripe Connect for actual payouts
+
+Update statuses from webhook feedback
+
+Emits:
+
+payout.created
+
+payout.paid
+
+payout.failed
+
+Engine 7 – Dispute & Adjustment Engine
+Listens to:
+
+POST /jobs/:id/dispute
+
+POST /disputes/:id/resolve
+
+Does:
+
+Create dispute records
+
+Apply final decision:
+
+adjust client credits
+
+adjust cleaner earnings
+
+Keep full audit trail
+
+Emits:
+
+dispute.opened
+
+dispute.resolved
+
+credits.adjusted
+
+Engine 8 – Notification Engine
+Listens to:
+
+All major events (job.*, payout.*, dispute.*, reliability.updated, etc.)
+
+Does:
+
+Map events → templates → channel sends
+
+Emits:
+
+notification.sent (for logging)
+
+Engine 9 – Analytics Engine
+Listens to:
+
+Event stream and DB
+
+Does:
+
+Compute aggregated metrics periodically
+
+Store them for dashboards
+
+3️⃣ API endpoints (by engine / resource)
+You don’t need to implement all at once, but this is your target surface.
+
+I’ll prefix everything with /v1.
+
+Auth & Users
+POST /v1/auth/register – create account (role: client/cleaner)
+
+POST /v1/auth/login
+
+POST /v1/auth/refresh
+
+POST /v1/auth/logout
+
+POST /v1/auth/forgot-password
+
+POST /v1/auth/reset-password
+
+GET /v1/me – get current user
+
+PATCH /v1/me – update profile basics
+
+GET /v1/me/addresses
+
+POST /v1/me/addresses
+
+PATCH /v1/me/addresses/:id
+
+DELETE /v1/me/addresses/:id
+
+GET /v1/cleaners/me/profile
+
+PATCH /v1/cleaners/me/profile
+
+GET /v1/cleaners/me/availability
+
+PATCH /v1/cleaners/me/availability
+
+(Admin)
+
+GET /v1/admin/users (filters)
+
+GET /v1/admin/users/:id
+
+PATCH /v1/admin/users/:id (role/flags)
+
+Credits & Payments
+GET /v1/me/credits/balance – client or cleaner
+
+GET /v1/me/credits/transactions – ledger
+
+POST /v1/credits/purchase-intent
+→ returns Stripe client secret, etc.
+
+POST /v1/credits/webhook/stripe
+→ Stripe webhook endpoint (backend-only)
+
+(Admin)
+
+POST /v1/admin/credits/adjust
+
+body: { user_id, amount, reason }
+
+Jobs – Client Side
+GET /v1/client/jobs – list my jobs
+
+GET /v1/client/jobs/:id
+
+POST /v1/client/jobs
+
+payload: address_id, date/time, cleaning_type, notes, etc.
+
+POST /v1/client/jobs/:id/cancel
+
+POST /v1/client/jobs/:id/approve – release credits
+
+POST /v1/client/jobs/:id/dispute – open dispute
+
+POST /v1/client/jobs/:id/rate-cleaner – rating
+
+Jobs – Cleaner Side
+GET /v1/cleaners/me/jobs/available
+
+GET /v1/cleaners/me/jobs/upcoming
+
+GET /v1/cleaners/me/jobs/history
+
+GET /v1/cleaners/me/jobs/:id
+
+POST /v1/cleaners/me/jobs/:id/accept
+
+POST /v1/cleaners/me/jobs/:id/decline
+
+POST /v1/cleaners/me/jobs/:id/check-in
+
+body: { timestamp, gps_lat, gps_lng }
+
+POST /v1/cleaners/me/jobs/:id/check-out
+
+body: { timestamp, gps_lat, gps_lng }
+
+POST /v1/cleaners/me/jobs/:id/upload-photo
+
+body: { type: "before" | "after", file_url }
+
+Jobs – Admin
+GET /v1/admin/jobs – list/filter by status, date, cleaner, client
+
+GET /v1/admin/jobs/:id
+
+POST /v1/admin/jobs/:id/assign-cleaner
+
+POST /v1/admin/jobs/:id/force-complete
+
+POST /v1/admin/jobs/:id/force-approve
+
+Reliability & Tiers
+GET /v1/cleaners/me/reliability
+
+GET /v1/cleaners/me/tier
+
+(Admin)
+
+GET /v1/admin/cleaners/:id/reliability
+
+POST /v1/admin/cleaners/:id/tier-override
+
+(Internally, scores calculated by cron/process; these endpoints are mostly read/override.)
+
+Payouts
+Cleaner:
+
+GET /v1/cleaners/me/payouts – history
+
+GET /v1/cleaners/me/earnings – current credit balance + pending payouts
+
+POST /v1/cleaners/me/payouts/request – for manual request model
+
+Stripe:
+
+POST /v1/payouts/webhook/stripe – webhook for payout updates
+
+Admin:
+
+GET /v1/admin/payouts
+
+POST /v1/admin/payouts/:id/retry
+
+POST /v1/admin/payouts/:id/cancel (if allowed)
+
+Disputes & Adjustments
+Client:
+
+GET /v1/client/disputes
+
+GET /v1/client/disputes/:id
+
+Admin:
+
+GET /v1/admin/disputes
+
+GET /v1/admin/disputes/:id
+
+POST /v1/admin/disputes/:id/resolve
+
+body: { resolution_type, client_credit_change, cleaner_credit_change, notes }
+
+Notifications (mostly internal)
+POST /v1/webhooks/notifications-provider – if provider needs webhooks
+
+GET /v1/admin/notifications/logs – view past sends
+
+Normally, notifications are triggered by internal events, not public API.
+
+Admin / Ops Utilities
+GET /v1/admin/dashboard/metrics – summary metrics for the day/week
+
+GET /v1/admin/cleaners – filter, sort by reliability, earnings
+
+GET /v1/admin/clients – list/filter
+
+POST /v1/admin/users/:id/freeze
+
+POST /v1/admin/users/:id/unfreeze
+
+4️⃣ What to actually do next
+If you want to move fast and not get lost:
+
+Lock in the engines & phases
+
+We just did the first pass. This is your canon.
+
+Start with Phase 1–3:
+
+Users/Auth
+
+Credits & Payments (basic purchase)
+
+Jobs lifecycle minimal (request → accept → check-in/out → complete → approve)
+
+In parallel, define the event names your backend will emit (job.created, credits.held_for_job, etc.), so Base44/n8n can hook in smoothly.
+
+Later, layer on Reliability, Payouts, Disputes, Notifications, KPIs.
+
+If you’d like, next I can:
+
+Turn this into a checklist-style implementation plan (week-by-week), or
+
+Design the exact event schema + event names your backend should emit so Base44/n8n can plug in with minimal friction.
+
+
+from the list from your most recent output , wat have we accomplished? wats completed finished , wats started but not finished and wats not started at all?
+
+Below is a fact-based status report using ONLY what appears in your uploaded documents.
+
+✅ Backend Progress Report (What’s Finished, Started, Not Started)
+According to documents from your uploaded files (various PDFs), here is the accurate breakdown of what has been fully built, partially built, and not yet started.
+
+✅ 1. COMPLETED / FINISHED
+✔ Credit System (core logic, legal structure, pricing rules)
+Your documents show a fully completed credit system including:
+
+Closed-loop credits (non-cash)
+
+Legal compliance & whitepaper
+
+Escrow logic (25% buffer hold)
+
+Refund logic
+
+Earnings + payout mapping
+
+DB structure for credits, escrow, earnings
+
+Terms + disclaimers
+Evidence:
+
+Whitepaper + credit structure, legality, credit–escrow–earning flow
+
+Full legal framing & rules for credits (non-cash, not redeemable, closed-loop)
+
+Pricing tiers + cleaner rate bands configured
+
+✔ Tier System (Bronze → Platinum) + Tier Pricing Rules
+Tier bands (Bronze/Silver/Gold/Platinum)
+
+Credit ranges per tier
+
+Cleaner rate sliders tied to tier
+Evidence:
+
+Tier validation & pricing ranges shown in DB structure
+
+✔ Reliability Score System (definitions + display, not the backend engine yet)
+Scoring factors: on-time arrivals, job completion, ratings, photos
+
+Reliability score UI
+Evidence:
+
+Scoring definition & UI breakdown
+
+✔ Job Pricing Logic
+Estimated hours + 25% buffer hold
+
+Dynamic add-ons based on cleaner tier
+Evidence:
+
+Pricing logic screens & rules
+
+✔ Booking Flow (spec + UI)
+Select Cleaner → Hours → Hold Credits
+Evidence:
+
+Booking flow in UI spec
+
+✔ Job Completion → Approval Flow
+Before/after photos required
+
+Client approval releases credits
+Evidence:
+
+Job review & approval screen spec
+
+Proof before payment flow detailed in launch docs
+
+✔ Dispute / Fix Request Flow (design + rules)
+Evidence:
+
+Rules for fix request, SLA timers, escalation
+
+✔ Photo System (before/after) – Requirements Defined
+Evidence:
+
+EXIF timestamps, min photo rules, storage paths
+
+✔ Admin Controls – Spec Completed
+Evidence:
+
+Score adjustments
+
+Manual refunds
+
+Override job status
+
+Freeze accounts
+
+✔ Seed Data (Users + Jobs)
+Evidence:
+
+CSV seeds confirmed completed
+
+✔ Base44 Database Schema + Automations
+Evidence:
+
+Stated as complete in multiple summaries
+“✔ Base44 database schema + automations”
+
+🟡 2. STARTED BUT NOT FULLY FINISHED
+🟡 Job Lifecycle Engine (partially defined, not implemented)
+You defined the screens and required behaviors:
+
+Check-in/out
+
+GPS verification
+
+Job statuses
+But no backend implementation is shown in documents.
+Evidence:
+
+Defined UX flows only, not implementation
+
+🟡 Reliability Engine (rules done, backend calculation not done)
+Inputs + scoring rules are defined.
+
+Tiers update logic partially outlined.
+No cron job / engine logic is finished.
+Evidence:
+
+Reliability rules identified, but no backend engine implementation shown
+
+🟡 Payout System (rules defined, partially started)
+Stripe Connect integration listed as a to-do (Week 1–2)
+
+Earnings + payouts appear defined but not built
+Evidence:
+
+Payout rules + DB fields shown in whitepaper
+
+But dev tasks list “Stripe Connect” as something to build
+
+🟡 Dispute Engine (workflow defined, backend not built)
+Statuses, SLA timers, and flow defined
+
+Admin operations specified
+But backend logic not yet implemented.
+Evidence:
+
+Fix request flow defined only in rules
+
+🟡 Notification Engine (templates + triggers conceptualized, not built)
+No backend code exists.
+
+🟡 KPIs & Analytics Engine (conceptual)
+Evidence:
+
+Analytics items appear in QA checklist but no implementation shown
+
+❌ 3. NOT STARTED AT ALL (No evidence in documents)
+These parts show 0 backend implementation in your files:
+
+❌ Auth System
+No backend or endpoint specs for:
+
+Login
+
+Register
+
+JWT tokens
+
+Phone/email verification
+(This needs full creation.)
+
+❌ API Layer
+None of the API endpoints from the roadmap exist yet.
+
+❌ Backend Job Matching / Search Engine
+UI rules exist, but backend is not built:
+
+Cleaner sorting
+
+Geo-distance filter
+Evidence:
+
+Search rules defined only conceptually
+
+❌ Background Queue (Stripe webhooks, payouts, cron)
+No implementation exists.
+
+❌ Real backend implementation of:
+Job status transitions
+
+Escrow debit/credit writes
+
+Tier auto-updates
+
+Cron tasks
+
+Notification dispatch
+
+Dispute resolution logic
+
+Payout batching
+
+Reliability recalculation
+
+Everything is designed, but not coded.
+
+🎯 Summary Table
+Component	Status
+Credit System	✅ COMPLETE
+Tier System	✅ COMPLETE
+Pricing Logic	✅ COMPLETE
+Escrow Logic	✅ COMPLETE
+UI/UX Screens	✅ COMPLETE
+Photo Rules	✅ COMPLETE
+Dispute System (spec)	🟡 STARTED
+Reliability Score (spec)	🟡 STARTED
+Job Lifecycle (spec)	🟡 STARTED
+Payouts (spec only)	🟡 STARTED
+Notifications	🟡 STARTED
+KPIs	🟡 STARTED
+Auth System	❌ NOT STARTED
+Backend API Endpoints	❌ NOT STARTED
+Search/Ranking Engine	❌ NOT STARTED
+Cron Jobs / Webhooks	❌ NOT STARTED
+Background Workers	❌ NOT STARTED
+Admin API	❌ NOT STARTED
+🔥 Final Verdict
+You’ve completed all the thinking, design, rules, and structure, including:
+
+credit system
+
+tiers
+
+pricing
+
+jobs spec
+
+disputes
+
+photos
+
+admin controls
+
+whitepapers
+
+schema
+
+automations plan
+
+BUT almost none of the backend code exists yet.
+Only documentation, rules, and UI/UX.
+
+This is perfect — it means you're ready to go into full backend build mode now.
+
+👉 If you want, I can next:
+A) Create the backend folder structure + all controllers/services
+(With empty method stubs ready for implementation)
+
+B) Generate your entire API spec in OpenAPI / Swagger
+C) Produce database migrations for all tables
+D) Build the event schema for Base44 + n8n
+E) Create the week-by-week backend build schedule
+Which one do you want me to generate first?
+
+
+Create the backend folder structure + all controllers/services
+
+(With empty method stubs ready for implementation)
+
+B) Generate your entire API spec in OpenAPI / Swagger
+C) Produce database migrations for all tables
+
+Love it. Let’s treat this like we’re handing a real backend team a starter repo.
+
+I’ll assume:
+
+Runtime: Node.js
+
+Language: TypeScript
+
+Framework: NestJS
+
+DB: PostgreSQL
+
+Migrations: raw SQL (e.g. with node-pg-migrate / db-migrate / custom runner)
+
+You can adapt to Express/Prisma/etc. but this gives you a solid, production-style structure.
+
+1️⃣ Backend folder structure + controllers/services (NestJS)
+Recommended folder structure
+puretask-backend/
+  package.json
+  tsconfig.json
+  nest-cli.json
+  .env
+  .env.example
+  src/
+    main.ts
+    app.module.ts
+
+    config/
+      config.module.ts
+      config.service.ts
+
+    common/
+      dto/
+        pagination.dto.ts
+      entities/
+        base.entity.ts
+      guards/
+        roles.guard.ts
+        auth.guard.ts
+      interceptors/
+        logging.interceptor.ts
+      filters/
+        http-exception.filter.ts
+      decorators/
+        current-user.decorator.ts
+        roles.decorator.ts
+
+    modules/
+      auth/
+        auth.module.ts
+        auth.controller.ts
+        auth.service.ts
+        dto/
+          login.dto.ts
+          register.dto.ts
+          refresh-token.dto.ts
+        strategies/
+          jwt.strategy.ts
+          jwt-refresh.strategy.ts
+
+      users/
+        users.module.ts
+        users.controller.ts
+        users.service.ts
+        dto/
+          update-profile.dto.ts
+          create-address.dto.ts
+        entities/
+          user.entity.ts
+          client-profile.entity.ts
+          cleaner-profile.entity.ts
+          address.entity.ts
+
+      credits/
+        credits.module.ts
+        credits.controller.ts
+        credits.service.ts
+        dto/
+          purchase-credits.dto.ts
+          adjust-credits.dto.ts
+        entities/
+          credit-account.entity.ts
+          credit-transaction.entity.ts
+
+      jobs/
+        jobs.module.ts
+        jobs.controller.ts
+        jobs.service.ts
+        dto/
+          create-job.dto.ts
+          update-job-status.dto.ts
+          checkin.dto.ts
+          upload-photo.dto.ts
+        entities/
+          job.entity.ts
+          job-status-history.entity.ts
+          job-checkin.entity.ts
+          job-photo.entity.ts
+
+      payouts/
+        payouts.module.ts
+        payouts.controller.ts
+        payouts.service.ts
+        dto/
+          request-payout.dto.ts
+        entities/
+          payout.entity.ts
+          payout-request.entity.ts
+
+      disputes/
+        disputes.module.ts
+        disputes.controller.ts
+        disputes.service.ts
+        dto/
+          create-dispute.dto.ts
+          resolve-dispute.dto.ts
+        entities/
+          dispute.entity.ts
+          dispute-action.entity.ts
+
+      reliability/
+        reliability.module.ts
+        reliability.controller.ts
+        reliability.service.ts
+        entities/
+          reliability-snapshot.entity.ts
+          cleaner-tier.entity.ts
+
+      notifications/
+        notifications.module.ts
+        notifications.service.ts
+        notifications.controller.ts
+        entities/
+          notification-template.entity.ts
+          notification-log.entity.ts
+
+      admin/
+        admin.module.ts
+        admin.controller.ts
+        admin.service.ts
+
+      webhooks/
+        webhooks.module.ts
+        webhooks.controller.ts
+        webhooks.service.ts
+
+    db/
+      migrations/
+        001_init_schema.sql
+      index.ts
+Example: main.ts
+// src/main.ts
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  app.setGlobalPrefix('v1');
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
+
+  await app.listen(process.env.PORT || 3000);
+}
+bootstrap();
+Example: app.module.ts
+// src/app.module.ts
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
+import { CreditsModule } from './modules/credits/credits.module';
+import { JobsModule } from './modules/jobs/jobs.module';
+import { PayoutsModule } from './modules/payouts/payouts.module';
+import { DisputesModule } from './modules/disputes/disputes.module';
+import { ReliabilityModule } from './modules/reliability/reliability.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    AuthModule,
+    UsersModule,
+    CreditsModule,
+    JobsModule,
+    PayoutsModule,
+    DisputesModule,
+    ReliabilityModule,
+    NotificationsModule,
+    AdminModule,
+    WebhooksModule,
+  ],
+})
+export class AppModule {}
+Auth module stubs
+// src/modules/auth/auth.module.ts
+import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { UsersModule } from '../users/users.module';
+
+@Module({
+  imports: [UsersModule, JwtModule.register({})],
+  controllers: [AuthController],
+  providers: [AuthService],
+  exports: [AuthService],
+})
+export class AuthModule {}
+// src/modules/auth/auth.controller.ts
+import { Controller, Post, Body } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Post('register')
+  async register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
+  }
+
+  @Post('login')
+  async login(@Body() dto: LoginDto) {
+    return this.authService.login(dto);
+  }
+
+  @Post('refresh')
+  async refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refresh(dto);
+  }
+}
+// src/modules/auth/auth.service.ts
+import { Injectable } from '@nestjs/common';
+import { UsersService } from '../users/users.service';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+
+@Injectable()
+export class AuthService {
+  constructor(private readonly usersService: UsersService) {}
+
+  async register(dto: RegisterDto) {
+    // TODO: create user, hash password, return tokens
+    return { message: 'register not implemented yet' };
+  }
+
+  async login(dto: LoginDto) {
+    // TODO: validate credentials, return tokens
+    return { message: 'login not implemented yet' };
+  }
+
+  async refresh(dto: RefreshTokenDto) {
+    // TODO: validate refresh token, issue new access token
+    return { message: 'refresh not implemented yet' };
+  }
+}
+DTO stubs:
+
+// src/modules/auth/dto/register.dto.ts
+import { IsEmail, IsEnum, IsString, MinLength } from 'class-validator';
+
+export enum UserRole {
+  CLIENT = 'client',
+  CLEANER = 'cleaner',
+}
+
+export class RegisterDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @MinLength(6)
+  password: string;
+
+  @IsEnum(UserRole)
+  role: UserRole;
+}
+// src/modules/auth/dto/login.dto.ts
+import { IsEmail, IsString } from 'class-validator';
+
+export class LoginDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  password: string;
+}
+// src/modules/auth/dto/refresh-token.dto.ts
+import { IsString } from 'class-validator';
+
+export class RefreshTokenDto {
+  @IsString()
+  refreshToken: string;
+}
+Users module stubs
+// src/modules/users/users.module.ts
+import { Module } from '@nestjs/common';
+import { UsersController } from './users.controller';
+import { UsersService } from './users.service';
+
+@Module({
+  controllers: [UsersController],
+  providers: [UsersService],
+  exports: [UsersService],
+})
+export class UsersModule {}
+// src/modules/users/users.controller.ts
+import { Controller, Get, Patch, Body } from '@nestjs/common';
+import { UsersService } from './users.service';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+
+@Controller('me')
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
+
+  @Get()
+  async getMe() {
+    // TODO: inject current user from auth
+    return this.usersService.getCurrentUser();
+  }
+
+  @Patch()
+  async updateProfile(@Body() dto: UpdateProfileDto) {
+    return this.usersService.updateProfile('CURRENT_USER_ID', dto);
+  }
+}
+// src/modules/users/users.service.ts
+import { Injectable } from '@nestjs/common';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+
+@Injectable()
+export class UsersService {
+  async getCurrentUser() {
+    // TODO: fetch from DB
+    return { message: 'getCurrentUser not implemented yet' };
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    // TODO: update DB
+    return { message: `updateProfile not implemented yet for ${userId}` };
+  }
+}
+Credits module stubs
+// src/modules/credits/credits.module.ts
+import { Module } from '@nestjs/common';
+import { CreditsController } from './credits.controller';
+import { CreditsService } from './credits.service';
+
+@Module({
+  controllers: [CreditsController],
+  providers: [CreditsService],
+  exports: [CreditsService],
+})
+export class CreditsModule {}
+// src/modules/credits/credits.controller.ts
+import { Controller, Get, Post, Body } from '@nestjs/common';
+import { CreditsService } from './credits.service';
+import { PurchaseCreditsDto } from './dto/purchase-credits.dto';
+import { AdjustCreditsDto } from './dto/adjust-credits.dto';
+
+@Controller()
+export class CreditsController {
+  constructor(private readonly creditsService: CreditsService) {}
+
+  @Get('me/credits/balance')
+  async getMyBalance() {
+    return this.creditsService.getBalance('CURRENT_USER_ID');
+  }
+
+  @Get('me/credits/transactions')
+  async getMyTransactions() {
+    return this.creditsService.getTransactions('CURRENT_USER_ID');
+  }
+
+  @Post('credits/purchase')
+  async purchaseCredits(@Body() dto: PurchaseCreditsDto) {
+    return this.creditsService.createPurchaseIntent('CURRENT_USER_ID', dto);
+  }
+
+  @Post('admin/credits/adjust')
+  async adjustCredits(@Body() dto: AdjustCreditsDto) {
+    return this.creditsService.adjustCredits(dto);
+  }
+}
+// src/modules/credits/credits.service.ts
+import { Injectable } from '@nestjs/common';
+import { PurchaseCreditsDto } from './dto/purchase-credits.dto';
+import { AdjustCreditsDto } from './dto/adjust-credits.dto';
+
+@Injectable()
+export class CreditsService {
+  async getBalance(userId: string) {
+    // TODO: query credit_accounts and transactions
+    return { message: `getBalance not implemented for ${userId}` };
+  }
+
+  async getTransactions(userId: string) {
+    // TODO: query credit_transactions
+    return { message: `getTransactions not implemented for ${userId}` };
+  }
+
+  async createPurchaseIntent(userId: string, dto: PurchaseCreditsDto) {
+    // TODO: create Stripe PaymentIntent & record pending transaction
+    return { message: `createPurchaseIntent not implemented for ${userId}` };
+  }
+
+  async adjustCredits(dto: AdjustCreditsDto) {
+    // TODO: create admin adjustment credit_transaction
+    return { message: 'adjustCredits not implemented yet' };
+  }
+}
+You’d mirror this pattern for jobs, payouts, disputes, etc.:
+
+Controller with endpoints that match the API spec
+
+Service with empty stubs (TODO comments)
+
+I won’t paste every module here to avoid a wall of code, but the pattern is identical.
+
+2️⃣ OpenAPI / Swagger spec (YAML)
+Here’s a starter OpenAPI 3.1 spec that covers the main endpoints we defined. You or a dev can drop this into openapi.yaml and iterate.
+
+openapi: 3.1.0
+info:
+  title: PureTask API
+  version: 1.0.0
+  description: >
+    Backend API for PureTask (clients, cleaners, admin, credits, jobs, payouts, disputes).
+servers:
+  - url: https://api.puretask.com/v1
+    description: Production
+  - url: http://localhost:3000/v1
+    description: Local dev
+
+tags:
+  - name: Auth
+  - name: Me
+  - name: Credits
+  - name: Jobs (Client)
+  - name: Jobs (Cleaner)
+  - name: Jobs (Admin)
+  - name: Payouts
+  - name: Disputes
+  - name: Reliability
+  - name: Admin
+  - name: Webhooks
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /me:
+    get:
+      tags: [Me]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+    patch:
+      tags: [Me]
+      summary: Update current user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /me/credits/balance:
+    get:
+      tags: [Credits]
+      summary: Get current user's credit balance
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Credit balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditBalance'
+
+  /me/credits/transactions:
+    get:
+      tags: [Credits]
+      summary: Get current user's credit transactions
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: List of credit transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CreditTransaction'
+                  total:
+                    type: integer
+
+  /credits/purchase:
+    post:
+      tags: [Credits]
+      summary: Create a credit purchase Stripe PaymentIntent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseCreditsRequest'
+      responses:
+        '200':
+          description: PaymentIntent client secret etc.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseCreditsResponse'
+
+  /client/jobs:
+    get:
+      tags: [Jobs (Client)]
+      summary: List client jobs
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Jobs list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Job'
+
+    post:
+      tags: [Jobs (Client)]
+      summary: Create a job
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJobRequest'
+      responses:
+        '201':
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+
+  /client/jobs/{id}:
+    get:
+      tags: [Jobs (Client)]
+      summary: Get job details for client
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+
+  /client/jobs/{id}/approve:
+    post:
+      tags: [Jobs (Client)]
+      summary: Approve job and release credits
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Job approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+
+  /client/jobs/{id}/dispute:
+    post:
+      tags: [Jobs (Client)]
+      summary: Open a dispute for a job
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDisputeRequest'
+      responses:
+        '201':
+          description: Dispute created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispute'
+
+  /cleaners/me/jobs/available:
+    get:
+      tags: [Jobs (Cleaner)]
+      summary: List available jobs for cleaner
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Jobs list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Job'
+
+  /cleaners/me/jobs/{id}/accept:
+    post:
+      tags: [Jobs (Cleaner)]
+      summary: Accept a job
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+
+  /cleaners/me/jobs/{id}/check-in:
+    post:
+      tags: [Jobs (Cleaner)]
+      summary: Check in to a job
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckInRequest'
+      responses:
+        '200':
+          description: Check-in recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobCheckin'
+
+  /cleaners/me/jobs/{id}/check-out:
+    post:
+      tags: [Jobs (Cleaner)]
+      summary: Check out of a job
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckOutRequest'
+      responses:
+        '200':
+          description: Check-out recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobCheckin'
+
+  /cleaners/me/payouts:
+    get:
+      tags: [Payouts]
+      summary: List cleaner payouts
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Payout list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payout'
+
+  /cleaners/me/payouts/request:
+    post:
+      tags: [Payouts]
+      summary: Request payout
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPayoutRequest'
+      responses:
+        '200':
+          description: Payout request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutRequest'
+
+  /admin/jobs:
+    get:
+      tags: [Jobs (Admin)]
+      summary: Admin search jobs
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: cleanerId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: clientId
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Job list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Job'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password, role]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 6 }
+        role:
+          type: string
+          enum: [client, cleaner]
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role:
+          type: string
+          enum: [client, cleaner, admin]
+        createdAt: { type: string, format: date-time }
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        firstName: { type: string }
+        lastName: { type: string }
+        phone: { type: string }
+
+    CreditBalance:
+      type: object
+      properties:
+        userId: { type: string, format: uuid }
+        availableCredits: { type: integer }
+        heldCredits: { type: integer }
+
+    CreditTransaction:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        accountId: { type: string, format: uuid }
+        amount: { type: integer }
+        type:
+          type: string
+          enum: [purchase, hold, release, refund, adjustment, payout]
+        referenceType: { type: string }
+        referenceId: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    PurchaseCreditsRequest:
+      type: object
+      required: [credits]
+      properties:
+        credits: { type: integer, minimum: 10 }
+
+    PurchaseCreditsResponse:
+      type: object
+      properties:
+        paymentIntentId: { type: string }
+        clientSecret: { type: string }
+
+    Job:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        clientId: { type: string, format: uuid }
+        cleanerId: { type: string, format: uuid, nullable: true }
+        status:
+          type: string
+          enum:
+            [
+              requested,
+              offered,
+              accepted,
+              in_progress,
+              completed_pending_approval,
+              approved,
+              disputed,
+              cancelled
+            ]
+        scheduledAt: { type: string, format: date-time }
+        durationHours: { type: number }
+        priceCredits: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    CreateJobRequest:
+      type: object
+      required: [addressId, scheduledAt, durationHours, cleaningType]
+      properties:
+        addressId: { type: string, format: uuid }
+        scheduledAt: { type: string, format: date-time }
+        durationHours: { type: number, minimum: 1 }
+        cleaningType:
+          type: string
+          enum: [standard, deep, move_out]
+        notes: { type: string }
+
+    CreateDisputeRequest:
+      type: object
+      required: [reasonCode, description]
+      properties:
+        reasonCode: { type: string }
+        description: { type: string }
+
+    Dispute:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        jobId: { type: string, format: uuid }
+        openedBy: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [open, resolved, cancelled]
+        createdAt: { type: string, format: date-time }
+
+    CheckInRequest:
+      type: object
+      required: [timestamp, lat, lng]
+      properties:
+        timestamp: { type: string, format: date-time }
+        lat: { type: number }
+        lng: { type: number }
+
+    CheckOutRequest:
+      type: object
+      required: [timestamp, lat, lng]
+      properties:
+        timestamp: { type: string, format: date-time }
+        lat: { type: number }
+        lng: { type: number }
+
+    JobCheckin:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        jobId: { type: string, format: uuid }
+        cleanerId: { type: string, format: uuid }
+        type:
+          type: string
+          enum: [check_in, check_out]
+        lat: { type: number }
+        lng: { type: number }
+        createdAt: { type: string, format: date-time }
+
+    Payout:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        cleanerId: { type: string, format: uuid }
+        amountCredits: { type: integer }
+        amountUsd: { type: number }
+        status:
+          type: string
+          enum: [pending, scheduled, paid, failed]
+        createdAt: { type: string, format: date-time }
+
+    RequestPayoutRequest:
+      type: object
+      required: [amountCredits]
+      properties:
+        amountCredits: { type: integer, minimum: 1 }
+
+    PayoutRequest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        cleanerId: { type: string, format: uuid }
+        amountCredits: { type: integer }
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        createdAt: { type: string, format: date-time }
+This covers the core endpoints. You can expand with all admin, webhooks, notifications, etc., using the same pattern.
+
+3️⃣ Database migrations (PostgreSQL, single init migration)
+Below is a single 001_init_schema.sql that creates the main tables we need.
+
+-- db/migrations/001_init_schema.sql
+
+-- UUID support
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- USERS & PROFILES
+
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('client', 'cleaner', 'admin')),
+  phone TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE client_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  first_name TEXT,
+  last_name TEXT,
+  -- more fields later
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE cleaner_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  first_name TEXT,
+  last_name TEXT,
+  bio TEXT,
+  tier TEXT NOT NULL DEFAULT 'bronze',
+  reliability_score INTEGER NOT NULL DEFAULT 0,
+  payout_percentage NUMERIC(5,2) NOT NULL DEFAULT 80.00,
+  avg_rating NUMERIC(3,2),
+  jobs_completed INTEGER NOT NULL DEFAULT 0,
+  stripe_connect_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE addresses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  label TEXT,
+  line1 TEXT NOT NULL,
+  line2 TEXT,
+  city TEXT NOT NULL,
+  state TEXT,
+  postal_code TEXT,
+  country TEXT NOT NULL,
+  lat NUMERIC(9,6),
+  lng NUMERIC(9,6),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- STRIPE ENTITIES
+
+CREATE TABLE stripe_customers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  stripe_customer_id TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE stripe_connect_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id UUID NOT NULL UNIQUE REFERENCES cleaner_profiles(id) ON DELETE CASCADE,
+  stripe_account_id TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- CREDITS
+
+CREATE TABLE credit_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  current_balance INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE credit_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id UUID NOT NULL REFERENCES credit_accounts(id) ON DELETE CASCADE,
+  amount INTEGER NOT NULL,
+  type TEXT NOT NULL CHECK (
+    type IN ('purchase', 'hold', 'release', 'refund', 'adjustment', 'payout')
+  ),
+  reference_type TEXT,
+  reference_id UUID,
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- JOBS
+
+CREATE TABLE jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES client_profiles(id) ON DELETE CASCADE,
+  cleaner_id UUID REFERENCES cleaner_profiles(id),
+  address_id UUID NOT NULL REFERENCES addresses(id),
+  status TEXT NOT NULL CHECK (
+    status IN (
+      'requested',
+      'offered',
+      'accepted',
+      'in_progress',
+      'completed_pending_approval',
+      'approved',
+      'disputed',
+      'cancelled'
+    )
+  ),
+  scheduled_at TIMESTAMPTZ NOT NULL,
+  duration_hours NUMERIC(4,2) NOT NULL,
+  cleaning_type TEXT NOT NULL CHECK (
+    cleaning_type IN ('standard', 'deep', 'move_out')
+  ),
+  price_credits INTEGER NOT NULL,
+  held_credits INTEGER NOT NULL DEFAULT 0,
+  notes_client TEXT,
+  notes_cleaner TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE job_status_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+  from_status TEXT,
+  to_status TEXT NOT NULL,
+  changed_by_user_id UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE job_checkins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+  cleaner_id UUID NOT NULL REFERENCES cleaner_profiles(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('check_in', 'check_out')),
+  lat NUMERIC(9,6),
+  lng NUMERIC(9,6),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE job_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+  uploaded_by_user_id UUID NOT NULL REFERENCES users(id),
+  kind TEXT NOT NULL CHECK (kind IN ('before', 'after')),
+  url TEXT NOT NULL,
+  taken_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- DISPUTES
+
+CREATE TABLE disputes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id UUID NOT NULL UNIQUE REFERENCES jobs(id) ON DELETE CASCADE,
+  opened_by_user_id UUID NOT NULL REFERENCES users(id),
+  reason_code TEXT,
+  description TEXT,
+  status TEXT NOT NULL CHECK (status IN ('open', 'resolved', 'cancelled')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE dispute_actions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dispute_id UUID NOT NULL REFERENCES disputes(id) ON DELETE CASCADE,
+  actor_user_id UUID NOT NULL REFERENCES users(id),
+  action TEXT NOT NULL,
+  details JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- PAYOUTS
+
+CREATE TABLE payouts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id UUID NOT NULL REFERENCES cleaner_profiles(id) ON DELETE CASCADE,
+  amount_credits INTEGER NOT NULL,
+  amount_usd NUMERIC(10,2) NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'scheduled', 'paid', 'failed')),
+  stripe_payout_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE payout_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id UUID NOT NULL REFERENCES cleaner_profiles(id) ON DELETE CASCADE,
+  amount_credits INTEGER NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  decided_at TIMESTAMPTZ
+);
+
+-- RELIABILITY & TIER
+
+CREATE TABLE reliability_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id UUID NOT NULL REFERENCES cleaner_profiles(id) ON DELETE CASCADE,
+  score INTEGER NOT NULL,
+  inputs JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE cleaner_tier_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cleaner_id UUID NOT NULL REFERENCES cleaner_profiles(id) ON DELETE CASCADE,
+  tier TEXT NOT NULL,
+  effective_from TIMESTAMPTZ NOT NULL,
+  effective_to TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- NOTIFICATIONS
+
+CREATE TABLE notification_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT NOT NULL UNIQUE,
+  channel TEXT NOT NULL CHECK (channel IN ('email', 'sms', 'push')),
+  subject TEXT,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE notification_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  channel TEXT NOT NULL CHECK (channel IN ('email', 'sms', 'push')),
+  template_key TEXT,
+  payload JSONB,
+  status TEXT NOT NULL CHECK (status IN ('queued', 'sent', 'failed')),
+  error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ADMIN AUDIT
+
+CREATE TABLE admin_audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_user_id UUID NOT NULL REFERENCES users(id),
+  action TEXT NOT NULL,
+  entity_type TEXT,
+  entity_id UUID,
+  details JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- INDEXES
+
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_jobs_status ON jobs(status);
+CREATE INDEX idx_jobs_client_id ON jobs(client_id);
+CREATE INDEX idx_jobs_cleaner_id ON jobs(cleaner_id);
+CREATE INDEX idx_credit_transactions_account_id ON credit_transactions(account_id);
+CREATE INDEX idx_disputes_status ON disputes(status);
+CREATE INDEX idx_payouts_cleaner_id ON payouts(cleaner_id);
+CREATE INDEX idx_reliability_cleaner_id ON reliability_snapshots(cleaner_id);
+That gives you a real, coherent schema ready to run on Neon.
+
+What you can do with this now
+Hand the folder structure + stubs to a dev and say:
+“Wire these to Postgres using our migrations.”
+
+Feed the OpenAPI spec into Swagger UI / Postman / codegen.
+
+Run the SQL migration on Neon to create all tables.
+
+If you want next, I can:
+
+Generate service method TODO lists per module (exact logic per method), or
+
+Design the event payloads (job.created, credits.released_to_cleaner, etc.) so Base44 + n8n can plug into this backend cleanly.
+
+
+
+
