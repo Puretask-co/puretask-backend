@@ -1,5 +1,5 @@
 ---
-description: Documentation hygiene (canonical docs only, archive everything else)
+description: Documentation hygiene (two-tier canonical + reference model)
 globs:
   - "**/*"
 alwaysApply: true
@@ -7,8 +7,8 @@ alwaysApply: true
 
 # PureTask Documentation Rules (Must Follow)
 
-## Canonical Docs Only
-- The ONLY "active" documentation lives in:
+## Tier 1: Canonical docs (source of truth)
+- The canonical documentation set is:
   - docs/active/README.md
   - docs/active/SETUP.md
   - docs/active/ARCHITECTURE.md
@@ -16,6 +16,11 @@ alwaysApply: true
   - docs/active/DEPLOYMENT.md
   - docs/active/TROUBLESHOOTING.md
   - docs/active/DECISIONS.md
+
+## Tier 2: Reference docs (supporting detail)
+- Additional files under `docs/active/**` are allowed as reference docs.
+- Reference docs do not override canonical guidance.
+- When canonical and reference conflict, canonical wins.
 
 ## Do NOT create new markdown files
 - Never create new *.md files anywhere except:

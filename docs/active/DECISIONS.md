@@ -5,13 +5,15 @@
 
 ## Current active decisions (curated)
 
-Hand-curated list (~10â€“30). Each entry: **Decision** â€” **Why** â€” **Tradeoff**.
+Hand-curated list (~10-30). Each entry: **Decision** — **Why** — **Tradeoff**.
+
+- **Two-tier documentation governance model (2026-04-18)** — Why: enforce a single source of truth while preserving detailed supporting docs without creating ambiguity. Tier 1 canonical docs are `README`, `SETUP`, `ARCHITECTURE`, `RUNBOOK`, `DEPLOYMENT`, `TROUBLESHOOTING`, `DECISIONS`; Tier 2 reference docs are the remaining files under `docs/active/**`. Canonical always wins on conflict. — Tradeoff: maintainers must keep canonical summaries updated when changing deep reference docs.
 
 - **Neon Postgres for DB** â€” Why: serverless scaling, branching, managed backups â€” Tradeoff: vendor dependency
 - **Railway for deploy** â€” Why: speed, simplicity, GitHub integration â€” Tradeoff: platform coupling
 - **n8n as event router** â€” Why: async workflows, retries, visibility â€” Tradeoff: extra service to run
 - **/health and /health/ready endpoints** â€” Why: monitoring, deploy checks, load balancer health â€” Tradeoff: none
-- **Canonical docs only (README, SETUP, ARCHITECTURE, RUNBOOK, DEPLOYMENT, TROUBLESHOOTING, DECISIONS)** â€” Why: single source of truth, no doc sprawl â€” Tradeoff: must append, not create new files
+- **Canonical docs only (README, SETUP, ARCHITECTURE, RUNBOOK, DEPLOYMENT, TROUBLESHOOTING, DECISIONS)** — **Superseded 2026-04-18** by the two-tier docs model (canonical + reference). Kept for historical context.
 - **Pre-commit guard for new .md** â€” Why: block new markdown outside docs/active or docs/archive â€” Tradeoff: must move new docs into approved paths
 - **Idempotency keys on money-adjacent endpoints** â€” Why: safe retries, no double charge â€” Tradeoff: client must send key, store responses
 - **Stripe for payments + Connect for payouts** â€” Why: global payments, compliance â€” Tradeoff: fees, Stripe dependency

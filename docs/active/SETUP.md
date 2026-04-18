@@ -4,6 +4,8 @@
 **What it does:** Gets a new contributor from zero to a running dev environment.  
 **How we use it:** Follow in order when cloning the repo; use with ARCHITECTURE and DEPLOYMENT for prod.
 
+**Scope rule (docs governance):** This file is canonical for local setup and first-run flow. Keep deep operational incident handling in `RUNBOOK.md`, deployment-specific production procedures in `DEPLOYMENT.md`, and historical detail in archive/reference docs.
+
 ---
 
 ## Prerequisites
