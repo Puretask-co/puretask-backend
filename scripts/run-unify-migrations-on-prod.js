@@ -22,7 +22,31 @@ const MIGRATIONS = [
   'DB/migrations/059_add_invoice_status_and_invoices.sql',
   'DB/migrations/060_add_reviews_ai_worker_stripe_tables.sql',
   'DB/migrations/061_add_cleaner_id_payout_misc_tables.sql',
+  'DB/migrations/062_job_photos_client_dispute_type.sql',
 ];
+
+function migrationSupportsCurrentSchema(errorMessage = '') {
+  const normalized = String(errorMessage || '').toLowerCase();
+  return !(
+    normalized.includes('cannot be implemented') ||
+    normalized.includes('42804') ||
+    normalized.includes('foreign key constraint')
+  );
+}
+
+function normalizeExecError(error) {
+  if (!error) return '';
+  if (typeof error.stderr === 'string' && error.stderr.trim()) return error.stderr;
+  if (Buffer.isBuffer(error.stderr)) return error.stderr.toString('utf8');
+  if (Array.isArray(error.output)) {
+    return error.output
+      .filter(Boolean)
+      .map((v) => (Buffer.isBuffer(v) ? v.toString('utf8') : String(v)))
+      .join('\n');
+  }
+  if (typeof error.message === 'string') return error.message;
+  return String(error);
+}
 
 if (process.env.UNIFY_PROD !== '1') {
   console.error('❌ UNIFY_PROD=1 is required to run migrations on production.');
@@ -35,7 +59,7 @@ if (!prodUrl) {
   process.exit(1);
 }
 
-console.log('📋 Running unify migrations (views patch + 019 + 059 → 060 → 061) on PRODUCTION...');
+console.log('📋 Running unify migrations (views patch + 019 + 059 → 060 → 061 → 062) on PRODUCTION...');
 console.log(`🔗 Target: ${prodUrl.replace(/:[^:@]+@/, ':****@')}`);
 console.log('');
 
@@ -48,6 +72,11 @@ for (const migration of MIGRATIONS) {
       stdio: 'inherit',
     });
   } catch (e) {
+    const message = normalizeExecError(e);
+    if (!migrationSupportsCurrentSchema(message)) {
+      console.warn(`⚠️  Skipping ${migration}: schema type mismatch for FK references (${message})`);
+      continue;
+    }
     process.exit(e.status || 1);
   }
 }

@@ -390,34 +390,119 @@ Current repo status: `tests/e2e/*.spec.ts` exists, but full Playwright wiring is
 - **Phase status:** [00-CRITICAL/PHASE_*_STATUS.md](./00-CRITICAL/)
 - **Backup/restore:** [BACKUP_RESTORE.md](./BACKUP_RESTORE.md)
 
-## 9. Full-stack completion checklist (backend + frontend)
+## 9. Live execution board (backend + frontend)
 
-This is the current prioritized execution list after full-stack integration hardening.
+Use this checklist as the canonical execution tracker for full-stack hardening work.
 
-### P0 — Must finish before strict branch protection
+### 9.1 Execution order (always run in this order)
 
-| Item | Why | Owner |
-|------|-----|-------|
-| Fix frontend lint blockers in `src/app/cleaner/[id]/page.tsx`, `src/app/cleaner/dashboard/page.tsx`, and `src/test-helpers/mocks/handlers.ts`. | `npm run lint` is currently non-green, so CI cannot be enforced as a mandatory gate. | Frontend |
-| Decide strategy for `legacy/reactSetup/` (archive, separate package, or keep excluded from Next.js build). | This path can re-enter builds/tests if tooling config changes; ownership must be explicit. | Frontend + Platform |
-| Ensure GitHub token used by cross-repo orchestration can dispatch workflows in both repos (`PURETASK_ORG_DISPATCH_TOKEN`). | Default `GITHUB_TOKEN` may be repo-scoped; cross-repo dispatch can silently fail without org PAT. | DevOps |
-| Configure all required deploy secrets (`RAILWAY_*`, `VERCEL_*`, healthcheck URLs, frontend runtime env vars) in both repos. | Release orchestration and manual release workflows depend on these secrets to actually deploy. | DevOps |
+1. P0.1 + P0.4 (repo identifiers + dispatch auth reliability)
+2. P0.3 (canonical full-stack verify gate)
+3. P0.2 (invoice schema strictness transition)
+4. P1.1 + P1.2 (deterministic DB + contract fixture hardening)
+5. P1.3 + P1.4 (release traceability + E2E runtime consistency)
+6. P2.x (observability, ownership, and delivery polish)
 
-### P1 — Stability and observability hardening
+### 9.2 P0 — Release safety and mandatory full-stack correctness
 
-| Item | Why | Owner |
-|------|-----|-------|
-| Add dashboard panels/alerts for contract gate and Playwright smoke outcomes per PR. | Makes frontend-backend drift visible immediately. | Platform |
-| Persist request/correlation IDs into centralized logging and include them in support playbooks. | Speeds incident triage across frontend, API, and worker logs. | Backend + DevOps |
-| Add nightly non-blocking full-stack smoke run (`test:api` + `test:e2e:smoke`) with artifact retention. | Detects regressions that can be missed by PR-only test coverage. | Platform |
-| Create deterministic invoice fixture seed path for contract tests (optional happy-path invoice in addition to empty/error-path assertions). | Increases contract confidence beyond shape checks. | Backend |
+- [x] **P0.1 Unify cross-repo identifiers and dispatch guardrails**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - Backend workflow: `.github/workflows/release-orchestration.yml`
+    - Frontend workflows: `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`
+  - **Verification commands/checks:**
+    - `gh workflow run release-orchestration.yml --repo PURETASK/puretask-backend --field backend_ref=<sha> --field frontend_ref=<sha> --field environment=staging`
+    - Confirm orchestration validate job can checkout both repos and reaches deploy dispatch steps.
 
-### P2 — Delivery efficiency
+- [x] **P0.4 Ensure dispatch token/scopes are stable for cross-repo release**
+  - **Owner:** `@owner-devops`
+  - **Touches:**
+    - Backend workflow auth preflight: `.github/workflows/release-orchestration.yml`
+    - GitHub secret: `PURETASK_ORG_DISPATCH_TOKEN` (org/repo settings)
+  - **Verification commands/checks:**
+    - `gh auth status` (automation identity has valid token)
+    - Dispatch step succeeds for both backend and frontend `release.yml` workflows.
 
-| Item | Why | Owner |
-|------|-----|-------|
-| Add repo-level CODEOWNERS for backend, frontend, workflows, and docs. | Improves review routing and release accountability. | Platform |
-| Add runbook links from PR template for full-stack verification commands. | Standardizes validation expectations for every feature PR. | Platform |
-| Expand frontend unit coverage around trust/billing and live appointment adapters. | Reduces reliance on manual QA for API contract-adjacent UI logic. | Frontend |
+- [x] **P0.3 Enforce canonical full-stack verify gate**
+  - **Owner:** `@owner-frontend-platform`
+  - **Touches:**
+    - Frontend scripts: `package.json`, `scripts/run-playwright-e2e.js`, `scripts/run-api-verification.js`
+    - Frontend CI: `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`
+  - **Verification commands/checks:**
+    - `npm run verify:fullstack`
+    - CI jobs pass: `contract-gate`, `e2e`, `build`.
 
-**Last updated:** 2026-04-17
+- [x] **P0.2 Transition invoice schema behavior from compatibility fallback to strict contract**
+  - **Owner:** `@owner-backend`
+  - **Touches:**
+    - Backend route: `src/routes/trustAdapter.ts`
+    - Backend DB setup path: `scripts/setup-test-db.js` (+ migration if required)
+  - **Verification commands/checks:**
+    - `npm run db:setup:test`
+    - `npm run test:api` (from frontend repo against running backend) must pass without hidden 500s.
+
+### 9.3 P1 — Stability and traceability hardening
+
+- [x] **P1.1 Make backend test DB provisioning deterministic across schema variants**
+  - **Owner:** `@owner-backend-platform`
+  - **Touches:**
+    - `scripts/setup-test-db.js`
+    - `docs/active/SETUP.md`, `docs/active/TROUBLESHOOTING.md`
+  - **Verification commands/checks:**
+    - `npm run db:setup:test`
+    - `npm run verify:e2e:fixtures`
+
+- [x] **P1.2 Add deterministic happy-path contract fixtures**
+  - **Owner:** `@owner-backend`
+  - **Touches:**
+    - Frontend contract runner: `scripts/run-api-verification.js`
+    - Backend seed path: `scripts/seed-e2e-users.js` (or new fixture script)
+  - **Verification commands/checks:**
+    - `npm run seed:e2e:users`
+    - `npm run test:api` (must verify shape and at least one stable happy path)
+
+- [x] **P1.3 Record backend/frontend ref traceability in release orchestration**
+  - **Owner:** `@owner-devops`
+  - **Touches:**
+    - `.github/workflows/release-orchestration.yml`
+    - `docs/active/DEPLOYMENT.md`
+  - **Verification commands/checks:**
+    - Run orchestration `workflow_dispatch`; confirm release manifest artifact/log has `backend_ref`, `frontend_ref`, and `environment`.
+
+- [x] **P1.4 Standardize E2E runtime mode between local and CI**
+  - **Owner:** `@owner-frontend`
+  - **Touches:**
+    - `playwright.config.ts`
+    - `.github/workflows/e2e.yml`, `.github/workflows/ci.yml`
+  - **Verification commands/checks:**
+    - `npm run test:e2e:smoke` (local)
+    - E2E CI workflow pass on PR.
+
+### 9.4 P2 — Observability and delivery efficiency
+
+- [x] **P2.1 Correlation/request ID continuity across frontend and backend**
+  - **Owner:** `@owner-backend-observability`
+  - **Touches:**
+    - Frontend client: `src/lib/apiClient.ts`
+    - Backend request context/logging path
+    - `docs/active/RUNBOOK.md` incident notes
+  - **Verification commands/checks:**
+    - Trigger one authenticated frontend request and verify same request/correlation IDs in backend logs.
+
+- [x] **P2.2 Synthetic post-deploy smoke checks for backend + frontend**
+  - **Owner:** `@owner-devops`
+  - **Touches:**
+    - Backend deploy workflow: `.github/workflows/release.yml`
+    - Frontend deploy workflow: `.github/workflows/release.yml`
+  - **Verification commands/checks:**
+    - Manual `workflow_dispatch` for staging; verify health + synthetic smoke checks pass.
+
+- [x] **P2.3 Ownership and review routing improvements**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `CODEOWNERS` (backend and frontend repos)
+    - PR template(s), runbook links, and review docs
+  - **Verification commands/checks:**
+    - Open a PR touching workflows + API + frontend and verify expected reviewers auto-request.
+
+**Last updated:** 2026-04-18

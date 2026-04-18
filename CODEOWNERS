@@ -1,0 +1,10 @@
+* @owner-platform
+
+# Backend ownership
+/src/ @owner-backend
+/scripts/ @owner-backend-platform
+/DB/migrations/ @owner-backend-platform
+
+# Workflow and docs ownership
+/.github/workflows/ @owner-devops
+/docs/active/ @owner-platform

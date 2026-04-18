@@ -3,6 +3,14 @@ name: Cross-Repo Release Orchestration
 on:
   workflow_dispatch:
     inputs:
+      backend_repo:
+        description: "Backend repository owner/name"
+        required: true
+        default: "PURETASK/puretask-backend"
+      frontend_repo:
+        description: "Frontend repository owner/name"
+        required: true
+        default: "Puretask-co/-puretask-frontend"
       frontend_ref:
         description: "Frontend git ref (branch/tag/sha)"
         required: true
@@ -29,8 +37,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  BACKEND_REPO: PURETASK/puretask-backend
-  FRONTEND_REPO: PURETASK/puretask-frontend
+  BACKEND_REPO: ${{ inputs.backend_repo }}
+  FRONTEND_REPO: ${{ inputs.frontend_repo }}
 
 jobs:
   validate:
@@ -154,6 +162,8 @@ jobs:
       - name: Record coordinated release intent
         run: |
           echo "Validated release pair:"
+          echo "backend_repo=${BACKEND_REPO}"
+          echo "frontend_repo=${FRONTEND_REPO}"
           echo "backend_ref=${{ inputs.backend_ref }}"
           echo "frontend_ref=${{ inputs.frontend_ref }}"
           echo "environment=${{ inputs.environment }}"

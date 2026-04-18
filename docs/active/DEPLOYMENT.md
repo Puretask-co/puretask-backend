@@ -193,6 +193,13 @@ Required GitHub secrets for orchestration:
   - `NEXT_PUBLIC_WS_URL`
   - `NEXT_PUBLIC_STRIPE_PUBLIC_KEY`
 
+The orchestration workflow now accepts `backend_repo` and `frontend_repo` inputs. Defaults:
+
+- `backend_repo=PURETASK/puretask-backend`
+- `frontend_repo=Puretask-co/-puretask-frontend`
+
+This prevents owner drift when backend and frontend live in different org/user owners.
+
 ### Branch protection (recommended)
 
 In GitHub → **Settings** → **Branches** → **Add rule** for `main`:

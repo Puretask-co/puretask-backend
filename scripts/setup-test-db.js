@@ -40,6 +40,11 @@ const GAMIFICATION_MIGRATIONS = [
   "055_gamification_ops_views.sql",
   "056_marketplace_health_governor.sql",
 ];
+const UNIFY_MIGRATIONS = [
+  "059_add_invoice_status_and_invoices.sql",
+  "060_add_reviews_ai_worker_stripe_tables.sql",
+  "061_add_cleaner_id_payout_misc_tables.sql",
+];
 
 function runMigration(file) {
   const relPath = file.startsWith("DB/") ? file : `DB/migrations/${file}`;
@@ -49,11 +54,77 @@ function runMigration(file) {
     return;
   }
   console.log(`   Running: ${path.basename(file)}`);
-  execSync(`node scripts/run-migration.js "${relPath}"`, {
-    cwd: ROOT,
-    stdio: "inherit",
-    env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
-  });
+  try {
+    const out = execSync(`node scripts/run-migration.js "${relPath}"`, {
+      cwd: ROOT,
+      stdio: "pipe",
+      env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
+      encoding: "utf8",
+    });
+    if (out) process.stdout.write(out);
+  } catch (error) {
+    const stdout =
+      typeof error?.stdout === "string"
+        ? error.stdout
+        : Buffer.isBuffer(error?.stdout)
+          ? error.stdout.toString("utf8")
+          : "";
+    const stderr =
+      typeof error?.stderr === "string"
+        ? error.stderr
+        : Buffer.isBuffer(error?.stderr)
+          ? error.stderr.toString("utf8")
+          : "";
+    if (stdout) process.stdout.write(stdout);
+    if (stderr) process.stderr.write(stderr);
+    const enriched = new Error(`${error?.message || "Migration command failed"}\n${stdout}\n${stderr}`);
+    enriched.original = error;
+    throw enriched;
+  }
+}
+
+function migrationSupportsCurrentSchema(errorMessage = "") {
+  const normalized = errorMessage.toLowerCase();
+  return !(
+    normalized.includes("cannot be implemented") ||
+    normalized.includes("42804") ||
+    normalized.includes("foreign key constraint")
+  );
+}
+
+function normalizeExecError(error) {
+  if (!error) return "";
+  if (typeof error.message === "string" && error.message.trim()) return error.message;
+  if (typeof error.stderr === "string" && error.stderr.trim()) return error.stderr;
+  if (Buffer.isBuffer(error.stderr)) return error.stderr.toString("utf8");
+  if (Array.isArray(error.output)) {
+    return error.output
+      .filter(Boolean)
+      .map((v) => (Buffer.isBuffer(v) ? v.toString("utf8") : String(v)))
+      .join("\n");
+  }
+  return String(error);
+}
+
+function runConsolidatedWithFallback() {
+  try {
+    runMigration(CONSOLIDATED);
+  } catch (error) {
+    const message = normalizeExecError(error).toLowerCase();
+    const canFallback =
+      !USE_LEGACY &&
+      (message.includes("invalid input value for enum credit_reason") ||
+        message.includes("wallet_topup"));
+
+    if (!canFallback) {
+      throw error;
+    }
+
+    console.warn(
+      "⚠️  Consolidated schema failed on current DB; retrying with legacy consolidated schema for compatibility."
+    );
+    runMigration("DB/migrations/000_CONSOLIDATED_SCHEMA.sql");
+  }
 }
 
 function main() {
@@ -67,7 +138,7 @@ function main() {
   console.log("📄 Setting up test database...\n");
 
   console.log(`1. Applying consolidated schema (${path.basename(CONSOLIDATED)})`);
-  runMigration(CONSOLIDATED);
+  runConsolidatedWithFallback();
 
   console.log("\n2. Applying gamification migrations (041–056)");
   for (const m of GAMIFICATION_MIGRATIONS) {
@@ -79,6 +150,26 @@ function main() {
   runMigration("DB/migrations/000_NEON_PATCH_job_status_disputed.sql");
   runMigration("DB/migrations/000_NEON_PATCH_cleaner_availability.sql");
   runMigration("DB/migrations/000_NEON_PATCH_test_db_align.sql");
+
+  console.log("\n4. Applying unify migrations (059–061) when schema supports UUID invoice references");
+  const shouldRunUnifyMigrations = !USE_LEGACY;
+  if (!shouldRunUnifyMigrations) {
+    console.log("⚠️  Skipping unify migrations because USE_LEGACY_SCHEMA=1 (legacy TEXT-id schema mode).");
+  } else {
+    for (const m of UNIFY_MIGRATIONS) {
+      try {
+        runMigration(m);
+      } catch (error) {
+        const message = normalizeExecError(error);
+        // Older local/test schemas can still use TEXT ids; keep setup usable and rely on trust fallback.
+        if (!migrationSupportsCurrentSchema(message)) {
+          console.warn(`⚠️  Skipping ${m}: schema type mismatch for FK references (${message})`);
+          continue;
+        }
+        throw error;
+      }
+    }
+  }
 
   console.log("\n✅ Test database ready.");
 }

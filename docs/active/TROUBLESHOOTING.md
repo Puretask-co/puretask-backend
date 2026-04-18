@@ -369,6 +369,24 @@ When running migrations 043–056 on Neon where `users.id` is UUID, replace all 
 
 For integration tests against a Neon test DB with `users.id` UUID, run `000_NEON_PATCH_test_db_align.sql` after schema setup. It fixes FKs (payouts, cleaner_availability → users), `is_cleaner_available` (uuid/text cast), and adds `job_event_type` values. See `scripts/setup-test-db.js` for the full patch sequence.
 
+### `db:setup:test` fallback and unify-migration behavior
+
+If `npm run db:setup:test` fails on the first consolidated migration with:
+
+- `invalid input value for enum credit_reason: "wallet_topup"` (or similar enum drift), or
+- `foreign key constraint ... cannot be implemented (SQLSTATE 42804)`,
+
+use these expectations:
+
+- The script now auto-falls back from `000_COMPLETE_CONSOLIDATED_SCHEMA.sql` to `000_CONSOLIDATED_SCHEMA.sql` when enum drift is detected.
+- If your DB uses legacy TEXT ids (`USE_LEGACY_SCHEMA=1`), unify migrations `059+` are skipped intentionally.
+- On UUID-based schemas, unify migrations run and skip only FK-incompatible steps rather than failing the entire setup.
+
+Quick commands:
+
+- `USE_LEGACY_SCHEMA=1 npm run db:setup:test` (legacy TEXT-id local/test)
+- `TEST_DATABASE_URL=... npm run db:migrate:unify-test` (explicit unify pass against test DB)
+
 **Risk profile 500 (credit_reason enum)**  
 Admin risk profile (`GET /admin/risk/:userId`) previously failed with `invalid input value for enum credit_reason: "payment_failed"`. The `credit_reason` enum does not include `payment_failed`. Fixed by removing the ledger query for payment failures; risk scoring now uses cancellation and dispute factors only.
 
