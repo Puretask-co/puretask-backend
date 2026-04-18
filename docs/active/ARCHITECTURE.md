@@ -5,6 +5,14 @@
 
 ---
 
+## Canonical scope (how to use this doc)
+
+- This file is **Tier 1 canonical** for system design, boundaries, and major architecture-level flows.
+- Do not use this file as a backlog tracker or incident playbook.
+- Put operational runbooks in `RUNBOOK.md`; put setup steps in `SETUP.md`; put point-in-time audits and historical analysis in Tier 2 reference docs or archive.
+
+---
+
 ## 1. Stack
 
 - **Runtime:** Node.js 20+, TypeScript

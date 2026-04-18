@@ -5,6 +5,14 @@
 
 ---
 
+## Documentation scope (canonical)
+
+- This file is the **canonical operations runbook**.
+- Canonical operations guidance is in Sections **1–6**.
+- Any planning/checklist/reference material in later sections is supporting context; if there is a conflict, follow Sections 1–6 plus `DEPLOYMENT.md` and `TROUBLESHOOTING.md`.
+
+---
+
 ## 1. Deploy
 
 - **Prereqs:** Secrets in Railway (or target); no secrets in repo. Env validated at startup (`src/config/env.ts`).
@@ -504,5 +512,60 @@ Use this checklist as the canonical execution tracker for full-stack hardening w
     - PR template(s), runbook links, and review docs
   - **Verification commands/checks:**
     - Open a PR touching workflows + API + frontend and verify expected reviewers auto-request.
+
+## 10. Docs governance migration tracker (canonical)
+
+Use this checklist to track the documentation model migration (canonical vs reference) and avoid future drift.
+
+- [x] **D0.1 Adopt two-tier docs governance model**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `.cursor/rules/documentation.mdc`
+    - `docs/active/DECISIONS.md`
+  - **Verification commands/checks:**
+    - Confirm rules file defines Tier 1 canonical + Tier 2 reference model.
+    - Confirm `DECISIONS.md` records the decision and marks prior canonical-only stance as superseded.
+
+- [x] **D0.2 Align docs entrypoint with governance model**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `docs/active/README.md`
+  - **Verification commands/checks:**
+    - Validate Tier 1 list maps to canonical docs only.
+    - Validate Tier 2 section links to existing reference docs.
+
+- [x] **D0.3 Add scope guardrails to core canonical docs**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `docs/active/SETUP.md`
+    - `docs/active/ARCHITECTURE.md`
+    - `docs/active/RUNBOOK.md`
+  - **Verification commands/checks:**
+    - Confirm each file states canonical scope and where non-scope content belongs.
+
+- [ ] **D1.1 Full docs inventory and classification**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `docs/active/**`
+    - `docs/archive/raw/**` (for moved/superseded files)
+  - **Verification commands/checks:**
+    - Produce file-by-file ledger: Keep Canonical / Keep Reference / Merge / Archive.
+    - Confirm no historical material is deleted; only moved to archive.
+
+- [ ] **D1.2 Resolve stale links and missing references in docs/active**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `docs/active/README.md`
+    - Any docs with dead internal links
+  - **Verification commands/checks:**
+    - Validate all internal doc links resolve to existing paths.
+
+- [ ] **D2.1 Ongoing docs hygiene cadence**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `docs/active/README.md` (or governance section)
+  - **Verification commands/checks:**
+    - Monthly review pass completed and logged.
+    - Canonical docs updated when high-impact reference content changes.
 
 **Last updated:** 2026-04-18
