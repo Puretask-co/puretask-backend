@@ -48,6 +48,7 @@ These are supporting docs for deep dives and implementation detail.
 | [PR_AUDIT_RUBRIC.md](./PR_AUDIT_RUBRIC.md) | PR audit rubric/checklist |
 | [AUDIT_TICKETS.md](./AUDIT_TICKETS.md) | Audit-derived remediation tickets |
 | [PROD_TEST_SCHEMA_REFERENCE.md](./PROD_TEST_SCHEMA_REFERENCE.md) | Production vs test schema comparison reference |
+| [FORWARD_EXECUTION_GUIDE.md](./FORWARD_EXECUTION_GUIDE.md) | Cross-repo forward plan (backend + frontend) with P0/P1/P2 execution gates |
 | [gamification_bundle/README.md](./gamification_bundle/README.md) | Gamification spec index and detailed bundle docs |
 
 ---
@@ -56,3 +57,19 @@ These are supporting docs for deep dives and implementation detail.
 
 - Historical notes and older plans belong in `docs/archive/raw/`.
 - Do not delete raw history; move superseded material to archive with clear naming.
+
+---
+
+## Docs hygiene cadence (monthly)
+
+Run this checklist once per month (or after major docs refactors):
+
+1. Re-run full inventory and ledger classification.
+2. Re-run `docs/active` internal link validation and confirm zero missing.
+3. Confirm Tier 1 canonical docs still reflect current implementation and decisions.
+4. Move newly superseded non-canonical material to `docs/archive/raw/` (never delete history).
+5. Record the pass in `docs/archive/raw/docs_governance/docs_hygiene_log_YYYY-MM.md`.
+
+Current monthly log:
+
+- [docs_hygiene_log_2026-04.md](../archive/raw/docs_governance/docs_hygiene_log_2026-04.md)
