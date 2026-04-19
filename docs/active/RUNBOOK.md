@@ -420,9 +420,8 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
 
 ### 9.1 Execution order (current)
 
-1. P1.2 (expand automated journey coverage)
-2. P1.3 (resolve highest-impact skipped test suites)
-3. P2.1 + P2.2 (backend architecture debt + security/quality gate tightening)
+1. P1.3 (resolve highest-impact skipped test suites)
+2. P2.1 + P2.2 (backend architecture debt + security/quality gate tightening)
 
 ### 9.2 P0 — Release safety and mandatory full-stack correctness
 
@@ -508,13 +507,23 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
       - `test:e2e`: auth smoke + payments-adjacent trust journey (`tests/e2e/trust/credits-billing-smoke.spec.ts`)
     - Payments-adjacent journey coverage is now explicit in default CI path by asserting authenticated access to credits balance and billing invoices APIs.
 
-- [ ] **P1.3 Resolve highest-impact skipped test suites**
+- [x] **P1.3 Resolve highest-impact skipped test suites**
   - **Owner:** `@owner-frontend`
   - **Touches:**
     - Frontend tests listed in `docs/SKIPPED_TESTS.md`
   - **Verification commands/checks:**
     - `npm run test`
     - `npm run test:coverage`
+  - **Result notes (2026-04-19):**
+    - Restored highest-priority skipped suites:
+      - `src/tests/hooks/useFormValidation.test.tsx`
+      - `src/components/error/__tests__/ErrorBoundary.test.tsx`
+      - `src/components/layout/__tests__/Header.test.tsx`
+    - Updated `docs/SKIPPED_TESTS.md` with restored status and next tranche order.
+    - `npm run test` is green with the restored suites included.
+    - `npm run test:coverage` remains blocked by known pre-existing repository issues:
+      - JSX parse error in `src/app/client/bookings/[id]/page.tsx`
+      - Existing global coverage thresholds not yet met across app surface.
 
 ### 9.4 P2 — Scale-quality and operational polish
 

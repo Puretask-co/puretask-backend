@@ -183,6 +183,17 @@ PureTask is in a stable “proceed fast” state when all are true:
 - **Exit criteria:**
   - Top-priority skipped suites are restored or intentionally deferred with explicit rationale.
 
+**Status (2026-04-19): partially completed**
+- Restored highest-priority skipped suites:
+  - `src/tests/hooks/useFormValidation.test.tsx`
+  - `src/components/error/__tests__/ErrorBoundary.test.tsx`
+  - `src/components/layout/__tests__/Header.test.tsx`
+- These restored suites pass in targeted and full Jest runs (`npm test -- --runInBand ...` and `npm test -- --runInBand`).
+- Remaining deferred suites are tracked with rationale in `puretask-frontend/docs/SKIPPED_TESTS.md` (next tranche starts with `TermsAgreementStep` + `ToastContext`).
+- `npm run test:coverage` remains blocked by pre-existing frontend issues outside this tranche:
+  - JSX parse error in `src/app/client/bookings/[id]/page.tsx`
+  - Existing global coverage thresholds not yet representative of current test surface.
+
 ## P2 — Scale-quality and operational polish
 
 ### P2.1 Backend architecture debt reduction (route→service boundaries)
@@ -251,10 +262,11 @@ If any gate fails, do not promote release refs.
 
 ## 7) Immediate next actions (starting now)
 
-1. Execute **P1.3** resolve highest-impact skipped test suites.
-2. Keep **P1.2** as a standing guardrail by requiring `npm run test:e2e:smoke` + `npm run test:e2e` in CI before deployment.
-3. Keep **P0.1** as a standing guardrail by requiring `npm run test:api` + `npm run verify:fullstack` before release promotion.
-4. Keep **P0.2** as a standing guardrail by requiring `npm run db:validate:migrations` + `STRICT_MIGRATION_PATH=1 npm run db:setup:test` before release promotion.
-5. Keep **P0.3** as a standing guardrail by requiring orchestration releases to pass validate job and carry explicit backend/frontend refs.
+1. Continue **P1.3** tranche-2 by restoring `TermsAgreementStep` + `ToastContext`, then rerun `npm test -- --runInBand`.
+2. Resolve frontend JSX parse blocker in `src/app/client/bookings/[id]/page.tsx` so `npm run test:coverage` and `npm run build` can become actionable gates.
+3. Keep **P1.2** as a standing guardrail by requiring `npm run test:e2e:smoke` + `npm run test:e2e` in CI before deployment.
+4. Keep **P0.1** as a standing guardrail by requiring `npm run test:api` + `npm run verify:fullstack` before release promotion.
+5. Keep **P0.2** as a standing guardrail by requiring `npm run db:validate:migrations` + `STRICT_MIGRATION_PATH=1 npm run db:setup:test` before release promotion.
+6. Keep **P0.3** as a standing guardrail by requiring orchestration releases to pass validate job and carry explicit backend/frontend refs.
 
 This sequence is currently the best risk-adjusted path for PureTask.
