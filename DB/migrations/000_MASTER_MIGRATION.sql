@@ -2909,10 +2909,10 @@ INSERT INTO achievements (achievement_key, name, description, category, tier, ic
 ON CONFLICT (achievement_key) DO NOTHING;
 
 INSERT INTO certifications (certification_key, name, description, level, icon, badge_color, requirements, benefits, display_order) VALUES
-('ai_assistant_basic', 'AI Assistant Basics', 'Master the fundamentals of the AI Assistant', 1, '🎓', '#3B82F6', '{"profile_completion": 50, "templates_customized": 3, "quick_responses_added": 5}'::jsonb, ARRAY['Access to basic templates', 'Community forum access'], 1),
-('ai_assistant_intermediate', 'AI Assistant Intermediate', 'Advanced AI configuration skills', 2, '📚', '#8B5CF6', '{"profile_completion": 75, "templates_customized": 10, "quick_responses_added": 15, "created_custom_template": true}'::jsonb, ARRAY['Priority support', 'Advanced template library', 'Analytics dashboard'], 2),
-('ai_assistant_advanced', 'AI Assistant Advanced', 'Expert-level AI customization', 3, '🏅', '#F59E0B', '{"profile_completion": 90, "templates_customized": 20, "quick_responses_added": 25, "viewed_insights_dashboard": true, "exported_settings": true}'::jsonb, ARRAY['1-on-1 coaching session', 'Featured in marketplace', 'Beta features access'], 3),
-('ai_assistant_master', 'AI Assistant Master', 'Absolute mastery of all AI features', 4, '👑', '#EF4444', '{"profile_completion": 100, "templates_customized": 50, "quick_responses_added": 50, "days_since_signup": 30}'::jsonb, ARRAY['Lifetime priority support', 'Exclusive webinars', 'Revenue sharing on templates', 'Master badge on profile'], 4)
+('ai_assistant_basic', 'AI Assistant Basics', 'Master the fundamentals of the AI Assistant', 1, '🎓', '#3B82F6', '{"profile_completion": 50, "templates_customized": 3, "quick_responses_added": 5}'::jsonb, '["Access to basic templates", "Community forum access"]'::jsonb, 1),
+('ai_assistant_intermediate', 'AI Assistant Intermediate', 'Advanced AI configuration skills', 2, '📚', '#8B5CF6', '{"profile_completion": 75, "templates_customized": 10, "quick_responses_added": 15, "created_custom_template": true}'::jsonb, '["Priority support", "Advanced template library", "Analytics dashboard"]'::jsonb, 2),
+('ai_assistant_advanced', 'AI Assistant Advanced', 'Expert-level AI customization', 3, '🏅', '#F59E0B', '{"profile_completion": 90, "templates_customized": 20, "quick_responses_added": 25, "viewed_insights_dashboard": true, "exported_settings": true}'::jsonb, '["1-on-1 coaching session", "Featured in marketplace", "Beta features access"]'::jsonb, 3),
+('ai_assistant_master', 'AI Assistant Master', 'Absolute mastery of all AI features', 4, '👑', '#EF4444', '{"profile_completion": 100, "templates_customized": 50, "quick_responses_added": 50, "days_since_signup": 30}'::jsonb, '["Lifetime priority support", "Exclusive webinars", "Revenue sharing on templates", "Master badge on profile"]'::jsonb, 4)
 ON CONFLICT (certification_key) DO NOTHING;
 
 INSERT INTO template_library (template_type, template_name, template_content, variables, category, description, is_featured, is_verified, tags) VALUES
@@ -3946,7 +3946,7 @@ SELECT 'PURETASK COMPLETE CONSOLIDATED SCHEMA CREATED SUCCESSFULLY!' AS status,
 -- Add this to the master sequence so the combined file is complete.
 -- ============================================================
 
--- From 003_credit_views.sql
+-- From 003_credit_views.sql (adapted for delta_credits schema per 045_credit_views_delta_fix.sql)
 CREATE OR REPLACE VIEW credit_summary_by_reason AS
 SELECT
   reason,
@@ -4285,12 +4285,12 @@ CREATE SEQUENCE IF NOT EXISTS public.invoice_number_seq
   NO MAXVALUE
   CACHE 1;
 
--- 3) Invoices table (cleaner_id, client_id, approved_by match prod users.id type UUID)
+-- 3) Invoices table (cleaner_id, client_id, approved_by match canonical users.id type TEXT)
 CREATE TABLE IF NOT EXISTS public.invoices (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   invoice_number text NOT NULL,
-  cleaner_id uuid NOT NULL,
-  client_id uuid NOT NULL,
+  cleaner_id text NOT NULL,
+  client_id text NOT NULL,
   job_id uuid,
   subtotal_cents integer DEFAULT 0 NOT NULL,
   tax_cents integer DEFAULT 0 NOT NULL,
@@ -4301,7 +4301,7 @@ CREATE TABLE IF NOT EXISTS public.invoices (
   description text,
   notes_to_client text,
   requires_approval boolean DEFAULT false,
-  approved_by uuid,
+  approved_by text,
   approved_at timestamp with time zone,
   denial_reason text,
   payment_intent_id text,
@@ -4336,7 +4336,7 @@ CREATE TABLE IF NOT EXISTS public.invoice_status_history (
   invoice_id uuid NOT NULL,
   old_status public.invoice_status,
   new_status public.invoice_status NOT NULL,
-  changed_by uuid,
+  changed_by text,
   actor_type text NOT NULL,
   reason text,
   metadata jsonb DEFAULT '{}'::jsonb,
@@ -4408,12 +4408,12 @@ END$$;
 -- Migration 060: Add reviews, AI tables, worker_runs, Stripe idempotency (from test schema)
 -- Production is canonical; these objects exist in test but not in prod.
 
--- 1) Reviews (reviewer_id, reviewee_id -> users.id UUID in prod)
+-- 1) Reviews (reviewer_id, reviewee_id -> users.id TEXT in canonical schema)
 CREATE TABLE IF NOT EXISTS public.reviews (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   job_id uuid NOT NULL,
-  reviewer_id uuid NOT NULL,
-  reviewee_id uuid NOT NULL,
+  reviewer_id text NOT NULL,
+  reviewee_id text NOT NULL,
   reviewer_type text NOT NULL,
   rating integer NOT NULL,
   comment text,
@@ -4426,10 +4426,10 @@ CREATE TABLE IF NOT EXISTS public.reviews (
   CONSTRAINT reviews_reviewer_type_check CHECK (reviewer_type IN ('client', 'cleaner'))
 );
 
--- 2) AI activity log (actor_id -> users.id UUID)
+-- 2) AI activity log (actor_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.ai_activity_log (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
-  actor_id uuid NOT NULL,
+  actor_id text NOT NULL,
   activity_type text NOT NULL,
   activity_description text NOT NULL,
   metadata jsonb DEFAULT '{}'::jsonb,
@@ -4438,21 +4438,21 @@ CREATE TABLE IF NOT EXISTS public.ai_activity_log (
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 3) AI performance metrics (cleaner_id -> users.id UUID)
+-- 3) AI performance metrics (cleaner_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.ai_performance_metrics (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   metric_date date NOT NULL,
   metric_type text NOT NULL,
-  cleaner_id uuid,
+  cleaner_id text,
   metric_value numeric NOT NULL,
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 4) AI suggestions (cleaner_id -> users.id UUID)
+-- 4) AI suggestions (cleaner_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.ai_suggestions (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
-  cleaner_id uuid NOT NULL,
+  cleaner_id text NOT NULL,
   suggestion_type text NOT NULL,
   suggestion_data jsonb NOT NULL,
   status text DEFAULT 'pending' NOT NULL,
@@ -4561,7 +4561,7 @@ END$$;
 -- Migration 061: Add cleaner_agreements, cleaner_client_notes, id_verifications,
 -- invalidated_tokens, message_delivery_log, phone_verifications, payout_items,
 -- payout_reconciliation_flag_history (from test schema)
--- Production is canonical; user/cleaner refs use UUID to match prod.
+-- Production is canonical; refs to users(id) must use TEXT.
 
 -- 1) Cleaner agreements (cleaner_id -> cleaner_profiles.id UUID)
 CREATE TABLE IF NOT EXISTS public.cleaner_agreements (
@@ -4575,11 +4575,11 @@ CREATE TABLE IF NOT EXISTS public.cleaner_agreements (
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 2) Cleaner client notes (cleaner_id, client_id -> users.id UUID)
+-- 2) Cleaner client notes (cleaner_id, client_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.cleaner_client_notes (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
-  cleaner_id uuid NOT NULL,
-  client_id uuid NOT NULL,
+  cleaner_id text NOT NULL,
+  client_id text NOT NULL,
   notes text,
   preferences text,
   is_favorite boolean DEFAULT false,
@@ -4587,7 +4587,7 @@ CREATE TABLE IF NOT EXISTS public.cleaner_client_notes (
   updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 3) ID verifications (cleaner_id -> cleaner_profiles.id, reviewed_by -> users.id)
+-- 3) ID verifications (cleaner_id -> cleaner_profiles.id, reviewed_by -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.id_verifications (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   cleaner_id uuid NOT NULL,
@@ -4595,25 +4595,25 @@ CREATE TABLE IF NOT EXISTS public.id_verifications (
   document_url text NOT NULL,
   status text DEFAULT 'pending' NOT NULL,
   reviewed_at timestamp with time zone,
-  reviewed_by uuid,
+  reviewed_by text,
   notes text,
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 4) Invalidated tokens (user_id -> users.id UUID)
+-- 4) Invalidated tokens (user_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.invalidated_tokens (
   jti text NOT NULL,
-  user_id uuid NOT NULL,
+  user_id text NOT NULL,
   invalidated_at timestamp with time zone DEFAULT now() NOT NULL,
   reason text
 );
 
--- 5) Message delivery log (cleaner_id, client_id -> users.id UUID)
+-- 5) Message delivery log (cleaner_id, client_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.message_delivery_log (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   message_type text NOT NULL,
-  cleaner_id uuid NOT NULL,
-  client_id uuid NOT NULL,
+  cleaner_id text NOT NULL,
+  client_id text NOT NULL,
   booking_id uuid,
   channels text[] NOT NULL,
   delivery_results jsonb NOT NULL,
@@ -4622,10 +4622,10 @@ CREATE TABLE IF NOT EXISTS public.message_delivery_log (
   clicked_at timestamp with time zone
 );
 
--- 6) Phone verifications (user_id -> users.id UUID)
+-- 6) Phone verifications (user_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.phone_verifications (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
-  user_id uuid NOT NULL,
+  user_id text NOT NULL,
   phone_number text NOT NULL,
   otp_code text NOT NULL,
   expires_at timestamp with time zone NOT NULL,
@@ -4642,13 +4642,13 @@ CREATE TABLE IF NOT EXISTS public.payout_items (
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 8) Payout reconciliation flag history (payout_id -> payouts.id, actor_id -> users.id)
+-- 8) Payout reconciliation flag history (payout_id -> payouts.id, actor_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.payout_reconciliation_flag_history (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   payout_id uuid NOT NULL,
   status text NOT NULL,
   note text,
-  actor_id uuid,
+  actor_id text,
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 

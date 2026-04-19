@@ -26,12 +26,12 @@ CREATE SEQUENCE IF NOT EXISTS public.invoice_number_seq
   NO MAXVALUE
   CACHE 1;
 
--- 3) Invoices table (cleaner_id, client_id, approved_by match prod users.id type UUID)
+-- 3) Invoices table (cleaner_id, client_id, approved_by match canonical users.id type TEXT)
 CREATE TABLE IF NOT EXISTS public.invoices (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   invoice_number text NOT NULL,
-  cleaner_id uuid NOT NULL,
-  client_id uuid NOT NULL,
+  cleaner_id text NOT NULL,
+  client_id text NOT NULL,
   job_id uuid,
   subtotal_cents integer DEFAULT 0 NOT NULL,
   tax_cents integer DEFAULT 0 NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS public.invoices (
   description text,
   notes_to_client text,
   requires_approval boolean DEFAULT false,
-  approved_by uuid,
+  approved_by text,
   approved_at timestamp with time zone,
   denial_reason text,
   payment_intent_id text,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS public.invoice_status_history (
   invoice_id uuid NOT NULL,
   old_status public.invoice_status,
   new_status public.invoice_status NOT NULL,
-  changed_by uuid,
+  changed_by text,
   actor_type text NOT NULL,
   reason text,
   metadata jsonb DEFAULT '{}'::jsonb,
