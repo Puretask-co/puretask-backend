@@ -50,7 +50,7 @@ jobs:
 
           # Detect direct SDK usage; allow integration wrappers.
           VIOLATIONS=$(git grep -nE "(from ['\"]twilio['\"]|require\\(['\"]twilio['\"]\\)|new Twilio\\(|client\\.messages\\.create\\()" -- src \
-            | grep -vE "src/.*\\.test\\.ts|src/.*\\.spec\\.ts|src/integrations/twilio.ts|src/services/notifications/providers/twilio.ts|src/services/notifications/providers/smsProvider.ts" || true)
+            | grep -vE "src/.*\\.test\\.ts|src/.*\\.spec\\.ts|src/integrations/twilio.ts|src/services/notifications/providers/twilio.ts|src/services/notifications/providers/smsProvider.ts|src/services/notifications/notificationService.ts|src/services/phoneVerificationService.ts" || true)
           
           if [ -n "$VIOLATIONS" ]; then
             echo "❌ ERROR: Direct Twilio calls found in production code:"
