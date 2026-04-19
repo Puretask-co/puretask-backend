@@ -11,6 +11,14 @@
 - Canonical operations guidance is in Sections **1–6**.
 - Any planning/checklist/reference material in later sections is supporting context; if there is a conflict, follow Sections 1–6 plus `DEPLOYMENT.md` and `TROUBLESHOOTING.md`.
 
+### Canonical extractions from Merge-classified specs (D1.1)
+
+- **Job state transitions:** canonical transition map and terminal-state rules are now in `ARCHITECTURE.md` § 3.6.
+- **Stripe webhook handling:** ingest→route→handle flow and idempotency model are now in `ARCHITECTURE.md` § 3.7.
+- **Ledger invariants:** required ledger row semantics, idempotency, and wallet/ledger integrity checks are now in `ARCHITECTURE.md` § 3.8.
+- **Assignment engine principles:** voluntary-acceptance wave model and policy controls are now in `ARCHITECTURE.md` § 3.9.
+- Remaining Merge-classified docs are preserved for staged merge and traceability in `docs/archive/raw/docs_governance/docs_file_ledger_2026-04-19.csv`.
+
 ---
 
 ## 1. Deploy
@@ -80,7 +88,7 @@ Table `idempotency_keys` is cleaned by function `cleanup_old_idempotency_keys()`
 
 - **Secrets exposure:** [SECURITY_INCIDENT_RESPONSE.md](./00-CRITICAL/SECURITY_INCIDENT_RESPONSE.md) and [PHASE_1_USER_RUNBOOK.md](./00-CRITICAL/PHASE_1_USER_RUNBOOK.md) — rotate, invalidate, purge history, verify.
 - **Outage:** Check health endpoint; logs (requestId); DB connectivity; rate limits; Stripe/webhook status.
-- **Payment/webhook issues:** [SECTION_04_STRIPE_WEBHOOKS.md](./sections/SECTION_04_STRIPE_WEBHOOKS.md). **Stripe webhook (dedupe, retries, crash safety):** (1) Dedupe: intake writes to `webhook_events` with `ON CONFLICT (provider, event_id) DO NOTHING`; `handleStripeEvent` uses `stripe_events_processed` (event_id + object_id) so duplicate deliveries are no-op. (2) Retries: on processing failure we set `webhook_events.processing_status = 'failed'` and call `queueWebhookForRetry`; worker `webhook-retry` (every 5 min) processes `webhook_failures` with exponential backoff. (3) Crash safety: event is stored before processing; if the process crashes after handling, retry will call `handleStripeEvent` again but stripe_events_processed makes it idempotent.
+- **Payment/webhook issues:** [SECTION_04_STRIPE_WEBHOOKS.md](./sections/SECTION_04_STRIPE_WEBHOOKS.md). **Stripe webhook (dedupe, retries, crash safety):** (1) Dedupe: intake writes to `webhook_events` with `ON CONFLICT (provider, event_id) DO NOTHING`; `handleStripeEvent` uses `stripe_events_processed` (event_id + object_id) so duplicate deliveries are no-op. (2) Retries: on processing failure we set `webhook_events.processing_status = 'failed'` and call `queueWebhookForRetry`; worker `webhook-retry` (every 5 min) processes `webhook_failures` with exponential backoff. (3) Crash safety: event is stored before processing; if the process crashes after handling, retry will call `handleStripeEvent` again but stripe_events_processed makes it idempotent. Canonical Stripe event mapping, idempotency expectations, and handler flow are tracked in [STRIPE_WEBHOOK_ROUTER.md](./STRIPE_WEBHOOK_ROUTER.md) and [STATE_SYNC.md](./STATE_SYNC.md).
 
 ### 3.1 Incident runbook (Section 14)
 
@@ -137,6 +145,12 @@ Runtime feature toggles live in `admin_feature_flags` (DB) and are loaded by `Ru
 ### 3.8 Section 12 — Outcomes and evidence
 
 - **Service outcomes:** Define per job type what was purchased (outcome), not how work is done. Store in config or DB; use for dispute resolution and client/cleaner transparency. See [SECTION_12_TRUST_IC_SAFE.md](./sections/SECTION_12_TRUST_IC_SAFE.md) § 12.2.
+
+### 3.9 High-value extracted contracts (from specs)
+
+- **Job lifecycle contract:** Allowed statuses and transitions, preconditions, and idempotency expectations are summarized in [JOB_STATUS_MACHINE.md](./JOB_STATUS_MACHINE.md). This is the practical reference used when validating route behavior and worker side effects.
+- **Stripe webhook routing contract:** Canonical event-to-handler mapping and duplicate/replay behavior are in [STRIPE_WEBHOOK_ROUTER.md](./STRIPE_WEBHOOK_ROUTER.md), with object-level state guarantees in [STATE_SYNC.md](./STATE_SYNC.md).
+- **Assignment policy contract:** Marketplace-safe assignment principles and long-wave visibility policy are tracked in [ASSIGNMENT_ENGINE.md](./ASSIGNMENT_ENGINE.md).
 - **Evidence (optional but conditional):** Photos/checklists optional for basic completion; required for certain protections (payout protection, dispute priority). Document in product/legal; link evidence to dispute eligibility and explainable auto-resolution. § 12.3–12.4.
 - **Review window:** Env `REVIEW_WINDOW_HOURS` (optional; defaults to `DISPUTE_WINDOW_HOURS` or 48 in auto-expire worker). After this many hours in `awaiting_approval`, the `auto-expire` worker auto-approves the job and releases escrow. See `src/workers/v1-core/autoExpireAwaitingApproval.ts` and `src/config/env.ts`. § 12.6.
 - **Structured feedback:** Dispute category optional on dispute creation: `createDispute({ ..., category })` and `POST /tracking/:jobId/dispute` body `category` (enum: missed_area, quality_issue, damages_claim, no_show, other). Stored in `disputes.reason_code`. See `disputesService.DISPUTE_CATEGORIES`. § 12.6.
@@ -543,22 +557,28 @@ Use this checklist to track the documentation model migration (canonical vs refe
   - **Verification commands/checks:**
     - Confirm each file states canonical scope and where non-scope content belongs.
 
-- [ ] **D1.1 Full docs inventory and classification**
+- [x] **D1.1 Full docs inventory and classification**
   - **Owner:** `@owner-platform`
   - **Touches:**
     - `docs/active/**`
     - `docs/archive/raw/**` (for moved/superseded files)
   - **Verification commands/checks:**
-    - Produce file-by-file ledger: Keep Canonical / Keep Reference / Merge / Archive.
-    - Confirm no historical material is deleted; only moved to archive.
+    - `git ls-files "*.md" > /workspace/md_inventory.txt`
+    - `git ls-files "*.txt" > /workspace/txt_inventory.txt`
+    - `wc -l /workspace/md_inventory.txt /workspace/txt_inventory.txt`
+    - `node -e 'const fs=require("fs");const path=require("path");const {execSync}=require("child_process");const root="/workspace";const canonical=new Set(["docs/active/README.md","docs/active/SETUP.md","docs/active/ARCHITECTURE.md","docs/active/RUNBOOK.md","docs/active/DEPLOYMENT.md","docs/active/TROUBLESHOOTING.md","docs/active/DECISIONS.md"]);const list=(pat)=>execSync("git ls-files \\""+pat+"\\"",{cwd:root,encoding:"utf8"}).trim().split("\\n").filter(Boolean);const files=[...list("*.md"),...list("*.txt")].sort();const rows=[["path","kind","classification","action","target","rationale"]];const summary={};const moveList=[];for(const f of files){const kind=f.endsWith(".md")?"md":"txt";let classification="Keep Reference",action="keep",target="",rationale="retain as supporting reference";if(canonical.has(f)){classification="Keep Canonical";rationale="tier-1 canonical source of truth";}else if(f.startsWith("docs/active/")){classification="Keep Reference";rationale="tier-2 active reference documentation";}else if(f.startsWith("docs/archive/")||f.startsWith("docs/_archive/")){classification="Archive";action="keep_archived";rationale="already archived history";}else if(kind==="txt"){classification="Archive";action="move_to_archive";target="docs/archive/raw/intake_txt/"+path.basename(f);rationale="intake/transient text outside canonical docs";moveList.push([f,target]);}else if(f.startsWith("docs/specs/")||f.startsWith("docs/blueprint/")||f.startsWith("docs/versions/")||f.startsWith("docs/runbooks/")){classification="Merge";action="merge_then_archive";target="docs/active/(canonical targets)";rationale="structured spec content to merge into canonical docs before archiving";}else if(f.startsWith("docs/admin/")||f.startsWith("docs/ai-assistant/")||f.startsWith("docs/architecture/")||f.startsWith("docs/_active/")||f.startsWith("docs/_future/")||f.startsWith("docs/_md_inventory/")||(/^docs\\/[A-Z0-9_\\-]+\\.md$/.test(f))||(/^docs\\/[A-Za-z0-9_\\-]+\\.md$/.test(f)&&!f.startsWith("docs/active/")&&!f.startsWith("docs/archive/")&&!f.startsWith("docs/_archive/")&&!f.startsWith("docs/specs/")&&!f.startsWith("docs/blueprint/")&&!f.startsWith("docs/versions/")&&!f.startsWith("docs/runbooks/"))){classification="Archive";action="archive_legacy_docs";target="docs/archive/raw/legacy_docs/"+f.replace(/^docs\\//,"");rationale="legacy docs outside canonical/reference structure";moveList.push([f,target]);}rows.push([f,kind,classification,action,target,rationale]);summary[classification]=(summary[classification]||0)+1;}const esc=(s)=>{s=String(s||"");return /[",\\n]/.test(s)?"\\""+s.replace(/\\"/g,"\\"\\"")+"\\"":s;};const csv=rows.map(r=>r.map(esc).join(",")).join("\\n")+"\\n";const dir="/workspace/docs/archive/raw/docs_governance";fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(dir+"/docs_file_ledger_2026-04-19.csv",csv);fs.writeFileSync(dir+"/docs_file_ledger_summary_2026-04-19.txt",["TOTAL "+files.length,...Object.entries(summary).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>k+" "+v)].join("\\n")+"\\n");fs.writeFileSync(dir+"/docs_file_moves_2026-04-19.tsv",moveList.map(([a,b])=>a+"\\t"+b).join("\\n")+"\\n");'`
+    - `while IFS=$'\t' read -r src dest; do mkdir -p "$(dirname "/workspace/$dest")" && git mv "$src" "$dest"; done < /workspace/docs/archive/raw/docs_governance/docs_file_moves_2026-04-19.tsv`
+    - Artifacts: `docs/archive/raw/docs_governance/docs_file_ledger_2026-04-19.csv`, `docs/archive/raw/docs_governance/docs_file_ledger_summary_2026-04-19.txt`, `docs/archive/raw/docs_governance/docs_file_moves_2026-04-19.tsv`
 
-- [ ] **D1.2 Resolve stale links and missing references in docs/active**
+- [x] **D1.2 Resolve stale links and missing references in docs/active**
   - **Owner:** `@owner-platform`
   - **Touches:**
     - `docs/active/README.md`
     - Any docs with dead internal links
   - **Verification commands/checks:**
-    - Validate all internal doc links resolve to existing paths.
+    - `node -e 'const fs=require("fs");const path=require("path");const {execSync}=require("child_process");const root="/workspace";const files=execSync("git ls-files \\"docs/active/**/*.md\\"",{cwd:root,encoding:"utf8"}).trim().split("\\n").filter(Boolean);const miss=[];const re=/\\[[^\\]]*\\]\\(([^)]+)\\)/g;for(const rel of files){const abs=path.join(root,rel);const txt=fs.readFileSync(abs,"utf8");let m;while((m=re.exec(txt))){const raw=m[1].trim();if(!raw||raw.startsWith("http://")||raw.startsWith("https://")||raw.startsWith("#")||raw.startsWith("mailto:")) continue;const clean=raw.split("#")[0].split("?")[0];if(!clean) continue;const target=path.resolve(path.dirname(abs),clean);if(!fs.existsSync(target)) miss.push(rel+" -> "+raw);}}fs.writeFileSync("/workspace/docs/archive/raw/docs_governance/docs_active_link_check_2026-04-19.txt",["TOTAL_FILES "+files.length,"MISSING "+miss.length,...miss].join("\\n")+"\\n");console.log("TOTAL_FILES "+files.length);console.log("MISSING "+miss.length);'`
+    - Report artifact: `docs/archive/raw/docs_governance/docs_active_link_check_2026-04-19.txt`
+    - Validate `MISSING 0` in report.
 
 - [ ] **D2.1 Ongoing docs hygiene cadence**
   - **Owner:** `@owner-platform`
@@ -568,4 +588,4 @@ Use this checklist to track the documentation model migration (canonical vs refe
     - Monthly review pass completed and logged.
     - Canonical docs updated when high-impact reference content changes.
 
-**Last updated:** 2026-04-18
+**Last updated:** 2026-04-19

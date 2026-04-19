@@ -57,4 +57,4 @@ For existing DBs that already have COMPLETE applied:
 1. Run **000_COMPLETE_CONSOLIDATED_SCHEMA.sql** (additive; uses `IF NOT EXISTS`).
 2. Run **000_COMPLETE_VIEWS_PATCH.sql**, then **019_payout_reconciliation_flags.sql**, then **057**, **058**, **059**, **060**, **061** in that order.
 
-See also: [DB/migrations/README.md](../../DB/migrations/README.md).
+See also: [DB/migrations/README.md](../DB/migrations/README.md).

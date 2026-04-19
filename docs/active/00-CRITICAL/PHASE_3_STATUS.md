@@ -22,7 +22,7 @@
 ## Links
 
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — Git hooks + branch protection
-- [.githooks/README.md](../../.githooks/README.md) — Pre-commit behavior
+- [.githooks/README.md](../../../.githooks/README.md) — Pre-commit behavior
 - [MASTER_CHECKLIST.md](../MASTER_CHECKLIST.md) — Section 3 checklist
 
 **Last updated:** 2026-01-31

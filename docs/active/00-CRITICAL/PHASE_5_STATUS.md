@@ -15,8 +15,8 @@
 | **Unique constraints (idempotency)** | Partial | webhook_events, stripe_events_processed, idempotency_keys, 902/903. |
 | **Safe migration workflow** | ✅ | Documented in this file: single system, naming, safe vs risky. |
 | **Rollback strategy** | ✅ | Documented: risky migrations need rollback SQL or IRREVERSIBLE note; backward-compatible preferred. |
-| **Index map** | ✅ | [DB/docs/INDEX_MAP.md](../../DB/docs/INDEX_MAP.md); hot paths + 030 + hardening. |
-| **Backups + restore** | ✅ | [BACKUP_RESTORE.md](../sections/BACKUP_RESTORE.md); run restore test periodically. |
+| **Index map** | ✅ | [DB/docs/INDEX_MAP.md](../../../DB/docs/INDEX_MAP.md); hot paths + 030 + hardening. |
+| **Backups + restore** | ✅ | [BACKUP_RESTORE.md](../BACKUP_RESTORE.md); run restore test periodically. |
 | **Audit tables** | ✅ | webhook_events, credit_ledger, admin_audit_log (019). |
 | **CI: migrations on fresh DB** | ✅ | `.github/workflows/migrations.yml`: consolidated schema + smoke query. |
 
@@ -27,7 +27,7 @@
 - **Fresh database:** Run `000_CONSOLIDATED_SCHEMA.sql` only (or equivalent single baseline). Optional: `000_SEED_TEST_DATA.sql` for dev.
 - **Existing / production:** Apply numbered migrations in order (001, 002, … 042, …). Do not re-run consolidated schema.
 - **New changes:** Add a new migration file `NNN_short_description.sql` (next number). Never edit an already-applied migration.
-- **Policy:** No manual prod SQL; all schema changes via migration files. See [DB/migrations/README.md](../../DB/migrations/README.md).
+- **Policy:** No manual prod SQL; all schema changes via migration files. See [DB/migrations/README.md](../../../DB/migrations/README.md).
 
 ---
 
@@ -57,6 +57,6 @@ Hot paths to document and justify: job feed/search/filter, booking creation, job
 
 - [MASTER_CHECKLIST.md](../MASTER_CHECKLIST.md) — Section 5 checklist
 - [SECTION_05_DATABASE.md](../sections/SECTION_05_DATABASE.md) — Runbook
-- [DB/migrations/README.md](../../DB/migrations/README.md) — Migration usage
+- [DB/migrations/README.md](../../../DB/migrations/README.md) — Migration usage
 
 **Last updated:** 2026-01-31

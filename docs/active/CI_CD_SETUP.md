@@ -74,7 +74,7 @@ N8N_WEBHOOK_SECRET=test-n8n-secret-for-ci
 
 ## 3. Database migrations in CI or on deploy
 
-- **Commands:** `npm run db:migrate` (or project’s migrate script). See [DB/migrations/README.md](../../DB/migrations/README.md).
+- **Commands:** `npm run db:migrate` (or project’s migrate script). See [DB/migrations/README.md](../DB/migrations/README.md).
 - **Option A (CI):** Add a job that sets `DATABASE_URL` to staging, runs migrate, then deploy. Run only on push to deploy branch.
 - **Option B (on server):** In deploy script, run migrate before `npm start`. Order: migrate then start.
 
