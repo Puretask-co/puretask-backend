@@ -1,7 +1,7 @@
 -- Migration 061: Add cleaner_agreements, cleaner_client_notes, id_verifications,
 -- invalidated_tokens, message_delivery_log, phone_verifications, payout_items,
 -- payout_reconciliation_flag_history (from test schema)
--- Production is canonical; user/cleaner refs use UUID to match prod.
+-- Production is canonical; refs to users(id) must use TEXT.
 
 -- 1) Cleaner agreements (cleaner_id -> cleaner_profiles.id UUID)
 CREATE TABLE IF NOT EXISTS public.cleaner_agreements (
@@ -15,11 +15,11 @@ CREATE TABLE IF NOT EXISTS public.cleaner_agreements (
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 2) Cleaner client notes (cleaner_id, client_id -> users.id UUID)
+-- 2) Cleaner client notes (cleaner_id, client_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.cleaner_client_notes (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
-  cleaner_id uuid NOT NULL,
-  client_id uuid NOT NULL,
+  cleaner_id text NOT NULL,
+  client_id text NOT NULL,
   notes text,
   preferences text,
   is_favorite boolean DEFAULT false,
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS public.cleaner_client_notes (
   updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 3) ID verifications (cleaner_id -> cleaner_profiles.id, reviewed_by -> users.id)
+-- 3) ID verifications (cleaner_id -> cleaner_profiles.id, reviewed_by -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.id_verifications (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   cleaner_id uuid NOT NULL,
@@ -35,25 +35,25 @@ CREATE TABLE IF NOT EXISTS public.id_verifications (
   document_url text NOT NULL,
   status text DEFAULT 'pending' NOT NULL,
   reviewed_at timestamp with time zone,
-  reviewed_by uuid,
+  reviewed_by text,
   notes text,
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 4) Invalidated tokens (user_id -> users.id UUID)
+-- 4) Invalidated tokens (user_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.invalidated_tokens (
   jti text NOT NULL,
-  user_id uuid NOT NULL,
+  user_id text NOT NULL,
   invalidated_at timestamp with time zone DEFAULT now() NOT NULL,
   reason text
 );
 
--- 5) Message delivery log (cleaner_id, client_id -> users.id UUID)
+-- 5) Message delivery log (cleaner_id, client_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.message_delivery_log (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   message_type text NOT NULL,
-  cleaner_id uuid NOT NULL,
-  client_id uuid NOT NULL,
+  cleaner_id text NOT NULL,
+  client_id text NOT NULL,
   booking_id uuid,
   channels text[] NOT NULL,
   delivery_results jsonb NOT NULL,
@@ -62,10 +62,10 @@ CREATE TABLE IF NOT EXISTS public.message_delivery_log (
   clicked_at timestamp with time zone
 );
 
--- 6) Phone verifications (user_id -> users.id UUID)
+-- 6) Phone verifications (user_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.phone_verifications (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
-  user_id uuid NOT NULL,
+  user_id text NOT NULL,
   phone_number text NOT NULL,
   otp_code text NOT NULL,
   expires_at timestamp with time zone NOT NULL,
@@ -82,13 +82,13 @@ CREATE TABLE IF NOT EXISTS public.payout_items (
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 8) Payout reconciliation flag history (payout_id -> payouts.id, actor_id -> users.id)
+-- 8) Payout reconciliation flag history (payout_id -> payouts.id, actor_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.payout_reconciliation_flag_history (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   payout_id uuid NOT NULL,
   status text NOT NULL,
   note text,
-  actor_id uuid,
+  actor_id text,
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 

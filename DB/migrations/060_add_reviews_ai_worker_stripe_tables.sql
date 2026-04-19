@@ -1,12 +1,12 @@
 -- Migration 060: Add reviews, AI tables, worker_runs, Stripe idempotency (from test schema)
 -- Production is canonical; these objects exist in test but not in prod.
 
--- 1) Reviews (reviewer_id, reviewee_id -> users.id UUID in prod)
+-- 1) Reviews (reviewer_id, reviewee_id -> users.id TEXT in canonical schema)
 CREATE TABLE IF NOT EXISTS public.reviews (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   job_id uuid NOT NULL,
-  reviewer_id uuid NOT NULL,
-  reviewee_id uuid NOT NULL,
+  reviewer_id text NOT NULL,
+  reviewee_id text NOT NULL,
   reviewer_type text NOT NULL,
   rating integer NOT NULL,
   comment text,
@@ -19,10 +19,10 @@ CREATE TABLE IF NOT EXISTS public.reviews (
   CONSTRAINT reviews_reviewer_type_check CHECK (reviewer_type IN ('client', 'cleaner'))
 );
 
--- 2) AI activity log (actor_id -> users.id UUID)
+-- 2) AI activity log (actor_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.ai_activity_log (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
-  actor_id uuid NOT NULL,
+  actor_id text NOT NULL,
   activity_type text NOT NULL,
   activity_description text NOT NULL,
   metadata jsonb DEFAULT '{}'::jsonb,
@@ -31,21 +31,21 @@ CREATE TABLE IF NOT EXISTS public.ai_activity_log (
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 3) AI performance metrics (cleaner_id -> users.id UUID)
+-- 3) AI performance metrics (cleaner_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.ai_performance_metrics (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   metric_date date NOT NULL,
   metric_type text NOT NULL,
-  cleaner_id uuid,
+  cleaner_id text,
   metric_value numeric NOT NULL,
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 4) AI suggestions (cleaner_id -> users.id UUID)
+-- 4) AI suggestions (cleaner_id -> users.id TEXT)
 CREATE TABLE IF NOT EXISTS public.ai_suggestions (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
-  cleaner_id uuid NOT NULL,
+  cleaner_id text NOT NULL,
   suggestion_type text NOT NULL,
   suggestion_data jsonb NOT NULL,
   status text DEFAULT 'pending' NOT NULL,

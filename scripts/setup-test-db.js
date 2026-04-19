@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 /**
- * Setup test database: consolidated schema + gamification migrations (041–056).
+ * Setup test database using a deterministic migration sequence.
  * Used by CI before running tests. Idempotent (uses IF NOT EXISTS).
  *
- * Uses 000_COMPLETE_CONSOLIDATED_SCHEMA.sql (001–025 + hardening) for full production-like schema.
- * Set USE_LEGACY_SCHEMA=1 to use 000_CONSOLIDATED_SCHEMA.sql (001–019 only).
+ * Uses 000_COMPLETE_CONSOLIDATED_SCHEMA.sql (001–056 + hardening 901–906)
+ * then applies gamification migrations, Neon patches, and unify migrations.
+ *
+ * Optional compatibility mode:
+ * - Set USE_LEGACY_SCHEMA=1 to use 000_CONSOLIDATED_SCHEMA.sql (001–019 only).
+ * - STRICT_MIGRATION_PATH=1 forbids legacy fallback/skip behavior (recommended for CI).
  *
  * Usage: DATABASE_URL=... node scripts/setup-test-db.js
  */
@@ -19,6 +23,7 @@ const ROOT = path.join(__dirname, "..");
 const MIGRATIONS_DIR = path.join(ROOT, "DB", "migrations");
 
 const USE_LEGACY = process.env.USE_LEGACY_SCHEMA === "1";
+const STRICT_MIGRATION_PATH = process.env.STRICT_MIGRATION_PATH === "1";
 const CONSOLIDATED = USE_LEGACY
   ? "DB/migrations/000_CONSOLIDATED_SCHEMA.sql"
   : "DB/migrations/000_COMPLETE_CONSOLIDATED_SCHEMA.sql";
@@ -116,7 +121,7 @@ function runConsolidatedWithFallback() {
       (message.includes("invalid input value for enum credit_reason") ||
         message.includes("wallet_topup"));
 
-    if (!canFallback) {
+    if (!canFallback || STRICT_MIGRATION_PATH) {
       throw error;
     }
 
@@ -136,6 +141,14 @@ function main() {
   process.env.DATABASE_URL = dbUrl;
 
   console.log("📄 Setting up test database...\n");
+  console.log(
+    `Mode: ${STRICT_MIGRATION_PATH ? "STRICT_MIGRATION_PATH=1 (deterministic)" : "compatibility (fallbacks allowed)"}`
+  );
+  if (STRICT_MIGRATION_PATH && USE_LEGACY) {
+    throw new Error(
+      "STRICT_MIGRATION_PATH=1 cannot be used with USE_LEGACY_SCHEMA=1. Use the default consolidated path for deterministic CI/local verification."
+    );
+  }
 
   console.log(`1. Applying consolidated schema (${path.basename(CONSOLIDATED)})`);
   runConsolidatedWithFallback();
@@ -154,6 +167,11 @@ function main() {
   console.log("\n4. Applying unify migrations (059–061) when schema supports UUID invoice references");
   const shouldRunUnifyMigrations = !USE_LEGACY;
   if (!shouldRunUnifyMigrations) {
+    if (STRICT_MIGRATION_PATH) {
+      throw new Error(
+        "STRICT_MIGRATION_PATH=1 requires unify migrations (059–061). Disable USE_LEGACY_SCHEMA to run deterministic path."
+      );
+    }
     console.log("⚠️  Skipping unify migrations because USE_LEGACY_SCHEMA=1 (legacy TEXT-id schema mode).");
   } else {
     for (const m of UNIFY_MIGRATIONS) {
@@ -163,6 +181,12 @@ function main() {
         const message = normalizeExecError(error);
         // Older local/test schemas can still use TEXT ids; keep setup usable and rely on trust fallback.
         if (!migrationSupportsCurrentSchema(message)) {
+          if (STRICT_MIGRATION_PATH) {
+            throw new Error(
+              `STRICT_MIGRATION_PATH=1: ${m} failed because schema does not support UUID FK references.\n` +
+                "Fix schema drift instead of skipping unify migrations."
+            );
+          }
           console.warn(`⚠️  Skipping ${m}: schema type mismatch for FK references (${message})`);
           continue;
         }

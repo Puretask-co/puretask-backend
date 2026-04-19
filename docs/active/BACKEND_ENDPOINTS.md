@@ -1,8 +1,16 @@
 # Backend API Endpoints Expected by the Frontend
 
+## Contract ownership (P0.1)
+
+- This file is the canonical cross-repo API contract for PureTask backend/frontend integration.
+- Frontend mirror: `puretask-frontend/docs/BACKEND_ENDPOINTS.md` must remain aligned with this document.
+- If endpoint behavior changes, update this file first, then sync frontend docs and rerun `npm run test:api` in `puretask-frontend`.
+
+---
+
 This document lists all REST API endpoints the PureTask frontend expects the backend to implement. Paths are relative to the API base URL (`NEXT_PUBLIC_API_URL` or `NEXT_PUBLIC_API_BASE_URL`).
 
-For Trust-Fintech integration details (auth, response contracts, roles, errors, CORS), see [TRUST_BACKEND_INTEGRATION.md](./TRUST_BACKEND_INTEGRATION.md).
+For Trust-Fintech integration details (auth, response contracts, roles, errors, CORS), see frontend integration docs in `puretask-frontend/docs/TRUST_BACKEND_INTEGRATION.md`.
 
 **What UI to build from the backend:** See [BACKEND_UI_SPEC.md](./BACKEND_UI_SPEC.md) for screens, data to show, actions, and states (empty, 401, 403, 404, 501) derived from the API.
 
@@ -32,7 +40,7 @@ For safe retries and to avoid double charges or duplicate state, send a unique *
 |--------|------|-------------|
 | GET | `/config/job-status` | **Optional.** Canonical job statuses, events, transitions, event permissions. Response: `{ data: { statuses, events, transitions, eventPermissions } }`. Use so frontend/n8n stay in sync with backend. If the endpoint is missing or fails, the frontend should fall back to static constants (e.g. `src/constants/jobStatus.ts`). Frontend can implement `getJobStatusConfig()` (service) and `useJobStatusConfig()` (hook, e.g. 5 min stale) exposing `getLabel`, `canTransition`, `isTerminal`, `isFromServer`. |
 
-**Frontend integration:** See [FRONTEND_JOB_STATUS_CONFIG.md](./FRONTEND_JOB_STATUS_CONFIG.md) for the full contract (service, hook, fallback) and Product/alignment notes.
+**Frontend integration:** Frontend job-status config usage is implemented in `puretask-frontend/src/services/config.service.ts` and `puretask-frontend/src/hooks/useJobStatusConfig.ts`.
 
 ---
 

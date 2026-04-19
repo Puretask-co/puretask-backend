@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for "what to run on a fresh DB" and "what the master file contains."
 
-There is effectively **one** consolidated schema: **000_COMPLETE_CONSOLIDATED_SCHEMA.sql**. For a single-file full apply (FIX + COMPLETE + views patch + 019 + 057–061), use **000_MASTER_MIGRATION.sql** — generate with `npm run db:generate:master-migration`.
+There is effectively **one** deterministic setup path for CI/local test DBs: `npm run db:setup:test` with `STRICT_MIGRATION_PATH=1` (applies COMPLETE + 041–056 + NEON patches + 059–061, without fallback/skip behavior). For fresh SQL-only bootstrap, use **000_MASTER_MIGRATION.sql** (FIX + COMPLETE + views patch + 019 + 057–061) and regenerate with `npm run db:generate:master-migration`.
 
 ## Canonical migration order
 
@@ -47,6 +47,15 @@ Skip `000_FIX_credit_ledger_delta_credits.sql` on a brand-new DB (it's for fixin
 | Regenerate master | `npm run db:generate:master-migration` |
 | Apply to fresh DB | `psql $DATABASE_URL -f DB/migrations/000_MASTER_MIGRATION.sql` |
 | Optional test data | `psql $DATABASE_URL -f DB/migrations/000_SEED_TEST_DATA.sql` |
+
+## Deterministic CI/local test path (P0.2)
+
+Use this when preparing a backend test database for CI-equivalent runs:
+
+1. `npm run db:validate:migrations`
+2. `STRICT_MIGRATION_PATH=1 DATABASE_URL=... npm run db:setup:test`
+
+`STRICT_MIGRATION_PATH=1` enforces determinism by failing fast on schema drift instead of silently falling back to legacy consolidated schema or skipping unify migrations.
 
 ## Existing databases (production / test)
 
