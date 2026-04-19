@@ -580,12 +580,14 @@ Use this checklist to track the documentation model migration (canonical vs refe
     - Report artifact: `docs/archive/raw/docs_governance/docs_active_link_check_2026-04-19.txt`
     - Validate `MISSING 0` in report.
 
-- [ ] **D2.1 Ongoing docs hygiene cadence**
+- [x] **D2.1 Ongoing docs hygiene cadence**
   - **Owner:** `@owner-platform`
   - **Touches:**
     - `docs/active/README.md` (or governance section)
   - **Verification commands/checks:**
-    - Monthly review pass completed and logged.
-    - Canonical docs updated when high-impact reference content changes.
+    - `node -e '/* full docs inventory + ledger regeneration */'`
+    - `node -e '/* docs/active internal link checker */'`
+    - Log artifact present: `docs/archive/raw/docs_governance/docs_hygiene_log_2026-04.md`
+    - Confirm monthly log includes inventory totals and `MISSING 0`.
 
 **Last updated:** 2026-04-19

@@ -56,3 +56,19 @@ These are supporting docs for deep dives and implementation detail.
 
 - Historical notes and older plans belong in `docs/archive/raw/`.
 - Do not delete raw history; move superseded material to archive with clear naming.
+
+---
+
+## Docs hygiene cadence (monthly)
+
+Run this checklist once per month (or after major docs refactors):
+
+1. Re-run full inventory and ledger classification.
+2. Re-run `docs/active` internal link validation and confirm zero missing.
+3. Confirm Tier 1 canonical docs still reflect current implementation and decisions.
+4. Move newly superseded non-canonical material to `docs/archive/raw/` (never delete history).
+5. Record the pass in `docs/archive/raw/docs_governance/docs_hygiene_log_YYYY-MM.md`.
+
+Current monthly log:
+
+- [docs_hygiene_log_2026-04.md](../archive/raw/docs_governance/docs_hygiene_log_2026-04.md)
