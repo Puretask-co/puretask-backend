@@ -466,7 +466,7 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
     - Trigger orchestration with explicit refs and environment.
     - Confirm release dispatches only execute after validate job success.
   - **Result notes (2026-04-19):**
-    - Orchestration defaults and checkout targets normalized to canonical repositories (`Puretask-co/puretask-backend`, `Puretask-co/puretask-frontend`).
+    - Orchestration defaults and checkout targets normalized to canonical repositories (`Puretask-co/puretask-backend`, `Puretask-co/-puretask-frontend`).
     - `validate` job now enforces backend deterministic migration + test gate (`db:validate:migrations`, strict `db:setup:test`, `test:ci`) before any deploy dispatch.
     - Validated release manifest artifact is generated and consumed by deploy job, ensuring traceable backend/frontend refs for each coordinated release.
     - Dispatch payload now includes `backend_ref`, `frontend_ref`, and `orchestration_run_id` for both backend and frontend release workflows.
@@ -474,7 +474,7 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
 
 ### 9.3 P1 — Confidence and maintainability
 
-- [ ] **P1.1 Frontend docs drift cleanup (must match real scripts/workflows)**
+- [x] **P1.1 Frontend docs drift cleanup (must match real scripts/workflows)**
   - **Owner:** `@owner-frontend-platform`
   - **Touches:**
     - `README.md`, `docs/DEPLOYMENT.md`, `LAUNCH_CHECKLIST.md`, `docs/ENV_SETUP.md` (frontend repo)
@@ -482,6 +482,17 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
     - `npm run build`
     - `npm run start`
     - `npm run test:api`
+  - **Result notes (2026-04-19):**
+    - Frontend docs updated to match current scripts/workflows and ports:
+      - `README.md`
+      - `docs/DEPLOYMENT.md`
+      - `LAUNCH_CHECKLIST.md`
+      - `docs/ENV_SETUP.md`
+    - Links corrected to real docs and release workflow references (`.github/workflows/ci.yml`, `.github/workflows/release.yml`).
+    - `npm run test:api` is green after deterministic user seed (`npm run seed:e2e:users` in backend).
+    - Remaining known blockers are now explicitly documented in frontend docs:
+      - `npm run build` parse error in `src/app/client/bookings/[id]/page.tsx`
+      - `npm run start` port conflict when `3001` is already occupied in shared environments.
 
 - [ ] **P1.2 Expand automated journey coverage beyond minimum smoke**
   - **Owner:** `@owner-qa` + `@owner-frontend`

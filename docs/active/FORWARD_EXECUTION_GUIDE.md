@@ -140,6 +140,17 @@ PureTask is in a stable “proceed fast” state when all are true:
 - **Exit criteria:**
   - Docs use correct ports, valid file links, and current deployment target(s).
 
+**Status (2026-04-19): completed**
+- Frontend docs now match current scripts and release flow:
+  - `README.md`, `docs/DEPLOYMENT.md`, `LAUNCH_CHECKLIST.md`, `docs/ENV_SETUP.md`
+- Script and workflow references updated to current reality:
+  - dev/start on `3001`, backend API base `:4000`, full-stack verification (`test:api`, `test:e2e:smoke`, `verify:fullstack`)
+  - CI deploy dispatch and release workflow contract aligned with `.github/workflows/ci.yml` and `.github/workflows/release.yml`
+- Current verification notes captured:
+  - `test:api` passes after deterministic user seeding (`npm run seed:e2e:users` in backend)
+  - `build` currently fails on a pre-existing JSX parse error in `src/app/client/bookings/[id]/page.tsx`
+  - `start` command is valid but local verification hit `EADDRINUSE` on `3001` in this environment
+
 ### P1.2 Expand automated journey coverage beyond minimum smoke
 - **Owner:** `@owner-qa` + `@owner-frontend`
 - **Goal:** Catch high-value regressions early.
@@ -231,9 +242,10 @@ If any gate fails, do not promote release refs.
 
 ## 7) Immediate next actions (starting now)
 
-1. Continue with **P1.1** frontend docs drift cleanup before adding new feature surface.
-2. Keep **P0.1** as a standing guardrail by requiring `npm run test:api` + `npm run verify:fullstack` before release promotion.
-3. Keep **P0.2** as a standing guardrail by requiring `npm run db:validate:migrations` + `STRICT_MIGRATION_PATH=1 npm run db:setup:test` before release promotion.
-4. Keep **P0.3** as a standing guardrail by requiring orchestration releases to pass validate job and carry explicit backend/frontend refs.
+1. Execute **P1.2** expand automated journey coverage beyond minimum smoke.
+2. Execute **P1.3** resolve highest-impact skipped test suites.
+3. Keep **P0.1** as a standing guardrail by requiring `npm run test:api` + `npm run verify:fullstack` before release promotion.
+4. Keep **P0.2** as a standing guardrail by requiring `npm run db:validate:migrations` + `STRICT_MIGRATION_PATH=1 npm run db:setup:test` before release promotion.
+5. Keep **P0.3** as a standing guardrail by requiring orchestration releases to pass validate job and carry explicit backend/frontend refs.
 
 This sequence is currently the best risk-adjusted path for PureTask.
