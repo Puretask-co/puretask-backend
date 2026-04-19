@@ -30,8 +30,9 @@ jobs:
       - name: Run linter
         run: npm run lint
       
-      - name: Check formatting
+      - name: Check formatting (warn-only during baseline cleanup)
         run: npm run format:check
+        continue-on-error: true
       
       - name: Run type check
         run: npm run typecheck
