@@ -2,9 +2,9 @@
 // Health check endpoint for load balancers and monitoring
 
 import { Router } from "express";
-import { pool } from "../db/client";
 import { logger } from "../lib/logger";
 import { getWorkerHealth } from "../lib/workerMetrics";
+import { isDatabaseReady } from "../services/healthService";
 
 const healthRouter = Router();
 
@@ -85,9 +85,7 @@ healthRouter.get("/", (_req, res) => {
  */
 healthRouter.get("/ready", async (_req, res) => {
   try {
-    // Test database connection
-    const result = await pool.query("SELECT 1 as connected");
-    const dbConnected = result.rows[0]?.connected === 1;
+    const dbConnected = await isDatabaseReady();
 
     if (!dbConnected) {
       return res.status(503).json({

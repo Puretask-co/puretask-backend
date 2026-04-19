@@ -10,7 +10,12 @@ import {
   getNotificationPreferences,
   updateNotificationPreferences,
 } from "../services/notifications";
-import { query } from "../db/client";
+import {
+  getNotificationsFeed,
+  getNotificationUnreadCount,
+  getNotificationHistory,
+  setPushToken,
+} from "../services/notificationsFeedService";
 
 const notificationsRouter = Router();
 
@@ -40,22 +45,8 @@ notificationsRouter.get("/", async (req: AuthedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || "50"), 10)));
-    const result = await query(
-      `SELECT id, type, channel, status, created_at
-       FROM notification_log
-       WHERE user_id = $1
-       ORDER BY created_at DESC
-       LIMIT $2`,
-      [userId, limit]
-    );
-    // No read_at column yet; treat all as unread for count. status = sent/pending/failed
-    const data = result.rows.map((r: { id: string; type: string; channel: string; status: string; created_at: string }) => ({
-      id: r.id,
-      type: r.type,
-      channel: r.channel,
-      success: r.status === "sent",
-      created_at: r.created_at,
-    }));
+    const data = await getNotificationsFeed(userId, limit);
+    // No read_at column yet; treat all as unread for count.
     res.json({ data, unread_count: data.length });
   } catch (error) {
     logger.error("get_notifications_feed_failed", {
@@ -75,11 +66,7 @@ notificationsRouter.get("/", async (req: AuthedRequest, res: Response) => {
 notificationsRouter.get("/unread-count", async (req: AuthedRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const result = await query<{ count: string }>(
-      `SELECT COUNT(*)::text as count FROM notification_log WHERE user_id = $1`,
-      [userId]
-    );
-    const count = parseInt(result.rows[0]?.count ?? "0", 10);
+    const count = await getNotificationUnreadCount(userId);
     res.json({ count });
   } catch (error) {
     logger.error("get_unread_count_failed", {
@@ -230,15 +217,7 @@ notificationsRouter.post(
       const { token, platform } = req.body;
 
       // Update user's push token
-      await query(
-        `
-          UPDATE users
-          SET push_token = $1,
-              updated_at = NOW()
-          WHERE id = $2
-        `,
-        [token, userId]
-      );
+      await setPushToken(userId, token);
 
       logger.info("push_token_registered", {
         userId,
@@ -270,15 +249,7 @@ notificationsRouter.delete("/push-token", async (req: AuthedRequest, res: Respon
   try {
     const userId = req.user!.id;
 
-    await query(
-      `
-          UPDATE users
-          SET push_token = NULL,
-              updated_at = NOW()
-          WHERE id = $1
-        `,
-      [userId]
-    );
+    await setPushToken(userId, null);
 
     logger.info("push_token_removed", { userId });
 
@@ -306,15 +277,10 @@ notificationsRouter.get("/history", async (req: AuthedRequest, res: Response) =>
     const userId = req.user!.id;
     const { limit = "50", offset = "0" } = req.query;
 
-    const result = await query(
-      `
-          SELECT id, type, channel, success, created_at
-          FROM notification_log
-          WHERE user_id = $1
-          ORDER BY created_at DESC
-          LIMIT $2 OFFSET $3
-        `,
-      [userId, parseInt(limit as string, 10), parseInt(offset as string, 10)]
+    const result = await getNotificationHistory(
+      userId,
+      parseInt(limit as string, 10),
+      parseInt(offset as string, 10)
     );
 
     res.json({

@@ -97,14 +97,14 @@ The program was designed using these lenses:
 
 **Scope:** Checklist items in this document were re-verified against the current repo. Summary:
 
-- **Sections 2–12:** All checked items confirmed in code or docs (authCanonical, route protection, CI/guardrails, Stripe webhook idempotency via `webhook_events` + ON CONFLICT, DB migrations, durable jobs, API/security/maintainability/cost/admin/trust).
+- **Sections 2–12:** Most checked items confirmed in code/docs, with follow-up work still open for route→service layering, route-level DB import enforcement rollout, and a small skipped-test backlog.
 - **Section 4 (Stripe):** `src/routes/stripe.ts` — raw body for signature; INSERT into `webhook_events` with ON CONFLICT DO NOTHING; return 200 if duplicate; then `handleStripeEvent`. Idempotency and replay handling verified.
 - **Section 6 (Workers):** `src/lib/workerUtils.ts` — `runWorkerSafely` with `pg_try_advisory_lock`; worker_runs tracking. Durable jobs table and retry/dead-letter referenced in codebase.
 - **Section 13 (Legal):** `docs/active/legal/` — TOS_CONSOLIDATED.md, PRIVACY_POLICY.md, CLEANER_AGREEMENT.md, IC_SAFEGUARDS_APPENDIX.md, AB5_ANALYSIS.md, IN_APP_COPY_*.md, legal/README.md present.
 - **Section 14 (Launch):** Feature flags and kill switches in `src/config/env.ts`; RUNBOOK and SECTION_14_LAUNCH docs; incident runbook and support training referenced.
 - **Section 1 (Secrets):** Code-side items are complete (env validation, .gitignore, CI secret scan, incident doc). Unchecked items are **operational runbook steps** (rotate secrets, purge history, force clone) — do once per PHASE_1_USER_RUNBOOK; not code-completion tasks.
 
-**Conclusion:** Design and implementation for Sections 1–14 are largely complete as checklisted. Remaining work is operational (secret rotation if ever exposed), test fixes, worker dry-run validation, and production stability validation.
+**Conclusion:** Design is complete across Sections 1–14. Implementation is largely complete but not fully closed: route-layer DB extraction and strict route lint enforcement are still in progress, along with remaining skipped-test cleanup and production validation.
 
 ---
 
@@ -312,7 +312,7 @@ Full runbooks (objectives, exit conditions, **tables**, **step-by-step procedure
 **Outcome (when done):** Ship fast without fear.  
 **Runbook:** [SECTION_09_MAINTAINABILITY.md](./sections/SECTION_09_MAINTAINABILITY.md). **Status:** [00-CRITICAL/PHASE_9_STATUS.md](./00-CRITICAL/PHASE_9_STATUS.md).
 
-- [x] Enforce project layering (routes → controllers/services → repos) — *Documented in ARCHITECTURE § 2: routes do not import src/db; use services; validation/pagination/ownership helpers*
+- [ ] Enforce project layering (routes → controllers/services → repos) — *In progress: several routes have been migrated to services, but remaining `src/routes/**` files still import `db/client` and must be extracted before this is complete.*
 - [x] Refactor oversized files (break up god files) — *Dashboard analytics + goals moved to cleanerDashboardService; route calls service (layering)*
 - [x] Standardize response helpers (ok, created, error) — *src/lib/response.ts, errors.ts*
 - [x] Standardize logging (requestId; structured; no console.log) — *requestContextMiddleware, logger*

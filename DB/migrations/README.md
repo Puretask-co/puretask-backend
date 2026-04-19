@@ -4,6 +4,17 @@
 
 ## Quick Start (Fresh Database)
 
+## Migration Decision Tree
+
+- Fresh database?
+  - Run `DB/migrations/000_MASTER_MIGRATION.sql` (single canonical file).
+- Existing database that already has incremental history?
+  - Follow the exact ordered path in this README Option B and in `docs/active/MASTER_MIGRATIONS.md`.
+- Production schema alignment patch needed?
+  - Use `npm run db:patch:production` and follow `docs/active/DEPLOYMENT.md`.
+- Unsure which path applies?
+  - Stop and verify current schema/version first; do not mix master + random incremental files.
+
 **Option A — Single file (recommended):**
 
 ```bash

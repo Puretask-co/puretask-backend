@@ -4,11 +4,10 @@
  * Handles: onboarding progress, achievements, certifications, template library
  */
 
-import { Router, Response, NextFunction, RequestHandler } from "express";
+import { Router, Response } from "express";
 import { z } from "zod";
 import { query } from "../db/client";
-import { requireAuth, AuthedRequest, authedHandler } from "../middleware/authCanonical";
-import { requireRole } from "../middleware/jwtAuth";
+import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
 import { getLevelProgress, recordCleanerLogin } from "../services/cleanerLevelService";
 import {
   recordEvent,
@@ -608,9 +607,12 @@ router.post(
  *       200:
  *         description: completionPercentage, wizardCompleted, currentStep, etc.
  */
-router.get("/onboarding/progress", (async (req: AuthedRequest, res) => {
-  try {
-    const cleanerId = req.user!.id;
+router.get(
+  "/onboarding/progress",
+  requireRole("cleaner"),
+  authedHandler(async (req: AuthedRequest, res) => {
+    try {
+      const cleanerId = req.user!.id;
 
     const result = await query(
       `SELECT 
@@ -637,26 +639,26 @@ router.get("/onboarding/progress", (async (req: AuthedRequest, res) => {
       [cleanerId]
     );
 
-    if (result.rows.length === 0) {
-      // Initialize if not exists
-      await query(`INSERT INTO cleaner_onboarding_progress (cleaner_id) VALUES ($1)`, [cleanerId]);
-      return res.json({
-        completionPercentage: 0,
-        wizardCompleted: false,
-        currentStep: 0,
-      });
-    }
+      if (result.rows.length === 0) {
+        // Initialize if not exists
+        await query(`INSERT INTO cleaner_onboarding_progress (cleaner_id) VALUES ($1)`, [cleanerId]);
+        res.json({
+          completionPercentage: 0,
+          wizardCompleted: false,
+          currentStep: 0,
+        });
+        return;
+      }
 
-    return res.json(result.rows[0]);
-  } catch (error: unknown) {
-    console.error("Error fetching onboarding progress:", error);
-    if (!res.headersSent) {
+      res.json(result.rows[0]);
+    } catch (error: unknown) {
+      console.error("Error fetching onboarding progress:", error);
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Failed to fetch progress" },
       });
     }
-  }
-}) as RequestHandler);
+  })
+);
 
 /**
  * @swagger

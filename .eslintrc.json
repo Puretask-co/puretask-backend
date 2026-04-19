@@ -21,11 +21,7 @@
         { "name": "../middleware/auth", "message": "Legacy auth. Use requireAuth from authCanonical." },
         { "name": "../../middleware/auth", "message": "Legacy auth. Use requireAuth from authCanonical." },
         { "name": "../../../middleware/auth", "message": "Legacy auth. Use requireAuth from authCanonical." },
-        { "name": "src/middleware/auth", "message": "Legacy auth. Use requireAuth from authCanonical." },
-        { "name": "../db/client", "message": "Direct DB in routes not allowed. Use services." },
-        { "name": "../../db/client", "message": "Direct DB in routes not allowed. Use services." },
-        { "name": "../../../db/client", "message": "Direct DB in routes not allowed. Use services." },
-        { "name": "src/db/client", "message": "Direct DB in routes not allowed. Use services." }
+        { "name": "src/middleware/auth", "message": "Legacy auth. Use requireAuth from authCanonical." }
       ],
       "patterns": [{ "group": ["**/middleware/auth"], "message": "Legacy auth. Use authCanonical." }]
     }],
@@ -43,7 +39,62 @@
       "rules": { "no-restricted-imports": "off" }
     },
     {
-      "files": ["src/lib/**/*.ts", "src/middleware/**/*.ts", "src/routes/**/*.ts"],
+      "files": ["src/routes/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              { "name": "../middleware/auth", "message": "Legacy auth. Use requireAuth from authCanonical." },
+              { "name": "../../middleware/auth", "message": "Legacy auth. Use requireAuth from authCanonical." },
+              { "name": "../../../middleware/auth", "message": "Legacy auth. Use requireAuth from authCanonical." },
+              { "name": "src/middleware/auth", "message": "Legacy auth. Use requireAuth from authCanonical." },
+              { "name": "../db/client", "message": "Direct DB in routes not allowed. Use services." },
+              { "name": "../../db/client", "message": "Direct DB in routes not allowed. Use services." },
+              { "name": "../../../db/client", "message": "Direct DB in routes not allowed. Use services." },
+              { "name": "src/db/client", "message": "Direct DB in routes not allowed. Use services." }
+            ],
+            "patterns": [{ "group": ["**/middleware/auth"], "message": "Legacy auth. Use authCanonical." }]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/routes/gamification.ts",
+        "src/routes/trustAdapter.ts",
+        "src/routes/jobs.ts",
+        "src/routes/dashboardStubs.ts",
+        "src/routes/admin/settings.ts",
+        "src/routes/admin/gamificationControl.ts",
+        "src/routes/admin.ts",
+        "src/routes/payments.ts",
+        "src/routes/users.ts",
+        "src/routes/cleanerEnhanced.ts",
+        "src/routes/admin/risk.ts",
+        "src/routes/message-history.ts",
+        "src/routes/stripe.ts",
+        "src/routes/admin/finance.ts",
+        "src/routes/admin/clients.ts",
+        "src/routes/admin/cleaners.ts",
+        "src/routes/clientEnhanced.ts",
+        "src/routes/scoring.ts",
+        "src/routes/reschedule.ts",
+        "src/routes/client.ts",
+        "src/routes/cleanerOnboarding.ts",
+        "src/routes/cleaner-ai-settings.ts",
+        "src/routes/cleaner-ai-advanced.ts",
+        "src/routes/cancellation.ts",
+        "src/routes/ai.ts",
+        "src/routes/adminIdVerifications.ts",
+        "src/routes/adminEnhanced.ts",
+        "src/routes/admin/webhooks.ts",
+        "src/routes/admin/system.ts",
+        "src/routes/admin/messages.ts",
+        "src/routes/admin/levelTuning.ts",
+        "src/routes/admin/bookings.ts",
+        "src/routes/admin/analytics.ts"
+      ],
       "rules": { "no-restricted-imports": "off" }
     },
     {

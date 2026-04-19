@@ -3,7 +3,12 @@
 // V2 FEATURE — DISABLED FOR NOW
 
 import { Router, Response } from "express";
-import { jwtAuthMiddleware, JWTAuthedRequest, requireRole } from "../middleware/jwtAuth";
+import {
+  requireAuth,
+  requireRole,
+  type AuthedRequest,
+  authedHandler,
+} from "../middleware/authCanonical";
 import { logger } from "../lib/logger";
 import {
   getDashboardMetrics,
@@ -23,15 +28,20 @@ import {
 const analyticsRouter = Router();
 
 // All analytics routes require admin access
-const requireAdmin = [jwtAuthMiddleware, requireRole("admin")];
+const requireAdmin = [requireAuth, requireRole("admin", "super_admin")];
 
 /**
  * Helper to parse time range from query
  */
-function parseTimeRange(query: any): TimeRange {
+function parseTimeRange(query: Record<string, unknown>): TimeRange {
   const valid: TimeRange[] = ["day", "week", "month", "quarter", "year", "all"];
-  const range = query.timeRange || query.range || "month";
-  return valid.includes(range) ? range : "month";
+  const range =
+    typeof query.timeRange === "string"
+      ? query.timeRange
+      : typeof query.range === "string"
+        ? query.range
+        : "month";
+  return (valid as string[]).includes(range) ? (range as TimeRange) : "month";
 }
 
 // ============================================
@@ -60,18 +70,22 @@ function parseTimeRange(query: any): TimeRange {
  *       401:
  *         description: Unauthorized - admin only
  */
-analyticsRouter.get("/dashboard", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
-  try {
-    const timeRange = parseTimeRange(req.query);
-    const metrics = await getDashboardMetrics(timeRange);
-    res.json({ timeRange, metrics });
-  } catch (error) {
-    logger.error("analytics_dashboard_failed", { error: (error as Error).message });
-    res.status(500).json({
-      error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
-    });
-  }
-});
+analyticsRouter.get(
+  "/dashboard",
+  ...requireAdmin,
+  authedHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const timeRange = parseTimeRange(req.query as Record<string, unknown>);
+      const metrics = await getDashboardMetrics(timeRange);
+      res.json({ timeRange, metrics });
+    } catch (error) {
+      logger.error("analytics_dashboard_failed", { error: (error as Error).message });
+      res.status(500).json({
+        error: { code: "ANALYTICS_ERROR", message: (error as Error).message },
+      });
+    }
+  })
+);
 
 // ============================================
 // Revenue
@@ -99,7 +113,7 @@ analyticsRouter.get("/dashboard", ...requireAdmin, async (req: JWTAuthedRequest,
 analyticsRouter.get(
   "/revenue/trend",
   ...requireAdmin,
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const timeRange = parseTimeRange(req.query);
       const trend = await getRevenueTrend(timeRange);
@@ -141,7 +155,7 @@ analyticsRouter.get(
 analyticsRouter.get(
   "/revenue/by-period",
   ...requireAdmin,
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const timeRange = parseTimeRange(req.query);
       const groupBy = (req.query.groupBy as "day" | "week" | "month") || "day";
@@ -182,7 +196,7 @@ analyticsRouter.get(
 analyticsRouter.get(
   "/jobs/trend",
   ...requireAdmin,
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const timeRange = parseTimeRange(req.query);
       const trend = await getJobTrend(timeRange);
@@ -218,7 +232,7 @@ analyticsRouter.get(
 analyticsRouter.get(
   "/jobs/status",
   ...requireAdmin,
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const timeRange = parseTimeRange(req.query);
       const breakdown = await getJobStatusBreakdown(timeRange);
@@ -264,7 +278,7 @@ analyticsRouter.get(
 analyticsRouter.get(
   "/users/signups",
   ...requireAdmin,
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const timeRange = parseTimeRange(req.query);
       const role = (req.query.role as "client" | "cleaner" | "all") || "all";
@@ -311,7 +325,7 @@ analyticsRouter.get(
 analyticsRouter.get(
   "/top/clients",
   ...requireAdmin,
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const timeRange = parseTimeRange(req.query);
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
@@ -354,7 +368,7 @@ analyticsRouter.get(
 analyticsRouter.get(
   "/top/cleaners",
   ...requireAdmin,
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const timeRange = parseTimeRange(req.query);
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
@@ -392,7 +406,7 @@ analyticsRouter.get(
 analyticsRouter.get(
   "/top/rated-cleaners",
   ...requireAdmin,
-  async (req: JWTAuthedRequest, res: Response) => {
+  async (req: AuthedRequest, res: Response) => {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
       const topRated = await getTopRatedCleaners(limit);
@@ -426,7 +440,7 @@ analyticsRouter.get(
 analyticsRouter.get(
   "/credits/health",
   ...requireAdmin,
-  async (_req: JWTAuthedRequest, res: Response) => {
+  async (_req: AuthedRequest, res: Response) => {
     try {
       const health = await getCreditEconomyHealth();
       res.json({ health });
@@ -462,7 +476,7 @@ analyticsRouter.get(
  *       200:
  *         description: Full analytics report
  */
-analyticsRouter.get("/report", ...requireAdmin, async (req: JWTAuthedRequest, res: Response) => {
+analyticsRouter.get("/report", ...requireAdmin, async (req: AuthedRequest, res: Response) => {
   try {
     const timeRange = parseTimeRange(req.query);
     const report = await generateFullReport(timeRange);

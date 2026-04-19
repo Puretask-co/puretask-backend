@@ -2,9 +2,9 @@
 // Operational status endpoints for monitoring
 
 import { Router, Request, Response } from "express";
-import { query } from "../db/client";
 import { logger } from "../lib/logger";
 import { isN8nWebhookConfigured, isN8nApiConfigured } from "../lib/n8nClient";
+import { checkDatabaseReady, getStatusMetrics } from "../services/statusService";
 
 const router = Router();
 
@@ -83,23 +83,21 @@ router.get("/summary", async (_req: Request, res: Response) => {
     const alerts: string[] = [];
     let status: "ok" | "warning" | "critical" = "ok";
 
-    // 1. Open payout reconciliation flags
-    const payoutFlagsResult = await query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM payout_reconciliation_flags WHERE status = 'open'`,
-      []
-    );
-    const openPayoutFlags = parseInt(payoutFlagsResult.rows[0]?.count || "0", 10);
+    const {
+      openPayoutFlags,
+      failedWebhooks24h,
+      stuckJobs,
+      pausedCleaners,
+      pendingPayouts,
+      openDisputes,
+      openFraudAlerts,
+    } = await getStatusMetrics();
     if (openPayoutFlags > 10) {
       alerts.push(`${openPayoutFlags} open payout reconciliation flags`);
       status = "warning";
     }
 
     // 2. Failed webhooks in last 24h
-    const webhookResult = await query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM stripe_events WHERE processed = false AND created_at >= NOW() - INTERVAL '24 hours'`,
-      []
-    );
-    const failedWebhooks24h = parseInt(webhookResult.rows[0]?.count || "0", 10);
     if (failedWebhooks24h > 5) {
       alerts.push(`${failedWebhooks24h} failed webhooks in last 24h`);
       if (failedWebhooks24h > 20) status = "critical";
@@ -107,15 +105,6 @@ router.get("/summary", async (_req: Request, res: Response) => {
     }
 
     // 3. Stuck jobs (in active state for > 4 hours without update)
-    const stuckJobsResult = await query<{ count: string }>(
-      `
-        SELECT COUNT(*) as count FROM jobs 
-        WHERE status IN ('accepted', 'on_my_way', 'in_progress')
-        AND updated_at < NOW() - INTERVAL '4 hours'
-      `,
-      []
-    );
-    const stuckJobs = parseInt(stuckJobsResult.rows[0]?.count || "0", 10);
     if (stuckJobs > 0) {
       alerts.push(`${stuckJobs} potentially stuck jobs`);
       if (stuckJobs > 5) status = "critical";
@@ -123,41 +112,21 @@ router.get("/summary", async (_req: Request, res: Response) => {
     }
 
     // 4. Payout-paused cleaners
-    const pausedCleanersResult = await query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM cleaner_profiles WHERE payout_paused = true`,
-      []
-    );
-    const pausedCleaners = parseInt(pausedCleanersResult.rows[0]?.count || "0", 10);
     if (pausedCleaners > 5) {
       alerts.push(`${pausedCleaners} cleaners with paused payouts`);
     }
 
     // 5. Pending payouts (bonus metric)
-    const pendingPayoutsResult = await query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM payouts WHERE status = 'pending'`,
-      []
-    );
-    const pendingPayouts = parseInt(pendingPayoutsResult.rows[0]?.count || "0", 10);
     if (pendingPayouts > 50) {
       alerts.push(`${pendingPayouts} payouts pending`);
     }
 
     // 6. Open disputes (bonus metric)
-    const disputesResult = await query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM disputes WHERE status = 'open'`,
-      []
-    );
-    const openDisputes = parseInt(disputesResult.rows[0]?.count || "0", 10);
     if (openDisputes > 10) {
       alerts.push(`${openDisputes} open disputes`);
     }
 
     // 7. Open fraud alerts (bonus metric)
-    const fraudResult = await query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM fraud_alerts WHERE status = 'open'`,
-      []
-    );
-    const openFraudAlerts = parseInt(fraudResult.rows[0]?.count || "0", 10);
     if (openFraudAlerts > 0) {
       alerts.push(`${openFraudAlerts} open fraud alerts`);
       if (status !== "critical") status = "warning";
@@ -254,9 +223,7 @@ router.get("/ping", (_req: Request, res: Response) => {
  */
 router.get("/ready", async (_req: Request, res: Response) => {
   try {
-    const start = Date.now();
-    await query("SELECT 1", []);
-    const dbLatency = Date.now() - start;
+    const dbLatency = await checkDatabaseReady();
 
     res.json({
       ready: true,
