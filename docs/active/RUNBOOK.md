@@ -452,7 +452,7 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
     - Backend scripts/docs: `scripts/setup-test-db.js`, `docs/active/MASTER_MIGRATIONS.md`, `docs/active/SETUP.md`, `docs/active/TROUBLESHOOTING.md`
   - **Verification commands/checks:**
     - `npm run db:validate:migrations`
-    - `npm run db:setup:test`
+    - `STRICT_MIGRATION_PATH=1 npm run db:setup:test`
     - `npm run test:ci`
 
 - [ ] **P0.3 Release orchestration hard gate**

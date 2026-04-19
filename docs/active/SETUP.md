@@ -243,11 +243,12 @@ Unit tests and contract tests use mocks where needed (auth, DB). Integration and
 ### Test database setup
 
 1. Create a Neon branch or separate DB for tests.
-2. Run `TEST_DATABASE_URL=... node scripts/setup-test-db.js` to apply schema + NEON patches.
-   - If the test DB uses legacy TEXT IDs (or mixed legacy state), the setup script now auto-falls back from `000_COMPLETE_CONSOLIDATED_SCHEMA.sql` to `000_CONSOLIDATED_SCHEMA.sql` when it detects enum drift, and skips UUID-only unify migrations (059–061) when FK type mismatch (`42804`) is detected.
+2. Run deterministic setup: `STRICT_MIGRATION_PATH=1 TEST_DATABASE_URL=... npm run db:setup:test`.
+   - This applies one canonical sequence: COMPLETE consolidated schema → 041–056 → NEON patches → 059–061.
+   - In strict mode, setup fails fast on schema drift (no legacy fallback and no unify migration skips).
 3. Run `npm run test` or `npm run test:integration`.
 
-**NEON patch order** (in setup-test-db.js): consolidated schema (with automatic legacy fallback) → gamification 041–056 → `000_NEON_PATCH_existing_db` → `000_NEON_PATCH_job_status_disputed` → `000_NEON_PATCH_cleaner_availability` → `000_NEON_PATCH_test_db_align` → conditional unify migrations 059–061. The last patch fixes FKs (payouts, cleaner_availability), `is_cleaner_available` uuid/text cast, and `job_event_type` for integration tests.
+**NEON patch order** (in setup-test-db.js): COMPLETE consolidated schema → gamification 041–056 → `000_NEON_PATCH_existing_db` → `000_NEON_PATCH_job_status_disputed` → `000_NEON_PATCH_cleaner_availability` → `000_NEON_PATCH_test_db_align` → unify migrations 059–061. The last patch fixes FKs (payouts, cleaner_availability), `is_cleaner_available` uuid/text cast, and `job_event_type` for integration tests.
 
 For deployment to Railway, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
@@ -538,9 +539,8 @@ When multiple cloud agents work on this repo, repeated local setup can waste tim
 5. Create `.env` only if missing, with local-safe defaults:
    - `DATABASE_URL=postgresql://puretask:puretask_dev@localhost:5432/puretask?sslmode=disable`
    - required `JWT_SECRET`, Stripe, and n8n placeholders so `src/config/env.ts` passes boot validation.
-6. Run schema setup with fallback:
-   - try `npm run db:migrate`
-   - on failure, run `USE_LEGACY_SCHEMA=1 npm run db:setup:test`
+6. Run deterministic schema setup:
+   - `STRICT_MIGRATION_PATH=1 npm run db:setup:test`
 7. Verify readiness with `npm run db:check`.
 
 **Why this matters:** it standardizes first-run setup, removes package-manager/network drift issues, and gives every agent a working backend+DB baseline before feature work.

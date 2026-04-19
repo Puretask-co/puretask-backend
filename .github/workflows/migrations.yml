@@ -39,10 +39,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Apply consolidated schema
+      - name: Validate migration files
+        run: npm run db:validate:migrations
+
+      - name: Apply deterministic test schema setup
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/puretask_migrations
-        run: node scripts/run-migration.js DB/migrations/000_CONSOLIDATED_SCHEMA.sql
+          STRICT_MIGRATION_PATH: "1"
+        run: npm run db:setup:test
 
       - name: Smoke query
         env:
@@ -52,7 +56,8 @@ jobs:
             const { Pool } = require('pg');
             const pool = new Pool({ connectionString: process.env.DATABASE_URL });
             pool.query(\"SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = 'public'\")
-              .then(r => { if (r.rows[0].n < 1) throw new Error('No tables'); console.log('Tables:', r.rows[0].n); })
+              .then(r => { if (r.rows[0].n < 1) throw new Error('No tables'); console.log('Tables:', r.rows[0].n); return pool.query(\\\"SELECT to_regclass('public.invoices') AS invoices, to_regclass('public.reviews') AS reviews\\\"); })
+              .then(r => { if (!r.rows[0].invoices || !r.rows[0].reviews) throw new Error('Expected unify tables missing after deterministic setup'); console.log('Unify tables present:', r.rows[0]); })
               .then(() => pool.end())
               .catch(e => { process.exitCode = 1; throw e; });
           "
