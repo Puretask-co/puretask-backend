@@ -420,11 +420,10 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
 
 ### 9.1 Execution order (current)
 
-1. P0.3 (release orchestration hard gate)
-2. P1.1 (frontend docs drift cleanup)
-3. P1.2 (expand automated journey coverage)
-4. P1.3 (resolve highest-impact skipped test suites)
-5. P2.1 + P2.2 (backend architecture debt + security/quality gate tightening)
+1. P1.1 (frontend docs drift cleanup)
+2. P1.2 (expand automated journey coverage)
+3. P1.3 (resolve highest-impact skipped test suites)
+4. P2.1 + P2.2 (backend architecture debt + security/quality gate tightening)
 
 ### 9.2 P0 — Release safety and mandatory full-stack correctness
 
@@ -458,7 +457,7 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
     - `db:setup:test` strict mode fails on drift instead of silently falling back/skipping unify migrations.
     - Unify migrations `059–061` were aligned with canonical `users.id` TEXT FKs; `000_MASTER_MIGRATION.sql` regenerated from corrected sources.
 
-- [ ] **P0.3 Release orchestration hard gate**
+- [x] **P0.3 Release orchestration hard gate**
   - **Owner:** `@owner-devops`
   - **Touches:**
     - Backend: `.github/workflows/release-orchestration.yml`, `.github/workflows/release.yml`
@@ -466,6 +465,12 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
   - **Verification commands/checks:**
     - Trigger orchestration with explicit refs and environment.
     - Confirm release dispatches only execute after validate job success.
+  - **Result notes (2026-04-19):**
+    - Orchestration defaults and checkout targets normalized to canonical repositories (`Puretask-co/puretask-backend`, `Puretask-co/puretask-frontend`).
+    - `validate` job now enforces backend deterministic migration + test gate (`db:validate:migrations`, strict `db:setup:test`, `test:ci`) before any deploy dispatch.
+    - Validated release manifest artifact is generated and consumed by deploy job, ensuring traceable backend/frontend refs for each coordinated release.
+    - Dispatch payload now includes `backend_ref`, `frontend_ref`, and `orchestration_run_id` for both backend and frontend release workflows.
+    - Added frontend `.github/workflows/release.yml` workflow with explicit dispatch inputs and release trace output.
 
 ### 9.3 P1 — Confidence and maintainability
 

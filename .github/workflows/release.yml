@@ -11,6 +11,18 @@ on:
         options:
           - production
           - staging
+      backend_ref:
+        description: "Validated backend ref from orchestration"
+        required: false
+        default: ""
+      frontend_ref:
+        description: "Validated frontend ref from orchestration"
+        required: false
+        default: ""
+      orchestration_run_id:
+        description: "Orchestration workflow run id"
+        required: false
+        default: ""
 
 concurrency:
   group: backend-release-${{ github.ref }}-${{ inputs.environment }}
@@ -34,6 +46,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Print release trace metadata
+        run: |
+          echo "environment=${{ inputs.environment }}"
+          echo "backend_ref=${{ inputs.backend_ref }}"
+          echo "frontend_ref=${{ inputs.frontend_ref }}"
+          echo "orchestration_run_id=${{ inputs.orchestration_run_id }}"
 
       - name: Build backend
         run: npm run build

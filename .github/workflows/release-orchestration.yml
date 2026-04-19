@@ -6,11 +6,11 @@ on:
       backend_repo:
         description: "Backend repository owner/name"
         required: true
-        default: "PURETASK/puretask-backend"
+        default: "Puretask-co/puretask-backend"
       frontend_repo:
         description: "Frontend repository owner/name"
         required: true
-        default: "Puretask-co/-puretask-frontend"
+        default: "Puretask-co/puretask-frontend"
       frontend_ref:
         description: "Frontend git ref (branch/tag/sha)"
         required: true
@@ -61,6 +61,7 @@ jobs:
       - name: Checkout backend
         uses: actions/checkout@v4
         with:
+          repository: ${{ env.BACKEND_REPO }}
           ref: ${{ inputs.backend_ref }}
 
       - name: Setup Node.js (backend)
@@ -72,12 +73,26 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
+      - name: Validate backend migrations
+        run: npm run db:validate:migrations
+
       - name: Setup backend test DB
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/puretask_release_test
+          STRICT_MIGRATION_PATH: "1"
         run: |
           npm run db:setup:test
           E2E_CLIENT_EMAIL=client@test.com E2E_CLIENT_PASSWORD=TestPass123! E2E_CLEANER_EMAIL=cleaner@test.com E2E_CLEANER_PASSWORD=TestPass123! E2E_ADMIN_EMAIL=admin@test.com E2E_ADMIN_PASSWORD=TestPass123! npm run seed:e2e:users
+
+      - name: Run backend deterministic test gate
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/puretask_release_test
+          JWT_SECRET: test-release-secret-minimum-32-characters
+          STRIPE_SECRET_KEY: sk_test_release
+          STRIPE_WEBHOOK_SECRET: whsec_release
+          N8N_WEBHOOK_SECRET: n8n_release
+        run: npm run test:ci
 
       - name: Build backend
         env:
@@ -135,12 +150,41 @@ jobs:
           TEST_PASSWORD: TestPass123!
         run: npm run test:api
 
+      - name: Write validated release manifest
+        run: |
+          mkdir -p /tmp/release-manifest
+          cat <<EOF > /tmp/release-manifest/validated-release-pair.txt
+          backend_repo=${BACKEND_REPO}
+          frontend_repo=${FRONTEND_REPO}
+          backend_ref=${{ inputs.backend_ref }}
+          frontend_ref=${{ inputs.frontend_ref }}
+          environment=${{ inputs.environment }}
+          orchestration_run_id=${{ github.run_id }}
+          validated_at=${{ github.run_id }}-${{ github.run_attempt }}
+          EOF
+
+      - name: Upload validated release manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: validated-release-pair
+          path: /tmp/release-manifest/validated-release-pair.txt
+
   deploy:
     name: Deploy coordinated release
     needs: [validate]
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    if: ${{ needs.validate.result == 'success' }}
     steps:
+      - name: Download validated release manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: validated-release-pair
+          path: /tmp/release-manifest
+
+      - name: Print validated release manifest
+        run: cat /tmp/release-manifest/validated-release-pair.txt
+
       - name: Dispatch backend release workflow
         env:
           GH_TOKEN: ${{ secrets.PURETASK_ORG_DISPATCH_TOKEN || secrets.GITHUB_TOKEN }}
@@ -148,6 +192,9 @@ jobs:
           gh workflow run release.yml \
             --repo "${BACKEND_REPO}" \
             --field environment="${{ inputs.environment }}" \
+            --field backend_ref="${{ inputs.backend_ref }}" \
+            --field frontend_ref="${{ inputs.frontend_ref }}" \
+            --field orchestration_run_id="${{ github.run_id }}" \
             --ref "${{ inputs.backend_ref }}"
 
       - name: Dispatch frontend release workflow
@@ -157,6 +204,9 @@ jobs:
           gh workflow run release.yml \
             --repo "${FRONTEND_REPO}" \
             --field environment="${{ inputs.environment }}" \
+            --field backend_ref="${{ inputs.backend_ref }}" \
+            --field frontend_ref="${{ inputs.frontend_ref }}" \
+            --field orchestration_run_id="${{ github.run_id }}" \
             --ref "${{ inputs.frontend_ref }}"
 
       - name: Record coordinated release intent

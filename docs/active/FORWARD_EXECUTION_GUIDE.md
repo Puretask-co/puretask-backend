@@ -116,6 +116,16 @@ PureTask is in a stable “proceed fast” state when all are true:
 - **Exit criteria:**
   - Coordinated release is traceable by backend_ref + frontend_ref + environment.
 
+**Status (2026-04-19): completed**
+- Cross-repo orchestration now enforces hard gate semantics:
+  - `deploy` job is blocked on successful `validate` job and consumes an uploaded validation manifest artifact.
+  - `validate` now runs backend migration validation + deterministic DB setup + backend CI test gate before frontend contract checks.
+- Release refs and trace metadata are propagated explicitly:
+  - orchestration dispatch passes `backend_ref`, `frontend_ref`, and `orchestration_run_id` to backend/frontend release workflows.
+  - backend release workflow now accepts and prints these trace fields.
+- Frontend release workflow path is now present and orchestration-compatible:
+  - Added `puretask-frontend/.github/workflows/release.yml` with matching `workflow_dispatch` inputs.
+
 ## P1 — Confidence and maintainability
 
 ### P1.1 Frontend docs drift cleanup (must match real scripts/workflows)
@@ -221,9 +231,9 @@ If any gate fails, do not promote release refs.
 
 ## 7) Immediate next actions (starting now)
 
-1. Execute **P0.3** release orchestration validation using explicit backend/frontend refs.
-2. Then continue with **P1.1** frontend docs drift cleanup before adding new feature surface.
-3. Keep **P0.1** as a standing guardrail by requiring `npm run test:api` + `npm run verify:fullstack` before release promotion.
-4. Keep **P0.2** as a standing guardrail by requiring `npm run db:validate:migrations` + `STRICT_MIGRATION_PATH=1 npm run db:setup:test` before release promotion.
+1. Continue with **P1.1** frontend docs drift cleanup before adding new feature surface.
+2. Keep **P0.1** as a standing guardrail by requiring `npm run test:api` + `npm run verify:fullstack` before release promotion.
+3. Keep **P0.2** as a standing guardrail by requiring `npm run db:validate:migrations` + `STRICT_MIGRATION_PATH=1 npm run db:setup:test` before release promotion.
+4. Keep **P0.3** as a standing guardrail by requiring orchestration releases to pass validate job and carry explicit backend/frontend refs.
 
 This sequence is currently the best risk-adjusted path for PureTask.
