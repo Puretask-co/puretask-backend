@@ -1,0 +1,5 @@
+TOTAL 1060
+Archive 832
+Keep Canonical 7
+Keep Reference 153
+Merge 68

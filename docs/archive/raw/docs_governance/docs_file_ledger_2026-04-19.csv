@@ -1,0 +1,1061 @@
+path,kind,classification,action,target,rationale
+.cursor/commands/generate.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+.githooks/README.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+.github/PULL_REQUEST_TEMPLATE.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+.github/copilot-instructions.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+44.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/44.txt,intake or transient text artifact outside canonical docs
+DB/docs/INDEX_MAP.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+DB/migrations/README.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+DB/migrations/README_CONSOLIDATED_SCHEMAS.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+DB/migrations/archive/README.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+DB/migrations/archive/README_CONSOLIDATED_SCHEMAS.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+DB/migrations/bundle_reference/README.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+ENV_VARS_CHECKLIST.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+IMPLEMENTATION_GUIDE.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+NEXT_5_MOVES.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+NEXT_5_STRATEGIC_MOVES.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+README.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+SERVER_STARTUP_GUIDE.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+TEST_ACCOUNTS_REFERENCE.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+annalyze and review files for puretask - needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/annalyze and review files for puretask - needs review.txt,intake or transient text artifact outside canonical docs
+backend analysis and feedback puretask- needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/backend analysis and feedback puretask- needs review.txt,intake or transient text artifact outside canonical docs
+basee 44 with backend puretask - needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/basee 44 with backend puretask - needs review.txt,intake or transient text artifact outside canonical docs
+begining of puretask - need to analyzze.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/begining of puretask - need to analyzze.txt,intake or transient text artifact outside canonical docs
+blog post writer skill.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/blog post writer skill.txt,intake or transient text artifact outside canonical docs
+cleaner payout system review - needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/cleaner payout system review - needs review.txt,intake or transient text artifact outside canonical docs
+component feedback summary puretask - needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/component feedback summary puretask - needs review.txt,intake or transient text artifact outside canonical docs
+custom gpt sectiopn 2 final agent puretask - need review and analysis.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/custom gpt sectiopn 2 final agent puretask - need review and analysis.txt,intake or transient text artifact outside canonical docs
+december content plan for puretask - needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/december content plan for puretask - needs review.txt,intake or transient text artifact outside canonical docs
+december content strat - puretask needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/december content strat - puretask needs review.txt,intake or transient text artifact outside canonical docs
+docs/ADMIN_DASHBOARD_FRONTEND.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ADMIN_DASHBOARD_FRONTEND.md,legacy docs outside canonical/reference structure
+docs/ADMIN_PORTAL_SETUP.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ADMIN_PORTAL_SETUP.md,legacy docs outside canonical/reference structure
+docs/ADVANCED_AUTH_GUIDE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ADVANCED_AUTH_GUIDE.md,legacy docs outside canonical/reference structure
+docs/ALL_VERSIONS_STATUS.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ALL_VERSIONS_STATUS.md,legacy docs outside canonical/reference structure
+docs/DETAILED_IMPLEMENTATION_STEPS.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/DETAILED_IMPLEMENTATION_STEPS.md,legacy docs outside canonical/reference structure
+docs/IMPLEMENTATION_GUIDE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/IMPLEMENTATION_GUIDE.md,legacy docs outside canonical/reference structure
+docs/JWT_AUTHENTICATION_GUIDE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/JWT_AUTHENTICATION_GUIDE.md,legacy docs outside canonical/reference structure
+docs/JWT_QUICK_REFERENCE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/JWT_QUICK_REFERENCE.md,legacy docs outside canonical/reference structure
+docs/N8N_API_CLIENT.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/N8N_API_CLIENT.md,legacy docs outside canonical/reference structure
+docs/N8N_COMPLETE_CONFIG.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/N8N_COMPLETE_CONFIG.md,legacy docs outside canonical/reference structure
+docs/N8N_ENV_CONFIG.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/N8N_ENV_CONFIG.md,legacy docs outside canonical/reference structure
+docs/N8N_MCP_INTEGRATION.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/N8N_MCP_INTEGRATION.md,legacy docs outside canonical/reference structure
+docs/N8N_WEBHOOK_SECRET.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/N8N_WEBHOOK_SECRET.md,legacy docs outside canonical/reference structure
+docs/PRODUCTION_READINESS.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/PRODUCTION_READINESS.md,legacy docs outside canonical/reference structure
+docs/PROJECT_REVIEW_AND_FORWARD_SUGGESTIONS.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/PROJECT_REVIEW_AND_FORWARD_SUGGESTIONS.md,legacy docs outside canonical/reference structure
+docs/README.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/README.md,legacy docs outside canonical/reference structure
+docs/STRIPE_TESTING.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/STRIPE_TESTING.md,legacy docs outside canonical/reference structure
+docs/V1_COMPLETE_SUMMARY.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V1_COMPLETE_SUMMARY.md,legacy docs outside canonical/reference structure
+docs/V1_COMPLETION_SUMMARY.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V1_COMPLETION_SUMMARY.md,legacy docs outside canonical/reference structure
+docs/V1_ENABLED_FEATURES.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V1_ENABLED_FEATURES.md,legacy docs outside canonical/reference structure
+docs/V2_EXECUTION_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V2_EXECUTION_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/V2_EXECUTION_PLAN.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V2_EXECUTION_PLAN.md,legacy docs outside canonical/reference structure
+docs/V2_FEATURES_DETAILED_BREAKDOWN.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V2_FEATURES_DETAILED_BREAKDOWN.md,legacy docs outside canonical/reference structure
+docs/V3_COMPLETE_OVERVIEW.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V3_COMPLETE_OVERVIEW.md,legacy docs outside canonical/reference structure
+docs/V3_COMPLETE_SUMMARY.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V3_COMPLETE_SUMMARY.md,legacy docs outside canonical/reference structure
+docs/V3_DEPLOYMENT_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V3_DEPLOYMENT_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/V3_DEPLOYMENT_VERIFICATION.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V3_DEPLOYMENT_VERIFICATION.md,legacy docs outside canonical/reference structure
+docs/V3_EXECUTION_PLAN.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V3_EXECUTION_PLAN.md,legacy docs outside canonical/reference structure
+docs/V3_FEATURES_DETAILED_BREAKDOWN.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V3_FEATURES_DETAILED_BREAKDOWN.md,legacy docs outside canonical/reference structure
+docs/V3_FINAL_STATUS.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V3_FINAL_STATUS.md,legacy docs outside canonical/reference structure
+docs/V3_IMPLEMENTATION_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V3_IMPLEMENTATION_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/V3_NEXT_STEPS.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V3_NEXT_STEPS.md,legacy docs outside canonical/reference structure
+docs/V3_NEXT_STEPS_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V3_NEXT_STEPS_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/V4_CAPABILITIES_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V4_CAPABILITIES_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/V4_DEPLOYMENT_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V4_DEPLOYMENT_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/V4_DEPLOYMENT_VERIFICATION.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V4_DEPLOYMENT_VERIFICATION.md,legacy docs outside canonical/reference structure
+docs/V4_IMPLEMENTATION_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V4_IMPLEMENTATION_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/V4_IMPLEMENTATION_PLAN.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/V4_IMPLEMENTATION_PLAN.md,legacy docs outside canonical/reference structure
+docs/VERSION_FEATURE_BREAKDOWN.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/VERSION_FEATURE_BREAKDOWN.md,legacy docs outside canonical/reference structure
+docs/_active/architecture/API_REFERENCE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/architecture/API_REFERENCE.md,legacy docs outside canonical/reference structure
+docs/_active/architecture/ARCHITECTURE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/architecture/ARCHITECTURE.md,legacy docs outside canonical/reference structure
+docs/_active/architecture/ARCHITECTURE_SUMMARY.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/architecture/ARCHITECTURE_SUMMARY.md,legacy docs outside canonical/reference structure
+docs/_active/architecture/CAPABILITIES.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/architecture/CAPABILITIES.md,legacy docs outside canonical/reference structure
+docs/_active/architecture/EVENT_SYSTEM_SPEC.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/architecture/EVENT_SYSTEM_SPEC.md,legacy docs outside canonical/reference structure
+docs/_active/architecture/PURETASK_MASTER_GUIDE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/architecture/PURETASK_MASTER_GUIDE.md,legacy docs outside canonical/reference structure
+docs/_active/architecture/ROUTES_CATALOG.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/architecture/ROUTES_CATALOG.md,legacy docs outside canonical/reference structure
+docs/_active/architecture/SERVICES_CATALOG.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/architecture/SERVICES_CATALOG.md,legacy docs outside canonical/reference structure
+docs/_active/architecture/architecture-what-lives-where.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/architecture/architecture-what-lives-where.md,legacy docs outside canonical/reference structure
+docs/_active/deployment/DATABASE_SETUP.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/deployment/DATABASE_SETUP.md,legacy docs outside canonical/reference structure
+docs/_active/deployment/ENV_TEMPLATE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/deployment/ENV_TEMPLATE.md,legacy docs outside canonical/reference structure
+docs/_active/deployment/NEON_SETUP_GUIDE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/deployment/NEON_SETUP_GUIDE.md,legacy docs outside canonical/reference structure
+docs/_active/deployment/STAGING_ENVIRONMENT.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/deployment/STAGING_ENVIRONMENT.md,legacy docs outside canonical/reference structure
+docs/_active/operations/DEPLOYMENT_CHECKLIST.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/operations/DEPLOYMENT_CHECKLIST.md,legacy docs outside canonical/reference structure
+docs/_active/operations/N8N_SETUP_COMPLETE_CHECKLIST.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/operations/N8N_SETUP_COMPLETE_CHECKLIST.md,legacy docs outside canonical/reference structure
+docs/_active/operations/N8N_WORKFLOW_IMPLEMENTATION_GUIDE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/operations/N8N_WORKFLOW_IMPLEMENTATION_GUIDE.md,legacy docs outside canonical/reference structure
+docs/_active/operations/NOTIFICATION_SERVICE_MIGRATION.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/operations/NOTIFICATION_SERVICE_MIGRATION.md,legacy docs outside canonical/reference structure
+docs/_active/operations/SECURITY_AUDIT_WORKFLOW_GUIDE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/operations/SECURITY_AUDIT_WORKFLOW_GUIDE.md,legacy docs outside canonical/reference structure
+docs/_active/operations/WORKER_SCHEDULE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/operations/WORKER_SCHEDULE.md,legacy docs outside canonical/reference structure
+docs/_active/operations/email-registry.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/operations/email-registry.md,legacy docs outside canonical/reference structure
+docs/_active/operations/n8n-universal-sender-workflow-spec.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_active/operations/n8n-universal-sender-workflow-spec.md,legacy docs outside canonical/reference structure
+docs/_archive/cleanup-2026-01-29/JWT_AUTHENTICATION_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/N8N_MCP_INTEGRATION.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/README.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/SERVER_STARTUP_ISSUES_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/STRIPE_TESTING.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/TROUBLESHOOTING.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/V1_COMPLETE_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/V2_EXECUTION_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/V2_EXECUTION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/V3_COMPLETE_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/V3_DEPLOYMENT_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/V3_DEPLOYMENT_VERIFICATION.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/V3_NEXT_STEPS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/V3_NEXT_STEPS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/V4_DEPLOYMENT_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/cleanup-2026-01-29/V4_DEPLOYMENT_VERIFICATION.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/ANALYSIS_DOCUMENTS_COMPARISON.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/ANALYSIS_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/ANALYSIS_REPORT_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/BACKEND_REVIEW_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/BEST_PRACTICES_AUDIT.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/BEST_PRACTICES_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/COMPLETE_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/CURRENT_SYSTEM_INVENTORY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/INTEGRATION_TESTS_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/LINTING_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/PROJECT_ANALYSIS_2025.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/PROJECT_COMPREHENSIVE_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/STATE_MACHINE_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/TEST_BEST_PRACTICES_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/V1_READINESS_ASSESSMENT.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/V1_REQUIREMENTS_AUDIT.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-analyses/V1_REVIEW_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-misc/ARCHITECTURE_ENFORCEMENT_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-misc/ARCHITECTURE_MIGRATION_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-misc/DB_SCHEMA_EXPORT_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-misc/MCP_SERVERS_FIX_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-misc/MCP_SERVERS_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-misc/MIGRATION_EXECUTION_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-misc/MIGRATION_REQUIRED_FOR_TESTS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-misc/N8N_WORKFLOW_VALIDATION.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-misc/TESTING_DATA_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-misc/WORKFLOW_FIX_AUDIT_AUTOFIX.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/CURSOR_BUILD_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/CURSOR_COMMAND.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/CURSOR_FIRST_COMMAND.txt,txt,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/FIXES_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/IMPLEMENTATION_ACTION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/IMPLEMENTATION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/NEXT_STEPS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/NEXT_STEPS_ACTION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/NEXT_STEPS_CURRENT.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/PHASE1_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/PHASE2_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/PHASE3_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/PHASE4_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/PHASE5_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/RUNBOOK_EXECUTION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-plans/SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-railway/DEPLOYMENT_QUICK_START.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-railway/RAILWAY_BEGINNERS_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-railway/RAILWAY_DEPLOYMENT_FIX.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-railway/RAILWAY_ENVIRONMENTS_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-railway/RAILWAY_HEALTHCHECK_FIX.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-railway/RAILWAY_QUICK_START.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-railway/RAILWAY_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/DATABASE_TEST_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/DATABASE_TEST_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/FINAL_WORKER_TEST_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/TESTING_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/TEST_FIXES_IMPLEMENTED.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/TEST_FIXES_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/TEST_PASSWORD_HASH_FIX_DIFFS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/TEST_PASSWORD_HASH_FIX_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/TEST_RESULTS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/TEST_STATUS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/V1_HARDENING_TEST_FIXES.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/V1_TESTING_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/V1_TEST_CHECKLIST.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/V2_TESTING_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/V4_TESTING_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/WORKER_DRY_RUN_FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/WORKER_DRY_RUN_ISSUES.md,md,Archive,keep_archived,,already archived history
+docs/_archive/old-tests/WORKER_TEST_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/_future/v5-planning/FUTURE_FEATURES.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_future/v5-planning/FUTURE_FEATURES.md,legacy docs outside canonical/reference structure
+docs/_future/v5-planning/ROADMAP.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_future/v5-planning/ROADMAP.md,legacy docs outside canonical/reference structure
+docs/_future/v5-planning/V5_CAPABILITIES_ANALYSIS.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_future/v5-planning/V5_CAPABILITIES_ANALYSIS.md,legacy docs outside canonical/reference structure
+docs/_md_inventory/md_report.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/_md_inventory/md_report.md,legacy docs outside canonical/reference structure
+docs/active/00-CRITICAL/ERROR_RECOVERY_CIRCUIT_BREAKERS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/MONITORING_SETUP.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_0_1_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_10_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_11_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_12_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_13_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_14_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_1_USER_RUNBOOK.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_2_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_3_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_4_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_5_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_6_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_7_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_8_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PHASE_9_STATUS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/PRODUCTION_READINESS_ROADMAP.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/SECRET_INVENTORY_TEMPLATE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/SECURITY_AUDIT_SUMMARY.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/SECURITY_GUARDRAILS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/00-CRITICAL/SECURITY_INCIDENT_RESPONSE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/01-HIGH/DATABASE_RECOVERY.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/01-HIGH/GDPR_COMPLIANCE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/01-HIGH/RATE_LIMITING.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/02-MEDIUM/ADDRESS_REMAINING_GAPS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/02-MEDIUM/ARCHITECTURE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/02-MEDIUM/COMPREHENSIVE_GAP_ANALYSIS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/02-MEDIUM/CRON_JOBS_AND_NOTIFICATIONS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/02-MEDIUM/GAP_COMPLETION_ROADMAP.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/02-MEDIUM/N8N_EVENT_ROUTER.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/02-MEDIUM/PERFORMANCE_TESTING.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/02-MEDIUM/REMAINING_ISSUES_STEPS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/02-MEDIUM/WORKER_HARDENING.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/03-LOW/CLEANUP_SUMMARY.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/03-LOW/CONTRIBUTING.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/03-LOW/README.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/03-LOW/SERVER_STARTUP_ANALYSIS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/AI_ONBOARDING_BUNDLE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/API_REFERENCE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/ARCHITECTURE.md,md,Keep Canonical,keep,,tier-1 canonical source of truth
+docs/active/AUDIT_TICKETS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/BACKEND_ALIGNMENT_CHECKLIST.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/BACKEND_ALIGNMENT_SOURCES.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/BACKEND_ENDPOINTS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/BACKEND_QA.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/BACKEND_UI_SPEC.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/BACKUP_RESTORE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/CI_CD_SETUP.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/CONSOLIDATION_GUIDE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/CONTRIBUTING.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/DATA_MODEL_REFERENCE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/DECISIONS.md,md,Keep Canonical,keep,,tier-1 canonical source of truth
+docs/active/DEPLOYMENT.md,md,Keep Canonical,keep,,tier-1 canonical source of truth
+docs/active/FOUNDER_BACKEND_REFERENCE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/FOUNDER_REFERENCE_CANDIDATES.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/FRONTEND_JOB_STATUS_CONFIG.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/GAMIFICATION_BACKEND_SPEC.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/GAMIFICATION_BUNDLE_IMPLEMENTATION_GUIDE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/GAMIFICATION_BUNDLE_INTEGRATION_GUIDE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/GAMIFICATION_FRONTEND_BACKEND_SPEC.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/MASTER_CHECKLIST.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/MASTER_CHECKLIST_EXECUTION.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/MASTER_MIGRATIONS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/MIGRATIONS_ANALYSIS_VS_MASTER.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/NOTIFICATIONS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/PROD_TEST_SCHEMA_REFERENCE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/PR_AUDIT_RUBRIC.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/README.md,md,Keep Canonical,keep,,tier-1 canonical source of truth
+docs/active/RUNBOOK.md,md,Keep Canonical,keep,,tier-1 canonical source of truth
+docs/active/SETUP.md,md,Keep Canonical,keep,,tier-1 canonical source of truth
+docs/active/SYSTEM_AUDIT_CHECKLIST.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/TROUBLESHOOTING.md,md,Keep Canonical,keep,,tier-1 canonical source of truth
+docs/active/founder/FOUNDER_ADMIN_DASHBOARD.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_AI_ASSISTANT.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_AUTH.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_BACKGROUND_CHECK.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_CALENDAR_AVAILABILITY.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_CIRCUIT_BREAKER_RETRY.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_CLEANER_ONBOARDING.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_CREDIT_ECONOMY.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_DISPUTES.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_EVENTS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_FILE_UPLOAD.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_GAMIFICATION.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_GDPR.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_GRACEFUL_SHUTDOWN.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_HOLIDAYS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_IDEMPOTENCY.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_JOB_EVENTS_FLOW.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_MANAGER_DASHBOARD.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_MCP_SERVERS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_MESSAGE_HISTORY.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_METRICS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_N8N_CLIENT.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_NOTIFICATIONS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_PAYMENT_FLOW.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_PAYOUT_FLOW.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_PHOTO_PROOF.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_PRICING.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_QUEUE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_RATE_LIMITING.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_RECONCILIATION.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_REFERRALS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_REQUEST_CONTEXT.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_SENTRY.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_STRIPE_WRAPPER.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_SUBSCRIPTIONS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_TRACKING.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_URL_BUILDER.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/founder/FOUNDER_WEBHOOKS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/README.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/BUNDLE_README.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/CURSOR_PROMPTS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/MIGRATION_RUN_ORDER.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/PURETASK_GAMIFICATION_CURSOR_CONTEXT.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/README.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/admin_ui_wireframe_spec.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/event_contract_v1.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/metrics_contract_test_checklist_v1.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/metrics_contract_v1.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/reward_meanings_and_fairness.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/runtime_config_loading.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/gamification_bundle/docs/spec_enforcement_matrix_v1.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/legal/AB5_ANALYSIS.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/legal/CLEANER_AGREEMENT.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/legal/COUNSEL_REVIEW_RATIONALE.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/legal/IC_SAFEGUARDS_APPENDIX.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/legal/IN_APP_COPY_CLEANER.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/legal/IN_APP_COPY_CLIENT.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/legal/PRIVACY_POLICY.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/legal/README.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/active/legal/TOS_CONSOLIDATED.md,md,Keep Reference,keep,,tier-2 active reference documentation
+docs/admin/ADMIN_QUICK_START.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/admin/ADMIN_QUICK_START.md,legacy docs outside canonical/reference structure
+docs/admin/ADMIN_SETTINGS_SUITE_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/admin/ADMIN_SETTINGS_SUITE_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/admin/ADMIN_SYSTEM_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/admin/ADMIN_SYSTEM_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/admin/ADMIN_USER_CREATED.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/admin/ADMIN_USER_CREATED.md,legacy docs outside canonical/reference structure
+docs/admin/GAMIFICATION_SYSTEM_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/admin/GAMIFICATION_SYSTEM_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/admin/ONBOARDING_CHECKLIST_FOR_STAFF.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/admin/ONBOARDING_CHECKLIST_FOR_STAFF.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/AI_ASSISTANT_BEST_PRACTICES.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/AI_ASSISTANT_BEST_PRACTICES.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/AI_ASSISTANT_COMPLETE_GUIDE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/AI_ASSISTANT_COMPLETE_GUIDE.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/AI_ASSISTANT_COMPLETE_MIGRATION_SUMMARY.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/AI_ASSISTANT_COMPLETE_MIGRATION_SUMMARY.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/AI_ASSISTANT_LIVE_AND_WORKING.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/AI_ASSISTANT_LIVE_AND_WORKING.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/AI_ASSISTANT_READY_TO_USE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/AI_ASSISTANT_READY_TO_USE.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/AI_ASSISTANT_SETUP_STATUS.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/AI_ASSISTANT_SETUP_STATUS.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/AI_ASSISTANT_VERIFICATION_REPORT.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/AI_ASSISTANT_VERIFICATION_REPORT.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/AI_MIGRATION_CHECKLIST.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/AI_MIGRATION_CHECKLIST.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/CLEANER_AI_SETTINGS_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/CLEANER_AI_SETTINGS_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/CLEANER_AI_SUITE_SUMMARY.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/CLEANER_AI_SUITE_SUMMARY.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/TEST_AI_ASSISTANT_PAGE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/TEST_AI_ASSISTANT_PAGE.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/TEST_AI_QUICK_START.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/TEST_AI_QUICK_START.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/USER_GUIDE_CLEANER_AI_ASSISTANT.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/USER_GUIDE_CLEANER_AI_ASSISTANT.md,legacy docs outside canonical/reference structure
+docs/ai-assistant/test-cleaner-ai-api.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/ai-assistant/test-cleaner-ai-api.md,legacy docs outside canonical/reference structure
+docs/architecture/ALL_ENDPOINTS_COMPLETE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/architecture/ALL_ENDPOINTS_COMPLETE.md,legacy docs outside canonical/reference structure
+docs/architecture/COMPLETE_API_ENDPOINTS.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/architecture/COMPLETE_API_ENDPOINTS.md,legacy docs outside canonical/reference structure
+docs/architecture/COMPLETE_FRONTEND_COMPONENTS_GUIDE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/architecture/COMPLETE_FRONTEND_COMPONENTS_GUIDE.md,legacy docs outside canonical/reference structure
+docs/architecture/DOCUMENTATION_ORGANIZATION_PLAN.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/architecture/DOCUMENTATION_ORGANIZATION_PLAN.md,legacy docs outside canonical/reference structure
+docs/architecture/ENDPOINT_AUDIT.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/architecture/ENDPOINT_AUDIT.md,legacy docs outside canonical/reference structure
+docs/architecture/ENV_EXAMPLE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/architecture/ENV_EXAMPLE.md,legacy docs outside canonical/reference structure
+docs/architecture/FRONTEND_REALITY_CHECK.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/architecture/FRONTEND_REALITY_CHECK.md,legacy docs outside canonical/reference structure
+docs/architecture/TEMPLATES_EXPLAINED_COMPLETE_GUIDE.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/architecture/TEMPLATES_EXPLAINED_COMPLETE_GUIDE.md,legacy docs outside canonical/reference structure
+docs/architecture/TEMPLATES_QUICK_ANSWER.md,md,Archive,archive_legacy_docs,docs/archive/raw/legacy_docs/architecture/TEMPLATES_QUICK_ANSWER.md,legacy docs outside canonical/reference structure
+docs/archive/7_DAY_PROGRESSIVE_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/ADMIN_ACCOUNT_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/ADMIN_SYSTEM_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/AGENT_RUNBOOK_COMPLETION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/ALL_RECOMMENDATIONS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/ALL_TODOS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/API_ENDPOINTS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/APPLY_COMPONENTS_TO_PAGES.md,md,Archive,keep_archived,,already archived history
+docs/archive/AUDIT_FIXES.md,md,Archive,keep_archived,,already archived history
+docs/archive/AUDIT_RESULTS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/AUTOMATED_SETUP_SCRIPT.md,md,Archive,keep_archived,,already archived history
+docs/archive/BACKEND_ANALYSIS_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/BACK_BUTTON_ADDED.md,md,Archive,keep_archived,,already archived history
+docs/archive/BATCH_APPLY_COMPONENTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/BUILD_COMPLETE_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/BUILD_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/CLEANER_FLOW_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/CLEANER_ONBOARDING_ENHANCED_OUTLINE.md,md,Archive,keep_archived,,already archived history
+docs/archive/CLEANER_PAGES_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_ALL_MISSING_ITEMS_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_BUILD_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_EXECUTION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_IMPLEMENTATION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_IMPLEMENTATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_IMPLEMENTATION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_MISSING_ITEMS_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_ROLLOUT_PLAN_V1.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_ROLLOUT_PLAN_V2.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_ROLLOUT_PLAN_V3_V4_FULL.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_TESTING_GUIDES_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_TODOS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPLETE_V1_SETUP_SCRIPT.md,md,Archive,keep_archived,,already archived history
+docs/archive/COMPREHENSIVE_FRONTEND_FIX_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/CURRENT_PROGRESS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/DAY_1_SCRIPT.md,md,Archive,keep_archived,,already archived history
+docs/archive/DEVELOPER_ONBOARDING.md,md,Archive,keep_archived,,already archived history
+docs/archive/DOCUMENTATION_INDEX.md,md,Archive,keep_archived,,already archived history
+docs/archive/ENDPOINT_CONNECTION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/ENDPOINT_VERIFICATION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/ENGINES_WORKERS_AUTOMATION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/FILE_LOCATIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/FINAL_COMPLETION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/FINAL_COMPREHENSIVE_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/FINAL_FRONTEND_FIX_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/FINAL_IMPLEMENTATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/FINAL_IMPLEMENTATION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/FINAL_IMPROVEMENTS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/FRONTEND_BUILD_REQUIREMENTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/FRONTEND_COMPLETE_IMPLEMENTATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/FRONTEND_COMPLETE_OUTLINE.md,md,Archive,keep_archived,,already archived history
+docs/archive/FRONTEND_COMPLETION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/FRONTEND_COMPLETION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/FRONTEND_ENHANCEMENTS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/FRONTEND_FIX_COMPLETE_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/FRONTEND_FIX_IMPLEMENTATION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/FRONTEND_FIX_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/FRONTEND_MISSING_ITEMS_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/GAPS_IMPLEMENTATION_FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/GAPS_IMPLEMENTATION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/GAPS_IMPLEMENTATION_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/GAPS_IMPLEMENTATION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/IMPLEMENTATION_COMPLETE_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/IMPLEMENTATION_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/IMPROVEMENTS_IMPLEMENTATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/LIVE_STATUS_AND_GATES_ACCURATE.md,md,Archive,keep_archived,,already archived history
+docs/archive/MANSION_OPTIMIZED.md,md,Archive,keep_archived,,already archived history
+docs/archive/MASTER_PLAN_LOCKED.md,md,Archive,keep_archived,,already archived history
+docs/archive/MASTER_PLAN_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/MASTER_ROLLOUT_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/MESSAGE_HISTORY_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/MESSAGE_SAVING_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/MOBILE_FRIENDLY_CONFIG.md,md,Archive,keep_archived,,already archived history
+docs/archive/MOBILE_IMPLEMENTATION_CHECKLIST.md,md,Archive,keep_archived,,already archived history
+docs/archive/MOBILE_PHASES_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/MOBILE_PHASE_1_2_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/MOBILE_PHASE_1_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/MOBILE_PHASE_2_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/MOVE_1_DETAILED_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/MOVE_1_FAILURES.md,md,Archive,keep_archived,,already archived history
+docs/archive/MOVE_1_FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/MOVE_1_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/MOVE_1_PROGRESS_UPDATE.md,md,Archive,keep_archived,,already archived history
+docs/archive/NAVIGATION_FOOTER_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/NEXT_STEPS_RECOMMENDATIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/NON_CRITICAL_PAGES_OUTLINE.md,md,Archive,keep_archived,,already archived history
+docs/archive/ONBOARDING_ENHANCEMENTS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/ONBOARDING_ENHANCEMENTS_VERIFICATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/ONBOARDING_FINAL_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/ONBOARDING_IMPLEMENTATION_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/ONBOARDING_IMPLEMENTATION_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/ORGANIZATION_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/PHASE_4_5_COMPLETE_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/PROGRESS_UPDATE.md,md,Archive,keep_archived,,already archived history
+docs/archive/PROJECT_GAPS_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/PURETASK_COMPLETE_TESTING_MASTER_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/PURETASK_CURRENT_STAGE.md,md,Archive,keep_archived,,already archived history
+docs/archive/PURETASK_IMPROVEMENTS_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/RAILWAY_BUILD_FIX.md,md,Archive,keep_archived,,already archived history
+docs/archive/RAILWAY_DEPLOYMENT_FIX.md,md,Archive,keep_archived,,already archived history
+docs/archive/RAILWAY_ENV_VARS_VERIFICATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/RAILWAY_QUICK_FIX.md,md,Archive,keep_archived,,already archived history
+docs/archive/RAILWAY_SETUP_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/README_TESTING.md,md,Archive,keep_archived,,already archived history
+docs/archive/REMAINING_TODOS_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/SAVE_EVERYTHING_QUICK_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/SERVER_STARTED.md,md,Archive,keep_archived,,already archived history
+docs/archive/SERVER_STARTUP_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/SERVER_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/SOFT_LAUNCH_30_DAY_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/SOFT_LAUNCH_CHECKLIST.md,md,Archive,keep_archived,,already archived history
+docs/archive/SOFT_LAUNCH_DAILY_TRACKER.md,md,Archive,keep_archived,,already archived history
+docs/archive/START_HERE_GUIDES_INDEX.md,md,Archive,keep_archived,,already archived history
+docs/archive/STYLING_FIXES_APPLIED.md,md,Archive,keep_archived,,already archived history
+docs/archive/TERMINAL_STATUS_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_CAMPAIGNS.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_COMPLETE_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_COMPLETE_IMPLEMENTATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_COMPLETE_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_EXPLANATIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_IMPLEMENTATION_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_IMPLEMENTATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_QUICK_REFERENCE.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_REMAINING_TESTS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_STRATEGY_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_STRATEGY_GAPS_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_STRATEGY_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/TESTING_VERIFICATION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/TEST_FIXES_APPLIED.md,md,Archive,keep_archived,,already archived history
+docs/archive/THE_COMPLETE_MANSION.md,md,Archive,keep_archived,,already archived history
+docs/archive/TYPESCRIPT_FIXES_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/completed-checklists/DOCUMENT_EXECUTION_TRACKER.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/completed-checklists/MASTER_CHECKLIST_COMPLETION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/completed-checklists/PRODUCTION_100_PERCENT_CHECKLIST.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/consolidated-sources/01-HIGH/BACKUP_RESTORE_PROCEDURE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/consolidated-sources/01-HIGH/BACKUP_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/consolidated-sources/01-HIGH/CI_CD_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/consolidated-sources/02-MEDIUM/API_DOCUMENTATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/consolidated-sources/02-MEDIUM/API_EXACT_ENDPOINTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/consolidated-sources/02-MEDIUM/API_SPEC_COMPARISON.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/consolidated-sources/02-MEDIUM/NOTIFICATION_DEDUPE_STRATEGY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/consolidated-sources/02-MEDIUM/NOTIFICATION_MATURITY_UPGRADES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/consolidated-sources/02-MEDIUM/NOTIFICATION_SENDER_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/consolidated-sources/02-MEDIUM/NOTIFICATION_TEMPLATES_OUTLINE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/consolidated-sources/FOUNDER_BACKEND_REFERENCE_FULL.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/database/ADDITIONAL_TABLES_NEEDED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/database/COMPLETE_NEON_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/database/MIGRATIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/database/MIGRATION_WALKTHROUGH.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/database/N8N_IMPORT_INSTRUCTIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/database/NEON_DATABASE_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/database/NEON_FIX_INSTRUCTIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/database/STEP_1_APPLY_INDEXES_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/deployment/BACKUP_COMPLETE_GITHUB.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/deployment/DEPLOYMENT_PREPARATION_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/deployment/DEPLOY_TO_RAILWAY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/deployment/GITHUB_PUSH_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/deployment/GITHUB_SAVE_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/deployment/LAUNCH_READINESS_CHECKLIST.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/deployment/PATH_TO_LAUNCH.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/deployment/PUSH_FRONTEND_TO_GITHUB_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/deployment/RAILWAY_DEPLOYMENT_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/deployment/RAILWAY_DEPLOYMENT_FIX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/deployment/RAILWAY_SETUP_CHECKLIST.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/development/DATABASE_CONNECTION_TROUBLESHOOTING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/development/DEVELOPMENT_WORKFLOW_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/development/EXECUTION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/development/MIGRATION_BEST_PRACTICES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/development/MIGRATION_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/development/POSTMAN_API_KEY_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/development/QUICK_REFERENCE_COMMANDS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/development/SETUP_INSTRUCTIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/development/TESTING_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/development/WINDOWS_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/experiments/TEMPLATES_EXPLAINED_COMPLETE_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/experiments/TEMPLATES_QUICK_ANSWER.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/experiments/TEMPLATE_WORKFLOW_VISUAL.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/frontend-backend-specs/FRONTEND_API_EXPECTATIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/frontend-backend-specs/FRONTEND_STATUS_AND_BACKEND_EXPECTATIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/frontend-backend-specs/TRUST_BACKEND_INTEGRATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/frontend-backend-specs/TRUST_FRONTEND_BACKEND_SPEC.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/gap-analyses/BUNDLE_MERGE_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/gap-analyses/BUNDLE_SWITCH_GAP_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/gap-analyses/COMPREHENSIVE_GAP_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/gap-analyses/PRODUCTION_READINESS_ROADMAP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/ADMIN_USER_COMPLETE_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/API.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/BEGINNER_GUIDE_DAY_1.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/CLEANER_USER_COMPLETE_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/CLIENT_USER_COMPLETE_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/CODEBASE_NAVIGATION_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/COMMANDS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/COMPLETE_PLATFORM_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/COMPLETE_UNDERSTANDING_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/CONNECTING_FRONTEND_BACKEND.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/CREATE_TEST_ACCOUNTS_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/DEBUG_SETUP_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/MAKING_CHANGES_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/MASTER_TESTING_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/PURETASK_ARCHITECTURE_EXPLAINED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/QUICK_6_HOUR_OVERVIEW.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/QUICK_REFERENCE_CARD.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/QUICK_START_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/QUICK_START_TROUBLESHOOTING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/START_HERE_DAY_1.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/TEMPLATE_WORKFLOW_VISUAL.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/guides/WHAT_YOU_ACTUALLY_NEED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/AI_ASSISTANT_SETUP_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/ALL_VERSIONS_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/API_DOCUMENTATION_FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/AUTH_MIGRATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_ALL_MISSING_ITEMS_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_API_ENDPOINTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_BUILD_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_EXECUTION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_FRONTEND_COMPONENTS_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_IMPLEMENTATION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_IMPLEMENTATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_IMPLEMENTATION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_MISSING_ITEMS_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_NEON_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_ORGANIZATION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_PLATFORM_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_ROLLOUT_PLAN_V1.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_ROLLOUT_PLAN_V2.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_ROLLOUT_PLAN_V3_V4_FULL.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_TESTING_GUIDES_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_TODOS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_UNDERSTANDING_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPLETE_V1_SETUP_SCRIPT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/COMPREHENSIVE_FRONTEND_FIX_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/CURRENT_PROGRESS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/DAY_1_SCRIPT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/ENDPOINT_CONNECTION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_COMPLETION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_COMPREHENSIVE_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_EXECUTION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_FRONTEND_FIX_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_IMPLEMENTATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_IMPLEMENTATION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_IMPROVEMENTS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_PLATFORM_CAPABILITIES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_PRE_LAUNCH_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_STATUS_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FINAL_WORKER_TEST_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FRONTEND_COMPLETE_IMPLEMENTATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/FRONTEND_FIX_COMPLETE_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/GAPS_IMPLEMENTATION_FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/IMPROVEMENTS_IMPLEMENTATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/JOB_STATUS_MACHINE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/LIVE_STATUS_AND_GATES_ACCURATE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/MASTER_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/MOVE_1_FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/ONBOARDING_FINAL_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/PRODUCTION_READINESS_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/PROGRESS_UPDATE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/PROJECT_COMPLETION_CERTIFICATE_FINAL.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/PURETASK_FINAL_BLUEPRINT_OVERVIEW.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/RAILWAY_BUILD_FIX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/RUNBOOK_EXECUTION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/SERVER_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/SOFT_LAUNCH_DAILY_TRACKER.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/TERMINAL_STATUS_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/TESTING_FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/TESTING_IMPLEMENTATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/TESTING_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/TEST_STATUS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/V3_FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/WORKER_DRY_RUN_FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/iterative_logs/WORKER_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/AI_ASSISTANT_INTEGRATION_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/ANTI_GAMING_SPEC.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/API_DOCUMENTATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/API_DOCUMENTATION_FINAL_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/API_DOCUMENTATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/ARCHITECTURE_AUTOMATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/AUTH_MIGRATION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/BACKEND_TIMEOUT_ISSUE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/BACKUP_RESTORE_PROCEDURE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/BACKUP_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/CLEANER_LEVELS_ACHIEVEMENTS_REFERENCE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/COST_MAP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/CRON_JOBS_AND_NOTIFICATIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/CURSOR_CONTEXT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/CURSOR_PRIMER.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/DATABASE_RECOVERY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/DOCUMENTATION_BENEFITS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/DOCUMENTATION_INDEX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/DOCUMENTATION_REVIEW_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/EVENT_CONTRACT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/EXTRACTION_ANALYSIS_AND_IMPROVEMENTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/FRONTEND_AUTH_FIX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/GAMIFICATION_BUILT_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/GAMIFICATION_ENGINEERING_TICKETS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/GAP_COMPLETION_ROADMAP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/GDPR_COMPLIANCE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/HARDENING_EXECUTION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/IC_LANGUAGE_AUDIT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/MASTER_CHECKLIST_VERIFICATION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/METRICS_CONTRACT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/MONITORING_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/N8N_AGENT_PACKAGE_VERIFICATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/N8N_FULL_REFERENCE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/N8N_PACK_VERIFICATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/N8N_WORKFLOWS_AND_EVENTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/NOTIFICATION_DEDUPE_STRATEGY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/NOTIFICATION_MATURITY_UPGRADES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/NOTIFICATION_SENDER_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/NOTIFICATION_TEMPLATES_OUTLINE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/PERFORMANCE_TESTING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/PRODUCTION_PROBLEMS_AND_SOLUTIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/PRODUCTION_READINESS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/PROJECT_AUDIT_QUESTIONS_ANSWERS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/PROJECT_REVIEW_FULL.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/RATE_LIMITING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/ROUTE_PROTECTION_TABLE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/SCHEMA_MIGRATIONS_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/SECTION_7_NEEDS_ASSESSMENT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/SECTION_8_SECURITY_ASSESSMENT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/SECTION_9_MAINTAINABILITY_ASSESSMENT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/SECURITY_AUDIT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/SECURITY_GUARDRAILS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/SECURITY_INCIDENT_RESPONSE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/SERVER_STARTUP_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/SERVER_STARTUP_ISSUES_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/SERVER_STARTUP_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/SPEC_REQUIREMENTS_MATRIX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/misc/WORKER_HARDENING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/BACKUP_RESTORE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/PAYMENT_STATE_MACHINE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_01_SECRETS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_02_AUTH.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_03_GUARDRAILS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_04_STRIPE_WEBHOOKS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_05_DATABASE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_06_WORKERS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_07_API.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_08_SECURITY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_09_MAINTAINABILITY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_10_COST_SCALE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_11_ADMIN_OPS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_12_TRUST_IC_SAFE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_13_LEGAL.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/sections/SECTION_14_LAUNCH.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/ALL_TASKS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/ALL_TODOS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/COMPLETE_ORGANIZATION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/COMPLETION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/COMPREHENSIVE_6_HOUR_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/EXECUTION_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/FINAL_EXECUTION_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/FINAL_PRE_LAUNCH_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/FINAL_STATUS_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/MASTER_STATUS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/PRE_LAUNCH_COMPLETE_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/PRE_LAUNCH_OPTIMIZATION_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/PROJECT_COMPLETION_CERTIFICATE_FINAL.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/SESSION_COMPLETE_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/status-reports/TASK_COMPLETION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/BUTTONS_FIXED_DEMO_MODE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/CONNECTION_TEST_RESULTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/PERFORMANCE_OPTIMIZATION_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/QUICK_FIX_TEST_PAGE_STYLES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/SECURITY_AUDIT_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/SECURITY_AUDIT_QUICK_START.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/SECURITY_AUDIT_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/SETUP_COMPLETE_TEST_PAGE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/TAILWIND_FIX_APPLIED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/TEST_PAGE_IMPROVEMENTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/UI_TESTING_CHECKLIST.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/testing/VERIFICATION_CHECKLIST.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/7_DAY_PROGRESSIVE_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ACCOUNT_SETTINGS_UX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_DASHBOARD_FRONTEND.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_DISPUTE_RESOLUTION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_EARNINGS_ADJUSTMENT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_JOB_OVERRIDE_TOOLS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_MONITORING_LOGGING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_PORTAL_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_REFUND_CONTROLS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_RISK_FRAUD_CONTROLS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_SYSTEM_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_USER_COMPLETE_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_USER_CREATED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ADMIN_WALLET_CONTROLS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/AI_ASSISTANT_BEST_PRACTICES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/AI_ASSISTANT_LIVE_AND_WORKING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/AI_ASSISTANT_READY_TO_USE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ALL_ENDPOINTS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ALL_RECOMMENDATIONS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ALL_TASKS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ALL_TODOS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ANALYSIS_REPORT_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/API.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/API_ENDPOINTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/API_ENDPOINTS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/API_REFERENCE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/APPLY_COMPONENTS_TO_PAGES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ASSIGNMENT_ENGINE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/AUDIT_FIXES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/AUDIT_RESULTS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/AUTOMATED_SETUP_SCRIPT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/BACKEND_TIMEOUT_ISSUE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/BACK_BUTTON_ADDED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/BATCH_APPLY_COMPONENTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/BEST_PRACTICES_AUDIT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/BEST_PRACTICES_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/BOOKING_SYSTEM.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/BUILD_COMPLETE_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/BUILD_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/BUTTONS_FIXED_DEMO_MODE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CANCELLATION_RULES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CAPABILITIES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CLEANER_APP_UX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CLEANER_FLOW_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CLEANER_PAGES_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CLEANER_PORTAL_CLIENTS_INVOICING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CLEANER_USER_COMPLETE_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CLEANER_WORKFLOW.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CLIENT_BOOKING_UX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CLIENT_POST_JOB_UX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CLIENT_USER_COMPLETE_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/COMMANDS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CONNECTION_TEST_RESULTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/CREATE_TEST_ACCOUNTS_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/DATABASE_TEST_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/DETAILED_IMPLEMENTATION_STEPS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/DEVELOPMENT_WORKFLOW_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/DISPUTE_UX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/EARNINGS_MATH.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENDPOINT_AUDIT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENDPOINT_VERIFICATION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINES_WORKERS_AUTOMATION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_ADMIN_OPS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_ANALYTICS_KPIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_BOOKING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_CREDITS_PAYMENTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_DISPUTES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_MATCHING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_MESSAGING_NOTIFICATIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_PAYOUTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_PRICING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_RELIABILITY_TIERS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_RISK_FRAUD.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ENGINE_SUBSCRIPTIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/EVENT_SYSTEM_SPEC.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/EXECUTION_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FILE_LOCATIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FRONTEND_AUTH_FIX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FRONTEND_BUILD_REQUIREMENTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FRONTEND_COMPLETE_OUTLINE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FRONTEND_COMPLETION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FRONTEND_COMPLETION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FRONTEND_ENHANCEMENTS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FRONTEND_FIX_IMPLEMENTATION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FRONTEND_FIX_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FRONTEND_MISSING_ITEMS_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FRONTEND_REALITY_CHECK.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/FUTURE_FEATURES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/GAPS_IMPLEMENTATION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/GAPS_IMPLEMENTATION_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/GAPS_IMPLEMENTATION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/GITHUB_PUSH_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/GITHUB_SAVE_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/IMPLEMENTATION_ACTION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/IMPLEMENTATION_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/IMPLEMENTATION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/IMPLEMENTATION_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/JOB_REASSIGNMENT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/JWT_QUICK_REFERENCE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/LEDGER_ENTRY_RULES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/LINTING_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MAKING_CHANGES_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MANSION_OPTIMIZED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MASTER_PLAN_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MASTER_ROLLOUT_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MASTER_TESTING_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MESSAGE_HISTORY_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MOBILE_FRIENDLY_CONFIG.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MOBILE_IMPLEMENTATION_CHECKLIST.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MOBILE_PHASES_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MOBILE_PHASE_1_2_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MOBILE_PHASE_1_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MOBILE_PHASE_2_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MOVE_1_DETAILED_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MOVE_1_FAILURES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MOVE_1_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/MOVE_1_PROGRESS_UPDATE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/N8N_API_CLIENT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/N8N_COMPLETE_CONFIG.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/N8N_ENV_CONFIG.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/N8N_ORCHESTRATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/N8N_WEBHOOK_SECRET.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/N8N_WORKFLOW_VALIDATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/NAVIGATION_FOOTER_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/NEXT_STEPS_CURRENT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/NEXT_STEPS_RECOMMENDATIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/NON_CRITICAL_PAGES_OUTLINE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/NOTIFICATION_SERVICE_MIGRATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/NO_SHOW_DETECTION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PAYMENT_FAILURE_UX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PAYOUT_FAILURE_UX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PAYOUT_PROCESSOR.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PERFORMANCE_OPTIMIZATION_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PHASE1_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PHASE3_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PHASE5_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PHOTO_VERIFICATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/POSTMAN_API_KEY_SETUP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PRE_LAUNCH_COMPLETE_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PRE_LAUNCH_OPTIMIZATION_PROGRESS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PRICING_CREDIT_CALC.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PRODUCTION_READINESS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PRODUCT_VISION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PROJECT_GAPS_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PURETASK_ARCHITECTURE_EXPLAINED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PURETASK_AUTOMATION_WORKER_MODEL.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PURETASK_COMPLETE_TESTING_MASTER_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PURETASK_DATA_MODEL.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PURETASK_IMPROVEMENTS_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PURETASK_JOURNEYS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PURETASK_LONG_TERM_ROADMAP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PURETASK_MARKETPLACE_ECONOMICS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/PUSH_FRONTEND_TO_GITHUB_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/QUICK_6_HOUR_OVERVIEW.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/QUICK_FIX_TEST_PAGE_STYLES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/QUICK_REFERENCE_CARD.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/QUICK_START_TROUBLESHOOTING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/REFUND_CHARGEBACK_SOP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/REFUND_PROCESSOR.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/RELIABILITY_SCORE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ROADMAP.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ROUTES_CATALOG.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/ROUTE_PROTECTION_TABLE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SAVE_EVERYTHING_QUICK_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SECTION_7_NEEDS_ASSESSMENT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SECTION_8_SECURITY_ASSESSMENT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SECTION_9_MAINTAINABILITY_ASSESSMENT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SECURITY_AUDIT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SECURITY_AUDIT_QUICK_START.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SECURITY_AUDIT_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SERVER_STARTED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SERVER_STARTUP_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SERVICES_CATALOG.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SOFT_LAUNCH_CHECKLIST.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/START_HERE_DAY_1.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/STATE_MACHINE_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/STATE_SYNC.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/STRIPE_EVENT_HANDLING.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/STRIPE_IDEMPOTENCY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/STRIPE_WEBHOOK_ROUTER.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/STYLING_FIXES_APPLIED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TAILWIND_FIX_APPLIED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TASK_COMPLETION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_CAMPAIGNS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_COMPLETE_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_COMPLETE_IMPLEMENTATION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_COMPLETE_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_EXPLANATIONS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_IMPLEMENTATION_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_QUICK_REFERENCE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_REMAINING_TESTS_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_STRATEGY_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_STRATEGY_GAPS_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_STRATEGY_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TESTING_VERIFICATION_REPORT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TEST_ACCOUNTS_REFERENCE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TEST_AI_ASSISTANT_PAGE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TEST_AI_QUICK_START.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TEST_BEST_PRACTICES_REVIEW.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TEST_FIXES_APPLIED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TEST_FIXES_IMPLEMENTED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TEST_FIXES_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TEST_PAGE_IMPROVEMENTS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TEST_PASSWORD_HASH_FIX_DIFFS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TEST_PASSWORD_HASH_FIX_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TEST_RESULTS_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/THE_COMPLETE_MANSION.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/TYPESCRIPT_FIXES_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/UI_TESTING_CHECKLIST.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/USER_GUIDE_CLEANER_AI_ASSISTANT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V1_COMPLETION_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V1_ENABLED_FEATURES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V1_REQUIREMENTS_AUDIT.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V1_REVIEW_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V2_FEATURES_DETAILED_BREAKDOWN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V2_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V2_TESTING_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V3_COMPLETE_OVERVIEW.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V3_EXECUTION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V3_FEATURES_DETAILED_BREAKDOWN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V3_IMPLEMENTATION_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V3_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V4_CAPABILITIES_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V4_IMPLEMENTATION_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V4_IMPLEMENTATION_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V4_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V4_TESTING_SUMMARY.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V5_CAPABILITIES_ANALYSIS.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/V5_PLAN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/VERSION_FEATURE_BREAKDOWN.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/WALLET_MATH.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/WHAT_YOU_ACTUALLY_NEED.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/WORKER_DRY_RUN_ISSUES.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/WORKER_SCHEDULE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/WORKFLOW_FIX_AUDIT_AUTOFIX.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/docs__IMPLEMENTATION_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/docs_archive__ADMIN_SYSTEM_COMPLETE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/docs_archive__SERVER_STARTUP_GUIDE.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/email-registry.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/md_report.md,md,Archive,keep_archived,,already archived history
+docs/archive/raw/uncategorized/n8n-universal-sender-workflow-spec.md,md,Archive,keep_archived,,already archived history
+docs/blueprint/ENGINE_ADMIN_OPS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/ENGINE_ANALYTICS_KPIS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/ENGINE_BOOKING.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/ENGINE_CREDITS_PAYMENTS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/ENGINE_DISPUTES.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/ENGINE_MATCHING.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/ENGINE_MESSAGING_NOTIFICATIONS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/ENGINE_PAYOUTS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/ENGINE_PRICING.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/ENGINE_RELIABILITY_TIERS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/ENGINE_RISK_FRAUD.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/ENGINE_SUBSCRIPTIONS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/PURETASK_AUTOMATION_WORKER_MODEL.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/PURETASK_DATA_MODEL.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/PURETASK_FINAL_BLUEPRINT_OVERVIEW.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/PURETASK_JOURNEYS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/blueprint/PURETASK_MARKETPLACE_ECONOMICS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/runbooks/handle-incident.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/runbooks/restore-from-backup.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/runbooks/rollback-deploy.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/README.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/admin/ADMIN_DISPUTE_RESOLUTION.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/admin/ADMIN_EARNINGS_ADJUSTMENT.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/admin/ADMIN_JOB_OVERRIDE_TOOLS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/admin/ADMIN_MONITORING_LOGGING.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/admin/ADMIN_REFUND_CONTROLS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/admin/ADMIN_RISK_FRAUD_CONTROLS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/admin/ADMIN_WALLET_CONTROLS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/admin/REFUND_CHARGEBACK_SOP.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/infra/API_ENDPOINTS.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/infra/ASSIGNMENT_ENGINE.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/infra/DB_SCHEMA_MIGRATION.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/infra/MONITORING_ALERTING.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/infra/N8N_ORCHESTRATION.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/infra/PAYOUT_PROCESSOR.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/infra/REFUND_PROCESSOR.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/infra/STATE_SYNC.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/infra/STRIPE_WEBHOOK_ROUTER.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/job/BOOKING_SYSTEM.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/job/CANCELLATION_RULES.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/job/CLEANER_WORKFLOW.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/job/JOB_REASSIGNMENT.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/job/JOB_STATUS_MACHINE.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/job/NO_SHOW_DETECTION.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/job/PHOTO_VERIFICATION.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/job/PRICING_CREDIT_CALC.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/micro/DB_CONSTRAINTS_VALIDATION.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/micro/EARNINGS_MATH.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/micro/LEDGER_ENTRY_RULES.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/micro/RELIABILITY_SCORE.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/micro/STRIPE_EVENT_HANDLING.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/micro/STRIPE_IDEMPOTENCY.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/micro/WALLET_MATH.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/ui/ACCOUNT_SETTINGS_UX.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/ui/CLEANER_APP_UX.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/ui/CLEANER_PORTAL_CLIENTS_INVOICING.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/ui/CLIENT_BOOKING_UX.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/ui/CLIENT_POST_JOB_UX.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/ui/DISPUTE_UX.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/ui/PAYMENT_FAILURE_UX.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/specs/ui/PAYOUT_FAILURE_UX.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/versions/MASTER_CHECKLIST.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/versions/PRIORITIZED_BACKLOG.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/versions/V1_PLAN.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/versions/V2_PLAN.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/versions/V3_PLAN.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/versions/V4_PLAN.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+docs/versions/V5_PLAN.md,md,Merge,merge_then_archive,docs/active/(canonical targets),structured spec content to merge into canonical docs before archiving
+document analysis overview puretask - needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/document analysis overview puretask - needs review.txt,intake or transient text artifact outside canonical docs
+document review and execution for puretask - analyze.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/document review and execution for puretask - analyze.txt,intake or transient text artifact outside canonical docs
+epic front end guide -puretask needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/epic front end guide -puretask needs review.txt,intake or transient text artifact outside canonical docs
+eslint-report.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/eslint-report.txt,intake or transient text artifact outside canonical docs
+event types and puretask stuff need to analyze.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/event types and puretask stuff need to analyze.txt,intake or transient text artifact outside canonical docs
+figma stuff -puretask needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/figma stuff -puretask needs review.txt,intake or transient text artifact outside canonical docs
+gameification puretask - needs review but good.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/gameification puretask - needs review but good.txt,intake or transient text artifact outside canonical docs
+hey gen video creator api.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/hey gen video creator api.txt,intake or transient text artifact outside canonical docs
+important credsit system puretask - neeeds review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/important credsit system puretask - neeeds review.txt,intake or transient text artifact outside canonical docs
+install stripe cli windows - puretask needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/install stripe cli windows - puretask needs review.txt,intake or transient text artifact outside canonical docs
+instructions puyretask - needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/instructions puyretask - needs review.txt,intake or transient text artifact outside canonical docs
+interactive website design- puretask needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/interactive website design- puretask needs review.txt,intake or transient text artifact outside canonical docs
+mcp/README.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+nodeSetup/README.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+product/FINAL_PLATFORM_CAPABILITIES.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+product/PRODUCT_VISION.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+product/PURETASK_LONG_TERM_ROADMAP.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+puretask interactive design ideas-needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/puretask interactive design ideas-needs review.txt,intake or transient text artifact outside canonical docs
+puretask master document - needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/puretask master document - needs review.txt,intake or transient text artifact outside canonical docs
+puretask plans semi important - need to review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/puretask plans semi important - need to review.txt,intake or transient text artifact outside canonical docs
+puretask ux description - needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/puretask ux description - needs review.txt,intake or transient text artifact outside canonical docs
+railway setup help - puretask -needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/railway setup help - puretask -needs review.txt,intake or transient text artifact outside canonical docs
+reliability score guide puretask- needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/reliability score guide puretask- needs review.txt,intake or transient text artifact outside canonical docs
+review and analyze options puretask- needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/review and analyze options puretask- needs review.txt,intake or transient text artifact outside canonical docs
+script for add.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/script for add.txt,intake or transient text artifact outside canonical docs
+script for busy person video.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/script for busy person video.txt,intake or transient text artifact outside canonical docs
+scripts/railway-variables-checklist.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+scripts/setup-railway-cron.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+setup puretask workspsace- needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/setup puretask workspsace- needs review.txt,intake or transient text artifact outside canonical docs
+src/gamification-bundle/README.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+src/tests/README.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+src/workers/WORKER_STATUS.md,md,Keep Reference,keep,,non-doc repo markdown retained (tooling/code-adjacent)
+stripe flatform vs marketplace - puretask needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/stripe flatform vs marketplace - puretask needs review.txt,intake or transient text artifact outside canonical docs
+summary of user flows - needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/summary of user flows - needs review.txt,intake or transient text artifact outside canonical docs
+super important puretask automations - needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/super important puretask automations - needs review.txt,intake or transient text artifact outside canonical docs
+test-results-backend.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/test-results-backend.txt,intake or transient text artifact outside canonical docs
+workflow setup progress- puretask needs review.txt,txt,Archive,move_to_archive,docs/archive/raw/intake_txt/workflow setup progress- puretask needs review.txt,intake or transient text artifact outside canonical docs

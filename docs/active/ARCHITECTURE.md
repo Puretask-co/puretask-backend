@@ -1,7 +1,7 @@
 # PureTask Backend — Architecture
 
 **Purpose:** High-level structure and key flows for maintainability (Section 9).  
-**See also:** [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md), [CONTRIBUTING.md](./CONTRIBUTING.md), [COST_MAP.md](./COST_MAP.md), runbooks in [sections/](./sections/).
+**See also:** [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md), [CONTRIBUTING.md](./CONTRIBUTING.md), [RUNBOOK.md](./RUNBOOK.md), runbooks in [sections/](./sections/).
 
 ---
 
@@ -168,6 +168,44 @@ Credits ledger is append-only; balance is derived. Invoice payment by credits cr
 | Short notice (good-faith) | &lt; 18 hours |
 | Good-faith decline allowance | 6 per 7 days |
 | Distance good-faith | travel radius 10 mi; penalty-free at ≥ 11 mi |
+
+---
+
+## 3.6 High-value spec extracts (2026-04 docs ledger pass)
+
+These distilled rules are promoted from structured specs in `docs/specs/**` and now treated as architecture-level source of truth.
+
+### Job status machine (canonical transitions and invariants)
+
+- Canonical states: `created`, `assigned`, `accepted`, `in_progress`, `completed`, `approved`, plus terminal variants `canceled_by_client`, `canceled_by_cleaner`, `no_show`, `disputed`, `refunded`.
+- Core transitions:
+  - `created -> assigned -> accepted -> in_progress -> completed`
+  - `completed -> approved` or `completed -> disputed`
+  - `approved -> refunded` for post-approval reversals.
+- Invalid transitions must be blocked (`approved -> in_progress`, `completed -> accepted`, etc.).
+- Idempotency rule: retrying the same transition must be safe and never double-create financial side effects.
+- Transactional rule: status update + side effects (ledger, payout, escrow release/refund) must commit atomically.
+
+### Stripe webhook routing and idempotency
+
+- Ingest flow: verify signature, persist raw event, route by `event.type`, then run domain handler.
+- Primary dedupe key is Stripe `event_id`; object-level guard is required for PI/invoice/charge/payout handlers.
+- Unknown events return 200 no-op and are logged.
+- Handler failures must enter retry flow with backoff; retry must remain idempotent.
+
+### Ledger rules (financial integrity)
+
+- Every wallet-affecting change must write a ledger row.
+- `user_id` is required for user ledger rows; `job_id` is required for escrow/earning-linked rows.
+- Wallet balance mutation and ledger insert must happen in one transaction.
+- Integrity equation must hold: derived balance from ledger equals stored wallet balance; per-job escrow hold/release/reversal math must reconcile.
+
+### Assignment engine safety constraints
+
+- Visibility is ranking-based and voluntary; cleaners choose to accept.
+- Long-wave exposure model (for example 24h) is preferred over tight dispatch control for IC-safe behavior.
+- Waves may widen radius / tier thresholds if unfilled, but no forced assignment by default.
+- Ranking inputs: availability, reliability/tier, distance, and optional preference signals.
 
 ---
 

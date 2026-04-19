@@ -245,4 +245,4 @@ npm run dev
 
 - [Neon Documentation](https://neon.tech/docs)
 - [PostgreSQL Backup Guide](https://www.postgresql.org/docs/current/backup.html)
-- [Database Backup Guide](./DATABASE_BACKUP_GUIDE.md)
+- [Database Backup Guide](../DATABASE_BACKUP_GUIDE.md)

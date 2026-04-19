@@ -1,7 +1,7 @@
 # Backup & Restore
 
 **Purpose:** Single doc for backup strategy, setup, and restore procedures (Neon, pg_dump, PITR). Validate integrity and run drills.  
-**See also:** [DB/migrations/README.md](../../DB/migrations/README.md), [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md) Section 5, [RUNBOOK.md](./RUNBOOK.md).
+**See also:** [DB/migrations/README.md](../DB/migrations/README.md), [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md) Section 5, [RUNBOOK.md](./RUNBOOK.md).
 
 ---
 
