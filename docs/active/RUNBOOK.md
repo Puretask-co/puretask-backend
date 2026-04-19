@@ -416,116 +416,101 @@ Current repo status: `tests/e2e/*.spec.ts` exists, but full Playwright wiring is
 
 Use this checklist as the canonical execution tracker for full-stack hardening work.
 
-### 9.1 Execution order (always run in this order)
+Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
 
-1. P0.1 + P0.4 (repo identifiers + dispatch auth reliability)
-2. P0.3 (canonical full-stack verify gate)
-3. P0.2 (invoice schema strictness transition)
-4. P1.1 + P1.2 (deterministic DB + contract fixture hardening)
-5. P1.3 + P1.4 (release traceability + E2E runtime consistency)
-6. P2.x (observability, ownership, and delivery polish)
+### 9.1 Execution order (current)
+
+1. P0.2 (migration path determinism)
+2. P0.3 (release orchestration hard gate)
+3. P1.1 (frontend docs drift cleanup)
+4. P1.2 (expand automated journey coverage)
+5. P1.3 (resolve highest-impact skipped test suites)
+6. P2.1 + P2.2 (backend architecture debt + security/quality gate tightening)
 
 ### 9.2 P0 — Release safety and mandatory full-stack correctness
 
-- [x] **P0.1 Unify cross-repo identifiers and dispatch guardrails**
-  - **Owner:** `@owner-platform`
+- [x] **P0.1 Canonical contract alignment (backend endpoints vs frontend expectations)**
+  - **Owner:** `@owner-backend` + `@owner-frontend`
   - **Touches:**
-    - Backend workflow: `.github/workflows/release-orchestration.yml`
-    - Frontend workflows: `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`
+    - Backend: `docs/active/BACKEND_ENDPOINTS.md`
+    - Frontend: `docs/BACKEND_ENDPOINTS.md`, `docs/FRONTEND_VS_BACKEND_REMAINING_WORK.md`
+    - Frontend verifier: `scripts/run-api-verification.js`, `package.json`, `tests/e2e/auth/login.spec.ts`
   - **Verification commands/checks:**
-    - `gh workflow run release-orchestration.yml --repo PURETASK/puretask-backend --field backend_ref=<sha> --field frontend_ref=<sha> --field environment=staging`
-    - Confirm orchestration validate job can checkout both repos and reaches deploy dispatch steps.
+    - Backend running on `:4000`
+    - `npm run seed:e2e:users` (backend)
+    - `npm run test:api` (frontend)
+    - `npm run verify:fullstack` (frontend)
+  - **Result notes (2026-04-19):**
+    - Canonical + mirror contract docs synchronized.
+    - Frontend unresolved-gap tracker updated to current integration reality.
+    - Contract gate outputs refreshed in `puretask-frontend/docs/TEST_RESULTS.md` and `puretask-frontend/api-verification-summary.json`.
 
-- [x] **P0.4 Ensure dispatch token/scopes are stable for cross-repo release**
-  - **Owner:** `@owner-devops`
-  - **Touches:**
-    - Backend workflow auth preflight: `.github/workflows/release-orchestration.yml`
-    - GitHub secret: `PURETASK_ORG_DISPATCH_TOKEN` (org/repo settings)
-  - **Verification commands/checks:**
-    - `gh auth status` (automation identity has valid token)
-    - Dispatch step succeeds for both backend and frontend `release.yml` workflows.
-
-- [x] **P0.3 Enforce canonical full-stack verify gate**
-  - **Owner:** `@owner-frontend-platform`
-  - **Touches:**
-    - Frontend scripts: `package.json`, `scripts/run-playwright-e2e.js`, `scripts/run-api-verification.js`
-    - Frontend CI: `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`
-  - **Verification commands/checks:**
-    - `npm run verify:fullstack`
-    - CI jobs pass: `contract-gate`, `e2e`, `build`.
-
-- [x] **P0.2 Transition invoice schema behavior from compatibility fallback to strict contract**
-  - **Owner:** `@owner-backend`
-  - **Touches:**
-    - Backend route: `src/routes/trustAdapter.ts`
-    - Backend DB setup path: `scripts/setup-test-db.js` (+ migration if required)
-  - **Verification commands/checks:**
-    - `npm run db:setup:test`
-    - `npm run test:api` (from frontend repo against running backend) must pass without hidden 500s.
-
-### 9.3 P1 — Stability and traceability hardening
-
-- [x] **P1.1 Make backend test DB provisioning deterministic across schema variants**
+- [ ] **P0.2 Migration path determinism (avoid env mismatch)**
   - **Owner:** `@owner-backend-platform`
   - **Touches:**
-    - `scripts/setup-test-db.js`
-    - `docs/active/SETUP.md`, `docs/active/TROUBLESHOOTING.md`
+    - Backend workflows: `.github/workflows/migrations.yml`, `.github/workflows/ci.yml`
+    - Backend scripts/docs: `scripts/setup-test-db.js`, `docs/active/MASTER_MIGRATIONS.md`, `docs/active/SETUP.md`, `docs/active/TROUBLESHOOTING.md`
   - **Verification commands/checks:**
+    - `npm run db:validate:migrations`
     - `npm run db:setup:test`
-    - `npm run verify:e2e:fixtures`
+    - `npm run test:ci`
 
-- [x] **P1.2 Add deterministic happy-path contract fixtures**
-  - **Owner:** `@owner-backend`
-  - **Touches:**
-    - Frontend contract runner: `scripts/run-api-verification.js`
-    - Backend seed path: `scripts/seed-e2e-users.js` (or new fixture script)
-  - **Verification commands/checks:**
-    - `npm run seed:e2e:users`
-    - `npm run test:api` (must verify shape and at least one stable happy path)
-
-- [x] **P1.3 Record backend/frontend ref traceability in release orchestration**
+- [ ] **P0.3 Release orchestration hard gate**
   - **Owner:** `@owner-devops`
   - **Touches:**
-    - `.github/workflows/release-orchestration.yml`
-    - `docs/active/DEPLOYMENT.md`
+    - Backend: `.github/workflows/release-orchestration.yml`, `.github/workflows/release.yml`
+    - Frontend: `.github/workflows/release.yml`
   - **Verification commands/checks:**
-    - Run orchestration `workflow_dispatch`; confirm release manifest artifact/log has `backend_ref`, `frontend_ref`, and `environment`.
+    - Trigger orchestration with explicit refs and environment.
+    - Confirm release dispatches only execute after validate job success.
 
-- [x] **P1.4 Standardize E2E runtime mode between local and CI**
+### 9.3 P1 — Confidence and maintainability
+
+- [ ] **P1.1 Frontend docs drift cleanup (must match real scripts/workflows)**
+  - **Owner:** `@owner-frontend-platform`
+  - **Touches:**
+    - `README.md`, `docs/DEPLOYMENT.md`, `LAUNCH_CHECKLIST.md`, `docs/ENV_SETUP.md` (frontend repo)
+  - **Verification commands/checks:**
+    - `npm run build`
+    - `npm run start`
+    - `npm run test:api`
+
+- [ ] **P1.2 Expand automated journey coverage beyond minimum smoke**
+  - **Owner:** `@owner-qa` + `@owner-frontend`
+  - **Touches:**
+    - Frontend workflows: `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`
+    - Frontend tests: `tests/e2e/**`
+  - **Verification commands/checks:**
+    - `npm run test:e2e:smoke`
+    - `npm run test:e2e`
+
+- [ ] **P1.3 Resolve highest-impact skipped test suites**
   - **Owner:** `@owner-frontend`
   - **Touches:**
-    - `playwright.config.ts`
-    - `.github/workflows/e2e.yml`, `.github/workflows/ci.yml`
+    - Frontend tests listed in `docs/SKIPPED_TESTS.md`
   - **Verification commands/checks:**
-    - `npm run test:e2e:smoke` (local)
-    - E2E CI workflow pass on PR.
+    - `npm run test`
+    - `npm run test:coverage`
 
-### 9.4 P2 — Observability and delivery efficiency
+### 9.4 P2 — Scale-quality and operational polish
 
-- [x] **P2.1 Correlation/request ID continuity across frontend and backend**
-  - **Owner:** `@owner-backend-observability`
+- [ ] **P2.1 Backend architecture debt reduction (route→service boundaries)**
+  - **Owner:** `@owner-backend`
   - **Touches:**
-    - Frontend client: `src/lib/apiClient.ts`
-    - Backend request context/logging path
-    - `docs/active/RUNBOOK.md` incident notes
+    - Backend routes/services with direct DB access concentration
   - **Verification commands/checks:**
-    - Trigger one authenticated frontend request and verify same request/correlation IDs in backend logs.
+    - `npm run lint`
+    - `npm run test:integration`
 
-- [x] **P2.2 Synthetic post-deploy smoke checks for backend + frontend**
-  - **Owner:** `@owner-devops`
+- [ ] **P2.2 Security/quality gate tightening**
+  - **Owner:** `@owner-security`
   - **Touches:**
-    - Backend deploy workflow: `.github/workflows/release.yml`
-    - Frontend deploy workflow: `.github/workflows/release.yml`
+    - Backend workflow gates (format/audit/scan policy)
+    - Frontend workflow policy where applicable
   - **Verification commands/checks:**
-    - Manual `workflow_dispatch` for staging; verify health + synthetic smoke checks pass.
-
-- [x] **P2.3 Ownership and review routing improvements**
-  - **Owner:** `@owner-platform`
-  - **Touches:**
-    - `CODEOWNERS` (backend and frontend repos)
-    - PR template(s), runbook links, and review docs
-  - **Verification commands/checks:**
-    - Open a PR touching workflows + API + frontend and verify expected reviewers auto-request.
+    - `npm run security:scan`
+    - `npm audit --audit-level=critical`
+    - `npm run lint && npm run test` (frontend)
 
 ## 10. Docs governance migration tracker (canonical)
 
