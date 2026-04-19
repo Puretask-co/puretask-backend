@@ -10,7 +10,7 @@ on:
       frontend_repo:
         description: "Frontend repository owner/name"
         required: true
-        default: "Puretask-co/puretask-frontend"
+        default: "Puretask-co/-puretask-frontend"
       frontend_ref:
         description: "Frontend git ref (branch/tag/sha)"
         required: true
