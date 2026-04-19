@@ -420,12 +420,11 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
 
 ### 9.1 Execution order (current)
 
-1. P0.2 (migration path determinism)
-2. P0.3 (release orchestration hard gate)
-3. P1.1 (frontend docs drift cleanup)
-4. P1.2 (expand automated journey coverage)
-5. P1.3 (resolve highest-impact skipped test suites)
-6. P2.1 + P2.2 (backend architecture debt + security/quality gate tightening)
+1. P0.3 (release orchestration hard gate)
+2. P1.1 (frontend docs drift cleanup)
+3. P1.2 (expand automated journey coverage)
+4. P1.3 (resolve highest-impact skipped test suites)
+5. P2.1 + P2.2 (backend architecture debt + security/quality gate tightening)
 
 ### 9.2 P0 — Release safety and mandatory full-stack correctness
 
@@ -445,7 +444,7 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
     - Frontend unresolved-gap tracker updated to current integration reality.
     - Contract gate outputs refreshed in `puretask-frontend/docs/TEST_RESULTS.md` and `puretask-frontend/api-verification-summary.json`.
 
-- [ ] **P0.2 Migration path determinism (avoid env mismatch)**
+- [x] **P0.2 Migration path determinism (avoid env mismatch)**
   - **Owner:** `@owner-backend-platform`
   - **Touches:**
     - Backend workflows: `.github/workflows/migrations.yml`, `.github/workflows/ci.yml`
@@ -454,6 +453,10 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
     - `npm run db:validate:migrations`
     - `STRICT_MIGRATION_PATH=1 npm run db:setup:test`
     - `npm run test:ci`
+  - **Result notes (2026-04-19):**
+    - CI migration checks now enforce deterministic setup (`STRICT_MIGRATION_PATH=1`) and run migration validation before setup.
+    - `db:setup:test` strict mode fails on drift instead of silently falling back/skipping unify migrations.
+    - Unify migrations `059–061` were aligned with canonical `users.id` TEXT FKs; `000_MASTER_MIGRATION.sql` regenerated from corrected sources.
 
 - [ ] **P0.3 Release orchestration hard gate**
   - **Owner:** `@owner-devops`

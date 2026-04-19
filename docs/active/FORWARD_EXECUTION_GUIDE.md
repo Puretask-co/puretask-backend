@@ -85,10 +85,23 @@ PureTask is in a stable “proceed fast” state when all are true:
   - Backend scripts/docs: `scripts/setup-test-db.js`, `docs/active/MASTER_MIGRATIONS.md`, `docs/active/SETUP.md`, `docs/active/TROUBLESHOOTING.md`
 - **Verification commands:**
   - Backend: `npm run db:validate:migrations`
-  - Backend: `npm run db:setup:test`
+  - Backend: `STRICT_MIGRATION_PATH=1 npm run db:setup:test`
   - Backend: `npm run test:ci`
 - **Exit criteria:**
   - Same migration strategy documented and used across CI + local/test instructions.
+
+**Status (2026-04-19): completed**
+- CI migration path is now deterministic and aligned:
+  - `.github/workflows/migrations.yml`: runs `db:validate:migrations` then strict `db:setup:test`.
+  - `.github/workflows/ci.yml`: runs `db:validate:migrations` and strict `db:setup:test` before test suite.
+- Deterministic setup behavior is enforced and documented:
+  - `scripts/setup-test-db.js` supports strict mode (`STRICT_MIGRATION_PATH=1`) and fails fast on drift.
+  - Canonical docs updated: `docs/active/MASTER_MIGRATIONS.md`, `docs/active/SETUP.md`, `docs/active/TROUBLESHOOTING.md`.
+- Canonical user-id FK contract drift removed from unify migrations:
+  - `DB/migrations/059_add_invoice_status_and_invoices.sql`
+  - `DB/migrations/060_add_reviews_ai_worker_stripe_tables.sql`
+  - `DB/migrations/061_add_cleaner_id_payout_misc_tables.sql`
+  - `DB/migrations/000_MASTER_MIGRATION.sql` regenerated
 
 ### P0.3 Release orchestration hard gate
 - **Owner:** `@owner-devops`
@@ -192,7 +205,7 @@ PureTask is in a stable “proceed fast” state when all are true:
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test:ci`
-- `npm run db:setup:test`
+- `STRICT_MIGRATION_PATH=1 npm run db:setup:test`
 - `npm run build`
 
 ### Frontend gate
@@ -208,9 +221,9 @@ If any gate fails, do not promote release refs.
 
 ## 7) Immediate next actions (starting now)
 
-1. Execute **P0.2** migration determinism pass (docs + CI + scripts) and re-run backend CI-equivalent checks.
-2. Execute **P0.3** release orchestration validation using explicit backend/frontend refs.
-3. Then continue with **P1.1** frontend docs drift cleanup before adding new feature surface.
-4. Keep **P0.1** as a standing guardrail by requiring `npm run test:api` + `npm run verify:fullstack` before release promotion.
+1. Execute **P0.3** release orchestration validation using explicit backend/frontend refs.
+2. Then continue with **P1.1** frontend docs drift cleanup before adding new feature surface.
+3. Keep **P0.1** as a standing guardrail by requiring `npm run test:api` + `npm run verify:fullstack` before release promotion.
+4. Keep **P0.2** as a standing guardrail by requiring `npm run db:validate:migrations` + `STRICT_MIGRATION_PATH=1 npm run db:setup:test` before release promotion.
 
 This sequence is currently the best risk-adjusted path for PureTask.
