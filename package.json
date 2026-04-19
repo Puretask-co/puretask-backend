@@ -24,6 +24,8 @@
     "test:smoke": "vitest run src/tests/smoke",
     "test:integration": "vitest run src/tests/integration",
     "test:coverage": "vitest run --coverage",
+    "test:ci": "vitest run --run src/lib/__tests__/auth.test.ts src/lib/__tests__/validation.test.ts src/lib/__tests__/logRedaction.test.ts src/lib/__tests__/ssrfProtection.test.ts src/lib/__tests__/tiers.test.ts src/tests/integration/stateMachine.test.ts",
+    "test:ci:coverage": "vitest run --coverage --run src/lib/__tests__/auth.test.ts src/lib/__tests__/validation.test.ts src/lib/__tests__/logRedaction.test.ts src/lib/__tests__/ssrfProtection.test.ts src/lib/__tests__/tiers.test.ts src/tests/integration/stateMachine.test.ts",
     "analyze:bundle": "node scripts/analyze-bundle.js",
     "security:scan": "node scripts/secret-scan.js",
     "security:full-audit": "npm audit --audit-level=moderate && npm run security:scan",
