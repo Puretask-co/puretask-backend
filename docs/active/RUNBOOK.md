@@ -420,10 +420,9 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
 
 ### 9.1 Execution order (current)
 
-1. P1.1 (frontend docs drift cleanup)
-2. P1.2 (expand automated journey coverage)
-3. P1.3 (resolve highest-impact skipped test suites)
-4. P2.1 + P2.2 (backend architecture debt + security/quality gate tightening)
+1. P1.2 (expand automated journey coverage)
+2. P1.3 (resolve highest-impact skipped test suites)
+3. P2.1 + P2.2 (backend architecture debt + security/quality gate tightening)
 
 ### 9.2 P0 — Release safety and mandatory full-stack correctness
 
@@ -494,7 +493,7 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
       - `npm run build` parse error in `src/app/client/bookings/[id]/page.tsx`
       - `npm run start` port conflict when `3001` is already occupied in shared environments.
 
-- [ ] **P1.2 Expand automated journey coverage beyond minimum smoke**
+- [x] **P1.2 Expand automated journey coverage beyond minimum smoke**
   - **Owner:** `@owner-qa` + `@owner-frontend`
   - **Touches:**
     - Frontend workflows: `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`
@@ -502,6 +501,12 @@ Execution source: `docs/active/FORWARD_EXECUTION_GUIDE.md`.
   - **Verification commands/checks:**
     - `npm run test:e2e:smoke`
     - `npm run test:e2e`
+  - **Result notes (2026-04-19):**
+    - Frontend CI now includes a deterministic full-stack `e2e-smoke` job that checks out backend + frontend, prepares backend test data, and runs both smoke lanes before deploy dispatch.
+    - Frontend smoke lane expanded beyond auth-only:
+      - `test:e2e:smoke`: stable auth UI smoke (`tests/e2e/auth/login-smoke.spec.ts`)
+      - `test:e2e`: auth smoke + payments-adjacent trust journey (`tests/e2e/trust/credits-billing-smoke.spec.ts`)
+    - Payments-adjacent journey coverage is now explicit in default CI path by asserting authenticated access to credits balance and billing invoices APIs.
 
 - [ ] **P1.3 Resolve highest-impact skipped test suites**
   - **Owner:** `@owner-frontend`
