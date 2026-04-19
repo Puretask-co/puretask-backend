@@ -31,6 +31,8 @@ JWT_EXPIRES_IN=30d
 
 Optional for local: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `N8N_WEBHOOK_SECRET`, `SENDGRID_API_KEY`, `TWILIO_*`. See `.env.example` for the full list.
 
+**Local profile/ID files (multer → `fileUploadService`):** Writes go under `uploads/` in the repo root unless you set **`UPLOAD_DIR`** to an absolute path. **`uploads/` is gitignored** so real user files are never committed. Committed **sample files** live under **`fixtures/uploads/`** using the same folder layout as on disk (`profile-photos/<userId>/...`, `identity-documents/...`). Copy from there into `uploads/` in dev if you need fixed paths, or point tests at `fixtures/uploads` via `UPLOAD_DIR` when you intentionally want reads from the fixture tree.
+
 **Optional — S3/R2 job photo uploads:** For signed PUT URLs (client uploads directly to bucket), set: `STORAGE_PROVIDER` (s3 or r2), `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`; for R2 also set `STORAGE_ENDPOINT` (e.g. `https://<accountid>.r2.cloudflarestorage.com`). Optional: `STORAGE_PUBLIC_BASE_URL` (CDN or bucket public URL for photo display). Same code works for S3 and R2; only env changes. See `src/lib/storage.ts` and routes: `POST /uploads/sign`, `POST /jobs/:jobId/photos/commit`.
 
 **Check that the database is reachable:** Run `npm run db:check`. If it says "DATABASE_URL is not set", add `DATABASE_URL=postgresql://...?sslmode=require` to `.env` (get the URI from Neon Dashboard → Connection string). If the DB still doesn't work, see [TROUBLESHOOTING.md — Database Connection Issues](./TROUBLESHOOTING.md).
