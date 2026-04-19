@@ -154,6 +154,52 @@ Railway auto-deploys on push to the linked branch unless disabled.
 - **Staging (optional)** — Create a second Railway service or project with `DATABASE_URL` pointing to a staging Neon branch. Deploy develop → staging; merge main → production.
 - **Coverage** — CI runs `npm run test:coverage`; reports in `coverage/`. Add `CODECOV_TOKEN` secret and `lcov.info` will be uploaded. Badge: `[![codecov](https://codecov.io/gh/OWNER/REPO/graph/badge.svg)](https://codecov.io/gh/OWNER/REPO)`.
 
+### Cross-repo release orchestration (backend + frontend)
+
+For coordinated full-stack releases, use the backend workflow:
+
+- `.github/workflows/release-orchestration.yml` (manual `workflow_dispatch`)
+- Backend deployment workflow: `.github/workflows/release.yml` (`Backend Release Deploy`)
+- Frontend deployment workflow: `puretask-frontend/.github/workflows/release.yml` (`Frontend Release Deploy`)
+- Inputs:
+  - `frontend_ref` (frontend branch/tag/sha to release)
+  - `backend_ref` (backend branch/tag/sha to release)
+  - `environment` (`staging` or `production`)
+
+What it does:
+
+1. Checks out backend + selected frontend ref.
+2. Builds backend and verifies health on local CI Postgres.
+3. Builds frontend against local backend and runs frontend API contract verification.
+4. Dispatches backend release workflow (Railway deploy) and frontend release workflow (Vercel deploy).
+
+Required GitHub secrets for orchestration:
+
+- Cross-repo dispatch:
+  - `PURETASK_ORG_DISPATCH_TOKEN` (recommended PAT with workflow dispatch rights in both repos)
+- Backend deploy:
+  - `RAILWAY_TOKEN`
+  - `RAILWAY_API_SERVICE`
+  - `RAILWAY_SCHEDULER_SERVICE`
+  - `RAILWAY_WORKER_SERVICE`
+- Frontend deploy:
+  - `VERCEL_TOKEN`
+  - `VERCEL_ORG_ID`
+  - `VERCEL_PROJECT_ID`
+- Frontend runtime env for build/deploy:
+  - `NEXT_PUBLIC_API_BASE_URL`
+  - `NEXT_PUBLIC_API_URL`
+  - `NEXT_PUBLIC_BASE_URL`
+  - `NEXT_PUBLIC_WS_URL`
+  - `NEXT_PUBLIC_STRIPE_PUBLIC_KEY`
+
+The orchestration workflow now accepts `backend_repo` and `frontend_repo` inputs. Defaults:
+
+- `backend_repo=PURETASK/puretask-backend`
+- `frontend_repo=Puretask-co/-puretask-frontend`
+
+This prevents owner drift when backend and frontend live in different org/user owners.
+
 ### Branch protection (recommended)
 
 In GitHub → **Settings** → **Branches** → **Add rule** for `main`:

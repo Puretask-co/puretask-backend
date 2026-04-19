@@ -1,0 +1,98 @@
+name: Backend Release Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
+
+concurrency:
+  group: backend-release-${{ github.ref }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  release:
+    name: Deploy backend services via Railway
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy API service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_SERVICE: ${{ secrets.RAILWAY_API_SERVICE }}
+        run: railway up --service "${RAILWAY_API_SERVICE}" --detach
+
+      - name: Deploy scheduler service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SCHEDULER_SERVICE: ${{ secrets.RAILWAY_SCHEDULER_SERVICE }}
+        run: railway up --service "${RAILWAY_SCHEDULER_SERVICE}" --detach
+
+      - name: Deploy durable worker service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_WORKER_SERVICE: ${{ secrets.RAILWAY_WORKER_SERVICE }}
+        run: railway up --service "${RAILWAY_WORKER_SERVICE}" --detach
+
+      - name: Verify API health
+        env:
+          BACKEND_HEALTHCHECK_URL: ${{ secrets.BACKEND_HEALTHCHECK_URL }}
+        run: |
+          if [ -z "${BACKEND_HEALTHCHECK_URL}" ]; then
+            echo "BACKEND_HEALTHCHECK_URL not configured; skipping health probe."
+            exit 0
+          fi
+          curl -fsS "${BACKEND_HEALTHCHECK_URL}" > /dev/null
+
+      - name: Run synthetic backend smoke checks
+        env:
+          BACKEND_SMOKE_URL: ${{ secrets.BACKEND_SMOKE_URL || secrets.BACKEND_HEALTHCHECK_URL }}
+          SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+        run: |
+          if [ -z "${BACKEND_SMOKE_URL}" ]; then
+            echo "BACKEND_SMOKE_URL not configured; skipping synthetic smoke checks."
+            exit 0
+          fi
+
+          BASE_URL="${BACKEND_SMOKE_URL%/}"
+          curl -fsS "${BASE_URL}/health" > /dev/null
+
+          if [ -n "${SMOKE_TEST_EMAIL}" ] && [ -n "${SMOKE_TEST_PASSWORD}" ]; then
+            AUTH_PAYLOAD=$(printf '{"email":"%s","password":"%s"}' "${SMOKE_TEST_EMAIL}" "${SMOKE_TEST_PASSWORD}")
+            LOGIN_HTTP_CODE=$(curl -sS -o /tmp/backend-smoke-login.json -w "%{http_code}" \
+              -X POST "${BASE_URL}/auth/login" \
+              -H "Content-Type: application/json" \
+              -d "${AUTH_PAYLOAD}")
+            if [ "${LOGIN_HTTP_CODE}" -lt 200 ] || [ "${LOGIN_HTTP_CODE}" -ge 300 ]; then
+              echo "Synthetic login failed with status ${LOGIN_HTTP_CODE}"
+              exit 1
+            fi
+          else
+            echo "SMOKE_TEST_EMAIL/SMOKE_TEST_PASSWORD not configured; ran health-only smoke."
+          fi

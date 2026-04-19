@@ -4,6 +4,8 @@
 **What it does:** Gets a new contributor from zero to a running dev environment.  
 **How we use it:** Follow in order when cloning the repo; use with ARCHITECTURE and DEPLOYMENT for prod.
 
+**Scope rule (docs governance):** This file is canonical for local setup and first-run flow. Keep deep operational incident handling in `RUNBOOK.md`, deployment-specific production procedures in `DEPLOYMENT.md`, and historical detail in archive/reference docs.
+
 ---
 
 ## Prerequisites
@@ -145,6 +147,25 @@ Frontend, n8n, and workers are separate; see ARCHITECTURE and RUNBOOK for how th
 - **Backend .env:** Set `FRONTEND_URL=http://localhost:3001` if your frontend runs on 3001 (see `.env.example`).
 - Trust contract: `/api/credits`, `/api/billing`, `/api/appointments`. Send `Authorization: Bearer <token>`. Check-in/check-out with photos: `/tracking/:jobId/check-in` and `/tracking/:jobId/check-out`.
 
+### Full-stack local verification (recommended sequence)
+
+From backend repo (`/workspace`):
+
+1. `npm run db:check`
+2. `npm run seed:e2e:users`
+
+From frontend repo (`/workspace/puretask-frontend`):
+
+3. `npm run test:fullstack:prepare`
+4. `npm run test:api`
+5. `npm run test:e2e:smoke`
+
+Cleanup (backend repo):
+
+6. `npm run reset:e2e:users`
+
+If you only want to validate fixture script determinism on backend, run `npm run verify:e2e:fixtures`.
+
 ### API verification script
 
 From repo root (backend must be running: `npm run dev`):
@@ -223,9 +244,10 @@ Unit tests and contract tests use mocks where needed (auth, DB). Integration and
 
 1. Create a Neon branch or separate DB for tests.
 2. Run `TEST_DATABASE_URL=... node scripts/setup-test-db.js` to apply schema + NEON patches.
+   - If the test DB uses legacy TEXT IDs (or mixed legacy state), the setup script now auto-falls back from `000_COMPLETE_CONSOLIDATED_SCHEMA.sql` to `000_CONSOLIDATED_SCHEMA.sql` when it detects enum drift, and skips UUID-only unify migrations (059–061) when FK type mismatch (`42804`) is detected.
 3. Run `npm run test` or `npm run test:integration`.
 
-**NEON patch order** (in setup-test-db.js): consolidated schema → gamification 041–056 → `000_NEON_PATCH_existing_db` → `000_NEON_PATCH_job_status_disputed` → `000_NEON_PATCH_cleaner_availability` → `000_NEON_PATCH_test_db_align`. The last patch fixes FKs (payouts, cleaner_availability), `is_cleaner_available` uuid/text cast, and `job_event_type` for integration tests.
+**NEON patch order** (in setup-test-db.js): consolidated schema (with automatic legacy fallback) → gamification 041–056 → `000_NEON_PATCH_existing_db` → `000_NEON_PATCH_job_status_disputed` → `000_NEON_PATCH_cleaner_availability` → `000_NEON_PATCH_test_db_align` → conditional unify migrations 059–061. The last patch fixes FKs (payouts, cleaner_availability), `is_cleaner_available` uuid/text cast, and `job_event_type` for integration tests.
 
 For deployment to Railway, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
@@ -500,3 +522,25 @@ Going forward: run the same migrations on both DBs so they stay in sync.
 | Known issues | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) |
 | Gamification checklist | [BUNDLE_SWITCH_GAP_ANALYSIS.md](./BUNDLE_SWITCH_GAP_ANALYSIS.md) |
 | Event contract / 057 | [RUNBOOK.md §4.4](./RUNBOOK.md) |
+
+### Cursor Cloud VM bootstrap (recommended)
+
+When multiple cloud agents work on this repo, repeated local setup can waste time. Keep a startup script in the VM environment config so new sessions are ready immediately.
+
+**What the startup script should do (idempotent):**
+
+1. Ensure apt sources use HTTPS (`archive.ubuntu.com`, `security.ubuntu.com`), then run `apt-get update`.
+2. Install PostgreSQL server/client (`postgresql`, `postgresql-client`).
+3. Start local PostgreSQL cluster and ensure local dev role/database exist:
+   - user: `puretask`, password: `puretask_dev`
+   - database: `puretask`
+4. Run `npm install` in repo root.
+5. Create `.env` only if missing, with local-safe defaults:
+   - `DATABASE_URL=postgresql://puretask:puretask_dev@localhost:5432/puretask?sslmode=disable`
+   - required `JWT_SECRET`, Stripe, and n8n placeholders so `src/config/env.ts` passes boot validation.
+6. Run schema setup with fallback:
+   - try `npm run db:migrate`
+   - on failure, run `USE_LEGACY_SCHEMA=1 npm run db:setup:test`
+7. Verify readiness with `npm run db:check`.
+
+**Why this matters:** it standardizes first-run setup, removes package-manager/network drift issues, and gives every agent a working backend+DB baseline before feature work.

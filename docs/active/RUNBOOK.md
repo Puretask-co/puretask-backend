@@ -5,6 +5,14 @@
 
 ---
 
+## Documentation scope (canonical)
+
+- This file is the **canonical operations runbook**.
+- Canonical operations guidance is in Sections **1–6**.
+- Any planning/checklist/reference material in later sections is supporting context; if there is a conflict, follow Sections 1–6 plus `DEPLOYMENT.md` and `TROUBLESHOOTING.md`.
+
+---
+
 ## 1. Deploy
 
 - **Prereqs:** Secrets in Railway (or target); no secrets in repo. Env validated at startup (`src/config/env.ts`).
@@ -248,10 +256,316 @@ Run in **puretask-backend** to re-verify. Summary:
 
 ---
 
-## 7. Contacts and links
+## 7. Cloud-agent skills catalog (backend + testing + Playwright)
+
+Use this section as the canonical skill inventory for autonomous agents working in Cursor Cloud.
+
+### 7.1 Global invocation order (all code changes)
+
+1. **Environment readiness**
+   - Ensure toolchain + DB: `node -v`, `npm -v`, `npm run db:check`.
+2. **Implement**
+   - Keep route/service boundaries and auth middleware conventions (`authCanonical`).
+3. **Targeted testing**
+   - Run the smallest high-signal suite(s) first.
+4. **Quality gate**
+   - `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run build`.
+5. **Evidence**
+   - Save command outputs/artifacts for review (logs, curl output, test summaries).
+
+### 7.2 Skill cards
+
+| Skill | Use when | Required context | Command/checklist | Output/evidence |
+|-------|----------|------------------|-------------------|-----------------|
+| `env-bootstrap-cursor-cloud` | Fresh VM or broken local env | OS package manager access, repo root | Ensure apt HTTPS mirrors → install postgres/server client → start cluster → ensure `puretask` DB/user → `npm install` → `.env` bootstrap if missing → `npm run db:check` | Working DB check + bootable backend |
+| `backend-feature-change` | Any route/service behavior change | Route path, role/auth requirement, service touched | Keep routes thin; do business logic in services; preserve requestId/error contracts; avoid direct DB access in routes | Code diff + route/service alignment notes |
+| `db-migration-change` | SQL schema edits/new migration | Target DB URL, migration file order | Validate idempotency (`IF NOT EXISTS` where needed), run migration on clean/local DB, run affected integration tests | Migration success logs + regression test pass |
+| `quality-gate-core` | Before commit/PR | None | `npm run lint` → `npm run format:check` → `npm run typecheck` → `npm run build` | Green quality/build logs |
+| `security-secrets-guard` | Env/dependency/integration edits | Security baseline and CI policy | `npm run security:scan`; avoid secret files in git; avoid direct SendGrid/Twilio imports in production paths unless approved architecture exception | Scan output + policy compliance note |
+| `release-readiness-backend` | Release candidate or risky refactor | ENV matrix, critical flows list | Run integration + smoke + quality gate; verify `/health`, `/health/ready`; verify key business route(s) | End-to-end verification transcript |
+
+### 7.3 Testing skills (all supported test types)
+
+#### `test-unit-vitest`
+- **Trigger:** Service/lib/pure logic changes.
+- **Inputs:** Files touched + related existing unit tests.
+- **Run:** `npm run test -- --run <target-path-or-glob>`
+- **Must verify:** logic branches, validation, idempotent helpers.
+- **Evidence:** vitest pass output (targeted path).
+
+#### `test-integration-vitest`
+- **Trigger:** Route + DB changes, auth flow changes, payment/credits/jobs updates.
+- **Inputs:** `DATABASE_URL` or `TEST_DATABASE_URL`, migrated schema.
+- **Run:** `npm run test:integration`
+- **Must verify:** API + DB interaction, transaction behavior, auth guards.
+- **Evidence:** integration suite summary + failing case reruns resolved.
+
+#### `test-smoke-vitest`
+- **Trigger:** Release readiness, broad regressions, hotfix validation.
+- **Inputs:** Running DB + seeded baseline as needed.
+- **Run:** `npm run test:smoke`
+- **Must verify:** core routes are alive and critical path still works.
+- **Evidence:** smoke suite pass output.
+
+#### `test-contract-and-response-shape`
+- **Trigger:** API response shape/error handling changes.
+- **Inputs:** Contract tests under `src/tests/contract`.
+- **Run:** `npm run test -- --run src/tests/contract`
+- **Must verify:** status codes, error schema, compatibility expectations.
+- **Evidence:** contract tests pass.
+
+#### `test-jest-live-api` (root `tests/` path)
+- **Trigger:** Cleaner AI API behavior or scripts that rely on running server.
+- **Inputs:** Running backend instance + test user credentials as required.
+- **Run:** `bash tests/run-tests.sh` (or direct Jest command for specific file).
+- **Must verify:** end-to-end HTTP behavior against live app process.
+- **Evidence:** Jest run log with target API URL and pass/fail summary.
+
+#### `test-load-k6`
+- **Trigger:** Throughput/latency/capacity tasks.
+- **Inputs:** stable target API URL + env safe for load testing.
+- **Run:** `npm run test:load` / `npm run test:load:jobs`
+- **Must verify:** no critical error spikes, acceptable latency under configured profile.
+- **Evidence:** k6 summary (error rate, p95, throughput).
+
+#### `test-performance-benchmark`
+- **Trigger:** algorithm/query performance optimization claims.
+- **Inputs:** reproducible benchmark scenario.
+- **Run:** `npm run test:performance`
+- **Must verify:** before/after measurable improvement.
+- **Evidence:** benchmark output comparison.
+
+### 7.4 Playwright skills (status + adoption workflow)
+
+Current repo status: `tests/e2e/*.spec.ts` exists, but full Playwright wiring is partial and must be standardized before treating as required CI gate.
+
+#### `playwright-bootstrap`
+- **Trigger:** Team decides to operationalize browser E2E in this repo.
+- **Checklist:**
+  1. Add dependency: `npm install -D @playwright/test`
+  2. Install browsers: `npx playwright install`
+  3. Add `playwright.config.ts` with explicit `baseURL` and artifacts.
+  4. Add scripts: `test:e2e`, `test:e2e:headed`, `test:e2e:ui`.
+  5. Align ports/URLs explicitly (`API 4000`, frontend URL env-driven).
+  6. Add CI workflow for Playwright artifacts on failure.
+- **Output:** runnable E2E harness and CI job.
+
+#### `playwright-e2e-execution`
+- **Trigger:** UI-critical changes (auth UX, booking lifecycle UX, admin workflows).
+- **Inputs:** running UI app + backend + test account fixtures.
+- **Run:** `npm run test:e2e` (after bootstrap), with traces/screenshots on failure.
+- **Must verify:** complete user flow from UI action to backend side effects.
+- **Evidence:** pass summary + trace/report artifacts.
+
+### 7.5 Pitfalls agents must explicitly guard against
+
+1. **Dual test runners:** `vitest` does not automatically cover root `tests/*.test.ts` Jest files.
+2. **Migration source mismatch:** local scripts may use different consolidated SQL files depending on command path; always state exact file used in test evidence.
+3. **Port drift:** API defaults to `4000`, some scripts historically assume `3000`; set explicit URLs in commands.
+4. **Policy checks in CI:** avoid unauthorized auth middleware imports and direct provider usage patterns blocked by policy workflows.
+5. **Docs governance:** new markdown must remain under `docs/active/` or `docs/archive/`.
+
+### 7.6 Full-stack deterministic E2E seed/reset skills
+
+#### `seed-fullstack-e2e-users`
+- **Trigger:** Before Playwright or contract verification that depends on deterministic test users.
+- **Run (backend repo):**
+  - `npm run seed:e2e:users`
+- **Default deterministic accounts:**
+  - `client@test.com` / `TestPass123!`
+  - `cleaner@test.com` / `TestPass123!`
+  - `admin@test.com` / `TestPass123!`
+- **Evidence:** script prints ensured users and completes successfully.
+
+#### `reset-fullstack-e2e-users`
+- **Trigger:** Test cleanup, rerun from clean auth identities, or flaky auth state.
+- **Run (backend repo):**
+  - `npm run reset:e2e:users`
+- **Evidence:** script reports number of deleted deterministic users.
+
+#### `frontend-backend-contract-gate`
+- **Trigger:** Frontend PRs touching API services/hooks or backend PRs changing response contracts.
+- **Run (frontend repo):**
+  - `npm run test:api`
+- **Expected env:** `API_BASE`, `TEST_EMAIL`, `TEST_PASSWORD`.
+- **Evidence:** verification report + failing endpoint details.
+
+---
+
+## 8. Contacts and links
 
 - **Checklists:** [MASTER_CHECKLIST.md](./MASTER_CHECKLIST.md)
 - **Phase status:** [00-CRITICAL/PHASE_*_STATUS.md](./00-CRITICAL/)
 - **Backup/restore:** [BACKUP_RESTORE.md](./BACKUP_RESTORE.md)
 
-**Last updated:** 2026-02-02
+## 9. Live execution board (backend + frontend)
+
+Use this checklist as the canonical execution tracker for full-stack hardening work.
+
+### 9.1 Execution order (always run in this order)
+
+1. P0.1 + P0.4 (repo identifiers + dispatch auth reliability)
+2. P0.3 (canonical full-stack verify gate)
+3. P0.2 (invoice schema strictness transition)
+4. P1.1 + P1.2 (deterministic DB + contract fixture hardening)
+5. P1.3 + P1.4 (release traceability + E2E runtime consistency)
+6. P2.x (observability, ownership, and delivery polish)
+
+### 9.2 P0 — Release safety and mandatory full-stack correctness
+
+- [x] **P0.1 Unify cross-repo identifiers and dispatch guardrails**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - Backend workflow: `.github/workflows/release-orchestration.yml`
+    - Frontend workflows: `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`
+  - **Verification commands/checks:**
+    - `gh workflow run release-orchestration.yml --repo PURETASK/puretask-backend --field backend_ref=<sha> --field frontend_ref=<sha> --field environment=staging`
+    - Confirm orchestration validate job can checkout both repos and reaches deploy dispatch steps.
+
+- [x] **P0.4 Ensure dispatch token/scopes are stable for cross-repo release**
+  - **Owner:** `@owner-devops`
+  - **Touches:**
+    - Backend workflow auth preflight: `.github/workflows/release-orchestration.yml`
+    - GitHub secret: `PURETASK_ORG_DISPATCH_TOKEN` (org/repo settings)
+  - **Verification commands/checks:**
+    - `gh auth status` (automation identity has valid token)
+    - Dispatch step succeeds for both backend and frontend `release.yml` workflows.
+
+- [x] **P0.3 Enforce canonical full-stack verify gate**
+  - **Owner:** `@owner-frontend-platform`
+  - **Touches:**
+    - Frontend scripts: `package.json`, `scripts/run-playwright-e2e.js`, `scripts/run-api-verification.js`
+    - Frontend CI: `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`
+  - **Verification commands/checks:**
+    - `npm run verify:fullstack`
+    - CI jobs pass: `contract-gate`, `e2e`, `build`.
+
+- [x] **P0.2 Transition invoice schema behavior from compatibility fallback to strict contract**
+  - **Owner:** `@owner-backend`
+  - **Touches:**
+    - Backend route: `src/routes/trustAdapter.ts`
+    - Backend DB setup path: `scripts/setup-test-db.js` (+ migration if required)
+  - **Verification commands/checks:**
+    - `npm run db:setup:test`
+    - `npm run test:api` (from frontend repo against running backend) must pass without hidden 500s.
+
+### 9.3 P1 — Stability and traceability hardening
+
+- [x] **P1.1 Make backend test DB provisioning deterministic across schema variants**
+  - **Owner:** `@owner-backend-platform`
+  - **Touches:**
+    - `scripts/setup-test-db.js`
+    - `docs/active/SETUP.md`, `docs/active/TROUBLESHOOTING.md`
+  - **Verification commands/checks:**
+    - `npm run db:setup:test`
+    - `npm run verify:e2e:fixtures`
+
+- [x] **P1.2 Add deterministic happy-path contract fixtures**
+  - **Owner:** `@owner-backend`
+  - **Touches:**
+    - Frontend contract runner: `scripts/run-api-verification.js`
+    - Backend seed path: `scripts/seed-e2e-users.js` (or new fixture script)
+  - **Verification commands/checks:**
+    - `npm run seed:e2e:users`
+    - `npm run test:api` (must verify shape and at least one stable happy path)
+
+- [x] **P1.3 Record backend/frontend ref traceability in release orchestration**
+  - **Owner:** `@owner-devops`
+  - **Touches:**
+    - `.github/workflows/release-orchestration.yml`
+    - `docs/active/DEPLOYMENT.md`
+  - **Verification commands/checks:**
+    - Run orchestration `workflow_dispatch`; confirm release manifest artifact/log has `backend_ref`, `frontend_ref`, and `environment`.
+
+- [x] **P1.4 Standardize E2E runtime mode between local and CI**
+  - **Owner:** `@owner-frontend`
+  - **Touches:**
+    - `playwright.config.ts`
+    - `.github/workflows/e2e.yml`, `.github/workflows/ci.yml`
+  - **Verification commands/checks:**
+    - `npm run test:e2e:smoke` (local)
+    - E2E CI workflow pass on PR.
+
+### 9.4 P2 — Observability and delivery efficiency
+
+- [x] **P2.1 Correlation/request ID continuity across frontend and backend**
+  - **Owner:** `@owner-backend-observability`
+  - **Touches:**
+    - Frontend client: `src/lib/apiClient.ts`
+    - Backend request context/logging path
+    - `docs/active/RUNBOOK.md` incident notes
+  - **Verification commands/checks:**
+    - Trigger one authenticated frontend request and verify same request/correlation IDs in backend logs.
+
+- [x] **P2.2 Synthetic post-deploy smoke checks for backend + frontend**
+  - **Owner:** `@owner-devops`
+  - **Touches:**
+    - Backend deploy workflow: `.github/workflows/release.yml`
+    - Frontend deploy workflow: `.github/workflows/release.yml`
+  - **Verification commands/checks:**
+    - Manual `workflow_dispatch` for staging; verify health + synthetic smoke checks pass.
+
+- [x] **P2.3 Ownership and review routing improvements**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `CODEOWNERS` (backend and frontend repos)
+    - PR template(s), runbook links, and review docs
+  - **Verification commands/checks:**
+    - Open a PR touching workflows + API + frontend and verify expected reviewers auto-request.
+
+## 10. Docs governance migration tracker (canonical)
+
+Use this checklist to track the documentation model migration (canonical vs reference) and avoid future drift.
+
+- [x] **D0.1 Adopt two-tier docs governance model**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `.cursor/rules/documentation.mdc`
+    - `docs/active/DECISIONS.md`
+  - **Verification commands/checks:**
+    - Confirm rules file defines Tier 1 canonical + Tier 2 reference model.
+    - Confirm `DECISIONS.md` records the decision and marks prior canonical-only stance as superseded.
+
+- [x] **D0.2 Align docs entrypoint with governance model**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `docs/active/README.md`
+  - **Verification commands/checks:**
+    - Validate Tier 1 list maps to canonical docs only.
+    - Validate Tier 2 section links to existing reference docs.
+
+- [x] **D0.3 Add scope guardrails to core canonical docs**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `docs/active/SETUP.md`
+    - `docs/active/ARCHITECTURE.md`
+    - `docs/active/RUNBOOK.md`
+  - **Verification commands/checks:**
+    - Confirm each file states canonical scope and where non-scope content belongs.
+
+- [ ] **D1.1 Full docs inventory and classification**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `docs/active/**`
+    - `docs/archive/raw/**` (for moved/superseded files)
+  - **Verification commands/checks:**
+    - Produce file-by-file ledger: Keep Canonical / Keep Reference / Merge / Archive.
+    - Confirm no historical material is deleted; only moved to archive.
+
+- [ ] **D1.2 Resolve stale links and missing references in docs/active**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `docs/active/README.md`
+    - Any docs with dead internal links
+  - **Verification commands/checks:**
+    - Validate all internal doc links resolve to existing paths.
+
+- [ ] **D2.1 Ongoing docs hygiene cadence**
+  - **Owner:** `@owner-platform`
+  - **Touches:**
+    - `docs/active/README.md` (or governance section)
+  - **Verification commands/checks:**
+    - Monthly review pass completed and logged.
+    - Canonical docs updated when high-impact reference content changes.
+
+**Last updated:** 2026-04-18
