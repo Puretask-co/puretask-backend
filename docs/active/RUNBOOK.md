@@ -590,4 +590,8 @@ Use this checklist to track the documentation model migration (canonical vs refe
     - Log artifact present: `docs/archive/raw/docs_governance/docs_hygiene_log_2026-04.md`
     - Confirm monthly log includes inventory totals and `MISSING 0`.
 
+### Current cross-repo execution source of truth
+
+- Forward planning and sequencing across backend + frontend is tracked in `docs/active/FORWARD_EXECUTION_GUIDE.md`.
+
 **Last updated:** 2026-04-19

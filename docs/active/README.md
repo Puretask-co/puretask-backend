@@ -48,6 +48,7 @@ These are supporting docs for deep dives and implementation detail.
 | [PR_AUDIT_RUBRIC.md](./PR_AUDIT_RUBRIC.md) | PR audit rubric/checklist |
 | [AUDIT_TICKETS.md](./AUDIT_TICKETS.md) | Audit-derived remediation tickets |
 | [PROD_TEST_SCHEMA_REFERENCE.md](./PROD_TEST_SCHEMA_REFERENCE.md) | Production vs test schema comparison reference |
+| [FORWARD_EXECUTION_GUIDE.md](./FORWARD_EXECUTION_GUIDE.md) | Cross-repo forward plan (backend + frontend) with P0/P1/P2 execution gates |
 | [gamification_bundle/README.md](./gamification_bundle/README.md) | Gamification spec index and detailed bundle docs |
 
 ---
