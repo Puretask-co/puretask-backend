@@ -155,13 +155,22 @@ PureTask is in a stable “proceed fast” state when all are true:
 - **Owner:** `@owner-qa` + `@owner-frontend`
 - **Goal:** Catch high-value regressions early.
 - **Touches:**
-  - Frontend workflows: `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`
+  - Frontend workflows: `.github/workflows/ci.yml`
   - Frontend tests: `tests/e2e/**`
 - **Verification commands:**
   - Frontend: `npm run test:e2e:smoke`
   - Frontend: `npm run test:e2e`
 - **Exit criteria:**
   - CI default path includes at least one booking/payments-adjacent journey in addition to auth smoke.
+
+**Status (2026-04-19): completed**
+- Frontend CI now includes an `e2e-smoke` job that checks out backend + frontend, prepares deterministic backend test data, and gates deploy on Playwright smoke success.
+- Frontend smoke lane expanded beyond auth-only by adding a payments-adjacent credits/billing journey (`tests/e2e/trust/credits-billing-smoke.spec.ts`) and wiring it into `test:e2e`.
+- Added focused smoke/auth regression scripts in `package.json`:
+  - `test:e2e:smoke` (stable login page smoke)
+  - `test:e2e` (auth smoke + credits/billing trust smoke)
+  - `test:e2e:auth-regression` (full legacy login regression suite, on-demand)
+- Playwright backend webServer path resolution hardened for both monorepo and sibling-repo layouts.
 
 ### P1.3 Resolve highest-impact skipped test suites
 - **Owner:** `@owner-frontend`
@@ -242,8 +251,8 @@ If any gate fails, do not promote release refs.
 
 ## 7) Immediate next actions (starting now)
 
-1. Execute **P1.2** expand automated journey coverage beyond minimum smoke.
-2. Execute **P1.3** resolve highest-impact skipped test suites.
+1. Execute **P1.3** resolve highest-impact skipped test suites.
+2. Keep **P1.2** as a standing guardrail by requiring `npm run test:e2e:smoke` + `npm run test:e2e` in CI before deployment.
 3. Keep **P0.1** as a standing guardrail by requiring `npm run test:api` + `npm run verify:fullstack` before release promotion.
 4. Keep **P0.2** as a standing guardrail by requiring `npm run db:validate:migrations` + `STRICT_MIGRATION_PATH=1 npm run db:setup:test` before release promotion.
 5. Keep **P0.3** as a standing guardrail by requiring orchestration releases to pass validate job and carry explicit backend/frontend refs.
