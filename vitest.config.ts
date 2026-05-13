@@ -16,6 +16,15 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary", "lcov"],
       reportsDirectory: "./coverage",
+      // Floor calibrated to the deterministic CI slice (test:ci:coverage) on
+      // 2026-05-13: stmts 95.43, branch 91.55, funcs 98.21, lines 95.22.
+      // Ratchet upward by ~2 points per quarter; never lower.
+      thresholds: {
+        statements: 93,
+        branches: 89,
+        functions: 96,
+        lines: 93,
+      },
     },
   },
   resolve: {
