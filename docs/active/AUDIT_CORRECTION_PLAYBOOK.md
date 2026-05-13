@@ -2123,4 +2123,16 @@ When you finish a section, append a note here with the date and what you did. Th
 
 | Date | Section | What I did |
 |---|---|---|
+| 2026-05-13 | 0.2 | Manual working-tree sweep (gitleaks not installed locally; gitleaks-action already wired in CI). Removed 4 archived docs containing the leaked JWT hex. Confirmed no other real secrets in working tree. Findings in `docs/active/SECRETS_TRIAGE_2026-05.md`. |
+| 2026-05-13 | 1.2 | ESLint `--max-warnings 1629` ratchet at current count. Errors already block CI; this stops the warning count from drifting upward. |
+| 2026-05-13 | 1.3 | Coverage thresholds on the deterministic CI slice: stmts 93 / branch 89 / funcs 96 / lines 93 (~2 points below current). Verified threshold actually fires. |
+| 2026-05-13 | 1.5 | `npm audit fix` resolved 2 highs (picomatch 2.3.1→2.3.2, fast-xml-builder 1.1.5→1.2.0). CI audit step tightened to `--audit-level=high` with `continue-on-error` removed. |
+| 2026-05-13 | 3.2 | Moved 4 stale root docs to `docs/_archive/stale-root-2026-05/` with a provenance README. |
+| 2026-05-13 | 3.4 | Removed `jest.config.js`, `jest.config.coverage.js`, `src/gamification-bundle/jest.config.cjs`; uninstalled `jest`, `@types/jest`, `ts-jest` (232 packages). Vitest already picks up the gamification tests. |
+| 2026-05-13 | 3.5 | Added ARCHIVED banner to 12 phase docs last edited >90 days ago (2026-02-11). PHASE_3 and PHASE_5 (2026-04-18) untouched. |
+| 2026-05-13 | 4.1 | Scaffolded `docs/active/incidents/` with template, README index, and 5 filled playbooks: stripe-webhook-backlog, auth-broken, database-down, worker-not-running, notification-delivery-failure. 3 listed as future placeholders. |
+| 2026-05-13 | 4.2 | Wrote `docs/active/ON_CALL.md`. |
+| 2026-05-13 | 4.4 | Wrote `docs/active/DEPLOY_TO_RAILWAY.md`. |
+| 2026-05-13 | 4.5 | Wrote `docs/active/MIGRATION_POLICY.md`. |
+| 2026-05-13 | 5.4 | Moved root prod.sql / test.sql to `DB/snapshots/` (still gitignored). Added `docs/active/DB_SNAPSHOTS.md` documenting the convention. |
 | | | |
