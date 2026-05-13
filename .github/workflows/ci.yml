@@ -161,9 +161,10 @@ jobs:
         run: npm ci
       
       - name: Run npm audit
-        run: npm audit --audit-level=critical
-        # Track critical vulnerabilities without blocking unrelated PR stabilization.
-        continue-on-error: true
+        # Playbook 1.5: blocking on high/critical vulnerabilities.
+        # If a transitive dep flips to high and no fix exists yet, document the
+        # exception in docs/active/SECURITY_EXCEPTIONS.md and tighten back.
+        run: npm audit --audit-level=high
       
       - name: Run security scan script
         run: npm run security:scan
