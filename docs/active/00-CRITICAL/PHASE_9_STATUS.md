@@ -1,3 +1,7 @@
+> **WARNING: ARCHIVED snapshot - last edited 2026-02-11**
+> This file is a point-in-time status report and may not reflect current architecture.
+> For canonical state, see `docs/active/RUNBOOK.md` and `docs/active/ARCHITECTURE.md`.
+
 # Phase 9 — Maintainability & Velocity — Status
 
 **Purpose:** Track Phase 9 (Section 9) progress.  

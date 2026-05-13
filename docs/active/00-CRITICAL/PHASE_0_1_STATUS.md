@@ -1,3 +1,7 @@
+> **WARNING: ARCHIVED snapshot - last edited 2026-02-11**
+> This file is a point-in-time status report and may not reflect current architecture.
+> For canonical state, see `docs/active/RUNBOOK.md` and `docs/active/ARCHITECTURE.md`.
+
 # Phase 0 & Phase 1 — Status & Next Steps
 
 **Purpose:** Track where we are in the hardening plan so we can "begin" and move forward. Updated as Phase 0 and Phase 1 progress.

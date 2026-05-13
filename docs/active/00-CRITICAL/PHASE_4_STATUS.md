@@ -1,3 +1,7 @@
+> **WARNING: ARCHIVED snapshot - last edited 2026-02-11**
+> This file is a point-in-time status report and may not reflect current architecture.
+> For canonical state, see `docs/active/RUNBOOK.md` and `docs/active/ARCHITECTURE.md`.
+
 # Phase 4 — Stripe, Webhooks & Integrations — Status
 
 **Purpose:** Track Phase 4 (Section 4) progress.  
