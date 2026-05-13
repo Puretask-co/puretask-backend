@@ -8,12 +8,10 @@ export default defineConfig({
     setupFiles: ["./src/tests/setup.ts"],
     hookTimeout: 30000,
     include: ["src/**/*.test.ts", "src/**/__tests__/**/*.test.ts"],
-    pool: "forks", // helps with DB connection limits on Neon free tier
-    poolOptions: {
-      forks: {
-        singleFork: true, // run tests sequentially to avoid Neon connection limits
-      },
-    },
+    // Run tests sequentially in a single worker to avoid Neon connection limits.
+    // Vitest 4 migration: replaces `pool: "forks"` + `poolOptions.forks.singleFork`.
+    maxWorkers: 1,
+    isolate: false,
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary", "lcov"],
