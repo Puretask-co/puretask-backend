@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/weeklySummary.ts
 // Worker to send weekly summary emails to clients and cleaners
 //

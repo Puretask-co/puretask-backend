@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/retryFailedNotifications.ts
 // Worker to retry failed notifications
 //

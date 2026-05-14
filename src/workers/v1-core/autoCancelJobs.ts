@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/autoCancelJobs.ts
 // Worker to auto-cancel jobs that are past their scheduled start time
 // Matches 001_init.sql schema

@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/autoExpireAwaitingApproval.ts
 // Worker to auto-approve jobs that have been in awaiting_approval status too long
 // This prevents jobs from being stuck indefinitely if client doesn't respond

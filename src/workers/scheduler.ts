@@ -1,3 +1,4 @@
+import "../instrument";
 // src/workers/scheduler.ts
 // Centralized cron scheduler for background workers
 // Can be used as internal scheduler or Railway cron runner

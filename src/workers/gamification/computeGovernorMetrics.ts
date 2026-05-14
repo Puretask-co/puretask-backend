@@ -1,3 +1,4 @@
+import "../../instrument";
 /**
  * Step 20 — Governor Metrics Scheduler
  * Computes region_marketplace_metrics per region and triggers governor compute.

@@ -1,3 +1,4 @@
+import "../instrument";
 // src/workers/onboardingReminderWorker.ts
 // Worker to send onboarding reminder emails
 

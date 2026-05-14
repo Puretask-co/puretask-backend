@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/v2-operations/goalChecker.ts
 // Check and award completed cleaner goals (V2 cleaner_goals)
 //

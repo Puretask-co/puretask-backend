@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/kpiDailySnapshot.ts
 // Daily worker to aggregate KPIs into kpi_snapshots table
 //

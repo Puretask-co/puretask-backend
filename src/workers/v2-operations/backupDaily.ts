@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/backupDaily.ts
 // Daily worker to create logical backup snapshots
 //
