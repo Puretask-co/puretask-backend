@@ -118,10 +118,26 @@ export async function registerUser(input: RegisterInput): Promise<User> {
 // Login
 // ============================================
 
+// Account lockout config — see docs/active/AUDIT_REANALYSIS_2026-05-13.md § B.8.
+// Schema columns (users.failed_login_attempts, users.locked_until) already
+// exist in 000_COMPLETE_CONSOLIDATED_SCHEMA.sql.
+// Read at function-call time so tests can override via process.env without
+// fighting ESM import hoisting.
+function getLockoutThreshold(): number {
+  return parseInt(process.env.LOGIN_LOCKOUT_THRESHOLD ?? "5", 10);
+}
+function getLockoutDurationMs(): number {
+  return parseInt(process.env.LOGIN_LOCKOUT_DURATION_MS ?? `${15 * 60 * 1000}`, 10);
+}
+
 /**
  * Authenticate user with email and password
  * Returns user if credentials are valid
  * Email is normalized to lowercase so login is case-insensitive.
+ *
+ * Lockout policy: LOGIN_LOCKOUT_THRESHOLD consecutive failed attempts
+ * locks the account for LOGIN_LOCKOUT_DURATION_MS. Lockouts surface as 423.
+ * Counter resets on a successful password verify.
  */
 export async function loginUser(email: string, password: string): Promise<User> {
   const normalizedEmail = email.trim().toLowerCase();
@@ -140,15 +156,66 @@ export async function loginUser(email: string, password: string): Promise<User> 
     });
   }
 
+  // Already locked? Reject before doing the expensive bcrypt compare.
+  if (user.locked_until && new Date(user.locked_until) > new Date()) {
+    logger.warn("login_blocked_locked", {
+      userId: user.id,
+      lockedUntil: user.locked_until,
+    });
+    throw Object.assign(new Error("Account temporarily locked. Try again later."), {
+      statusCode: 423,
+      code: "ACCOUNT_LOCKED",
+    });
+  }
+
   // Verify password
   const isValid = await verifyPassword(password, user.password_hash);
 
   if (!isValid) {
-    logger.warn("login_failed", { email, reason: "invalid_password" });
+    const newAttempts = (user.failed_login_attempts ?? 0) + 1;
+    const shouldLock = newAttempts >= getLockoutThreshold();
+    const lockedUntil = shouldLock ? new Date(Date.now() + getLockoutDurationMs()) : null;
+
+    await query(
+      `UPDATE users
+         SET failed_login_attempts = $2,
+             locked_until = $3,
+             updated_at = NOW()
+       WHERE id = $1`,
+      [user.id, newAttempts, lockedUntil]
+    );
+
+    logger.warn("login_failed", {
+      userId: user.id,
+      email,
+      reason: "invalid_password",
+      failedAttempts: newAttempts,
+      ...(shouldLock ? { lockedUntil: lockedUntil!.toISOString() } : {}),
+    });
+
+    if (shouldLock) {
+      throw Object.assign(new Error("Account temporarily locked. Try again later."), {
+        statusCode: 423,
+        code: "ACCOUNT_LOCKED",
+      });
+    }
+
     throw Object.assign(new Error("Invalid email or password"), {
       statusCode: 401,
       code: "INVALID_CREDENTIALS",
     });
+  }
+
+  // Successful login — reset the failure counter if it had drifted up.
+  if ((user.failed_login_attempts ?? 0) > 0 || user.locked_until) {
+    await query(
+      `UPDATE users
+         SET failed_login_attempts = 0,
+             locked_until = NULL,
+             updated_at = NOW()
+       WHERE id = $1`,
+      [user.id]
+    );
   }
 
   logger.info("user_logged_in", {
