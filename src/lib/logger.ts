@@ -2,6 +2,7 @@
 // Centralized JSON logger with request ID tracing for PureTask backend
 
 import { AsyncLocalStorage } from "async_hooks";
+import * as Sentry from "@sentry/node";
 import { redactSensitiveFields, redactHeaders, redactRequestBody } from "./logRedaction";
 
 export type LogLevel = "info" | "warn" | "error" | "debug";
@@ -153,7 +154,38 @@ function log(level: LogLevel, msg: string, meta?: Record<string, unknown>): void
       console.log(output);
       break;
   }
+
+  // Mirror as Sentry breadcrumb so the issue page shows the trail of log
+  // lines that preceded an exception. Sentry.addBreadcrumb() is a no-op when
+  // Sentry isn't initialized (workers/CLI/tests), so this is safe to call
+  // unconditionally. We strip the bulky `stack` field — Sentry already has
+  // the exception's stack on its own when captureException runs.
+  // See docs/active/AUDIT_REANALYSIS_2026-05-13.md § B.2.
+  try {
+    const breadcrumbData: Record<string, unknown> = {};
+    for (const key of Object.keys(cleanEntry)) {
+      // Strip fields that Sentry already has on the event/breadcrumb wrapper.
+      if (key === "error" || key === "time" || key === "service" || key === "level" || key === "msg") continue;
+      breadcrumbData[key] = (cleanEntry as Record<string, unknown>)[key];
+    }
+    Sentry.addBreadcrumb({
+      category: "log",
+      level: SENTRY_LEVEL[level],
+      message: msg,
+      data: breadcrumbData,
+      timestamp: Date.now() / 1000,
+    });
+  } catch {
+    // Never let breadcrumb failures take down a log call.
+  }
 }
+
+const SENTRY_LEVEL: Record<LogLevel, Sentry.SeverityLevel> = {
+  error: "error",
+  warn: "warning",
+  info: "info",
+  debug: "debug",
+};
 
 // ============================================
 // Timer Utility for Performance Logging

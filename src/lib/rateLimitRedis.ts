@@ -5,6 +5,7 @@ import { Request, Response, NextFunction } from "express";
 import { getRedisClient, isRedisAvailable } from "./redis";
 import { logger } from "./logger";
 import { createRateLimiter, getClientIp } from "./security";
+import { env } from "../config/env";
 
 export interface RateLimitOptions {
   windowMs: number;
@@ -13,6 +14,39 @@ export interface RateLimitOptions {
   message?: string;
   skipSuccessfulRequests?: boolean;
   skip?: (req: Request) => boolean;
+}
+
+/**
+ * Whether rate limiting should fail closed (503) when Redis is unreachable
+ * instead of silently falling back to per-instance memory limits.
+ *
+ * Per-instance fallback in production with N replicas gives an attacker N×
+ * the budget. In production with Redis-mode enabled, refuse to serve rather
+ * than silently degrade.
+ *
+ * See docs/active/AUDIT_REANALYSIS_2026-05-13.md § B.4.
+ */
+function shouldFailClosed(): boolean {
+  return env.NODE_ENV === "production" && env.USE_REDIS_RATE_LIMITING === true;
+}
+
+let lastRedisErrorLoggedAt = 0;
+function reportRedisDegradation(reason: string, extra: Record<string, unknown> = {}): void {
+  // Log at most once per minute to avoid Sentry noise during sustained outages.
+  const now = Date.now();
+  if (now - lastRedisErrorLoggedAt < 60_000) return;
+  lastRedisErrorLoggedAt = now;
+  logger.error("rate_limit_redis_unavailable", { reason, ...extra });
+}
+
+function sendUnavailable(res: Response, message: string): void {
+  res.setHeader("Retry-After", "10");
+  res.status(503).json({
+    error: {
+      code: "RATE_LIMIT_BACKEND_UNAVAILABLE",
+      message,
+    },
+  });
 }
 
 /**
@@ -29,8 +63,18 @@ export function createRedisRateLimiter(options: RateLimitOptions) {
     skip,
   } = options;
 
-  // Fallback to in-memory limiter if Redis not available
+  // At-startup decision: if Redis isn't configured/available and we're NOT
+  // in production-fail-closed mode, use the in-memory limiter for the
+  // lifetime of the limiter. In production with USE_REDIS_RATE_LIMITING=true,
+  // we instead let every request reach the runtime Redis check so a transient
+  // outage results in 503 rather than silent per-instance fallback.
   if (!isRedisAvailable() || !process.env.USE_REDIS_RATE_LIMITING) {
+    if (shouldFailClosed()) {
+      reportRedisDegradation("Redis not available at limiter init in production");
+      return async (_req: Request, res: Response): Promise<void> => {
+        sendUnavailable(res, message);
+      };
+    }
     logger.debug("rate_limit_using_memory", { reason: "Redis not available" });
     return createRateLimiter(options);
   }
@@ -43,7 +87,12 @@ export function createRedisRateLimiter(options: RateLimitOptions) {
 
     const redis = getRedisClient();
     if (!redis) {
-      // Fallback to in-memory
+      if (shouldFailClosed()) {
+        reportRedisDegradation("Redis client missing at request time", { path: req.path });
+        sendUnavailable(res, message);
+        return;
+      }
+      // Dev/non-fail-closed: fall back to in-memory
       return createRateLimiter(options)(req, res, next);
     }
 
@@ -122,7 +171,15 @@ export function createRedisRateLimiter(options: RateLimitOptions) {
 
       next();
     } catch (error) {
-      // If Redis fails, fall back to in-memory limiter
+      if (shouldFailClosed()) {
+        reportRedisDegradation("Redis call failed at request time", {
+          path: req.path,
+          error: (error as Error).message,
+        });
+        sendUnavailable(res, message);
+        return;
+      }
+      // Dev/non-fail-closed: fall back to in-memory limiter
       logger.error("rate_limit_redis_error", {
         error: (error as Error).message,
         fallingBack: true,

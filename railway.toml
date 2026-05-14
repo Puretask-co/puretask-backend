@@ -5,7 +5,11 @@ watchPatterns = ["package.json", "src/**", "tsconfig.json"]
 
 [deploy]
 startCommand = "npm start"
-healthcheckPath = "/health"
+# Point at /health/ready so Railway only marks the instance healthy
+# when the DB is reachable. /health (root) is liveness-only and would
+# falsely report healthy during a Neon outage. See
+# docs/active/AUDIT_REANALYSIS_2026-05-13.md § B.3.
+healthcheckPath = "/health/ready"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
