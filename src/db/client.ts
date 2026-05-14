@@ -9,6 +9,11 @@ const isTestEnv =
   process.env.VITEST === "true";
 
 const SLOW_QUERY_MS = parseInt(process.env.SLOW_QUERY_MS || "1000", 10);
+// Hard ceiling on any single query. A hung query holds its pool connection;
+// without this cap, a handful of deadlocked queries can starve the whole
+// pool on Neon. 30s is generous for everything the app does — see
+// docs/active/AUDIT_REANALYSIS_2026-05-13.md § A.3.
+const STATEMENT_TIMEOUT_MS = parseInt(process.env.DB_STATEMENT_TIMEOUT_MS || "30000", 10);
 
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
@@ -19,6 +24,7 @@ export const pool = new Pool({
   connectionTimeoutMillis: isTestEnv ? 15000 : 20000,
   // Retry settings
   allowExitOnIdle: true, // Allow process to exit when pool is idle
+  statement_timeout: STATEMENT_TIMEOUT_MS,
 });
 
 export async function query<T extends Record<string, any> = any>(
