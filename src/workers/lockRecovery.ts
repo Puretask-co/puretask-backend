@@ -1,3 +1,4 @@
+import "../instrument";
 // src/workers/lockRecovery.ts
 // Worker to recover expired locks from crashed workers
 

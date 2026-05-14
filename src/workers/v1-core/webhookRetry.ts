@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/webhookRetry.ts
 // Worker to process failed webhook retries
 //

@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/reliabilityRecalc.ts
 // Nightly worker to recalculate all cleaner reliability scores
 //

@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/cleaningScores.ts
 // Recalculate cleaning scores for all properties
 //

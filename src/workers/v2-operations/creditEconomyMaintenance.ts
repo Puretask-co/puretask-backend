@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/creditEconomyMaintenance.ts
 // Worker for credit economy maintenance tasks
 //

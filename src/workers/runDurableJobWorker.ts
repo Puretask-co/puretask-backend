@@ -1,3 +1,4 @@
+import "../instrument";
 // src/workers/runDurableJobWorker.ts
 // CLI entry for durable job worker. One cycle (cron) or loop.
 // Usage: ts-node src/workers/runDurableJobWorker.ts [--loop] [--interval=10000]

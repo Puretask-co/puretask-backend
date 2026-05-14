@@ -25,7 +25,17 @@
       ],
       "patterns": [{ "group": ["**/middleware/auth"], "message": "Legacy auth. Use authCanonical." }]
     }],
-    "no-restricted-syntax": ["warn", { "selector": "TemplateLiteral[expressions.length>0]", "message": "SQL template literals: use parameterized queries ($1, $2)." }]
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "CallExpression[callee.name='query'] > TemplateLiteral[expressions.length>0]",
+        "message": "SQL injection risk: query() called with an interpolated template literal. Use parameterized queries ($1, $2)."
+      },
+      {
+        "selector": "CallExpression[callee.property.name='query'] > TemplateLiteral[expressions.length>0]",
+        "message": "SQL injection risk: .query() called with an interpolated template literal. Use parameterized queries ($1, $2)."
+      }
+    ]
   },
   "ignorePatterns": [
     "dist/**", "node_modules/**", "*.config.js", "*.config.ts", "src/tests/**",

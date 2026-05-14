@@ -245,10 +245,12 @@ Unit tests and contract tests use mocks where needed (auth, DB). Integration and
 ### Test database setup
 
 1. Create a Neon branch or separate DB for tests.
-2. Run deterministic setup: `STRICT_MIGRATION_PATH=1 TEST_DATABASE_URL=... npm run db:setup:test`.
-   - This applies one canonical sequence: COMPLETE consolidated schema → 041–056 → NEON patches → 059–061.
-   - In strict mode, setup fails fast on schema drift (no legacy fallback and no unify migration skips).
-3. Run `npm run test` or `npm run test:integration`.
+2. Set `TEST_DATABASE_URL` in your `.env`.
+3. Run `npm run test`.
+   - **`pretest` hook (added 2026-05-13, audit A.5):** when `TEST_DATABASE_URL` is set, `npm test` automatically runs `scripts/maybe-setup-test-db.js`, which seeds the schema (COMPLETE consolidated → 041–056 → NEON patches → 059–061) before the suite starts.
+   - When `TEST_DATABASE_URL` is **unset**, the pretest hook is a no-op — useful when you only want to run unit tests against mocks. Integration tests in that case will fail loudly when they hit `query()` against an unseeded DB.
+   - To run the seeding step alone (without tests): `STRICT_MIGRATION_PATH=1 TEST_DATABASE_URL=... npm run db:setup:test`.
+   - In strict mode (default), setup fails fast on schema drift (no legacy fallback and no unify migration skips).
 
 **NEON patch order** (in setup-test-db.js): COMPLETE consolidated schema → gamification 041–056 → `000_NEON_PATCH_existing_db` → `000_NEON_PATCH_job_status_disputed` → `000_NEON_PATCH_cleaner_availability` → `000_NEON_PATCH_test_db_align` → unify migrations 059–061. The last patch fixes FKs (payouts, cleaner_availability), `is_cleaner_available` uuid/text cast, and `job_event_type` for integration tests.
 

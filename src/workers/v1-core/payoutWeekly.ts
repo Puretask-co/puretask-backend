@@ -1,3 +1,4 @@
+import "../../instrument";
 // src/workers/payoutWeekly.ts
 // Weekly worker to process pending payouts via Stripe Connect
 //
