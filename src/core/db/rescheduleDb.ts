@@ -34,6 +34,35 @@ export interface RescheduleEventUpdate {
 }
 
 // ============================================
+// Raw DB row shapes (B.14)
+// ============================================
+// Wire types as node-pg returns them by default: BIGSERIAL/NUMERIC → string,
+// UUID → string, TIMESTAMPTZ → Date. Domain conversion happens in
+// mapRescheduleEventRow below — keep this shape faithful to the schema so
+// the compiler catches column-name typos before they reach prod.
+
+interface RescheduleEventRow {
+  id: string;
+  job_id: string;
+  client_id: string;
+  cleaner_id: string;
+  requested_by: "client" | "cleaner";
+  requested_to: "client" | "cleaner";
+  t_request: Date;
+  t_start_original: Date;
+  t_start_new: Date;
+  hours_before_original: string;
+  bucket: TimeBucket;
+  reason_code: string | null;
+  status: "pending" | "accepted" | "declined" | "expired";
+  declined_by: "client" | "cleaner" | null;
+  decline_reason_code: string | null;
+  is_reasonable: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// ============================================
 // 3.1 - Insert Reschedule Event
 // ============================================
 
@@ -112,7 +141,7 @@ export async function updateRescheduleEvent(
     values.push(updates.declineReasonCode);
   }
 
-  const result = await query<any>(
+  const result = await query<RescheduleEventRow>(
     `UPDATE reschedule_events
      SET ${setClauses.join(", ")}
      WHERE id = $1
@@ -135,7 +164,10 @@ export async function updateRescheduleEvent(
  * Task 3.3: db.rescheduleEvents.findById(id)
  */
 export async function findRescheduleEventById(id: number): Promise<RescheduleEvent | null> {
-  const result = await query<any>(`SELECT * FROM reschedule_events WHERE id = $1`, [id]);
+  const result = await query<RescheduleEventRow>(
+    `SELECT * FROM reschedule_events WHERE id = $1`,
+    [id]
+  );
 
   if (result.rows.length === 0) return null;
 
@@ -198,8 +230,9 @@ export async function countLateClientReschedulesLt24LastNDays(
  * Updates job's scheduled start time (preserving duration).
  */
 export async function updateJobStartTime(jobId: number, newStartTime: Date): Promise<void> {
-  // Get original duration
-  const jobResult = await query<{ scheduled_start_at: string; scheduled_end_at: string }>(
+  // Get original duration. TIMESTAMPTZ columns come back as Date instances
+  // from node-pg's default type parsers, not strings.
+  const jobResult = await query<{ scheduled_start_at: Date; scheduled_end_at: Date }>(
     `SELECT scheduled_start_at, scheduled_end_at FROM jobs WHERE id = $1`,
     [String(jobId)]
   );
@@ -208,8 +241,8 @@ export async function updateJobStartTime(jobId: number, newStartTime: Date): Pro
     throw new Error(`Job ${jobId} not found`);
   }
 
-  const originalStart = new Date(jobResult.rows[0].scheduled_start_at);
-  const originalEnd = new Date(jobResult.rows[0].scheduled_end_at);
+  const originalStart = jobResult.rows[0].scheduled_start_at;
+  const originalEnd = jobResult.rows[0].scheduled_end_at;
   const durationMs = originalEnd.getTime() - originalStart.getTime();
   const newEndTime = new Date(newStartTime.getTime() + durationMs);
 
@@ -333,7 +366,7 @@ export async function logCleanerDeclineReasonableRequest(data: {
 /**
  * Map database row to RescheduleEvent type
  */
-function mapRescheduleEventRow(row: any): RescheduleEvent {
+function mapRescheduleEventRow(row: RescheduleEventRow): RescheduleEvent {
   return {
     id: Number(row.id),
     jobId: Number(row.job_id),
@@ -358,7 +391,7 @@ function mapRescheduleEventRow(row: any): RescheduleEvent {
  * Get pending reschedule events for a job
  */
 export async function getPendingReschedulesForJob(jobId: number): Promise<RescheduleEvent[]> {
-  const result = await query<any>(
+  const result = await query<RescheduleEventRow>(
     `SELECT * FROM reschedule_events
      WHERE job_id = $1
      AND status = 'pending'
