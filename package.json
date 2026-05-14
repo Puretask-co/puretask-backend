@@ -15,7 +15,7 @@
     "build": "tsc -p tsconfig.json && node scripts/copy-contracts-to-dist.js",
     "verify": "npm run lint:routes && npm run test:no-skips && npm run lint:no-route-db-imports && npm run build && npm run test -- --run src/lib/gamification src/config/cleanerLevels/contracts",
     "start": "node -r ./dist/instrument.js ./dist/index.js",
-    "lint": "eslint . --ext .ts --ignore-pattern \"scripts/**\" --max-warnings 1629",
+    "lint": "eslint . --ext .ts --ignore-pattern \"scripts/**\" --max-warnings 939",
     "lint:routes": "eslint src/routes --ext .ts",
     "lint:no-route-db-imports": "node scripts/check-route-db-imports.js",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
