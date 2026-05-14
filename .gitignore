@@ -128,10 +128,12 @@ pnpm-lock.yaml
 *.sqlite
 *.sqlite3
 
-# Schema dumps (db:dump:schema)
+# Schema dumps (db:dump:schema) — keep these out of git.
+# Local snapshots live in DB/snapshots/; see DB/snapshots/README.md.
 prod.sql
 test.sql
 test_to_production_dump.sql
+DB/snapshots/*.sql
 *.db
 *.db-journal
 

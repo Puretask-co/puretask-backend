@@ -1,3 +1,7 @@
+> **WARNING: ARCHIVED snapshot - last edited 2026-02-11**
+> This file is a point-in-time status report and may not reflect current architecture.
+> For canonical state, see `docs/active/RUNBOOK.md` and `docs/active/ARCHITECTURE.md`.
+
 # Phase 13 — Legal, Policy & Compliance — Status
 
 **Purpose:** Track Phase 13 (Section 13) progress.  
