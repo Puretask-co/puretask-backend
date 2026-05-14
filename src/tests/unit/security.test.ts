@@ -128,32 +128,31 @@ describe("Security - CSRF", () => {
   });
 
   describe("storeCsrfToken", () => {
-    it("should store token for session", () => {
+    it("should store token for session", async () => {
       const token = generateCsrfToken();
-      storeCsrfToken(sessionId, token);
+      await storeCsrfToken(sessionId, token);
 
-      const isValid = validateCsrfToken(sessionId, token);
-      expect(isValid).toBe(true);
+      expect(await validateCsrfToken(sessionId, token)).toBe(true);
     });
   });
 
   describe("validateCsrfToken", () => {
-    it("should validate correct token", () => {
+    it("should validate correct token", async () => {
       const token = generateCsrfToken();
-      storeCsrfToken(sessionId, token);
+      await storeCsrfToken(sessionId, token);
 
-      expect(validateCsrfToken(sessionId, token)).toBe(true);
+      expect(await validateCsrfToken(sessionId, token)).toBe(true);
     });
 
-    it("should reject incorrect token", () => {
+    it("should reject incorrect token", async () => {
       const token = generateCsrfToken();
-      storeCsrfToken(sessionId, token);
+      await storeCsrfToken(sessionId, token);
 
-      expect(validateCsrfToken(sessionId, "wrong-token")).toBe(false);
+      expect(await validateCsrfToken(sessionId, "wrong-token")).toBe(false);
     });
 
-    it("should reject token for non-existent session", () => {
-      expect(validateCsrfToken("non-existent", "token")).toBe(false);
+    it("should reject token for non-existent session", async () => {
+      expect(await validateCsrfToken("non-existent", "token")).toBe(false);
     });
   });
 });
