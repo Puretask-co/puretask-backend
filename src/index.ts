@@ -26,6 +26,7 @@ import { requestContextMiddleware, enrichRequestContext } from "./middleware/req
 import { redactHeaders } from "./lib/logRedaction";
 import { metrics } from "./lib/metrics";
 import { setSocketIO } from "./lib/socket";
+import { recordErrorForAlerting } from "./lib/alerting";
 
 // Import routes
 import healthRouter from "./routes/health";
@@ -102,10 +103,16 @@ app.set("trust proxy", 1);
 // Security Middleware
 // ============================================
 
-// Helmet for secure headers
+// Helmet for secure headers.
+//
+// contentSecurityPolicy is disabled here because the project sets a
+// hand-tuned CSP via src/middleware/security.ts → securityHeaders(). If
+// Helmet's CSP were also on, the two would clobber each other. See
+// docs/active/AUDIT_REANALYSIS_2026-05-13.md § B.6 for the rationale and
+// the directives that are actually applied.
 app.use(
   helmet({
-    contentSecurityPolicy: false, // We handle CSP manually for API
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     hsts: {
       maxAge: 31536000,
@@ -362,6 +369,14 @@ app.use(
 
     // Record error metrics
     metrics.errorOccurred(code, req.path);
+
+    // B.12: rolling 1-minute spike detector. Fires sendAlert() (Slack+email)
+    // when 5xx volume exceeds ERROR_SPIKE_THRESHOLD per minute, with a
+    // 5-minute cooldown so a sustained outage doesn't flood the channel.
+    recordErrorForAlerting(
+      { ...err, statusCode, code } as Error & { code: string; statusCode: number },
+      { path: req.path, method: req.method }
+    );
 
     // Note: Sentry already captured the error via setupExpressErrorHandler above
     // We don't need to call Sentry.captureException() again to avoid double-capture

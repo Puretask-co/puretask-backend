@@ -5,7 +5,7 @@ import { query } from "../db/client";
 import { logger } from "../lib/logger";
 import {
   uploadFile,
-  validateFile,
+  validateFileBytes,
   PROFILE_PHOTO_TYPES,
   ID_DOCUMENT_TYPES,
 } from "./fileUploadService";
@@ -100,8 +100,8 @@ export async function uploadFacePhoto(
   file: { buffer: Buffer; mimetype: string; size: number; originalname: string }
 ): Promise<{ success: boolean; profile_photo_url?: string; error?: string }> {
   try {
-    // Validate file
-    const validation = validateFile(file, PROFILE_PHOTO_TYPES, 5 * 1024 * 1024); // 5MB max
+    // Validate file (includes magic-number check against declared MIME)
+    const validation = validateFileBytes(file, PROFILE_PHOTO_TYPES, 5 * 1024 * 1024); // 5MB max
     if (!validation.valid) {
       return { success: false, error: validation.error };
     }
@@ -147,8 +147,8 @@ export async function uploadIDVerification(
   documentType: "drivers_license" | "passport" | "state_id"
 ): Promise<{ success: boolean; id_verification_id?: string; error?: string }> {
   try {
-    // Validate file
-    const validation = validateFile(file, ID_DOCUMENT_TYPES, 10 * 1024 * 1024); // 10MB max
+    // Validate file (includes magic-number check against declared MIME)
+    const validation = validateFileBytes(file, ID_DOCUMENT_TYPES, 10 * 1024 * 1024); // 10MB max
     if (!validation.valid) {
       return { success: false, error: validation.error };
     }

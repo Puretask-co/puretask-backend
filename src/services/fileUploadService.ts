@@ -90,6 +90,13 @@ export async function deleteFile(filePath: string): Promise<void> {
 
 /**
  * Validate file
+ *
+ * NOTE: this is the legacy MIME-only validator kept for callsites that
+ * don't have the file buffer at hand. For new code, prefer
+ * `validateFileBytes()` below — it also verifies the file's magic-number
+ * signature against the declared MIME so a `.exe` masquerading as
+ * `image/jpeg` is rejected.
+ * See docs/active/AUDIT_REANALYSIS_2026-05-13.md § B.7.
  */
 export function validateFile(
   file: { size: number; mimetype: string },
@@ -104,6 +111,108 @@ export function validateFile(
     return {
       valid: false,
       error: `File type not allowed. Allowed types: ${allowedTypes.join(", ")}`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Detect a file's actual type from the first bytes of its buffer.
+ * Returns the canonical MIME for the detected format, or null if
+ * the bytes don't match any of the formats this app accepts.
+ *
+ * We accept: JPEG, PNG, WebP, HEIC/HEIF, PDF. Anything else is rejected.
+ */
+export function detectFileSignature(buffer: Buffer): string | null {
+  if (buffer.length < 12) return null;
+
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  // WebP: bytes 0-3 = "RIFF", bytes 8-11 = "WEBP"
+  if (
+    buffer.toString("ascii", 0, 4) === "RIFF" &&
+    buffer.toString("ascii", 8, 12) === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  // HEIC/HEIF: ISO BMFF container — bytes 4-7 = "ftyp",
+  // brand at 8-11 in {heic, heix, hevc, hevx, mif1, msf1}
+  if (buffer.toString("ascii", 4, 8) === "ftyp") {
+    const brand = buffer.toString("ascii", 8, 12);
+    if (["heic", "heix", "hevc", "hevx", "mif1", "msf1"].includes(brand)) {
+      return "image/heic";
+    }
+  }
+  // PDF: %PDF
+  if (
+    buffer[0] === 0x25 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x44 &&
+    buffer[3] === 0x46
+  ) {
+    return "application/pdf";
+  }
+  return null;
+}
+
+// Some clients send `image/jpg` (incorrect) for what is really `image/jpeg`.
+const MIME_NORMALIZE: Record<string, string> = {
+  "image/jpg": "image/jpeg",
+};
+
+function normalize(mime: string): string {
+  return MIME_NORMALIZE[mime] ?? mime;
+}
+
+/**
+ * Strict file validator. Performs size + declared-MIME-allowlist check
+ * (same as validateFile), then verifies the buffer's magic-number signature
+ * matches the declared MIME.
+ *
+ * Rejects:
+ * - oversize files
+ * - MIME types outside `allowedTypes`
+ * - files whose declared MIME doesn't match the actual file signature
+ *   (e.g. a .exe sent with `Content-Type: image/jpeg`)
+ * - files whose signature isn't one of the recognized formats
+ */
+export function validateFileBytes(
+  file: { size: number; mimetype: string; buffer: Buffer },
+  allowedTypes: string[],
+  maxSize: number = MAX_FILE_SIZE
+): { valid: boolean; error?: string } {
+  // Reuse the cheap checks first.
+  const basic = validateFile(file, allowedTypes, maxSize);
+  if (!basic.valid) return basic;
+
+  const detected = detectFileSignature(file.buffer);
+  if (!detected) {
+    return {
+      valid: false,
+      error: "File contents are not a recognized image or PDF",
+    };
+  }
+
+  if (normalize(detected) !== normalize(file.mimetype)) {
+    return {
+      valid: false,
+      error: `File contents (${detected}) do not match declared type (${file.mimetype})`,
     };
   }
 
