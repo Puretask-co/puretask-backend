@@ -21,6 +21,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
     "typecheck": "tsc --noEmit",
+    "pretest": "node scripts/maybe-setup-test-db.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:smoke": "vitest run src/tests/smoke",
