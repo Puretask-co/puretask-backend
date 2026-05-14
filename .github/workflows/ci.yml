@@ -174,62 +174,11 @@ jobs:
         run: npm run security:scan
         continue-on-error: true
 
-  deploy:
-    name: Deploy Backend to Railway
-    runs-on: ubuntu-latest
-    needs: [build, test, security-scan]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment:
-      name: production
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: deploy-artifacts
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy API service
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_API_SERVICE: ${{ secrets.RAILWAY_API_SERVICE }}
-        run: |
-          cp -R deploy-artifacts/* .
-          railway up --service "${RAILWAY_API_SERVICE}" --detach
-
-      - name: Deploy scheduler service
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_SCHEDULER_SERVICE: ${{ secrets.RAILWAY_SCHEDULER_SERVICE }}
-        run: railway up --service "${RAILWAY_SCHEDULER_SERVICE}" --detach
-
-      - name: Deploy durable worker service
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_WORKER_SERVICE: ${{ secrets.RAILWAY_WORKER_SERVICE }}
-        run: railway up --service "${RAILWAY_WORKER_SERVICE}" --detach
-
-      - name: Verify API health
-        env:
-          BACKEND_HEALTHCHECK_URL: ${{ secrets.BACKEND_HEALTHCHECK_URL }}
-        run: |
-          if [ -z "${BACKEND_HEALTHCHECK_URL}" ]; then
-            echo "BACKEND_HEALTHCHECK_URL not configured; skipping health probe."
-            exit 0
-          fi
-          curl -fsS "${BACKEND_HEALTHCHECK_URL}" > /dev/null
+# Note: Railway deploys are handled by Railway's native GitHub integration
+# (it watches main and runs the build defined in nixpacks.toml). The
+# previous "Deploy Backend to Railway" job here duplicated that path,
+# was missing RAILWAY_TOKEN, and was reliably red on every push. Removed
+# 2026-05-13 — see docs/active/AUDIT_REANALYSIS_2026-05-13.md § B.15.
+# If you ever want CI-driven deploys back (for the smoke-test step),
+# restore from git history and set RAILWAY_TOKEN / RAILWAY_*_SERVICE in
+# the production GitHub environment.
