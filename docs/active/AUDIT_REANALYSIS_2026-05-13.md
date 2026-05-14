@@ -196,17 +196,34 @@ The API uses `start: "node -r ./dist/instrument.js ./dist/index.js"` which prelo
 
 ---
 
-## B.6 🟡 Helmet CSP is disabled
+## B.6 🟡 Helmet CSP is disabled — **partially addressed (CSP exists elsewhere)**
 
 **Where:** `src/index.ts` `app.use(helmet({ contentSecurityPolicy: false, ... }))`.
 
-**WHY:** Without CSP, any XSS injection vector (e.g. user-generated content in admin views) executes arbitrary scripts. Helmet's other headers are on but CSP is the one that actually contains XSS impact.
+**Status:** Originally rated P1; downgraded after re-audit on 2026-05-13.
 
-**WHAT:** Enable CSP with a policy tailored to this app's actual asset origins (Stripe.js, Sentry, your CDN if any).
+**Re-audit finding:** A Content-Security-Policy header IS already set on every response by the custom `securityHeaders` middleware at `src/middleware/security.ts:37`. Directives applied:
 
-**HOW:** Replace `contentSecurityPolicy: false` with `contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'", "https://js.stripe.com"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", "data:", "https://*.stripe.com"], connectSrc: ["'self'", "https://api.stripe.com", "https://*.sentry.io"] } }`. Test in staging first — CSP breakage looks like everything-is-fine-server-side, blank-page-client-side.
+```
+default-src 'self';
+script-src 'self';
+style-src 'self' 'unsafe-inline';
+img-src 'self' data: https:;
+font-src 'self' data:;
+connect-src 'self' <FRONTEND_URL>;
+frame-ancestors 'none';
+base-uri 'self';
+form-action 'self';
+```
 
-**Done when:** CSP report-only mode landed first; after a week of no violation reports, switch to enforcing.
+This is reasonably strict — `frame-ancestors 'none'` blocks clickjacking, `script-src 'self'` blocks inline-script XSS. The Helmet `contentSecurityPolicy: false` was intentional so the two CSP sources don't clobber each other; the `src/index.ts` comment now says so explicitly.
+
+**What's left (lower priority):**
+- The CSP doesn't whitelist Stripe.js (`https://js.stripe.com`) — only matters if HTML pages from this backend need to embed Stripe Checkout/Elements. The backend is mostly JSON, so this is mostly theoretical.
+- The CSP doesn't whitelist Sentry — only matters for browser-side Sentry. We use server-side Sentry only, so non-issue.
+- No CSP report-uri / Report-To wired up.
+
+**Done when:** if Swagger UI or any HTML view breaks under CSP, add a per-route relaxation; otherwise leave as-is.
 
 ---
 
