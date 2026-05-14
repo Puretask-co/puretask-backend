@@ -56,7 +56,7 @@ jobs:
             const { Pool } = require('pg');
             const pool = new Pool({ connectionString: process.env.DATABASE_URL });
             pool.query(\"SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = 'public'\")
-              .then(r => { if (r.rows[0].n < 1) throw new Error('No tables'); console.log('Tables:', r.rows[0].n); return pool.query(\\\"SELECT to_regclass('public.invoices') AS invoices, to_regclass('public.reviews') AS reviews\\\"); })
+              .then(r => { if (r.rows[0].n < 1) throw new Error('No tables'); console.log('Tables:', r.rows[0].n); return pool.query(\"SELECT to_regclass('public.invoices') AS invoices, to_regclass('public.reviews') AS reviews\"); })
               .then(r => { if (!r.rows[0].invoices || !r.rows[0].reviews) throw new Error('Expected unify tables missing after deterministic setup'); console.log('Unify tables present:', r.rows[0]); })
               .then(() => pool.end())
               .catch(e => { process.exitCode = 1; throw e; });
