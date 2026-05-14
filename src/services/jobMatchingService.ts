@@ -3,9 +3,8 @@
 
 import { query } from "../db/client";
 import { logger } from "../lib/logger";
-import { isCleanerAvailableForSlot, getPreferences } from "./availabilityService";
+import { isCleanerAvailableForSlot } from "./availabilityService";
 import { Job } from "../types/db";
-import { getBoostMultiplier } from "./premiumService";
 
 // ============================================
 // Types
@@ -122,17 +121,42 @@ export async function findMatchingCleaners(
 
   const candidates: CleanerCandidate[] = [];
 
-  // Step 2: Filter by availability and score each cleaner
+  // ============================================
+  // Step 2 (B.11): pre-fetch per-cleaner data in 4 batched queries.
+  // Before this change each loop iteration did ~5 extra round-trips,
+  // so 100 cleaners cost ~500 queries plus availability checks. Now
+  // it's 4 queries up front + the availability check per cleaner.
+  // ============================================
+  const candidateIds = cleanersResult.rows.map((c) => c.user_id);
+
+  // preferencesByCleaner: cleaner_id -> CleanerPreferences (or absent)
+  // pastJobsByCleaner: cleaner_id -> count of completed jobs with this client
+  // responseStatsByCleaner: cleaner_id -> { offered, accepted } in last 30 days
+  // boostByCleaner: cleaner_id -> multiplier (default 1.0)
+  const [
+    preferencesByCleaner,
+    pastJobsByCleaner,
+    responseStatsByCleaner,
+    boostByCleaner,
+  ] = await Promise.all([
+    fetchPreferencesBatch(candidateIds),
+    fetchPastJobsBatch(candidateIds, job.client_id),
+    fetchResponseStatsBatch(candidateIds),
+    fetchBoostMultipliersBatch(candidateIds),
+  ]);
+
+  // Step 3: Filter by availability and score each cleaner
   for (const cleaner of cleanersResult.rows) {
     const startAt = new Date(job.scheduled_start_at);
     const endAt = new Date(job.scheduled_end_at);
 
-    // Check availability
+    // Availability check still per-cleaner; SQL function takes a datetime
+    // and isn't trivially batchable. Tracked as a follow-up to B.11.
     const isAvailable = await isCleanerAvailableForSlot(cleaner.user_id, startAt, endAt);
     if (!isAvailable) continue;
 
     // Check preferences match
-    const prefs = await getPreferences(cleaner.user_id);
+    const prefs = preferencesByCleaner.get(cleaner.user_id) ?? null;
     const jobDurationHours = (endAt.getTime() - startAt.getTime()) / (1000 * 60 * 60);
 
     if (prefs) {
@@ -148,28 +172,10 @@ export async function findMatchingCleaners(
       cleaner.longitude
     );
 
-    // Get past jobs with this client
-    const pastJobsResult = await query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM jobs WHERE client_id = $1 AND cleaner_id = $2 AND status = 'completed'`,
-      [job.client_id, cleaner.user_id]
-    );
-    const pastJobsCount = Number(pastJobsResult.rows[0]?.count || 0);
-
-    // Calculate response rate (jobs accepted / jobs offered in last 30 days)
-    const responseRateResult = await query<{ offered: string; accepted: string }>(
-      `
-        SELECT 
-          COUNT(*) as offered,
-          COUNT(*) FILTER (WHERE status != 'cancelled') as accepted
-        FROM jobs
-        WHERE cleaner_id = $1
-          AND created_at > NOW() - INTERVAL '30 days'
-      `,
-      [cleaner.user_id]
-    );
-    const offered = Number(responseRateResult.rows[0]?.offered || 1);
-    const accepted = Number(responseRateResult.rows[0]?.accepted || 0);
-    const responseRate = offered > 0 ? accepted / offered : 1;
+    const pastJobsCount = pastJobsByCleaner.get(cleaner.user_id) ?? 0;
+    const responseStats = responseStatsByCleaner.get(cleaner.user_id) ?? { offered: 1, accepted: 0 };
+    const responseRate =
+      responseStats.offered > 0 ? responseStats.accepted / responseStats.offered : 1;
 
     // Calculate match score
     const { score: baseScore, reasons } = calculateMatchScore({
@@ -184,7 +190,7 @@ export async function findMatchingCleaners(
     });
 
     // V4 FEATURE: Apply boost multiplier (capped at 1.5x to prevent unfairness)
-    const boostMultiplier = await getBoostMultiplier(cleaner.user_id);
+    const boostMultiplier = boostByCleaner.get(cleaner.user_id) ?? 1.0;
     const cappedBoost = Math.min(boostMultiplier, 1.5); // Cap at 1.5x
     const finalScore = Math.round(baseScore * cappedBoost);
 
@@ -245,6 +251,102 @@ export async function findMatchingCleaners(
   });
 
   return result;
+}
+
+// ============================================
+// Batched fetches (B.11) — convert N+1 patterns inside the matching
+// loop into N=1 query that hydrates a Map<cleanerId, T>. Empty input
+// short-circuits to an empty Map so the call is safe on degenerate
+// inputs.
+// ============================================
+
+interface PreferencesRow {
+  cleaner_id: string;
+  min_job_duration_h: number;
+  max_job_duration_h: number;
+  max_jobs_per_day: number;
+}
+
+async function fetchPreferencesBatch(
+  cleanerIds: readonly string[]
+): Promise<Map<string, PreferencesRow>> {
+  if (cleanerIds.length === 0) return new Map();
+  const result = await query<PreferencesRow>(
+    `SELECT cleaner_id, min_job_duration_h, max_job_duration_h, max_jobs_per_day
+       FROM cleaner_preferences
+      WHERE cleaner_id = ANY($1::text[])`,
+    [cleanerIds]
+  );
+  const map = new Map<string, PreferencesRow>();
+  for (const row of result.rows) {
+    map.set(row.cleaner_id, {
+      cleaner_id: row.cleaner_id,
+      min_job_duration_h: Number(row.min_job_duration_h),
+      max_job_duration_h: Number(row.max_job_duration_h),
+      max_jobs_per_day: Number(row.max_jobs_per_day),
+    });
+  }
+  return map;
+}
+
+async function fetchPastJobsBatch(
+  cleanerIds: readonly string[],
+  clientId: string
+): Promise<Map<string, number>> {
+  if (cleanerIds.length === 0) return new Map();
+  const result = await query<{ cleaner_id: string; count: string }>(
+    `SELECT cleaner_id, COUNT(*)::text as count
+       FROM jobs
+      WHERE client_id = $1
+        AND cleaner_id = ANY($2::text[])
+        AND status = 'completed'
+      GROUP BY cleaner_id`,
+    [clientId, cleanerIds]
+  );
+  const map = new Map<string, number>();
+  for (const row of result.rows) map.set(row.cleaner_id, Number(row.count));
+  return map;
+}
+
+async function fetchResponseStatsBatch(
+  cleanerIds: readonly string[]
+): Promise<Map<string, { offered: number; accepted: number }>> {
+  if (cleanerIds.length === 0) return new Map();
+  const result = await query<{ cleaner_id: string; offered: string; accepted: string }>(
+    `SELECT cleaner_id,
+            COUNT(*)::text as offered,
+            COUNT(*) FILTER (WHERE status != 'cancelled')::text as accepted
+       FROM jobs
+      WHERE cleaner_id = ANY($1::text[])
+        AND created_at > NOW() - INTERVAL '30 days'
+      GROUP BY cleaner_id`,
+    [cleanerIds]
+  );
+  const map = new Map<string, { offered: number; accepted: number }>();
+  for (const row of result.rows) {
+    map.set(row.cleaner_id, {
+      offered: Number(row.offered),
+      accepted: Number(row.accepted),
+    });
+  }
+  return map;
+}
+
+async function fetchBoostMultipliersBatch(
+  cleanerIds: readonly string[]
+): Promise<Map<string, number>> {
+  if (cleanerIds.length === 0) return new Map();
+  const result = await query<{ cleaner_id: string; multiplier: number }>(
+    `SELECT cleaner_id, multiplier
+       FROM cleaner_boosts
+      WHERE cleaner_id = ANY($1::text[])
+        AND status = 'active'
+        AND ends_at > NOW()`,
+    [cleanerIds]
+  );
+  const map = new Map<string, number>();
+  for (const row of result.rows) map.set(row.cleaner_id, Number(row.multiplier));
+  return map;
 }
 
 /**
