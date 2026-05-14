@@ -41,6 +41,52 @@ export interface JobMatchingContext {
 }
 
 // ============================================
+// Raw DB row shapes (B.14)
+// ============================================
+// Wire types as node-pg returns them by default: TEXT/UUID/NUMERIC/BIGINT → string,
+// INTEGER → number, BOOLEAN → boolean, TIMESTAMPTZ → Date, DOUBLE PRECISION → number.
+// Domain conversion happens in the consumer mappers below — keep these shapes
+// faithful to the schema so the compiler catches column-name typos before
+// they reach prod.
+
+interface CandidateRow {
+  id: string;
+  reliability_score: string;
+  tier: string;
+  base_lat: string | null;
+  base_lng: string | null;
+  max_radius_km: string;
+  is_active: boolean;
+  is_suspended: boolean;
+  max_jobs_per_day: number | null;
+  low_flexibility_badge: boolean;
+  accepts_high_risk_clients: boolean;
+  distance_km: number;
+  has_good_history: boolean;
+  jobs_count_for_day: string;
+}
+
+interface MatchHistoryRow {
+  cleaner_id: string;
+  match_score: string;
+  rank: number;
+  generated_at: Date;
+}
+
+interface JobWithClientProfileRow {
+  job_id: string;
+  client_id: string;
+  job_lat: string | null;
+  job_lng: string | null;
+  job_type: "basic" | "deep" | "move_out" | "recurring";
+  requested_start: Date;
+  requested_end: Date;
+  client_risk_score: string;
+  client_risk_band: string;
+  client_flex_score: string;
+}
+
+// ============================================
 // 5.1 - Get Candidates for Job
 // ============================================
 
@@ -74,7 +120,7 @@ export async function getCandidatesForJob(
   // 6. Checks for repeat client history
   // 7. Gets job count for today
 
-  const result = await query<any>(
+  const result = await query<CandidateRow>(
     `WITH candidate_cleaners AS (
       SELECT 
         u.id,
@@ -248,7 +294,7 @@ export async function getMatchHistoryForJob(jobId: number): Promise<
     generatedAt: Date;
   }>
 > {
-  const result = await query<any>(
+  const result = await query<MatchHistoryRow>(
     `SELECT cleaner_id, match_score, rank, generated_at
      FROM match_recommendations
      WHERE job_id = $1
@@ -260,7 +306,7 @@ export async function getMatchHistoryForJob(jobId: number): Promise<
     cleanerId: Number(row.cleaner_id),
     matchScore: Number(row.match_score),
     rank: Number(row.rank),
-    generatedAt: new Date(row.generated_at),
+    generatedAt: row.generated_at,
   }));
 }
 
@@ -305,8 +351,8 @@ export async function getJobWithClientProfile(jobId: number): Promise<{
   clientRiskBand: string;
   clientFlexScore: number;
 } | null> {
-  const result = await query<any>(
-    `SELECT 
+  const result = await query<JobWithClientProfileRow>(
+    `SELECT
       j.id as job_id,
       j.client_id,
       j.latitude as job_lat,
@@ -333,8 +379,8 @@ export async function getJobWithClientProfile(jobId: number): Promise<{
     jobLat: Number(row.job_lat || 0),
     jobLng: Number(row.job_lng || 0),
     jobType: row.job_type,
-    requestedStart: new Date(row.requested_start),
-    requestedEnd: new Date(row.requested_end),
+    requestedStart: row.requested_start,
+    requestedEnd: row.requested_end,
     clientRiskScore: Number(row.client_risk_score),
     clientRiskBand: row.client_risk_band,
     clientFlexScore: Number(row.client_flex_score),
