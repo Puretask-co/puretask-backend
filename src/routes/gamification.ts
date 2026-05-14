@@ -8,6 +8,7 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { query } from "../db/client";
 import { requireAuth, requireRole, AuthedRequest, authedHandler } from "../middleware/authCanonical";
+import { AppError } from "../lib/errors";
 import { getLevelProgress, recordCleanerLogin } from "../services/cleanerLevelService";
 import {
   recordEvent,
@@ -76,16 +77,9 @@ router.get(
     const regionId = (req.query.region_id as string) || null;
     if (!(await gateGamification(req, res, regionId, { level: 1, goals: [], progress: [] })))
       return;
-    try {
-      const cleanerId = req.user!.id;
-      const progress = await getLevelProgress(cleanerId);
-      res.json(progress);
-    } catch (error: unknown) {
-      console.error("Error fetching level progress:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch level progress" },
-      });
-    }
+    const cleanerId = req.user!.id;
+    const progress = await getLevelProgress(cleanerId);
+    res.json(progress);
   })
 );
 
@@ -97,24 +91,17 @@ router.get(
   "/level/progression",
   requireRole("cleaner"),
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const cleanerId = req.user!.id;
-      const currentLevel = Number(req.query.current_level) || 1;
+    const cleanerId = req.user!.id;
+    const currentLevel = Number(req.query.current_level) || 1;
 
-      const levelRow = await query<{ current_level: number }>(
-        `SELECT current_level FROM cleaner_level_progress WHERE cleaner_id = $1`,
-        [cleanerId]
-      );
-      const level = levelRow.rows[0]?.current_level ?? currentLevel;
+    const levelRow = await query<{ current_level: number }>(
+      `SELECT current_level FROM cleaner_level_progress WHERE cleaner_id = $1`,
+      [cleanerId]
+    );
+    const level = levelRow.rows[0]?.current_level ?? currentLevel;
 
-      const progression = await getCleanerProgression(cleanerId, level);
-      res.json({ ok: true, ...progression });
-    } catch (error: unknown) {
-      console.error("Error fetching progression:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch progression" },
-      });
-    }
+    const progression = await getCleanerProgression(cleanerId, level);
+    res.json({ ok: true, ...progression });
   })
 );
 
@@ -127,16 +114,9 @@ router.get(
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.query.region_id as string) || null;
     if (!(await gateGamification(req, res, regionId, { goals: [] }))) return;
-    try {
-      const cleanerId = req.user!.id;
-      const goals = await getCleanerGoalsWithProgress(cleanerId);
-      res.json({ goals });
-    } catch (error: unknown) {
-      console.error("Error fetching cleaner goals:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch goals" },
-      });
-    }
+    const cleanerId = req.user!.id;
+    const goals = await getCleanerGoalsWithProgress(cleanerId);
+    res.json({ goals });
   })
 );
 
@@ -149,19 +129,12 @@ router.get(
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.query.region_id as string) || null;
     if (!(await gateGamification(req, res, regionId, { current_level: 1, active_rewards: [] }))) return;
-    try {
-      const cleanerId = req.user!.id;
-      const summary = await getCleanerProgressSummary(cleanerId);
-      if (!summary) {
-        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Progress not found" } });
-      }
-      res.json(summary);
-    } catch (error: unknown) {
-      console.error("Error fetching cleaner progress:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch progress" },
-      });
+    const cleanerId = req.user!.id;
+    const summary = await getCleanerProgressSummary(cleanerId);
+    if (!summary) {
+      throw new AppError("NOT_FOUND", "Progress not found", 404);
     }
+    res.json(summary);
   })
 );
 
@@ -174,16 +147,9 @@ router.get(
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.query.region_id as string) || null;
     if (!(await gateGamification(req, res, regionId, { choices: [] }))) return;
-    try {
-      const cleanerId = req.user!.id;
-      const choices = await getOpenChoiceEligibilities(cleanerId);
-      res.json({ ok: true, choices });
-    } catch (error: unknown) {
-      console.error("Error fetching choice eligibilities:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch choices" },
-      });
-    }
+    const cleanerId = req.user!.id;
+    const choices = await getOpenChoiceEligibilities(cleanerId);
+    res.json({ ok: true, choices });
   })
 );
 
@@ -195,16 +161,12 @@ router.post(
   "/rewards/select",
   requireRole("cleaner"),
   authedHandler(async (req: AuthedRequest, res) => {
+    const cleanerId = req.user!.id;
+    const { eligibility_id, reward_id } = req.body ?? {};
+    if (!eligibility_id || !reward_id) {
+      throw new AppError("VALIDATION_ERROR", "eligibility_id and reward_id required", 400);
+    }
     try {
-      const cleanerId = req.user!.id;
-      const { eligibility_id, reward_id } = req.body ?? {};
-      if (!eligibility_id || !reward_id) {
-        res.status(400).json({
-          error: { code: "VALIDATION_ERROR", message: "eligibility_id and reward_id required" },
-        });
-        return;
-      }
-
       const grant = await selectChoiceReward({
         cleanerId,
         eligibilityId: eligibility_id,
@@ -212,8 +174,10 @@ router.post(
       });
       res.json({ ok: true, grant });
     } catch (error: unknown) {
+      // selectChoiceReward throws domain errors that should surface as 400s,
+      // not 500s. Re-wrap rather than rely on the default 500 path.
       const msg = error instanceof Error ? error.message : "Failed to select reward";
-      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: msg } });
+      throw new AppError("VALIDATION_ERROR", msg, 400);
     }
   })
 );
@@ -226,28 +190,24 @@ router.post(
   "/rewards/choice/:choiceGroupId/select",
   requireRole("cleaner"),
   authedHandler(async (req: AuthedRequest, res) => {
+    const cleanerId = req.user!.id;
+    const choiceGroupId = req.params.choiceGroupId;
+    const reward_id = (req.body as { reward_id?: string })?.reward_id;
+    if (!reward_id) {
+      throw new AppError("BAD_REQUEST", "reward_id required", 400);
+    }
+    const elig = await query<{ id: string }>(
+      `SELECT id FROM gamification_choice_eligibilities
+       WHERE cleaner_id = $1 AND choice_group_id = $2 AND status = 'open'
+         AND (expires_at IS NULL OR expires_at > now())
+       ORDER BY earned_at DESC LIMIT 1`,
+      [cleanerId, choiceGroupId]
+    );
+    const eligibilityId = elig.rows[0]?.id;
+    if (!eligibilityId) {
+      throw new AppError("UNPROCESSABLE_ENTITY", "No open eligibility for this choice group", 422);
+    }
     try {
-      const cleanerId = req.user!.id;
-      const choiceGroupId = req.params.choiceGroupId;
-      const reward_id = (req.body as { reward_id?: string })?.reward_id;
-      if (!reward_id) {
-        return res.status(400).json({
-          error: { code: "BAD_REQUEST", message: "reward_id required" },
-        });
-      }
-      const elig = await query<{ id: string }>(
-        `SELECT id FROM gamification_choice_eligibilities
-         WHERE cleaner_id = $1 AND choice_group_id = $2 AND status = 'open'
-           AND (expires_at IS NULL OR expires_at > now())
-         ORDER BY earned_at DESC LIMIT 1`,
-        [cleanerId, choiceGroupId]
-      );
-      const eligibilityId = elig.rows[0]?.id;
-      if (!eligibilityId) {
-        return res.status(422).json({
-          error: { code: "UNPROCESSABLE_ENTITY", message: "No open eligibility for this choice group" },
-        });
-      }
       const grant = await selectChoiceReward({
         cleanerId,
         eligibilityId,
@@ -256,7 +216,7 @@ router.post(
       res.json({ ok: true, grant });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Failed to select reward";
-      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: msg } });
+      throw new AppError("VALIDATION_ERROR", msg, 400);
     }
   })
 );
@@ -271,20 +231,13 @@ router.get(
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.query.region_id as string) || null;
     if (!(await gateGamification(req, res, regionId))) return;
-    try {
-      const cleanerId = req.user!.id;
-      const service = new RewardEffectsService();
-      const effects = await service.getEffectiveEffects({
-        cleaner_id: cleanerId,
-        region_id: regionId,
-      });
-      res.json({ ok: true, effects });
-    } catch (error: unknown) {
-      console.error("Error fetching reward effects:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch effects" },
-      });
-    }
+    const cleanerId = req.user!.id;
+    const service = new RewardEffectsService();
+    const effects = await service.getEffectiveEffects({
+      cleaner_id: cleanerId,
+      region_id: regionId,
+    });
+    res.json({ ok: true, effects });
   })
 );
 
@@ -303,22 +256,15 @@ router.get(
       res.json({ ok: true, gamification_enabled: false, actions: [] });
       return;
     }
-    try {
-      const cleanerId = req.user!.id;
-      const limit = req.query.limit ? Number(req.query.limit) : 3;
-      const svc = new NextBestActionService();
-      const result = await svc.getNextBestActions({
-        cleaner_id: cleanerId,
-        region_id: regionId,
-        limit,
-      });
-      res.json({ ok: true, ...result });
-    } catch (error: unknown) {
-      console.error("Error fetching next best actions:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch next best actions" },
-      });
-    }
+    const cleanerId = req.user!.id;
+    const limit = req.query.limit ? Number(req.query.limit) : 3;
+    const svc = new NextBestActionService();
+    const result = await svc.getNextBestActions({
+      cleaner_id: cleanerId,
+      region_id: regionId,
+      limit,
+    });
+    res.json({ ok: true, ...result });
   })
 );
 
@@ -331,26 +277,19 @@ router.get(
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.query.region_id as string) ?? null;
     if (!(await gateGamification(req, res, regionId, { seasons: [] }))) return;
-    try {
-      const svc = new SeasonService();
-      const seasons = await svc.getActiveSeasons({ region_id: regionId, at: new Date() });
-      res.json({
-        ok: true,
-        seasons: seasons.map((s) => ({
-          id: s.id,
-          name: s.name,
-          description: s.description,
-          starts_at: s.starts_at,
-          ends_at: s.ends_at,
-          ui: s.rule?.ui ?? {},
-        })),
-      });
-    } catch (error: unknown) {
-      console.error("Error fetching active seasons:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch seasons" },
-      });
-    }
+    const svc = new SeasonService();
+    const seasons = await svc.getActiveSeasons({ region_id: regionId, at: new Date() });
+    res.json({
+      ok: true,
+      seasons: seasons.map((s) => ({
+        id: s.id,
+        name: s.name,
+        description: s.description,
+        starts_at: s.starts_at,
+        ends_at: s.ends_at,
+        ui: s.rule?.ui ?? {},
+      })),
+    });
   })
 );
 
@@ -369,16 +308,9 @@ router.get(
       res.json({ ok: true, gamification_enabled: false, badges: [] });
       return;
     }
-    try {
-      const svc = new BadgeService();
-      const badges = await svc.getBadgeCatalog();
-      res.json({ ok: true, badges });
-    } catch (error: unknown) {
-      console.error("Error fetching badge catalog:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch badges" },
-      });
-    }
+    const svc = new BadgeService();
+    const badges = await svc.getBadgeCatalog();
+    res.json({ ok: true, badges });
   })
 );
 
@@ -391,17 +323,10 @@ router.get(
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.query.region_id as string) || null;
     if (!(await gateGamification(req, res, regionId, { earned: [] }))) return;
-    try {
-      const cleanerId = req.user!.id;
-      const svc = new BadgeService();
-      const earned = await svc.getCleanerBadges(cleanerId);
-      res.json({ ok: true, earned });
-    } catch (error: unknown) {
-      console.error("Error fetching earned badges:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch earned badges" },
-      });
-    }
+    const cleanerId = req.user!.id;
+    const svc = new BadgeService();
+    const earned = await svc.getCleanerBadges(cleanerId);
+    res.json({ ok: true, earned });
   })
 );
 
@@ -412,18 +337,11 @@ router.get(
   "/badges/feed",
   requireRole("cleaner"),
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const cleanerId = req.user!.id;
-      const limit = Math.min(Number(req.query.limit ?? 50), 200);
-      const svc = new BadgeService();
-      const feed = await svc.getAchievementFeed(cleanerId, limit);
-      res.json({ ok: true, feed });
-    } catch (error: unknown) {
-      console.error("Error fetching achievement feed:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch feed" },
-      });
-    }
+    const cleanerId = req.user!.id;
+    const limit = Math.min(Number(req.query.limit ?? 50), 200);
+    const svc = new BadgeService();
+    const feed = await svc.getAchievementFeed(cleanerId, limit);
+    res.json({ ok: true, feed });
   })
 );
 
@@ -436,16 +354,9 @@ router.get(
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.query.region_id as string) || null;
     if (!(await gateGamification(req, res, regionId, { rewards: [] }))) return;
-    try {
-      const cleanerId = req.user!.id;
-      const rewards = await getActiveRewards(cleanerId);
-      res.json({ ok: true, rewards });
-    } catch (error: unknown) {
-      console.error("Error fetching active rewards:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch rewards" },
-      });
-    }
+    const cleanerId = req.user!.id;
+    const rewards = await getActiveRewards(cleanerId);
+    res.json({ ok: true, rewards });
   })
 );
 
@@ -466,16 +377,9 @@ router.post(
   "/level/record-login",
   requireRole("cleaner"),
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const cleanerId = req.user!.id;
-      await recordCleanerLogin(cleanerId);
-      res.json({ message: "Login recorded" });
-    } catch (error: unknown) {
-      console.error("Error recording login:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to record login" },
-      });
-    }
+    const cleanerId = req.user!.id;
+    await recordCleanerLogin(cleanerId);
+    res.json({ message: "Login recorded" });
   })
 );
 
@@ -498,28 +402,25 @@ router.post(
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.body?.region_id as string) || (req.query.region_id as string) || null;
     if (!(await gateGamification(req, res, regionId))) return;
-    try {
-      const parsed = eventSchema.safeParse(req.body);
-      if (!parsed.success) {
-        res
-          .status(400)
-          .json({ error: { code: "VALIDATION_ERROR", details: parsed.error.flatten() } });
-        return;
-      }
-      const {
-        event_type,
-        occurred_at,
-        payload,
-        idempotency_key,
-        job_id,
-        job_request_id,
-        client_id,
-      } = parsed.data;
-      const source = (req.headers["x-event-source"] as string) || "mobile";
-      const validSource = ["mobile", "web"].includes(source)
-        ? (source as "mobile" | "web")
-        : "mobile";
+    const parsed = eventSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError("VALIDATION_ERROR", "Invalid event payload", 400, parsed.error.flatten());
+    }
+    const {
+      event_type,
+      occurred_at,
+      payload,
+      idempotency_key,
+      job_id,
+      job_request_id,
+      client_id,
+    } = parsed.data;
+    const source = (req.headers["x-event-source"] as string) || "mobile";
+    const validSource = ["mobile", "web"].includes(source)
+      ? (source as "mobile" | "web")
+      : "mobile";
 
+    try {
       await recordEvent({
         event_type,
         occurred_at: occurred_at ? new Date(occurred_at) : new Date(),
@@ -531,23 +432,15 @@ router.post(
         payload: payload ?? {},
         idempotency_key: idempotency_key ?? undefined,
       });
-      res.json({ ok: true });
     } catch (error: unknown) {
+      // Translate event-contract violations to 400 so callers can fix the
+      // payload; everything else propagates to the global error middleware.
       if (error instanceof EventContractValidationError) {
-        res.status(400).json({
-          error: {
-            code: "EVENT_CONTRACT_VIOLATION",
-            message: error.message,
-            details: error.errors,
-          },
-        });
-        return;
+        throw new AppError("EVENT_CONTRACT_VIOLATION", error.message, 400, error.errors);
       }
-      console.error("Error recording event:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to record event" },
-      });
+      throw error;
     }
+    res.json({ ok: true });
   })
 );
 
@@ -566,31 +459,21 @@ router.post(
   authedHandler(async (req: AuthedRequest, res) => {
     const regionId = (req.body?.region_id as string) || (req.query.region_id as string) || null;
     if (!(await gateGamification(req, res, regionId))) return;
-    try {
-      const parsed = sessionStartSchema.safeParse(req.body);
-      if (!parsed.success) {
-        res
-          .status(400)
-          .json({ error: { code: "VALIDATION_ERROR", details: parsed.error.flatten() } });
-        return;
-      }
-      const source = (req.headers["x-event-source"] as string) || "mobile";
-      const validSource = ["mobile", "web"].includes(source)
-        ? (source as "mobile" | "web")
-        : "mobile";
-
-      await recordSessionStart(parsed.data.session_id, req.user!.id, validSource, {
-        timezone: parsed.data.timezone,
-        device_platform: parsed.data.device_platform,
-        app_version: parsed.data.app_version,
-      });
-      res.json({ ok: true });
-    } catch (error: unknown) {
-      console.error("Error recording session start:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to record session" },
-      });
+    const parsed = sessionStartSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError("VALIDATION_ERROR", "Invalid session payload", 400, parsed.error.flatten());
     }
+    const source = (req.headers["x-event-source"] as string) || "mobile";
+    const validSource = ["mobile", "web"].includes(source)
+      ? (source as "mobile" | "web")
+      : "mobile";
+
+    await recordSessionStart(parsed.data.session_id, req.user!.id, validSource, {
+      timezone: parsed.data.timezone,
+      device_platform: parsed.data.device_platform,
+      app_version: parsed.data.app_version,
+    });
+    res.json({ ok: true });
   })
 );
 
@@ -611,11 +494,10 @@ router.get(
   "/onboarding/progress",
   requireRole("cleaner"),
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const cleanerId = req.user!.id;
+    const cleanerId = req.user!.id;
 
     const result = await query(
-      `SELECT 
+      `SELECT
         profile_completion_percentage as "completionPercentage",
         setup_wizard_completed as "wizardCompleted",
         setup_wizard_step as "currentStep",
@@ -639,24 +521,18 @@ router.get(
       [cleanerId]
     );
 
-      if (result.rows.length === 0) {
-        // Initialize if not exists
-        await query(`INSERT INTO cleaner_onboarding_progress (cleaner_id) VALUES ($1)`, [cleanerId]);
-        res.json({
-          completionPercentage: 0,
-          wizardCompleted: false,
-          currentStep: 0,
-        });
-        return;
-      }
-
-      res.json(result.rows[0]);
-    } catch (error: unknown) {
-      console.error("Error fetching onboarding progress:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch progress" },
+    if (result.rows.length === 0) {
+      // Initialize if not exists
+      await query(`INSERT INTO cleaner_onboarding_progress (cleaner_id) VALUES ($1)`, [cleanerId]);
+      res.json({
+        completionPercentage: 0,
+        wizardCompleted: false,
+        currentStep: 0,
       });
+      return;
     }
+
+    res.json(result.rows[0]);
   })
 );
 
@@ -698,62 +574,53 @@ router.get(
 router.post(
   "/onboarding/update",
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const cleanerId = req.user!.id;
-      const updates = req.body;
+    const cleanerId = req.user!.id;
+    const updates = req.body;
 
-      const allowedFields = [
-        "setup_wizard_step",
-        "setup_wizard_completed",
-        "profile_photo_uploaded",
-        "bio_completed",
-        "services_defined",
-        "availability_set",
-        "pricing_configured",
-        "ai_personality_set",
-        "templates_customized",
-        "quick_responses_added",
-        "first_template_used",
-        "viewed_insights_dashboard",
-        "created_custom_template",
-        "marked_favorite_response",
-      ];
+    const allowedFields = [
+      "setup_wizard_step",
+      "setup_wizard_completed",
+      "profile_photo_uploaded",
+      "bio_completed",
+      "services_defined",
+      "availability_set",
+      "pricing_configured",
+      "ai_personality_set",
+      "templates_customized",
+      "quick_responses_added",
+      "first_template_used",
+      "viewed_insights_dashboard",
+      "created_custom_template",
+      "marked_favorite_response",
+    ];
 
-      const updateFields = Object.keys(updates)
+    const updateFields = Object.keys(updates)
+      .filter((key) => allowedFields.includes(key))
+      .map((key, index) => `${key} = $${index + 2}`)
+      .join(", ");
+
+    if (!updateFields) {
+      throw new AppError("VALIDATION_ERROR", "No valid fields to update", 400);
+    }
+
+    const values = [
+      cleanerId,
+      ...Object.keys(updates)
         .filter((key) => allowedFields.includes(key))
-        .map((key, index) => `${key} = $${index + 2}`)
-        .join(", ");
+        .map((key) => updates[key]),
+    ];
 
-      if (!updateFields) {
-        return res.status(400).json({
-          error: { code: "VALIDATION_ERROR", message: "No valid fields to update" },
-        });
-      }
-
-      const values = [
-        cleanerId,
-        ...Object.keys(updates)
-          .filter((key) => allowedFields.includes(key))
-          .map((key) => updates[key]),
-      ];
-
-      await query(
-        `UPDATE cleaner_onboarding_progress
+    await query(
+      `UPDATE cleaner_onboarding_progress
        SET ${updateFields}, updated_at = NOW()
        WHERE cleaner_id = $1`,
-        values
-      );
+      values
+    );
 
-      // Check if any achievements unlocked
-      await checkAndUnlockAchievements(cleanerId);
+    // Check if any achievements unlocked
+    await checkAndUnlockAchievements(cleanerId);
 
-      res.json({ message: "Progress updated successfully" });
-    } catch (error: any) {
-      console.error("Error updating onboarding progress:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to update progress" },
-      });
-    }
+    res.json({ message: "Progress updated successfully" });
   })
 );
 
@@ -777,12 +644,11 @@ router.post(
 router.get(
   "/achievements",
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const cleanerId = req.user!.id;
+    const cleanerId = req.user!.id;
 
-      // Get all achievements with earned status
-      const result = await query(
-        `SELECT 
+    // Get all achievements with earned status
+    const result = await query(
+      `SELECT
         a.id,
         a.achievement_key as "key",
         a.name,
@@ -800,40 +666,34 @@ router.get(
       LEFT JOIN cleaner_achievements ca ON a.id = ca.achievement_id AND ca.cleaner_id = $1
       WHERE a.is_active = true
       ORDER BY a.display_order, a.created_at`,
-        [cleanerId]
-      );
+      [cleanerId]
+    );
 
-      // Group by category
-      const grouped = result.rows.reduce((acc: any, achievement: any) => {
-        if (!acc[achievement.category]) {
-          acc[achievement.category] = [];
-        }
-        acc[achievement.category].push(achievement);
-        return acc;
-      }, {});
+    // Group by category
+    const grouped = result.rows.reduce((acc: any, achievement: any) => {
+      if (!acc[achievement.category]) {
+        acc[achievement.category] = [];
+      }
+      acc[achievement.category].push(achievement);
+      return acc;
+    }, {});
 
-      // Calculate total points
-      const earnedPoints = result.rows
-        .filter((a: any) => a.earned)
-        .reduce((sum: number, a: any) => sum + a.points, 0);
+    // Calculate total points
+    const earnedPoints = result.rows
+      .filter((a: any) => a.earned)
+      .reduce((sum: number, a: any) => sum + a.points, 0);
 
-      const totalPoints = result.rows.reduce((sum: number, a: any) => sum + a.points, 0);
+    const totalPoints = result.rows.reduce((sum: number, a: any) => sum + a.points, 0);
 
-      res.json({
-        achievements: grouped,
-        stats: {
-          earnedPoints,
-          totalPoints,
-          earnedCount: result.rows.filter((a: any) => a.earned).length,
-          totalCount: result.rows.length,
-        },
-      });
-    } catch (error: any) {
-      console.error("Error fetching achievements:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch achievements" },
-      });
-    }
+    res.json({
+      achievements: grouped,
+      stats: {
+        earnedPoints,
+        totalPoints,
+        earnedCount: result.rows.filter((a: any) => a.earned).length,
+        totalCount: result.rows.length,
+      },
+    });
   })
 );
 
@@ -858,24 +718,17 @@ router.get(
 router.post(
   "/achievements/:achievementId/mark-seen",
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const cleanerId = req.user!.id;
-      const { achievementId } = req.params;
+    const cleanerId = req.user!.id;
+    const { achievementId } = req.params;
 
-      await query(
-        `UPDATE cleaner_achievements
+    await query(
+      `UPDATE cleaner_achievements
        SET seen = true
        WHERE cleaner_id = $1 AND achievement_id = $2`,
-        [cleanerId, achievementId]
-      );
+      [cleanerId, achievementId]
+    );
 
-      res.json({ message: "Achievement marked as seen" });
-    } catch (error: any) {
-      console.error("Error marking achievement:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to mark achievement" },
-      });
-    }
+    res.json({ message: "Achievement marked as seen" });
   })
 );
 
@@ -899,11 +752,10 @@ router.post(
 router.get(
   "/certifications",
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const cleanerId = req.user!.id;
+    const cleanerId = req.user!.id;
 
-      const result = await query(
-        `SELECT 
+    const result = await query(
+      `SELECT
         c.id,
         c.certification_key as "key",
         c.name,
@@ -922,31 +774,25 @@ router.get(
       LEFT JOIN cleaner_certifications cc ON c.id = cc.certification_id AND cc.cleaner_id = $1
       WHERE c.is_active = true
       ORDER BY c.level`,
-        [cleanerId]
-      );
+      [cleanerId]
+    );
 
-      // Calculate progress for each certification
-      const certsWithProgress = await Promise.all(
-        result.rows.map(async (cert: any) => {
-          const progress = await calculateCertificationProgress(cleanerId, cert.requirements);
-          return {
-            ...cert,
-            progress,
-            canEarn: progress >= 100 && !cert.earned,
-          };
-        })
-      );
+    // Calculate progress for each certification
+    const certsWithProgress = await Promise.all(
+      result.rows.map(async (cert: any) => {
+        const progress = await calculateCertificationProgress(cleanerId, cert.requirements);
+        return {
+          ...cert,
+          progress,
+          canEarn: progress >= 100 && !cert.earned,
+        };
+      })
+    );
 
-      res.json({
-        certifications: certsWithProgress,
-        currentLevel: certsWithProgress.filter((c: any) => c.earned).length,
-      });
-    } catch (error: any) {
-      console.error("Error fetching certifications:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch certifications" },
-      });
-    }
+    res.json({
+      certifications: certsWithProgress,
+      currentLevel: certsWithProgress.filter((c: any) => c.earned).length,
+    });
   })
 );
 
@@ -968,8 +814,9 @@ router.get(
  *       200:
  *         description: Certification claimed
  */
-router.post("/certifications/:certificationId/claim", async (req: AuthedRequest, res) => {
-  try {
+router.post(
+  "/certifications/:certificationId/claim",
+  authedHandler(async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const { certificationId } = req.params;
 
@@ -979,17 +826,13 @@ router.post("/certifications/:certificationId/claim", async (req: AuthedRequest,
     ]);
 
     if (cert.rows.length === 0) {
-      return res.status(404).json({
-        error: { code: "NOT_FOUND", message: "Certification not found" },
-      });
+      throw new AppError("NOT_FOUND", "Certification not found", 404);
     }
 
     const progress = await calculateCertificationProgress(cleanerId, cert.rows[0].requirements);
 
     if (progress < 100) {
-      return res.status(400).json({
-        error: { code: "REQUIREMENTS_NOT_MET", message: "Requirements not yet met" },
-      });
+      throw new AppError("REQUIREMENTS_NOT_MET", "Requirements not yet met", 400);
     }
 
     // Award certification
@@ -1005,13 +848,8 @@ router.post("/certifications/:certificationId/claim", async (req: AuthedRequest,
       message: "Certification earned!",
       certification: result.rows[0],
     });
-  } catch (error: any) {
-    console.error("Error claiming certification:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to claim certification" },
-    });
-  }
-});
+  })
+);
 
 // ============================================
 // TEMPLATE LIBRARY
@@ -1046,11 +884,10 @@ router.post("/certifications/:certificationId/claim", async (req: AuthedRequest,
 router.get(
   "/template-library",
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const { category, type, search, sort = "rating" } = req.query;
+    const { category, type, search, sort = "rating" } = req.query;
 
-      let sql = `
-      SELECT 
+    let sql = `
+      SELECT
         id,
         template_type as type,
         template_name as name,
@@ -1071,50 +908,44 @@ router.get(
       WHERE is_active = true
     `;
 
-      const params: any[] = [];
-      let paramIndex = 1;
+    const params: any[] = [];
+    let paramIndex = 1;
 
-      if (category) {
-        sql += ` AND category = $${paramIndex}`;
-        params.push(category);
-        paramIndex++;
-      }
-
-      if (type) {
-        sql += ` AND template_type = $${paramIndex}`;
-        params.push(type);
-        paramIndex++;
-      }
-
-      if (search) {
-        sql += ` AND (template_name ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR $${paramIndex} = ANY(tags))`;
-        params.push(`%${search}%`);
-        paramIndex++;
-      }
-
-      // Sorting
-      if (sort === "rating") {
-        sql += ` ORDER BY is_featured DESC, rating_average DESC, rating_count DESC`;
-      } else if (sort === "popular") {
-        sql += ` ORDER BY is_featured DESC, usage_count DESC`;
-      } else if (sort === "recent") {
-        sql += ` ORDER BY is_featured DESC, created_at DESC`;
-      }
-
-      sql += ` LIMIT 50`;
-
-      const result = await query(sql, params);
-
-      res.json({
-        templates: result.rows,
-        count: result.rows.length,
-      });
-    } catch (error: any) {
-      console.error("Error fetching template library:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch templates" },
-      });
+    if (category) {
+      sql += ` AND category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
     }
+
+    if (type) {
+      sql += ` AND template_type = $${paramIndex}`;
+      params.push(type);
+      paramIndex++;
+    }
+
+    if (search) {
+      sql += ` AND (template_name ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR $${paramIndex} = ANY(tags))`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    // Sorting
+    if (sort === "rating") {
+      sql += ` ORDER BY is_featured DESC, rating_average DESC, rating_count DESC`;
+    } else if (sort === "popular") {
+      sql += ` ORDER BY is_featured DESC, usage_count DESC`;
+    } else if (sort === "recent") {
+      sql += ` ORDER BY is_featured DESC, created_at DESC`;
+    }
+
+    sql += ` LIMIT 50`;
+
+    const result = await query(sql, params);
+
+    res.json({
+      templates: result.rows,
+      count: result.rows.length,
+    });
   })
 );
 
@@ -1148,45 +979,36 @@ router.get(
 router.post(
   "/template-library/:templateId/save",
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const cleanerId = req.user!.id;
-      const { templateId } = req.params;
-      const { customizedContent } = req.body;
+    const cleanerId = req.user!.id;
+    const { templateId } = req.params;
+    const { customizedContent } = req.body;
 
-      // Get template from library
-      const template = await query(`SELECT * FROM template_library WHERE id = $1`, [templateId]);
+    // Get template from library
+    const template = await query(`SELECT * FROM template_library WHERE id = $1`, [templateId]);
 
-      if (template.rows.length === 0) {
-        return res.status(404).json({
-          error: { code: "NOT_FOUND", message: "Template not found" },
-        });
-      }
+    if (template.rows.length === 0) {
+      throw new AppError("NOT_FOUND", "Template not found", 404);
+    }
 
-      // Save to user's templates
-      await query(
-        `INSERT INTO cleaner_saved_library_templates 
+    // Save to user's templates
+    await query(
+      `INSERT INTO cleaner_saved_library_templates
         (cleaner_id, library_template_id, customized_content)
        VALUES ($1, $2, $3)
-       ON CONFLICT (cleaner_id, library_template_id) 
+       ON CONFLICT (cleaner_id, library_template_id)
        DO UPDATE SET customized_content = EXCLUDED.customized_content, saved_at = NOW()`,
-        [cleanerId, templateId, customizedContent || template.rows[0].template_content]
-      );
+      [cleanerId, templateId, customizedContent || template.rows[0].template_content]
+    );
 
-      // Increment usage count
-      await query(
-        `UPDATE template_library 
-       SET usage_count = usage_count + 1 
+    // Increment usage count
+    await query(
+      `UPDATE template_library
+       SET usage_count = usage_count + 1
        WHERE id = $1`,
-        [templateId]
-      );
+      [templateId]
+    );
 
-      res.json({ message: "Template saved successfully" });
-    } catch (error: any) {
-      console.error("Error saving template:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to save template" },
-      });
-    }
+    res.json({ message: "Template saved successfully" });
   })
 );
 
@@ -1220,34 +1042,28 @@ router.post(
  *       400:
  *         description: Rating must be 1-5
  */
-router.post("/template-library/:templateId/rate", async (req: AuthedRequest, res) => {
-  try {
+router.post(
+  "/template-library/:templateId/rate",
+  authedHandler(async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const { templateId } = req.params;
     const { rating, review } = req.body;
 
     if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({
-        error: { code: "VALIDATION_ERROR", message: "Rating must be between 1 and 5" },
-      });
+      throw new AppError("VALIDATION_ERROR", "Rating must be between 1 and 5", 400);
     }
 
     await query(
       `INSERT INTO template_library_ratings (template_id, cleaner_id, rating, review)
        VALUES ($1, $2, $3, $4)
-       ON CONFLICT (template_id, cleaner_id) 
+       ON CONFLICT (template_id, cleaner_id)
        DO UPDATE SET rating = EXCLUDED.rating, review = EXCLUDED.review`,
       [templateId, cleanerId, rating, review]
     );
 
     res.json({ message: "Rating submitted successfully" });
-  } catch (error: any) {
-    console.error("Error rating template:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to rate template" },
-    });
-  }
-});
+  })
+);
 
 /**
  * @swagger
@@ -1265,11 +1081,10 @@ router.post("/template-library/:templateId/rate", async (req: AuthedRequest, res
 router.get(
   "/template-library/saved",
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const cleanerId = req.user!.id;
+    const cleanerId = req.user!.id;
 
-      const result = await query(
-        `SELECT 
+    const result = await query(
+      `SELECT
         st.id,
         st.customized_content as "customizedContent",
         st.is_active as "isActive",
@@ -1283,19 +1098,13 @@ router.get(
       JOIN template_library tl ON st.library_template_id = tl.id
       WHERE st.cleaner_id = $1 AND st.is_active = true
       ORDER BY st.saved_at DESC`,
-        [cleanerId]
-      );
+      [cleanerId]
+    );
 
-      res.json({
-        templates: result.rows,
-        count: result.rows.length,
-      });
-    } catch (error: any) {
-      console.error("Error fetching saved templates:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch saved templates" },
-      });
-    }
+    res.json({
+      templates: result.rows,
+      count: result.rows.length,
+    });
   })
 );
 
@@ -1316,12 +1125,13 @@ router.get(
  *       200:
  *         description: tooltips array and count
  */
-router.get("/tooltips", async (req: AuthedRequest, res) => {
-  try {
+router.get(
+  "/tooltips",
+  authedHandler(async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
 
     const result = await query(
-      `SELECT 
+      `SELECT
         t.id,
         t.tooltip_key as "key",
         t.target_element as "targetElement",
@@ -1343,13 +1153,8 @@ router.get("/tooltips", async (req: AuthedRequest, res) => {
       tooltips: result.rows,
       count: result.rows.length,
     });
-  } catch (error: any) {
-    console.error("Error fetching tooltips:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to fetch tooltips" },
-    });
-  }
-});
+  })
+);
 
 /**
  * @swagger
@@ -1379,33 +1184,26 @@ router.get("/tooltips", async (req: AuthedRequest, res) => {
 router.post(
   "/tooltips/:tooltipId/dismiss",
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const cleanerId = req.user!.id;
-      const { tooltipId } = req.params;
-      const { helpful } = req.body;
+    const cleanerId = req.user!.id;
+    const { tooltipId } = req.params;
+    const { helpful } = req.body;
 
-      await query(
-        `INSERT INTO cleaner_tooltip_interactions (cleaner_id, tooltip_id, marked_helpful)
+    await query(
+      `INSERT INTO cleaner_tooltip_interactions (cleaner_id, tooltip_id, marked_helpful)
        VALUES ($1, $2, $3)
        ON CONFLICT (cleaner_id, tooltip_id) DO UPDATE SET marked_helpful = EXCLUDED.marked_helpful`,
-        [cleanerId, tooltipId, helpful]
-      );
+      [cleanerId, tooltipId, helpful]
+    );
 
-      // Update tooltip dismissed count in onboarding
-      await query(
-        `UPDATE cleaner_onboarding_progress
+    // Update tooltip dismissed count in onboarding
+    await query(
+      `UPDATE cleaner_onboarding_progress
        SET tooltip_dismissed_count = tooltip_dismissed_count + 1
        WHERE cleaner_id = $1`,
-        [cleanerId]
-      );
+      [cleanerId]
+    );
 
-      res.json({ message: "Tooltip dismissed" });
-    } catch (error: any) {
-      console.error("Error dismissing tooltip:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to dismiss tooltip" },
-      });
-    }
+    res.json({ message: "Tooltip dismissed" });
   })
 );
 
@@ -1440,8 +1238,9 @@ router.post(
  *       400:
  *         description: Validation error
  */
-router.post("/template-library", async (req: AuthedRequest, res) => {
-  try {
+router.post(
+  "/template-library",
+  authedHandler(async (req: AuthedRequest, res) => {
     const cleanerId = req.user!.id;
     const {
       template_type,
@@ -1456,12 +1255,11 @@ router.post("/template-library", async (req: AuthedRequest, res) => {
 
     // Validation
     if (!template_name || !template_content || !category) {
-      return res.status(400).json({
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Template name, content, and category are required",
-        },
-      });
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Template name, content, and category are required",
+        400
+      );
     }
 
     // Insert template into library
@@ -1506,13 +1304,8 @@ router.post("/template-library", async (req: AuthedRequest, res) => {
       message: "Template published to marketplace successfully!",
       template: result.rows[0],
     });
-  } catch (error: any) {
-    console.error("Error publishing template:", error);
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Failed to publish template" },
-    });
-  }
-});
+  })
+);
 
 /**
  * @swagger
@@ -1537,11 +1330,10 @@ router.post("/template-library", async (req: AuthedRequest, res) => {
 router.get(
   "/template-library/:templateId",
   authedHandler(async (req: AuthedRequest, res) => {
-    try {
-      const { templateId } = req.params;
+    const { templateId } = req.params;
 
-      const result = await query(
-        `SELECT 
+    const result = await query(
+      `SELECT
         id,
         template_type as type,
         template_name as name,
@@ -1560,22 +1352,14 @@ router.get(
         created_at as "createdAt"
       FROM template_library
       WHERE id = $1 AND is_active = true`,
-        [templateId]
-      );
+      [templateId]
+    );
 
-      if (result.rows.length === 0) {
-        return res.status(404).json({
-          error: { code: "NOT_FOUND", message: "Template not found" },
-        });
-      }
-
-      res.json({ template: result.rows[0] });
-    } catch (error: any) {
-      console.error("Error fetching template:", error);
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to fetch template" },
-      });
+    if (result.rows.length === 0) {
+      throw new AppError("NOT_FOUND", "Template not found", 404);
     }
+
+    res.json({ template: result.rows[0] });
   })
 );
 
