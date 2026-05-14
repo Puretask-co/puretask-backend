@@ -331,6 +331,20 @@ The API uses `start: "node -r ./dist/instrument.js ./dist/index.js"` which prelo
 
 ---
 
+## B.15 🟡 CI/CD Pipeline deploy step is permanently red (RAILWAY_TOKEN unset)
+
+**Where:** `.github/workflows/ci.yml` previously had a `deploy` job (lines ~177-235) that ran `railway up` after build/test/security-scan. The job's `env: RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}` resolved to empty — secrets `RAILWAY_TOKEN`, `RAILWAY_API_SERVICE`, `RAILWAY_SCHEDULER_SERVICE`, `RAILWAY_WORKER_SERVICE` are not set in the `production` GitHub environment (or aren't reaching it).
+
+**WHY:** The CI/CD Pipeline workflow was failing on every push to `main` at the deploy step, exiting with "Invalid RAILWAY_TOKEN". This made the CI signal misleading — every main-branch run showed a red ✗, suggesting prod was broken. In reality, production was deploying fine via **Railway's native GitHub integration** (Railway watches `main` directly and runs the build defined in `nixpacks.toml`, separately from GitHub Actions). The workflow's deploy step was a redundant second deploy path that never worked.
+
+**WHAT:** Remove the deploy job. Railway's native integration is the actual deploy path; the workflow step was duplicate, broken, and confusing.
+
+**HOW:** Delete the `deploy:` job from `ci.yml`. Leave a comment explaining why so the next person doesn't try to "restore the missing deploy step." If you later want CI-driven deploys back (for the smoke-test verification step it provided), restore from git history and set `RAILWAY_TOKEN` + `RAILWAY_API_SERVICE`/`RAILWAY_SCHEDULER_SERVICE`/`RAILWAY_WORKER_SERVICE` in the `production` GitHub environment.
+
+**Done when:** push to main; CI/CD Pipeline goes fully green (no broken deploy step). Confirm Railway dashboard still shows the corresponding deploy fired from its native integration.
+
+---
+
 # SECTION C — P2 (next month)
 
 ## C.1 🟠 Prettier shows 87+ unformatted files in CI (continue-on-error)
