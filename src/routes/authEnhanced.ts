@@ -9,6 +9,7 @@ import { env } from "../config/env";
 import { auth } from "../lib/auth";
 import { authRateLimiter } from "../lib/security";
 import { logger } from "../lib/logger";
+import { AppError, asyncHandler } from "../lib/errors";
 
 // Import all the new services
 import {
@@ -119,24 +120,15 @@ const setPasswordSchema = z.object({
  *       200:
  *         description: Verification email sent
  */
-router.post("/send-verification", auth(), async (req, res: Response) => {
-  try {
+router.post(
+  "/send-verification",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const userId = req.user!.id;
-    const userEmail = req.user!.email || "";
-
     await resendVerificationEmail(userId);
-
-    res.json({
-      success: true,
-      message: "Verification email sent",
-    });
-  } catch (err) {
-    const error = err as Error & { statusCode?: number; code?: string };
-    res.status(error.statusCode ?? 500).json({
-      error: { code: error.code ?? "SEND_VERIFICATION_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Verification email sent" });
+  })
+);
 
 /**
  * @swagger
@@ -160,33 +152,17 @@ router.post("/send-verification", auth(), async (req, res: Response) => {
  *       400:
  *         description: Invalid or expired token
  */
-router.post("/verify-email", async (req, res: Response) => {
-  try {
+router.post(
+  "/verify-email",
+  asyncHandler(async (req, res: Response) => {
     const parsed = verifyEmailSchema.parse(req.body);
     const result = await verifyEmail(parsed.token);
-
     if (!result.success) {
-      return res.status(400).json({
-        error: { code: "INVALID_TOKEN", message: "Invalid or expired verification token" },
-      });
+      throw new AppError("INVALID_TOKEN", "Invalid or expired verification token", 400);
     }
-
-    res.json({
-      success: true,
-      message: "Email verified successfully",
-    });
-  } catch (err) {
-    const error = err as Error & { issues?: unknown };
-    if (error.issues) {
-      return res.status(400).json({
-        error: { code: "VALIDATION_ERROR", message: "Invalid input", details: error.issues },
-      });
-    }
-    res.status(500).json({
-      error: { code: "VERIFICATION_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Email verified successfully" });
+  })
+);
 
 /**
  * @swagger
@@ -210,22 +186,15 @@ router.post("/verify-email", async (req, res: Response) => {
  *       200:
  *         description: Verification email sent to new address
  */
-router.post("/request-email-change", auth(), async (req, res: Response) => {
-  try {
+router.post(
+  "/request-email-change",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const parsed = changeEmailSchema.parse(req.body);
     await requestEmailChange(req.user!.id, parsed.newEmail);
-
-    res.json({
-      success: true,
-      message: "Verification email sent to new address",
-    });
-  } catch (err) {
-    const error = err as Error & { statusCode?: number; code?: string };
-    res.status(error.statusCode ?? 500).json({
-      error: { code: error.code ?? "EMAIL_CHANGE_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Verification email sent to new address" });
+  })
+);
 
 /**
  * @swagger
@@ -249,28 +218,17 @@ router.post("/request-email-change", auth(), async (req, res: Response) => {
  *       400:
  *         description: Invalid or expired token
  */
-router.post("/verify-email-change", async (req, res: Response) => {
-  try {
+router.post(
+  "/verify-email-change",
+  asyncHandler(async (req, res: Response) => {
     const parsed = verifyEmailSchema.parse(req.body);
     const result = await verifyEmailChange(parsed.token);
-
     if (!result.success) {
-      return res.status(400).json({
-        error: { code: "INVALID_TOKEN", message: "Invalid or expired verification token" },
-      });
+      throw new AppError("INVALID_TOKEN", "Invalid or expired verification token", 400);
     }
-
-    res.json({
-      success: true,
-      message: "Email changed successfully",
-    });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "VERIFICATION_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Email changed successfully" });
+  })
+);
 
 // ============================================
 // PASSWORD RESET ROUTES
@@ -296,25 +254,19 @@ router.post("/verify-email-change", async (req, res: Response) => {
  *       200:
  *         description: If email exists, reset link sent
  */
-router.post("/forgot-password", async (req, res: Response) => {
-  try {
+router.post(
+  "/forgot-password",
+  asyncHandler(async (req, res: Response) => {
     const parsed = emailSchema.parse(req.body);
     const ipAddress = req.ip || req.connection.remoteAddress;
-
     await requestPasswordReset(parsed.email, ipAddress);
-
     // Always return success to prevent email enumeration
     res.json({
       success: true,
       message: "If that email exists, a password reset link has been sent",
     });
-  } catch (err) {
-    const error = err as Error & { statusCode?: number; code?: string };
-    res.status(error.statusCode ?? 500).json({
-      error: { code: error.code ?? "RESET_REQUEST_FAILED", message: error.message },
-    });
-  }
-});
+  })
+);
 
 /**
  * @swagger
@@ -336,19 +288,14 @@ router.post("/forgot-password", async (req, res: Response) => {
  *       200:
  *         description: Token validity result
  */
-router.post("/verify-reset-token", async (req, res: Response) => {
-  try {
+router.post(
+  "/verify-reset-token",
+  asyncHandler(async (req, res: Response) => {
     const parsed = verifyEmailSchema.parse(req.body);
     const result = await verifyResetToken(parsed.token);
-
     res.json(result);
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "VERIFICATION_FAILED", message: error.message },
-    });
-  }
-});
+  })
+);
 
 /**
  * @swagger
@@ -373,30 +320,18 @@ router.post("/verify-reset-token", async (req, res: Response) => {
  *       400:
  *         description: Invalid or expired token
  */
-router.post("/reset-password", async (req, res: Response) => {
-  try {
+router.post(
+  "/reset-password",
+  asyncHandler(async (req, res: Response) => {
     const parsed = resetPasswordSchema.parse(req.body);
     const ipAddress = req.ip || req.connection.remoteAddress;
-
     const result = await resetPassword(parsed.token, parsed.newPassword, ipAddress);
-
     if (!result.success) {
-      return res.status(400).json({
-        error: { code: "INVALID_TOKEN", message: "Invalid or expired reset token" },
-      });
+      throw new AppError("INVALID_TOKEN", "Invalid or expired reset token", 400);
     }
-
-    res.json({
-      success: true,
-      message: "Password reset successfully",
-    });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "RESET_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Password reset successfully" });
+  })
+);
 
 // ============================================
 // TWO-FACTOR AUTHENTICATION ROUTES
@@ -415,10 +350,11 @@ router.post("/reset-password", async (req, res: Response) => {
  *       200:
  *         description: secret, qrCode, backupCodes
  */
-router.post("/2fa/enable-totp", auth(), async (req, res: Response) => {
-  try {
+router.post(
+  "/2fa/enable-totp",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const result = await enableTOTP(req.user!.id);
-
     res.json({
       success: true,
       secret: result.secret,
@@ -426,13 +362,8 @@ router.post("/2fa/enable-totp", auth(), async (req, res: Response) => {
       backupCodes: result.backupCodes,
       message: "Scan the QR code with your authenticator app, then verify with a code",
     });
-  } catch (err) {
-    const error = err as Error & { statusCode?: number; code?: string };
-    res.status(error.statusCode ?? 500).json({
-      error: { code: error.code ?? "2FA_SETUP_FAILED", message: error.message },
-    });
-  }
-});
+  })
+);
 
 /**
  * @swagger
@@ -458,28 +389,18 @@ router.post("/2fa/enable-totp", auth(), async (req, res: Response) => {
  *       400:
  *         description: Invalid code
  */
-router.post("/2fa/verify-totp", auth(), async (req, res: Response) => {
-  try {
+router.post(
+  "/2fa/verify-totp",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const parsed = verify2FASchema.parse(req.body);
     const result = await verifyAndEnableTOTP(req.user!.id, parsed.code);
-
     if (!result.success) {
-      return res.status(400).json({
-        error: { code: "INVALID_CODE", message: "Invalid verification code" },
-      });
+      throw new AppError("INVALID_CODE", "Invalid verification code", 400);
     }
-
-    res.json({
-      success: true,
-      message: "Two-factor authentication enabled successfully",
-    });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "2FA_ENABLE_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Two-factor authentication enabled successfully" });
+  })
+);
 
 /**
  * @swagger
@@ -503,27 +424,19 @@ router.post("/2fa/verify-totp", auth(), async (req, res: Response) => {
  *       200:
  *         description: Verification code sent
  */
-router.post("/2fa/enable-sms", auth(), async (req, res: Response) => {
-  try {
+router.post(
+  "/2fa/enable-sms",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const parsed = z
       .object({
         phoneNumber: z.string().min(10),
       })
       .parse(req.body);
-
     await enableSMS2FA(req.user!.id, parsed.phoneNumber);
-
-    res.json({
-      success: true,
-      message: "Verification code sent to your phone",
-    });
-  } catch (err) {
-    const error = err as Error & { statusCode?: number; code?: string };
-    res.status(error.statusCode ?? 500).json({
-      error: { code: error.code ?? "2FA_SETUP_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Verification code sent to your phone" });
+  })
+);
 
 /**
  * @swagger
@@ -538,21 +451,14 @@ router.post("/2fa/enable-sms", auth(), async (req, res: Response) => {
  *       200:
  *         description: Code sent
  */
-router.post("/2fa/send-sms-code", auth(), async (req, res: Response) => {
-  try {
+router.post(
+  "/2fa/send-sms-code",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     await sendSMS2FACode(req.user!.id);
-
-    res.json({
-      success: true,
-      message: "Verification code sent",
-    });
-  } catch (err) {
-    const error = err as Error & { statusCode?: number; code?: string };
-    res.status(error.statusCode ?? 500).json({
-      error: { code: error.code ?? "SMS_SEND_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Verification code sent" });
+  })
+);
 
 /**
  * @swagger
@@ -578,28 +484,18 @@ router.post("/2fa/send-sms-code", auth(), async (req, res: Response) => {
  *       400:
  *         description: Invalid code
  */
-router.post("/2fa/verify-sms", auth(), async (req, res: Response) => {
-  try {
+router.post(
+  "/2fa/verify-sms",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const parsed = verify2FASchema.parse(req.body);
     const result = await verifyAndEnableSMS2FA(req.user!.id, parsed.code);
-
     if (!result.success) {
-      return res.status(400).json({
-        error: { code: "INVALID_CODE", message: "Invalid verification code" },
-      });
+      throw new AppError("INVALID_CODE", "Invalid verification code", 400);
     }
-
-    res.json({
-      success: true,
-      message: "Two-factor authentication enabled successfully",
-    });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "2FA_ENABLE_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Two-factor authentication enabled successfully" });
+  })
+);
 
 /**
  * @swagger
@@ -624,34 +520,22 @@ router.post("/2fa/verify-sms", auth(), async (req, res: Response) => {
  *       400:
  *         description: Invalid code
  */
-router.post("/2fa/verify", async (req, res: Response) => {
-  try {
+router.post(
+  "/2fa/verify",
+  asyncHandler(async (req, res: Response) => {
     const parsed = z
       .object({
         userId: z.string().uuid(),
         code: z.string().min(6),
       })
       .parse(req.body);
-
     const result = await verify2FACode(parsed.userId, parsed.code);
-
     if (!result.success) {
-      return res.status(400).json({
-        error: { code: "INVALID_CODE", message: "Invalid verification code" },
-      });
+      throw new AppError("INVALID_CODE", "Invalid verification code", 400);
     }
-
-    res.json({
-      success: true,
-      method: result.method,
-    });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "2FA_VERIFICATION_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, method: result.method });
+  })
+);
 
 /**
  * @swagger
@@ -675,22 +559,15 @@ router.post("/2fa/verify", async (req, res: Response) => {
  *       200:
  *         description: 2FA disabled
  */
-router.post("/2fa/disable", auth(), async (req, res: Response) => {
-  try {
+router.post(
+  "/2fa/disable",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const parsed = disable2FASchema.parse(req.body);
     await disable2FA(req.user!.id, parsed.password);
-
-    res.json({
-      success: true,
-      message: "Two-factor authentication disabled",
-    });
-  } catch (err) {
-    const error = err as Error & { statusCode?: number; code?: string };
-    res.status(error.statusCode ?? 500).json({
-      error: { code: error.code ?? "2FA_DISABLE_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Two-factor authentication disabled" });
+  })
+);
 
 /**
  * @swagger
@@ -705,17 +582,14 @@ router.post("/2fa/disable", auth(), async (req, res: Response) => {
  *       200:
  *         description: 2FA status object
  */
-router.get("/2fa/status", auth(), async (req, res: Response) => {
-  try {
+router.get(
+  "/2fa/status",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const status = await get2FAStatus(req.user!.id);
     res.json(status);
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "STATUS_FETCH_FAILED", message: error.message },
-    });
-  }
-});
+  })
+);
 
 /**
  * @swagger
@@ -730,22 +604,18 @@ router.get("/2fa/status", auth(), async (req, res: Response) => {
  *       200:
  *         description: New backupCodes array
  */
-router.post("/2fa/regenerate-backup-codes", auth(), async (req, res: Response) => {
-  try {
+router.post(
+  "/2fa/regenerate-backup-codes",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const backupCodes = await regenerateBackupCodes(req.user!.id);
-
     res.json({
       success: true,
       backupCodes,
       message: "New backup codes generated. Store them safely!",
     });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "REGENERATE_FAILED", message: error.message },
-    });
-  }
-});
+  })
+);
 
 // ============================================
 // SESSION MANAGEMENT ROUTES
@@ -764,17 +634,14 @@ router.post("/2fa/regenerate-backup-codes", auth(), async (req, res: Response) =
  *       200:
  *         description: sessions array
  */
-router.get("/sessions", auth(), async (req, res: Response) => {
-  try {
+router.get(
+  "/sessions",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const sessions = await getUserActiveSessions(req.user!.id);
     res.json({ sessions });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "SESSIONS_FETCH_FAILED", message: error.message },
-    });
-  }
-});
+  })
+);
 
 /**
  * @swagger
@@ -789,17 +656,14 @@ router.get("/sessions", auth(), async (req, res: Response) => {
  *       200:
  *         description: Session stats
  */
-router.get("/sessions/stats", auth(), async (req, res: Response) => {
-  try {
+router.get(
+  "/sessions/stats",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const stats = await getUserSessionStats(req.user!.id);
     res.json(stats);
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "STATS_FETCH_FAILED", message: error.message },
-    });
-  }
-});
+  })
+);
 
 /**
  * @swagger
@@ -819,21 +683,14 @@ router.get("/sessions/stats", auth(), async (req, res: Response) => {
  *       200:
  *         description: Session revoked
  */
-router.delete("/sessions/:sessionId", auth(), async (req, res: Response) => {
-  try {
+router.delete(
+  "/sessions/:sessionId",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     await revokeSession(req.params.sessionId);
-
-    res.json({
-      success: true,
-      message: "Session revoked",
-    });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "REVOKE_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Session revoked" });
+  })
+);
 
 /**
  * @swagger
@@ -848,21 +705,14 @@ router.delete("/sessions/:sessionId", auth(), async (req, res: Response) => {
  *       200:
  *         description: Logged out from N device(s)
  */
-router.post("/logout-all", auth(), async (req, res: Response) => {
-  try {
+router.post(
+  "/logout-all",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const count = await revokeAllUserSessions(req.user!.id);
-
-    res.json({
-      success: true,
-      message: `Logged out from ${count} device(s)`,
-    });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "LOGOUT_ALL_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: `Logged out from ${count} device(s)` });
+  })
+);
 
 // ============================================
 // OAUTH ROUTES
@@ -881,12 +731,11 @@ router.post("/logout-all", auth(), async (req, res: Response) => {
  *       500:
  *         description: OAuth not configured
  */
-router.get("/oauth/google/start", (req, res: Response) => {
-  try {
+router.get(
+  "/oauth/google/start",
+  asyncHandler(async (req, res: Response) => {
     if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
-      return res.status(500).json({
-        error: { code: "OAUTH_CONFIG_MISSING", message: "Google OAuth is not configured" },
-      });
+      throw new AppError("OAUTH_CONFIG_MISSING", "Google OAuth is not configured", 500);
     }
 
     const roleParam = typeof req.query.role === "string" ? req.query.role : "";
@@ -911,13 +760,8 @@ router.get("/oauth/google/start", (req, res: Response) => {
     });
 
     res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "OAUTH_START_FAILED", message: error.message },
-    });
-  }
-});
+  })
+);
 
 /**
  * @swagger
@@ -1041,10 +885,11 @@ router.get("/oauth/google/callback", async (req, res: Response) => {
  *       200:
  *         description: accounts array (provider, providerEmail, linkedAt)
  */
-router.get("/oauth/accounts", auth(), async (req, res: Response) => {
-  try {
+router.get(
+  "/oauth/accounts",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const accounts = await getUserOAuthAccounts(req.user!.id);
-
     // Don't expose tokens
     const safeAccounts = accounts.map((acc) => ({
       id: acc.id,
@@ -1052,15 +897,9 @@ router.get("/oauth/accounts", auth(), async (req, res: Response) => {
       providerEmail: acc.provider_email,
       linkedAt: acc.created_at,
     }));
-
     res.json({ accounts: safeAccounts });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "ACCOUNTS_FETCH_FAILED", message: error.message },
-    });
-  }
-});
+  })
+);
 
 /**
  * @swagger
@@ -1082,29 +921,18 @@ router.get("/oauth/accounts", auth(), async (req, res: Response) => {
  *       400:
  *         description: Invalid provider or cannot unlink last auth method
  */
-router.delete("/oauth/:provider", auth(), async (req, res: Response) => {
-  try {
+router.delete(
+  "/oauth/:provider",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const provider = req.params.provider as any;
-
     if (!["google", "facebook", "apple", "github"].includes(provider)) {
-      return res.status(400).json({
-        error: { code: "INVALID_PROVIDER", message: "Invalid OAuth provider" },
-      });
+      throw new AppError("INVALID_PROVIDER", "Invalid OAuth provider", 400);
     }
-
     await unlinkOAuthAccount(req.user!.id, provider);
-
-    res.json({
-      success: true,
-      message: "OAuth account unlinked",
-    });
-  } catch (err) {
-    const error = err as Error & { statusCode?: number; code?: string };
-    res.status(error.statusCode ?? 500).json({
-      error: { code: error.code ?? "UNLINK_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "OAuth account unlinked" });
+  })
+);
 
 /**
  * @swagger
@@ -1130,23 +958,15 @@ router.delete("/oauth/:provider", auth(), async (req, res: Response) => {
  *       400:
  *         description: User already has password or invalid input
  */
-router.post("/oauth/set-password", auth(), async (req, res: Response) => {
-  try {
+router.post(
+  "/oauth/set-password",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const parsed = setPasswordSchema.parse(req.body);
-
     await setPasswordForOAuthUser(req.user!.id, parsed.password);
-
-    res.json({
-      success: true,
-      message: "Password set successfully",
-    });
-  } catch (err) {
-    const error = err as Error & { statusCode?: number; code?: string };
-    res.status(error.statusCode ?? 500).json({
-      error: { code: error.code ?? "SET_PASSWORD_FAILED", message: error.message },
-    });
-  }
-});
+    res.json({ success: true, message: "Password set successfully" });
+  })
+);
 
 /**
  * @swagger
@@ -1161,16 +981,13 @@ router.post("/oauth/set-password", auth(), async (req, res: Response) => {
  *       200:
  *         description: { canSetPassword: boolean }
  */
-router.get("/oauth/can-set-password", auth(), async (req, res: Response) => {
-  try {
+router.get(
+  "/oauth/can-set-password",
+  auth(),
+  asyncHandler(async (req, res: Response) => {
     const canSet = await canSetPassword(req.user!.id);
     res.json({ canSetPassword: canSet });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({
-      error: { code: "CHECK_FAILED", message: error.message },
-    });
-  }
-});
+  })
+);
 
 export default router;
