@@ -40,6 +40,53 @@ export interface TravelRadiusSettings {
 }
 
 // ============================================
+// Raw DB row shapes (B.14)
+// ============================================
+// These describe what `pg` actually hands back for each table. They are
+// intentionally snake_case and use the wire types node-pg returns by
+// default (BIGSERIAL/NUMERIC → string, TIMESTAMPTZ → Date). Domain
+// conversion (string → number, Date construction) happens in the mapper
+// functions below — keep these row shapes faithful to the schema so the
+// compiler can catch column-name typos.
+
+interface AvailabilityBlockRow {
+  id: string;
+  cleaner_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+interface BlackoutPeriodRow {
+  id: string;
+  cleaner_id: string;
+  start_ts: Date;
+  end_ts: Date;
+  reason: string | null;
+  created_at: Date;
+}
+
+interface JobRow {
+  id: string;
+  client_id: string;
+  cleaner_id: string | null;
+  status: string;
+  scheduled_start_at: Date;
+  scheduled_end_at: Date;
+  credit_amount: number | null;
+}
+
+interface CleanerProfileTravelRow {
+  user_id: string;
+  travel_radius_km: string | null;
+  latitude: string | null;
+  longitude: string | null;
+}
+
+// ============================================
 // Main Service
 // ============================================
 
@@ -77,7 +124,7 @@ export class AvailabilityService {
    * Get weekly availability for a cleaner
    */
   static async getWeeklyAvailability(cleanerId: number): Promise<WeeklyAvailability> {
-    const result = await query<any>(
+    const result = await query<AvailabilityBlockRow>(
       `SELECT id, cleaner_id, day_of_week, start_time, end_time
        FROM availability_blocks
        WHERE cleaner_id = $1
@@ -100,7 +147,7 @@ export class AvailabilityService {
    * Get availability blocks for a specific day
    */
   static async getBlocksForDay(cleanerId: number, dayOfWeek: number): Promise<AvailabilityBlock[]> {
-    const result = await query<any>(
+    const result = await query<AvailabilityBlockRow>(
       `SELECT * FROM availability_blocks
        WHERE cleaner_id = $1 AND day_of_week = $2
        ORDER BY start_time`,
@@ -167,7 +214,7 @@ export class AvailabilityService {
    * Get all blackout periods for a cleaner
    */
   static async getBlackoutPeriods(cleanerId: number): Promise<BlackoutPeriod[]> {
-    const result = await query<any>(
+    const result = await query<BlackoutPeriodRow>(
       `SELECT * FROM blackout_periods
        WHERE cleaner_id = $1
        ORDER BY start_ts`,
@@ -191,7 +238,7 @@ export class AvailabilityService {
     startTs: Date,
     endTs: Date
   ): Promise<BlackoutPeriod | null> {
-    const result = await query<any>(
+    const result = await query<BlackoutPeriodRow>(
       `SELECT * FROM blackout_periods
        WHERE cleaner_id = $1
        AND start_ts < $3
@@ -281,7 +328,7 @@ export class AvailabilityService {
     startTs: Date,
     endTs: Date
   ): Promise<Job | null> {
-    const result = await query<any>(
+    const result = await query<JobRow>(
       `SELECT * FROM jobs
        WHERE cleaner_id = $1
        AND status NOT IN ('cancelled', 'completed')
@@ -337,7 +384,7 @@ export class AvailabilityService {
    * Get travel radius settings for a cleaner
    */
   static async getTravelRadius(cleanerId: number): Promise<TravelRadiusSettings | null> {
-    const result = await query<any>(
+    const result = await query<CleanerProfileTravelRow>(
       `SELECT user_id, travel_radius_km, latitude, longitude
        FROM cleaner_profiles
        WHERE user_id = $1`,
